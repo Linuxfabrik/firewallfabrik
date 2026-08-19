@@ -1570,9 +1570,8 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 ### Partial
 
 - `InterfaceAndDirection` — for iface=any with direction Inbound/Outbound, C++ adds the `*` wildcard (`-i +` / `-o +`); Python does not
-- `ItfNegation` (multi-interface) — excludes only loopback; missing the C++ filters for unprotected, bridge-port, and cluster interfaces
 - `SingleSrcNegation` / `SingleDstNegation` — no `countInetAddresses` check and no AddressTable/ipset handling; `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled)
-- `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant and the TCP-RST special case (preserving "any TCP" on the action rule for tcp-reset)
+- `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant; the separate shadowing pass works on copies instead
 - `TimeNegation` — on nftables a negated interval that names both a time of day
   and a weekday is reported and left out: its negation is a disjunction, which
   one nftables rule cannot hold. iptables expands it into a temporary chain
@@ -1583,10 +1582,14 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   An older iptables has no date options in its time match, so the rule is
   compiled without them and says so; a date outside the 1970-2038 range both
   tools can express is reported and the rule is left out.
-- `SplitIfSrcAny` — no POSTROUTING copy for mangle+classification, no bridging / bridge-port check
-- `SplitIfDstAny` — no PREROUTING copy for mangle+classification
 - `InterfacePolicyRulesWithOptimization` — splits one rule per interface but does not factor the common rule body into a shared user-defined chain
-- `DecideOnTarget` — the Branch action is not yet mapped to the target ruleset name
+- `InterfacePolicyRules` — does not expand a group in the interface rule
+  element.  The main pass runs `ExpandGroupsInItf` first, so only the
+  shadowing pass, which does not, can meet one.
+- `Begin` — does not skip a rule that references a deleted object.  Firewall
+  Builder leaves a "dummy" reference behind and warns; fwf has no deleted
+  objects of its own and no `.fwb` of the corpus carries one, so such a rule
+  is compiled as a rule about 255.255.255.255.
 
 ### Reporting
 

@@ -10,6 +10,7 @@
 #
 #  Branch rules in NAT
 #
+# firewall80:NAT:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -260,6 +261,7 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
+        # firewall80:NAT:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
         ip daddr 192.0.2.1 counter jump NAT_1_prerouting
         #
         # Rule 1 (NAT)
@@ -293,6 +295,7 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
+        # firewall80:NAT:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
         ip daddr 192.0.2.1 counter jump NAT_1_postrouting
         #
         # Rule 1 (NAT)

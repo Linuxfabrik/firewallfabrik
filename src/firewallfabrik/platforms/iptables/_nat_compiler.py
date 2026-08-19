@@ -762,9 +762,22 @@ class ClassifyNATRule(NATRuleProcessor):
         tdst_any = tdst is None
         tsrv_any = tsrv is None
 
-        # Branch action
+        # Branch action.  A branch jumps into another rule set and
+        # translates nothing itself, so whatever the editor left in the
+        # translated elements is not compiled - and saying so beats
+        # leaving it there for a later processor to read
+        # (NATCompiler::classifyNATRule).
         if rule.action == NATAction.Branch:
             rule.nat_rule_type = NATRuleType.NATBranch
+            if rule.tsrc or rule.tdst or rule.tsrv:
+                rule.tsrc = []
+                rule.tdst = []
+                rule.tsrv = []
+                self.compiler.warning(
+                    rule,
+                    'Translated Src, Dst and Srv are ignored in the NAT rule '
+                    "with action 'Branch'",
+                )
             return True
 
         # NONAT
