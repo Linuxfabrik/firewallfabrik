@@ -2234,6 +2234,19 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        # A bridge port is matched with `-m physdev --physdev-out`, which
+        # iptables does not allow in the OUTPUT chain (fwbuilder #2008), so
+        # the copy this processor would make is a command that stops the
+        # activation.
+        itf = rule.itf[0] if rule.itf else None
+        if (
+            self.compiler.fw.get_option('bridging_fw')
+            and itf is not None
+            and getattr(itf, 'is_bridge_port', lambda: False)()
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
             return True
@@ -2250,6 +2263,18 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             ipt_comp.set_chain(r, 'OUTPUT')
             r.direction = Direction.Outbound
             self.tmp_queue.append(r)
+
+            # CLASSIFY registers for LOCAL_OUT, FORWARD and POST_ROUTING
+            # (net/netfilter/xt_CLASSIFY.c), and the copy above went into
+            # OUTPUT alone, so a classifying rule never reached the chain
+            # where a forwarded packet is classified.
+            if ipt_comp.my_table == 'mangle' and rule.get_option(
+                'classification', False
+            ):
+                r = rule.clone()
+                ipt_comp.set_chain(r, 'POSTROUTING')
+                r.direction = Direction.Outbound
+                self.tmp_queue.append(r)
 
         self.tmp_queue.append(rule)
         return True
@@ -2295,6 +2320,17 @@ class SplitIfDstAny(PolicyRuleProcessor):
             ipt_comp.set_chain(r, 'INPUT')
             r.direction = Direction.Inbound
             self.tmp_queue.append(r)
+
+            # The mangle counterpart of the OUTPUT copy above: a marking
+            # target that only works before the routing decision needs the
+            # prerouting chain, which INPUT is not.
+            if ipt_comp.my_table == 'mangle' and rule.get_option(
+                'classification', False
+            ):
+                r = rule.clone()
+                ipt_comp.set_chain(r, 'PREROUTING')
+                r.direction = Direction.Inbound
+                self.tmp_queue.append(r)
 
         self.tmp_queue.append(rule)
         return True
