@@ -299,6 +299,18 @@ table ip fwf_filter {
         #
         ip daddr 192.168.1.10 counter log level debug drop
         #
+        # Rule 22 (global)
+        #
+        # this rule should generate commands
+        # in both INPUT and FORWARD chains
+        # because this is a bridging firewall
+        # see bug #811860
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.1 tcp dport 22 ct state new counter accept
+        #
+        # Rule 23 (global)
+        #
+        ip daddr 192.168.1.1 ct state new counter accept
+        #
         # Rule 24 (global)
         #
         # interface of another firewall

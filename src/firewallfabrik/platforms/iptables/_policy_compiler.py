@@ -2729,6 +2729,33 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             return True
 
         dst = rule.dst[0] if rule.dst else None
+        # A bridging firewall sees the traffic to its own addresses in
+        # FORWARD as well, whenever it arrives over a bridged path, and a
+        # rule that is not tied to a routing interface cannot tell the two
+        # apart.  fwbuilder therefore emits both copies (bugs #811860,
+        # #934949 and #1231 in PolicyCompiler_ipt::decideOnChainIf{Src,Dst}FW);
+        # the interface test is what keeps it from duplicating a rule that
+        # already names a routing interface.  Broadcasts and multicasts are
+        # deliberately not recognised for this test, unlike the chain
+        # decision below.
+        if (
+            dst is not None
+            and ipt_comp.fw.get_option('bridging_fw')
+            and ipt_comp.complex_match(
+                dst,
+                ipt_comp.fw,
+                recognize_broadcasts=False,
+                recognize_multicasts=False,
+            )
+        ):
+            rule_iface = rule.itf[0] if rule.itf else None
+            if rule_iface is None or (
+                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
+            ):
+                forward_copy = rule.clone()
+                ipt_comp.set_chain(forward_copy, 'FORWARD')
+                self.tmp_queue.append(forward_copy)
+
         if dst is not None and not isinstance(dst, AddressRange):
             # AddressRange is handled by SplitIfDstMatchingAddressRange,
             # which emits a dedicated INPUT clone and leaves the
@@ -2775,6 +2802,33 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             return True
 
         src = rule.src[0] if rule.src else None
+        # A bridging firewall sees the traffic to its own addresses in
+        # FORWARD as well, whenever it arrives over a bridged path, and a
+        # rule that is not tied to a routing interface cannot tell the two
+        # apart.  fwbuilder therefore emits both copies (bugs #811860,
+        # #934949 and #1231 in PolicyCompiler_ipt::decideOnChainIf{Src,Dst}FW);
+        # the interface test is what keeps it from duplicating a rule that
+        # already names a routing interface.  Broadcasts and multicasts are
+        # deliberately not recognised for this test, unlike the chain
+        # decision below.
+        if (
+            src is not None
+            and ipt_comp.fw.get_option('bridging_fw')
+            and ipt_comp.complex_match(
+                src,
+                ipt_comp.fw,
+                recognize_broadcasts=False,
+                recognize_multicasts=False,
+            )
+        ):
+            rule_iface = rule.itf[0] if rule.itf else None
+            if rule_iface is None or (
+                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
+            ):
+                forward_copy = rule.clone()
+                ipt_comp.set_chain(forward_copy, 'FORWARD')
+                self.tmp_queue.append(forward_copy)
+
         if src is not None and not isinstance(src, AddressRange):
             # AddressRange is handled by SplitIfSrcMatchingAddressRange,
             # which emits a dedicated OUTPUT clone and leaves the

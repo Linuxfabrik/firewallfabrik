@@ -1367,6 +1367,32 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             return True
 
         dst = rule.dst[0] if rule.dst else None
+        # A bridging firewall sees the traffic to its own addresses in the
+        # forward chain as well, whenever it arrives over a bridged path,
+        # and a rule that is not tied to a routing interface cannot tell
+        # the two apart, so both copies are emitted (fwbuilder bugs
+        # #811860, #934949 and #1231 in
+        # PolicyCompiler_ipt::decideOnChainIf{Src,Dst}FW).  Broadcasts and
+        # multicasts are deliberately not recognised for this test, unlike
+        # the chain decision below.
+        if (
+            dst is not None
+            and nft_comp.fw.get_option('bridging_fw')
+            and nft_comp.complex_match(
+                dst,
+                nft_comp.fw,
+                recognize_broadcasts=False,
+                recognize_multicasts=False,
+            )
+        ):
+            rule_iface = rule.itf[0] if rule.itf else None
+            if rule_iface is None or (
+                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
+            ):
+                forward_copy = rule.clone()
+                forward_copy.ipt_chain = 'forward'
+                self.tmp_queue.append(forward_copy)
+
         if dst is not None and not isinstance(dst, AddressRange):
             # AddressRange handling is delegated to
             # SplitIfDstMatchingAddressRange so the original rule can
@@ -1465,6 +1491,26 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             return True
 
         src = rule.src[0] if rule.src else None
+        # See :class:`DecideOnChainIfDstFW` for why a bridging firewall
+        # gets a forward copy as well.
+        if (
+            src is not None
+            and nft_comp.fw.get_option('bridging_fw')
+            and nft_comp.complex_match(
+                src,
+                nft_comp.fw,
+                recognize_broadcasts=False,
+                recognize_multicasts=False,
+            )
+        ):
+            rule_iface = rule.itf[0] if rule.itf else None
+            if rule_iface is None or (
+                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
+            ):
+                forward_copy = rule.clone()
+                forward_copy.ipt_chain = 'forward'
+                self.tmp_queue.append(forward_copy)
+
         if src is not None and not isinstance(src, AddressRange):
             # See :class:`DecideOnChainIfDstFW` for the AddressRange
             # exclusion rationale (fwbuilder #2650) and the broadcast /
