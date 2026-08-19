@@ -284,8 +284,8 @@ table ip fwf_filter {
         # Rule 1 (eth1)
         #
         # тестовый комментарий по-русски. Проверяем конвертацию из/в Utf8
-        iifname "eth1" ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        iifname "eth1" ip frag-off & 0x1fff != 0 counter drop
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 2 (eth1)
         #
@@ -297,7 +297,7 @@ table ip fwf_filter {
         #
         # Rule 3 (eth1)
         #
-        iifname "eth1" udp dport 53 ct state new counter accept
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 4 (eth1)
         #
@@ -330,7 +330,7 @@ table ip fwf_filter {
         #
         # Rule 10 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 udp dport 53 ct state new counter accept
+        iifname "eth0" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 12 (eth0)
         #
@@ -339,28 +339,28 @@ table ip fwf_filter {
         # Rule 13 (eth0,eth1)
         #
         # reject using connlimit
-        iifname "eth0" add @connlimit_Policy_13 { ip saddr and 255.255.255.0 ct count over 2 } counter drop
-        iifname "eth1" add @connlimit_Policy_13 { ip saddr and 255.255.255.0 ct count over 2 } counter drop
+        iifname "eth0" ip daddr { 192.168.1.1, 222.222.222.222 } add @connlimit_Policy_13 { ip saddr and 255.255.255.0 ct count over 2 } counter drop
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } add @connlimit_Policy_13 { ip saddr and 255.255.255.0 ct count over 2 } counter drop
         #
         # Rule 14 (eth0,eth1)
         #
         # reject using connlimit
         # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
-        iifname "eth0" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        iifname "eth0" ip daddr { 192.168.1.1, 222.222.222.222 } meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
-        iifname "eth1" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         #
         # Rule 15 (eth0,eth1)
         #
-        iifname "eth0" ct state new counter accept
-        iifname "eth1" ct state new counter accept
+        iifname "eth0" ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 17 (global)
         #
         # INTPUT with "-i +"
         # "-i +" is redundant if chain is INPUT,
         # optimization removes it
-        ip saddr 1.1.1.1 counter accept
+        ip saddr 1.1.1.1 ip daddr { 192.168.1.1, 222.222.222.222 } counter accept
         #
         # Rule 19 (global)
         #
@@ -397,24 +397,23 @@ table ip fwf_filter {
         # Rule 28 (global)
         #
         # both src and dst have multiple interfaces
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
-        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
+        ip saddr { 192.168.1.1, 222.222.222.222, 33.33.33.33, 172.16.1.1, 192.168.100.1 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 30 (global)
         #
-        ip saddr 192.168.1.10 ct state new counter accept
+        ip saddr 192.168.1.10 ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 32 (global)
         #
-        ether saddr 00:10:4b:de:e9:70 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 34 (global)
         #
-        ether saddr aa:bb:cc:dd:ee:ff ip saddr 192.168.1.15 ct state new counter accept
+        ether saddr aa:bb:cc:dd:ee:ff ip saddr 192.168.1.15 ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 35 (global)
         #
-        ether saddr aa:bb:cc:dd:ee:ff ct state new counter accept
+        ether saddr aa:bb:cc:dd:ee:ff ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 40 (global)
         #
@@ -439,8 +438,8 @@ table ip fwf_filter {
         # plus "ALL UDP" service, which has
         # empty ports specs. This is special
         # case for multiport.
-        ip saddr 192.168.1.0/24 meta l4proto udp ct state new counter accept
-        ip saddr 192.168.1.0/24 udp dport { 68, 67 } ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } meta l4proto udp ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 51 (global)
         #
@@ -742,7 +741,7 @@ table ip fwf_filter {
         #
         # Rule 7 (eth1)
         #
-        oifname "eth1" udp dport 53 ct state new counter accept
+        oifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 8 (eth1)
         #
@@ -761,7 +760,7 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # OUTPUT
-        ip daddr 1.1.1.1 counter accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr 1.1.1.1 counter accept
         #
         # Rule 18 (global)
         #
@@ -797,7 +796,7 @@ table ip fwf_filter {
         #
         # both src and dst have multiple interfaces
         ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
-        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
         #
         # Rule 44 (global)
         #
@@ -850,13 +849,12 @@ table ip fwf_filter {
         # Rule 52 (global)
         #
         ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new counter accept
-        ip daddr 200.200.200.200 udp dport 161 ct state new counter accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr 200.200.200.200 udp dport 161 ct state new counter accept
         #
         # Rule 53 (global)
         #
         # Automatically generated 'masquerading' rule
-        ct state new counter accept
-        ip saddr 192.168.1.0/24 ct state new counter accept
+        ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } ct state new counter accept
         #
         # Rule 54 (global)
         #

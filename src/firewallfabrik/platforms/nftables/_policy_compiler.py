@@ -2130,6 +2130,13 @@ class RemoveFW(PolicyRuleProcessor):
 
     When dst/src is negated, we must keep the fw addresses so that
     ``daddr != { addr1, addr2 }`` / ``saddr != { ... }`` is emitted.
+
+    And it is only safe at all where the firewall object stands for every
+    address the firewall answers on.  A script that adds virtual addresses
+    for NAT breaks that: those belong to a translation, not to the firewall
+    as the editor shows it, so a rule "to the firewall, port 22" collapsed
+    to a rule with no destination would permit the whole world to them too
+    (``PolicyCompiler_ipt::removeFW``, fwbuilder bug #685947).
     """
 
     def process_next(self) -> bool:
@@ -2138,6 +2145,11 @@ class RemoveFW(PolicyRuleProcessor):
             return False
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        oscnf = getattr(nft_comp, 'oscnf', None)
+        if oscnf is not None and oscnf.virtual_addresses:
+            self.tmp_queue.append(rule)
+            return True
+
         chain = rule.ipt_chain
         fw_id = nft_comp.fw.id
 

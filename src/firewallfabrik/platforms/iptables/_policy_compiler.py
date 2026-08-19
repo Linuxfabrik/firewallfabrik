@@ -1697,6 +1697,10 @@ class SrcNegation(PolicyRuleProcessor):
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         rule.set_neg('src', False)
+        # Every copy below inherits it: `removeFW` must not collapse a
+        # rule the negation expansion built (PolicyCompiler_ipt::SrcNegation
+        # sets it on the rule the three copies are duplicated from).
+        rule.set_option('upstream_rule_neg', True)
 
         this_chain = rule.ipt_chain
         new_chain = ipt_comp.get_new_tmp_chain_name(rule)
@@ -1781,6 +1785,11 @@ class TimeNegation(PolicyRuleProcessor):
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         rule.set_neg('when', False)
+        # Every copy below inherits it: `removeFW` must not collapse a rule
+        # the negation expansion built
+        # (PolicyCompiler_ipt::TimeNegation sets it on the rule the copies
+        # are duplicated from).
+        rule.set_option('upstream_rule_neg', True)
 
         this_chain = rule.ipt_chain
         new_chain = ipt_comp.get_new_tmp_chain_name(rule)
@@ -1850,6 +1859,10 @@ class DstNegation(PolicyRuleProcessor):
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         rule.set_neg('dst', False)
+        # Every copy below inherits it: `removeFW` must not collapse a
+        # rule the negation expansion built (PolicyCompiler_ipt::SrcNegation
+        # sets it on the rule the three copies are duplicated from).
+        rule.set_option('upstream_rule_neg', True)
 
         this_chain = rule.ipt_chain
         new_chain = ipt_comp.get_new_tmp_chain_name(rule)
@@ -1971,6 +1984,9 @@ class SrvNegation(PolicyRuleProcessor):
             r.set_option('stateless', True)
             r.force_state_check = False
             r.final = True
+            # `removeFW` must not collapse a rule the negation expansion
+            # built (PolicyCompiler_ipt::SrvNegation sets it here).
+            r.set_option('upstream_rule_neg', True)
             return r
 
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
@@ -2988,6 +3004,18 @@ class RemoveFW(PolicyRuleProcessor):
     Only removes the Firewall object itself (by ID match), NOT interface
     addresses that happen to belong to the firewall. This matches
     fwbuilder's is_firewall_or_cluster() check.
+
+    It is only safe where the firewall object really stands for every
+    address the firewall answers on.  Two cases where it does not, both
+    from ``PolicyCompiler_ipt::removeFW`` (fwbuilder bug #685947):
+
+    * The script adds virtual addresses for NAT.  Those belong to a
+      translation and not to the firewall as the editor shows it, so a
+      rule "to the firewall, port 22" collapsed to ``-A INPUT --dport 22``
+      would permit the whole world to them as well.
+    * The rule came out of a negation expansion.  The temporary chain the
+      negation builds already decides on the firewall's addresses, and
+      dropping the object here changes what the rule means.
     """
 
     def process_next(self) -> bool:
@@ -2996,12 +3024,19 @@ class RemoveFW(PolicyRuleProcessor):
             return False
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        oscnf = getattr(ipt_comp, 'oscnf', None)
+        if (oscnf is not None and oscnf.virtual_addresses) or rule.get_option(
+            'upstream_rule_neg', False
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
         chain = rule.ipt_chain
         fw_id = ipt_comp.fw.id
 
-        if chain == 'INPUT':
+        if chain == 'INPUT' or ipt_comp.is_chain_descendant_of_input(chain):
             rule.dst = [obj for obj in rule.dst if obj.id != fw_id]
-        elif chain == 'OUTPUT':
+        elif chain == 'OUTPUT' or ipt_comp.is_chain_descendant_of_output(chain):
             rule.src = [obj for obj in rule.src if obj.id != fw_id]
 
         self.tmp_queue.append(rule)
