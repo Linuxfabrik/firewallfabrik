@@ -12,9 +12,9 @@
 #
 # Interface name "this-name-is-too-long" is longer than the 15 characters iptables and nftables can carry; the rules matching on it are left out. Rename the interface.
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
-# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it, for destination 'fw-old-ipt:this-name-is-too-long:ip' and service 'ssh'
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
-# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it, for destination 'fw-old-ipt:eth0:ip6' and service 'ssh'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

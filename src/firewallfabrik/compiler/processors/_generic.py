@@ -856,12 +856,38 @@ class DetectShadowing(BasicRuleProcessor):
                 if key not in self._reported_shadows:
                     self._reported_shadows.add(key)
                     self.compiler.warning(
-                        f"Rule '{prev.label}' shadows rule '{rule.label}' below it",
+                        f"Rule '{prev.label}' shadows rule '{rule.label}' below it"
+                        + self._overlap(rule),
                     )
                 break
 
         self._rules_seen.append(rule)
         return True
+
+    @staticmethod
+    def _overlap(rule: CompRule) -> str:
+        """Name the one combination that is covered, if it is not the rule.
+
+        The check runs on atomic rules - `ConvertToAtomic` splits every
+        rule into one per (source, destination, service), in fwbuilder as
+        much as here - so one atom of a rule being covered is enough to
+        report it.  A rule naming five services of which one is covered is
+        therefore reported like a rule that is dead, and an administrator
+        who reads it that way deletes four working services with it.
+        Saying which combination it was costs one clause and turns the
+        sentence into something that can be acted on.
+        """
+        parts = []
+        for slot, label in (('dst', 'destination'), ('srv', 'service')):
+            objects = getattr(rule, slot) or []
+            if len(objects) != 1:
+                continue
+            name = getattr(objects[0], 'name', '')
+            if name:
+                parts.append(f"{label} '{name}'")
+        if not parts:
+            return ''
+        return ', for ' + ' and '.join(parts)
 
     @staticmethod
     def _rules_equivalent(r1: CompRule, r2: CompRule) -> bool:

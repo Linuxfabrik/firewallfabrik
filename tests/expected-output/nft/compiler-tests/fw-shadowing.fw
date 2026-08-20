@@ -8,7 +8,7 @@
 #
 # files: * fw-shadowing.fw /etc/fw/fw-shadowing.fw
 #
-# Rule '0 (global)' shadows rule '1 (global)' below it
+# Rule '0 (global)' shadows rule '1 (global)' below it, for destination 'external-host:eth0:ip' and service 'ssh'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

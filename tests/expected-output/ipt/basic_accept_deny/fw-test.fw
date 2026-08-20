@@ -12,7 +12,7 @@
 # Compiled for iptables (any version)
 #
 
-# Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule '2 (global)' shadows rule '3 (global)' below it, for destination 'external-host'
 
 FWBDEBUG=""
 RETVAL=0

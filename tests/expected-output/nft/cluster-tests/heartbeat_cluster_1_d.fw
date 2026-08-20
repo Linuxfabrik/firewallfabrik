@@ -24,10 +24,10 @@
 # Rule '13 (eth0)' shadows rule '19 (eth0)' below it
 # Rule '13 (eth0)' shadows rule '20 (eth0,eth1)' below it
 # Rule '14 (eth0,eth1)' shadows rule '20 (eth0,eth1)' below it
-# Rule '12 (global)' shadows rule '21 (eth0)' below it
-# Rule '12 (global)' shadows rule '22 (eth0,eth1)' below it
-# Rule '12 (global)' shadows rule '23 (eth0)' below it
-# Rule '12 (global)' shadows rule '24 (eth0,eth1)' below it
+# Rule '12 (global)' shadows rule '21 (eth0)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
+# Rule '12 (global)' shadows rule '22 (eth0,eth1)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
+# Rule '12 (global)' shadows rule '23 (eth0)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
+# Rule '12 (global)' shadows rule '24 (eth0,eth1)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

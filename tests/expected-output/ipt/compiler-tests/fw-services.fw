@@ -13,9 +13,9 @@
 #
 
 # Rule 10 (global): Rate limit is negated, which the iptables limit match cannot express; the rule is left out
-# Rule '7 (global)' shadows rule '8 (global)' below it
-# Rule '1 (global)' shadows rule '8 (global)' below it
-# Rule '7 (global)' shadows rule '9 (global)' below it
+# Rule '7 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'All TCP'
+# Rule '1 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'http'
+# Rule '7 (global)' shadows rule '9 (global)' below it, for destination 'fw-services:eth1:ip' and service 'tos-and-dscp'
 
 FWBDEBUG=""
 RETVAL=0

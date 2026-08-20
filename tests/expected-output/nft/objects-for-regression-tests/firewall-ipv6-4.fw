@@ -13,9 +13,9 @@
 # DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
 # Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule '2 (global)' shadows rule '3 (global)' below it, for service 'ping request'
 # Rule '4 (global)' shadows rule '6 (global)' below it
-# Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule '2 (global)' shadows rule '3 (global)' below it, for service 'ping request'
 # firewall-ipv6-4:Policy:8: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
 
 FWBDEBUG=""

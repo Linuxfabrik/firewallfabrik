@@ -12,7 +12,7 @@
 # Compiled for iptables (any version)
 #
 
-# Rule '0 (global)' shadows rule '1 (global)' below it
+# Rule '0 (global)' shadows rule '1 (global)' below it, for destination 'external-host:eth0:ip' and service 'ssh'
 
 FWBDEBUG=""
 RETVAL=0

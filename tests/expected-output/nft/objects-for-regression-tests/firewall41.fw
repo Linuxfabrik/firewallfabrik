@@ -14,7 +14,7 @@
 # DNSName "does not resolve" cannot resolve "does_not_resolve.local": DNS lookup failed
 # Rule 5 (global): Empty group or address table object 'missing table' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 6 (global): Empty group or address table object 'does not resolve' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule '3 (global)' shadows rule '4 (global)' below it
+# Rule '3 (global)' shadows rule '4 (global)' below it, for destination 'atbl.1'
 # firewall41:Policy:5: warning: Rule is left out because "missing table" resolves to no address at all
 # firewall41:Policy:6: warning: Rule is left out because "does not resolve" resolves to no address at all
 

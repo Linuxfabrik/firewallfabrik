@@ -10,8 +10,8 @@
 #
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #
-# Rule '10 (eth1)' shadows rule '13 (eth1)' below it
-# Rule '10 (eth1)' shadows rule '14 (eth1)' below it
+# Rule '10 (eth1)' shadows rule '13 (eth1)' below it, for destination 'Internal_net' and service 'TCP no flags'
+# Rule '10 (eth1)' shadows rule '14 (eth1)' below it, for destination 'Internal_net' and service 'TCP no flags'
 # firewall72-1.4.3:Policy:15: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 
 FWBDEBUG=""

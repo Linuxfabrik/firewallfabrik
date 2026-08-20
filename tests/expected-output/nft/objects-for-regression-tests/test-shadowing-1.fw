@@ -13,10 +13,10 @@
 #  firewall is assumed to be part of any
 #
 # Rule '0 (eth0)' shadows rule '1 (eth0)' below it
-# Rule '2 (global)' shadows rule '3 (global)' below it
-# Rule '4 (global)' shadows rule '5 (global)' below it
-# Rule '4 (global)' shadows rule '7 (global)' below it
-# Rule '4 (global)' shadows rule '9 (global)' below it
+# Rule '2 (global)' shadows rule '3 (global)' below it, for service 'http'
+# Rule '4 (global)' shadows rule '5 (global)' below it, for service 'ftp'
+# Rule '4 (global)' shadows rule '7 (global)' below it, for service 'ntp'
+# Rule '4 (global)' shadows rule '9 (global)' below it, for service 'ping reply'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
