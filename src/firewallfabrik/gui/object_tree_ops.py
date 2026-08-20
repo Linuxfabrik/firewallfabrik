@@ -153,8 +153,68 @@ class TreeOperations:
         return obj_ids, rule_ids
 
     @staticmethod
+    def _disable_rules_left_matching_everything(session, obj_ids, rule_ids):
+        """Disable the rules a deletion would otherwise widen.
+
+        A rule element with no objects in it means "any" everywhere in the
+        compiler, so removing the last object from one turns "from this
+        host" into "from anywhere" - an Accept rule that was written for one
+        machine would then admit the whole world, and nothing on screen or
+        in the compiled script would say so.
+
+        Firewall Builder cannot end up there: it puts a `dummySource` /
+        `dummyDestination` placeholder in the element and `Compiler::Begin`
+        skips such a rule with a warning.  FirewallFabrik has no deleted
+        objects and no placeholders (see DesignDecisions.md), so it says the
+        same thing the other way round - the rule is disabled, stays where
+        it is, and the administrator decides whether to repair or remove it.
+
+        Returns the rules that were disabled, as ``(label, slot)`` pairs.
+        """
+        affected = session.execute(
+            sqlalchemy.select(rule_elements.c.rule_id, rule_elements.c.slot).where(
+                rule_elements.c.target_id.in_(obj_ids)
+            )
+        ).all()
+
+        disabled = []
+        for rule_id, slot in sorted(set(affected)):
+            if rule_id in rule_ids:
+                continue  # the rule goes away with the object anyway
+            remaining = session.scalar(
+                sqlalchemy.select(sqlalchemy.func.count())
+                .select_from(rule_elements)
+                .where(
+                    rule_elements.c.rule_id == rule_id,
+                    rule_elements.c.slot == slot,
+                    rule_elements.c.target_id.notin_(obj_ids),
+                )
+            )
+            if remaining:
+                continue  # something else still matches there
+            rule = session.get(Rule, rule_id)
+            if rule is None or (rule.options or {}).get('disabled', False):
+                continue
+            options = dict(rule.options or {})
+            options['disabled'] = True
+            rule.options = options
+            rule_set = session.get(RuleSet, rule.rule_set_id)
+            device = session.get(Host, rule_set.device_id) if rule_set else None
+            where = f'{device.name}/{rule_set.name}' if device else '?'
+            disabled.append((f'{where} rule {rule.position}', slot))
+        return disabled
+
+    @staticmethod
     def _cleanup_references_and_delete(session, obj_ids, rule_ids):
-        """Single-pass reference cleanup + cascade delete."""
+        """Single-pass reference cleanup + cascade delete.
+
+        Returns the rules that had to be disabled because the deletion
+        emptied one of their match elements.
+        """
+        disabled = TreeOperations._disable_rules_left_matching_everything(
+            session, obj_ids, rule_ids
+        )
+
         # 1. rule_elements by rule_id
         for rid in rule_ids:
             session.execute(
@@ -192,6 +252,8 @@ class TreeOperations:
                     if obj is not None:
                         session.delete(obj)
                         deleted.add(oid)
+
+        return disabled
 
     def delete_object(self, obj_id, model_cls, obj_name, obj_type, *, prefix=''):
         """Delete *obj_id* and clean up all references.  Returns True on success."""
