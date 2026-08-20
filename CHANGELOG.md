@@ -349,6 +349,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor, so a firewall imported with "ICMP admin prohibited" or "ICMP protocol unreachable" keeps it.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 * Test suite: the check that asks the installed iptables which chain names it refuses skips itself on a host that denies unprivileged network namespaces, instead of reporting every name as a failure. Only the test suite is affected.
+* User guide: the chapter on coexistence with Docker, CrowdSec and fail2ban names the policy rules a container host needs. Keeping the rules of another tool alive does not let them decide: on nftables the policy still filters forwarded traffic, so published container ports and container egress stayed dead without rules of their own.
 
 
 ## [v1.9.0] - 2026-07-12

@@ -71,7 +71,7 @@ On servers running Docker, CrowdSec, fail2ban or similar tools, this full flush 
 
 Both platforms support this coexistence mode:
 
-- **nftables**: FirewallFabrik creates named tables (e.g. `fwf_filter`, `fwf_nat`). Only these tables are deleted and recreated. Other tools' tables (e.g. Docker's `table ip docker`, CrowdSec's `table inet crowdsec`) remain untouched.
+- **nftables**: FirewallFabrik creates named tables (e.g. `fwf_filter`, `fwf_nat`). Only these tables are deleted and recreated. Other tools' tables (e.g. Docker's `table ip docker`, CrowdSec's `table inet crowdsec`) remain untouched. Untouched is not the same as unaffected: the FirewallFabrik chains keep filtering the same packets, see [Forwarded Traffic Needs Rules in the Policy](#forwarded-traffic-needs-rules-in-the-policy).
 - **iptables**: FirewallFabrik creates prefixed chains (e.g. `fwf_INPUT`, `fwf_FORWARD`, `fwf_OUTPUT`) and inserts jump rules into the built-in chains. Only the prefixed chains are flushed on reload.
 
 The table/chain prefix is configurable via **"Table name"** in the firewall settings dialog (default: `fwf`).
@@ -114,7 +114,7 @@ Chain fwf_INPUT (1 references)
 On `stop`, only the `fwf_*` chains and their jump rules are removed. The built-in chain policies are reset to ACCEPT so the machine stays reachable, and other tools' chains are untouched.
 
 > [!WARNING]
-> Disabling "Flush entire ruleset" means FirewallFabrik no longer controls the entire firewall. Other tools may add rules that bypass your policy. Only disable this if you need coexistence with other tools on the same machine.
+> Disabling "Flush entire ruleset" means FirewallFabrik no longer controls the entire firewall. On iptables, a rule another tool inserts above the FirewallFabrik jump rule decides on its own and the policy never sees the packet. On nftables the opposite holds: the FirewallFabrik chains keep filtering everything the other tools forward, so that traffic needs rules in the policy. Only disable this if you need coexistence with other tools on the same machine.
 
 ### Controlling Rule Evaluation Order (iptables)
 
@@ -160,6 +160,66 @@ This is typically the desired order: CrowdSec blocklists and fail2ban bans are c
 
 > [!NOTE]
 > nftables uses table priorities instead of insertion order, so the systemd ordering is less critical there. FirewallFabrik's named tables use the default `filter` priority.
+
+### Forwarded Traffic Needs Rules in the Policy
+
+Keeping the rules of another tool alive is not the same as letting them decide. FirewallFabrik still filters forwarded traffic, and the policy has to permit whatever Docker, libvirt or a container runtime forwards. Otherwise that traffic is dropped, no matter which rules those tools installed for it.
+
+On iptables all tools share the built-in `FORWARD` chain, and the first terminal verdict wins. A tool whose jump rule sits above the FirewallFabrik one accepts the packet on its own, and the rest of the chain never sees it.
+
+nftables works differently. Every table brings its own base chain, and the kernel runs all base chains attached to a hook. An `accept` ends processing only within its own table, while a `drop` in any of them is final for the packet. A forwarded packet therefore has to be accepted by **every** base chain on the `forward` hook, and the strictest one decides. There is no position to insert at and no start order that changes this.
+
+The FirewallFabrik `forward` chain is created with `policy drop` and usually ends in a catch-all deny, so on a host running Docker the symptoms are:
+
+- published container ports answer nothing from other machines, although the DNAT rule of the container runtime allows (and counts) the packets
+- containers reach nothing outside the host, although the masquerade rule is in place
+
+The same applies to every other tool that filters forwarded traffic in a table of its own.
+
+Two policy rules permit that traffic. `container-networks` is an object group holding the networks the containers or guests live on:
+
+| Rule | Interface | Direction | Source | Destination | Service | Action |
+|----|----|----|----|----|----|----|
+| To the containers | Any | Inbound | Any | `container-networks` | Any | Accept |
+| From the containers | Any | Outbound | `container-networks` | Any | Any | Accept |
+
+The Direction field is what keeps both rules in the `forward` chain. With "Assume firewall is part of 'any'" enabled, a rule whose Source is Any also produces a copy in the `output` chain, and a rule whose Destination is Any also produces one in the `input` chain. The second copy of the first rule would permit the firewall to reach anything, and the second copy of the second rule would open every port of the firewall to the containers.
+
+For Docker: Match on addresses, not on interfaces. A bridge created by Docker Compose is named after a project hash (`br-72389e00bbd6`) and is called something else as soon as the project is recreated, while the subnet it serves is predictable. Pin the pool the runtime allocates from, so that one group covers every network it will ever create:
+
+``` json
+{
+  "default-address-pools": [
+    { "base": "172.18.0.0/16", "size": 24 }
+  ]
+}
+```
+
+> [!NOTE]
+> A rule permitting a whole container network does not expose unpublished ports. Docker keeps its own `FORWARD` chain at `policy drop` and only accepts the ports actually published, and it drops packets addressed straight to a container address from outside. The rule moves the per-port decision to the container runtime, it does not remove it.
+
+### Published Ports Are Not Visible in the Policy
+
+Destination NAT runs in the `prerouting` hook, ahead of the `forward` hook. A policy rule therefore sees the **container** address and the **container** port, never the published one. A container started with `-p 32990:80` is matched as its container address on port 80, and a rule written for port 32990 never matches.
+
+Where the published port has to appear in the policy, a [Custom Service](05%20-%20Working%20with%20Objects.md#custom-service) carrying the nftables code below matches the port the client connected to, read from the original direction of the conntrack entry:
+
+``` text
+ct original proto-dst 32990
+```
+
+### Traffic from the Firewall to a Container
+
+Traffic the firewall itself sends to a container is not forwarded, it is local output, so the rules above do not cover it. This affects the userland proxy that serves published ports for connections originating on the host, monitoring plugins, and a reverse proxy running outside the container.
+
+Cover it deliberately with a rule naming the firewall object as Source. The reverse direction, a container connecting to a service on the firewall, needs a rule of its own:
+
+| Rule | Interface | Direction | Source | Destination | Service | Action |
+|----|----|----|----|----|----|----|
+| From the firewall | Any | Outbound | the firewall object | `container-networks` | Any | Accept |
+| To the firewall | Any | Inbound | `container-networks` | the firewall object | the ports in question | Accept |
+
+The first rule is compiled into the `output` chain, the second into the `input` chain. Name the services in the second one rather than leaving them at Any, otherwise every port of the firewall is open to whatever runs in a container.
 
 ## Restarting the Policy when an Interface Address Changes
 
