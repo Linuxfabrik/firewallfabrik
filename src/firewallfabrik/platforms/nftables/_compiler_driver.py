@@ -561,6 +561,11 @@ class CompilerDriver_nft(CompilerDriver):
             nat_compiler.single_rule_compile_mode = True
             nat_compiler.single_rule_id = single_rule_id
         nat_compiler.verbose = self.verbose > 0
+        # Whether a rule the address-family filter empties is still
+        # compiled for the family it does name.
+        nat_compiler.other_family_is_compiled = self._other_family_is_compiled(
+            nat_rs, policy_af
+        )
         nat_compiler.source_dir = self.source_dir
         nat_compiler.debug_rule = self.debug_rule_nat
         nat_compiler.rule_debug_on = self.debug_rule_nat >= 0
@@ -628,6 +633,11 @@ class CompilerDriver_nft(CompilerDriver):
             policy_compiler.single_rule_compile_mode = True
             policy_compiler.single_rule_id = single_rule_id
         policy_compiler.verbose = self.verbose > 0
+        # Whether a rule the address-family filter empties is still
+        # compiled for the family it does name.
+        policy_compiler.other_family_is_compiled = self._other_family_is_compiled(
+            pol_rs, policy_af
+        )
         policy_compiler.source_dir = self.source_dir
         policy_compiler.debug_rule = self.debug_rule_policy
         policy_compiler.rule_debug_on = self.debug_rule_policy >= 0
@@ -700,6 +710,11 @@ class CompilerDriver_nft(CompilerDriver):
             mangle_compiler.single_rule_compile_mode = True
             mangle_compiler.single_rule_id = single_rule_id
         mangle_compiler.verbose = self.verbose > 0
+        # Whether a rule the address-family filter empties is still
+        # compiled for the family it does name.
+        mangle_compiler.other_family_is_compiled = self._other_family_is_compiled(
+            pol_rs, policy_af
+        )
         mangle_compiler.source_dir = self.source_dir
         mangle_compiler.debug_rule = self.debug_rule_policy
         mangle_compiler.rule_debug_on = self.debug_rule_policy >= 0
@@ -1313,6 +1328,19 @@ class CompilerDriver_nft(CompilerDriver):
         return '\n'.join(lines)
 
     # -- Utility methods --
+
+    def _other_family_is_compiled(self, ruleset, policy_af: int) -> bool:
+        """Whether *ruleset* is compiled for the other address family too.
+
+        A rule the address-family filter empties leaves this pass either
+        way; whether that is worth a word depends on whether the rule
+        survives somewhere else.  Both halves have to be true: the driver
+        has to run the other pass at all, and this rule set has to be
+        compiled in it.
+        """
+        other_af = AF_INET if policy_af == AF_INET6 else AF_INET6
+        other_runs = self.ipv6_run if other_af == AF_INET6 else self.ipv4_run
+        return bool(other_runs) and self._matching_address_family(ruleset, other_af)
 
     def _matching_address_family(self, ruleset: RuleSet, policy_af: int) -> bool:
         """Check if a rule set matches the given address family."""

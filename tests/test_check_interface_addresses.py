@@ -91,7 +91,8 @@ class TestRegularInterface:
             iface_id='id-eth0',
         )
         err = _check([iface])
-        assert err == 'Interface eth0 (id=id-eth0) has IP address 0.0.0.0.'
+        assert err.startswith('Interface eth0 (id=id-eth0) has IP address 0.0.0.0.')
+        assert 'mark it dynamic' in err, 'and says what to do about it'
 
     def test_zero_ipv6_aborts(self):
         iface = _FakeInterface('eth0', [_FakeAddress('::', '::')])
@@ -106,7 +107,9 @@ class TestRegularInterface:
             iface_id='id-eth0',
         )
         err = _check([iface])
-        assert err == 'Interface eth0 (id=id-eth0) has invalid netmask 0.0.0.0.'
+        assert err.startswith(
+            'Interface eth0 (id=id-eth0) has invalid netmask 0.0.0.0.'
+        )
 
     def test_invalid_address_string_is_ignored(self):
         # garbage in the address field (e.g. malformed import) should not

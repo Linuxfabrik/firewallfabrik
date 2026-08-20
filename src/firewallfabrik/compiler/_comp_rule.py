@@ -136,6 +136,13 @@ class CompRule:
     # as "any" here and would widen the rule instead of narrowing it.
     # ``DropRuleWithEmptyRE`` drops the rule and reports the reason.
     has_empty_re: bool = False
+    # The element was emptied by the address-family filter alone.  On a
+    # firewall that compiles both families that is the ordinary fate of
+    # an IPv4-only rule in the IPv6 pass, and fwbuilder says nothing
+    # about it (DropIPv4Rules and DropIPv6Rules carry an empty
+    # warning string).  It is only worth a word where the other family
+    # is not compiled, because then the rule is gone from the firewall.
+    empty_re_family_only: bool = False
     empty_re_reason: str = ''
 
     def clone(self) -> CompRule:

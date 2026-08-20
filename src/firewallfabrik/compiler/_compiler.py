@@ -569,6 +569,7 @@ class Compiler(BaseCompiler):
 
         if not new_elements:
             comp_rule.has_empty_re = True
+            comp_rule.empty_re_family_only = True
             comp_rule.empty_re_reason = (
                 'none of the addresses it names belong to the address family '
                 'being compiled'

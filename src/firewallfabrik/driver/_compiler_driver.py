@@ -163,9 +163,15 @@ class CompilerDriver(BaseCompiler):
                 except ValueError:
                     continue
                 if int(ip) == 0:
+                    # Naming the address alone leaves the administrator with
+                    # nothing to act on, and the two ways out are not
+                    # obvious: the interface either gets its address or
+                    # gets told that it has none.
                     return (
                         f'Interface {iface.name} (id={iface.id}) has IP '
-                        f'address {addr_str}.'
+                        f'address {addr_str}. Give it the address it has on '
+                        'the firewall, or mark it dynamic if it gets one at '
+                        'boot time, or unnumbered if it never has one.'
                     )
                 mask_str = addr.get_netmask()
                 if not mask_str:
@@ -177,7 +183,8 @@ class CompilerDriver(BaseCompiler):
                 if int(nm) == 0:
                     return (
                         f'Interface {iface.name} (id={iface.id}) has '
-                        f'invalid netmask {mask_str}.'
+                        f'invalid netmask {mask_str}. Every rule naming this '
+                        'interface would match every address.'
                     )
         return ''
 

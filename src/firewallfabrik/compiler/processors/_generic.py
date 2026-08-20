@@ -704,13 +704,26 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
         # etc.), it should be dropped.  The has_empty_re flag is set by
         # processors that remove objects from elements.
         if getattr(rule, 'has_empty_re', False):
-            # Saying so matters: the rule is in the policy, the GUI shows it,
-            # and it is missing from this ruleset for a reason the
-            # administrator cannot see anywhere else.
-            reason = (
-                getattr(rule, 'empty_re_reason', '') or 'one of its elements is empty'
+            # An element the address-family filter emptied is the ordinary
+            # fate of a single-stack rule in the other family's pass, and
+            # the rule is still compiled for the family it names.  fwbuilder
+            # drops it without a word (`DropIPv4Rules` and `DropIPv6Rules`
+            # carry an empty warning string), and saying something here
+            # buries the reports that matter under one line per rule on
+            # every dual-stack firewall.  Where the other family is not
+            # compiled at all the rule really is gone, and then it is said.
+            quiet = getattr(rule, 'empty_re_family_only', False) and getattr(
+                self.compiler, 'other_family_is_compiled', False
             )
-            self.compiler.warning(rule, f'Rule is left out because {reason}')
+            if not quiet:
+                # Saying so matters: the rule is in the policy, the GUI shows
+                # it, and it is missing from this ruleset for a reason the
+                # administrator cannot see anywhere else.
+                reason = (
+                    getattr(rule, 'empty_re_reason', '')
+                    or 'one of its elements is empty'
+                )
+                self.compiler.warning(rule, f'Rule is left out because {reason}')
             return True  # drop
 
         self.tmp_queue.append(rule)
