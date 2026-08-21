@@ -380,6 +380,10 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 0 (global)
+        #
+        ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
+        #
         # Rule 5 (global)
         #
         ip saddr @block_these counter log prefix "RULE 5 -- DENY on global " level debug drop
@@ -404,6 +408,14 @@ table inet fwf_filter {
         # Rule 11 (global)
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
+        #
+        # Rule 14 (global)
+        #
+        # using connlimit
+        # option. Connlimit
+        # is only valid in combination
+        # with "-p tcp -m tcp"
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } tcp dport 25 ct state new add @connlimit_Policy_14 { ip saddr ct count over 2 } counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #

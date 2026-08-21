@@ -1569,7 +1569,6 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 
 ### Partial
 
-- `InterfaceAndDirection` — for iface=any with direction Inbound/Outbound, C++ adds the `*` wildcard (`-i +` / `-o +`); Python does not
 - `SingleSrcNegation` / `SingleDstNegation` — no `countInetAddresses` check and no AddressTable/ipset handling; `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled)
 - `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant; the separate shadowing pass works on copies instead
 - `TimeNegation` — on nftables a negated interval that names both a time of day
@@ -1626,6 +1625,43 @@ for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
 
 - `DecideOnChainIfLoopback` — for direction Both, splits into INPUT+OUTPUT rules; C++ sets only one chain. This is deliberate, not a gap.
 - Multi-address handling uses `ResolveMultiAddress` (compile-time) + `ProcessMultiAddressObjectsInRE` (runtime) instead of the C++ `swapMultiAddressObjectsInRE`.
+- `VerifyPortRanges` (`compiler/processors/_service.py`) and
+  `VerifyAddressRanges` (`compiler/processors/_generic.py`) have no C++
+  counterpart.  Firewall Builder corrects a range whose end is below its start
+  in its editor (`TCPServiceDialog::applyChanges`, its bug #1695481, and
+  `AddressRangeDialog::applyChanges`), so its compiler never asks; a data file
+  written by an older release, by another tool or by hand carries whatever it
+  carries, and both packet filters refuse such a range - iptables the command,
+  nftables the whole ruleset.  The same processors bound a port number at
+  65535, which is what `xtables_parse_port` does.
+
+### What counts as "the firewall"
+
+`Compiler.complex_match` answers that for every processor that decides a
+chain, and it is a port of `ObjectMatcher`, not a comparison of addresses.
+Three parts of it are easy to lose:
+
+- Both of its flags default to *on*, the way `Compiler::complexMatch`
+  declares them (`Compiler.h:955`), so a broadcast, a multicast and the
+  "old broadcast" 0.0.0.0 count as the firewall.  Such a packet is
+  delivered locally, can be sent by the firewall itself and is never
+  routed, so a rule naming one belongs in INPUT and OUTPUT and never in
+  FORWARD.
+- The address is compared against every address of the firewall's
+  interfaces, so a standalone IPv4 or IPv6 object holding one of them is
+  the firewall.  With broadcasts recognised, the network address and the
+  broadcast address of each interface's subnet answer too (fwbuilder bug
+  #1040773).
+- A `Network` object stops at a netmask that is not a host mask.  Whether
+  a network the firewall merely has an address on counts is the "assume
+  firewall is part of any and networks" question, which the callers ask
+  for themselves.
+
+Only `FinalizeChain` and `SplitIf{Src,Dst}MatchingAddressRange` ask with
+the flags off, and only on a bridging firewall, which forwards such a
+frame instead of terminating it (`b=m= !bridging_fw`).  The same line is
+present but commented out in `decideOnChainIf{Src,Dst}FW`, where
+`bridgingFw` adds the forward copy afterwards instead.
 
 ## Processor naming map
 
@@ -1672,6 +1708,8 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `separateSrcPort` | `compiler/processors/_service.py:SeparateSrcPort` |
 | `separateUserServices` | `compiler/processors/_service.py:SeparateUserServices` |
 | `verifyCustomServices` | `compiler/processors/_service.py:VerifyCustomServices` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyPortRanges` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyAddressRanges` |
 | `CheckForTCPEstablished` | `compiler/processors/_generic.py:CheckForTCPEstablished` |
 | `dropMangleTableRules` | `platforms/iptables/_policy_compiler.py:DropMangleTableRules` |
 | `checkActionInMangleTable` | `platforms/iptables/_policy_compiler.py:CheckActionInMangleTable` |
@@ -1729,6 +1767,8 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `groupServicesByProtocol` | `platforms/iptables/_policy_compiler.py:GroupServicesByProtocol` |
 | `separateTCPWithFlags` | `compiler/processors/_service.py:SeparateTCPWithFlags` |
 | `verifyCustomServices` | `compiler/processors/_service.py:VerifyCustomServices` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyPortRanges` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyAddressRanges` |
 | `specialCasesWithCustomServices` | `platforms/iptables/_policy_compiler.py:SpecialCasesWithCustomServices` |
 | `separatePortRanges` | `platforms/iptables/_policy_compiler.py:SeparatePortRanges` |
 | `separateUserServices` | `compiler/processors/_service.py:SeparateUserServices` |

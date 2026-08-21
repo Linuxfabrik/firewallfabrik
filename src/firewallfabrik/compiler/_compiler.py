@@ -959,6 +959,21 @@ def _addr_sort_key(obj):
     return (1, name)
 
 
+def _defines_a_subnet(obj) -> bool:
+    """Whether *obj* stands for a subnet rather than for one address.
+
+    ``Compiler::checkIfAddressesMatch`` asks that of both sides, and it
+    counts two shapes: a Network object, and an address that hangs under
+    an interface - the netmask an interface carries describes the network
+    the interface is on, which is exactly what the question is about.
+    Only the first shape was ported, so an interface never contributed
+    its own subnet and the answer was one-sided.
+    """
+    if isinstance(obj, (Network, NetworkIPv6)):
+        return True
+    return isinstance(obj, Address) and obj.interface_id is not None
+
+
 def _check_addresses_match(a1, a2) -> bool:
     """Check if two address objects match (same address or same network)."""
     if a1.id == a2.id:
@@ -979,12 +994,12 @@ def _check_addresses_match(a1, a2) -> bool:
         mask2 = a2.get_netmask() if isinstance(a2, Address) else ''
         mask1 = a1.get_netmask() if isinstance(a1, Address) else ''
 
-        if mask2 and isinstance(a2, (Network, NetworkIPv6)):
+        if mask2 and _defines_a_subnet(a2):
             net2 = ipaddress.ip_network(f'{addr2}/{mask2}', strict=False)
             if ip1 in net2:
                 return True
 
-        if mask1 and isinstance(a1, (Network, NetworkIPv6)):
+        if mask1 and _defines_a_subnet(a1):
             net1 = ipaddress.ip_network(f'{addr1}/{mask1}', strict=False)
             if ip2 in net1:
                 return True

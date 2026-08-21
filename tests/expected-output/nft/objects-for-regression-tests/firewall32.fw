@@ -383,6 +383,10 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule Policy_fw32 1 (global)
+        #
+        ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
+        #
         # Rule Policy_fw32 2 (global)
         #
         ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
