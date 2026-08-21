@@ -76,7 +76,6 @@ from firewallfabrik.core.objects import (
     IPv6,
     Network,
     NetworkIPv6,
-    PhysAddress,
     PolicyAction,
     TCPService,
     UDPService,
@@ -88,6 +87,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
+    strip_mac_objects,
 )
 from firewallfabrik.platforms.nftables._identifiers import (
     is_valid_nft_identifier,
@@ -2829,36 +2829,45 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
     a bare ``PhysAddress``, a ``CombinedAddress`` pairing one with an
     address, and an interface or host whose only address is a MAC.  The
     print rule renders an ``ether`` match for every one of them.
+
+    A combined address keeps its IP half and loses only the MAC, which is
+    what the iptables sibling and both NAT guards do; only an object that
+    is nothing but a MAC takes the rule with it, because removing that one
+    leaves an element that means "any".
     """
 
     #: The chains an ethernet address cannot be matched in.
     FORBIDDEN_CHAINS = ('output',)
 
-    @staticmethod
-    def _mac_object(rule) -> object | None:
-        for obj in (*rule.src, *rule.dst):
-            if isinstance(obj, PhysAddress):
-                return obj
-            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
-                return obj
-            if get_mac_only_address(obj):
-                return obj
-        return None
-
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.ipt_chain in self.FORBIDDEN_CHAINS:
-            obj = self._mac_object(rule)
-            if obj is not None:
+
+        if rule.ipt_chain not in self.FORBIDDEN_CHAINS:
+            self.tmp_queue.append(rule)
+            return True
+
+        for slot in ('src', 'dst'):
+            kept, mac_name = strip_mac_objects(getattr(rule, slot))
+            if not mac_name:
+                continue
+            if not kept:
                 self.compiler.abort(
                     rule,
-                    f'Can not match the MAC address of "{obj.name}" in the '
+                    f'Can not match the MAC address of "{mac_name}" in the '
                     f'{rule.ipt_chain} chain, where the packet does not carry '
                     f'one yet',
                 )
                 return True
+            setattr(rule, slot, kept)
+            self.compiler.warning(
+                rule,
+                f'Can not match the MAC address of "{mac_name}" in the '
+                f'{rule.ipt_chain} chain, where the packet does not carry one '
+                f'yet; the rule matches on the address alone',
+            )
+
         self.tmp_queue.append(rule)
         return True
 

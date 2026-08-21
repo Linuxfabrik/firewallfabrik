@@ -102,19 +102,37 @@ _COMBINED = CombinedAddress(_Address('host-with-mac/addr', '192.0.2.5'), _phys()
     'element',
     [
         {'src': [_phys()]},
-        {'src': [_COMBINED]},
-        # The second object of the element counts too; the guard used to
-        # look at the first one only.
-        {'src': [_Address('plain', '192.0.2.1'), _phys()]},
         # `ether daddr` is rendered as readily as `ether saddr`.
         {'dst': [_phys()]},
-        {'dst': [_COMBINED]},
     ],
 )
-def test_mac_in_output_is_reported(element):
+def test_a_rule_that_is_nothing_but_a_mac_goes(element):
+    """Removing the object would leave an element that means "any"."""
     kept, messages = _check('output', **element)
     assert not kept
     assert messages and 'Can not match the MAC address' in messages[0]
+
+
+@pytest.mark.parametrize(
+    'element',
+    [
+        {'src': [_COMBINED]},
+        {'dst': [_COMBINED]},
+        # The second object of the element counts too; the guard used to
+        # look at the first one only.
+        {'src': [_Address('plain', '192.0.2.1'), _phys()]},
+    ],
+)
+def test_an_address_half_survives_the_chain_that_has_no_header(element):
+    """``setPhysAddress("")`` in ``PolicyCompiler_ipt::checkMACinOUTPUTChain``.
+
+    A combined address is an address *and* a MAC, and the address half is
+    a match the output chain can perfectly well make.  Dropping the whole
+    rule loses a rule the administrator wrote.
+    """
+    kept, messages = _check('output', **element)
+    assert kept
+    assert messages and 'matches on the address alone' in messages[0]
 
 
 @pytest.mark.parametrize('chain', ['input', 'forward', 'prerouting', 'postrouting'])

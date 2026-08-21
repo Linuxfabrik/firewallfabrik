@@ -18,6 +18,7 @@ import ipaddress
 import re
 import uuid
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.core.objects import (
     Host,
     Interface,
@@ -539,6 +540,43 @@ def bridge_port_match_needs_the_bridge(obj, bridge_count: int) -> bool:
         return False
     parent = getattr(obj, 'parent_interface', None)
     return bool(parent is not None and parent.name)
+
+
+def strip_mac_objects(objects) -> tuple[list, str]:
+    """Take the ethernet half out of *objects*, keeping every address half.
+
+    Returns the objects that survive and the name of the first one that
+    carried a MAC, or an empty name when none did.
+
+    ``PolicyCompiler_ipt::checkMACinOUTPUTChain`` (PolicyCompiler_ipt.cpp:
+    3613) and ``NATCompiler_ipt::verifyRuleWithMAC`` (NATCompiler_ipt.cpp:
+    2288) both make the same distinction, and it is the whole point of the
+    check: a bare physAddress is nothing but a MAC, so removing it empties
+    the element and the rule has to go, but a combined address - which is
+    what a host with "MAC address matching" expands to, and therefore the
+    usual shape here - is an address *and* a MAC, and the address half is a
+    match the chain can perfectly well make.  fwbuilder clears the MAC with
+    ``setPhysAddress("")`` and keeps the rule.
+
+    Dropping such a rule instead loses a rule the administrator wrote,
+    which is fail-closed on an Accept and fail-open on a Deny.
+    """
+    kept = []
+    mac_name = ''
+    for obj in objects:
+        if isinstance(obj, PhysAddress):
+            mac_name = mac_name or obj.name
+            continue
+        if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+            mac_name = mac_name or obj.name
+            if not obj.is_address_any():
+                kept.append(obj.address)
+            continue
+        if get_mac_only_address(obj):
+            mac_name = mac_name or obj.name
+            continue
+        kept.append(obj)
+    return kept, mac_name
 
 
 def get_mac_only_address(obj) -> str:

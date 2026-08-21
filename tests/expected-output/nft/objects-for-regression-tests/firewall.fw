@@ -14,11 +14,11 @@
 # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 41 (global): Can not match the MAC address of "host-with-mac-1/addr" in the output chain, where the packet does not carry one yet
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
+# firewall:Policy:41: warning: Can not match the MAC address of "host-with-mac-1/addr" in the output chain, where the packet does not carry one yet; the rule matches on the address alone
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""
@@ -794,6 +794,11 @@ table ip fwf_filter {
         # both src and dst have multiple interfaces
         ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
+        #
+        # Rule 41 (global)
+        #
+        # firewall:Policy:41: warning: Can not match the MAC address of "host-with-mac-1/addr" in the output chain, where the packet does not carry one yet; the rule matches on the address alone
+        ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 44 (global)
         #

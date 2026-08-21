@@ -24,7 +24,6 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, cast
 
-from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._nat_compiler import NATCompiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
@@ -62,16 +61,15 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
-    PhysAddress,
     TCPUDPService,
     UserService,
 )
 from firewallfabrik.platforms.linux._netfilter import (
     build_interface_groups,
     destination_port_half,
-    get_mac_only_address,
     interface_group_object,
     nat_interface_problem,
+    strip_mac_objects,
 )
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._print_rule import (
@@ -1785,24 +1783,7 @@ class VerifyRuleWithMAC(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        mac_name = ''
-        kept = []
-        for obj in rule.osrc:
-            if isinstance(obj, PhysAddress):
-                mac_name = mac_name or obj.name
-                continue
-            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
-                mac_name = mac_name or obj.name
-                if not obj.is_address_any():
-                    # The IP half is a match this chain can make, so the
-                    # object is handed on as the plain address it wraps.
-                    kept.append(obj.address)
-                continue
-            if get_mac_only_address(obj):
-                mac_name = mac_name or obj.name
-                continue
-            kept.append(obj)
-
+        kept, mac_name = strip_mac_objects(rule.osrc)
         if not mac_name:
             self.tmp_queue.append(rule)
             return True

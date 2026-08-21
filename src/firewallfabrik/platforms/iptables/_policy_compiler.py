@@ -24,7 +24,6 @@ import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
-from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
@@ -80,7 +79,6 @@ from firewallfabrik.core.objects import (
     IPv6,
     Network,
     NetworkIPv6,
-    PhysAddress,
     PolicyAction,
     TagService,
     TCPService,
@@ -103,6 +101,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     interface_direction_problem,
     is_valid_mgmt_address,
     mgmt_address_family,
+    strip_mac_objects,
 )
 
 if TYPE_CHECKING:
@@ -3657,35 +3656,49 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
     ``CombinedAddress``, not to a bare ``PhysAddress``, and the print rule
     renders a ``-m mac`` for it as well, so both shapes have to be looked
     for - and in every object of the element, not only the first.
+
+    The two shapes do not deserve the same answer, which the C++ makes and
+    the port did not: a bare physAddress is nothing but a MAC, so removing
+    it empties the element and the rule has to go, but a combined address
+    keeps its IP half and loses only the MAC
+    (``setPhysAddress("")``).  Dropping such a rule instead loses a rule
+    the administrator wrote - fail-closed on an Accept, fail-open on a
+    Deny - and the reference output carries it
+    (``firewall.fw.orig:1059``).
     """
 
     #: The chains the mac match cannot be used in.
     FORBIDDEN_CHAINS = ('OUTPUT', 'POSTROUTING')
-
-    @staticmethod
-    def _mac_object(rule) -> object | None:
-        for obj in rule.src:
-            if isinstance(obj, PhysAddress):
-                return obj
-            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
-                return obj
-        return None
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        if rule.ipt_chain in self.FORBIDDEN_CHAINS:
-            obj = self._mac_object(rule)
-            if obj is not None:
-                self.compiler.abort(
-                    rule,
-                    f'Can not match a MAC address in the {rule.ipt_chain} chain, '
-                    f'where the packet no longer carries one',
-                )
-                return True
+        if rule.ipt_chain not in self.FORBIDDEN_CHAINS:
+            self.tmp_queue.append(rule)
+            return True
 
+        kept, mac_name = strip_mac_objects(rule.src)
+        if not mac_name:
+            self.tmp_queue.append(rule)
+            return True
+
+        if not kept:
+            self.compiler.abort(
+                rule,
+                f'Can not match a MAC address in the {rule.ipt_chain} chain, '
+                f'where the packet no longer carries one',
+            )
+            return True
+
+        rule.src = kept
+        self.compiler.warning(
+            rule,
+            f'Can not match the MAC address of "{mac_name}" in the '
+            f'{rule.ipt_chain} chain, where the packet no longer carries one; '
+            f'the rule matches on the address alone',
+        )
         self.tmp_queue.append(rule)
         return True
 
