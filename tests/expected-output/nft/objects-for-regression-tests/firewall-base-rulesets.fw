@@ -261,37 +261,37 @@ table ip fwf_filter {
         #
         # Rule mail_server_inbound 0 (global)
         #
-        tcp dport 25 ct state new counter accept
+        meta iif != 0 tcp dport 25 ct state new counter accept
         #
         # Rule mail_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new counter accept
-        icmp type echo-request icmp code 0 ct state new counter accept
+        meta iif != 0 icmp type destination-unreachable ct state new counter accept
+        meta iif != 0 icmp type echo-request icmp code 0 ct state new counter accept
     }
 
     chain mail_server_outbound {
         #
         # Rule mail_server_outbound 0 (global)
         #
-        tcp dport { 53, 25 } ct state new counter accept
-        udp dport 53 ct state new counter accept
+        meta oif != 0 tcp dport { 53, 25 } ct state new counter accept
+        meta oif != 0 udp dport 53 ct state new counter accept
         #
         # Rule mail_server_outbound 1 (global)
         #
-        icmp type destination-unreachable ct state new counter accept
-        icmp type echo-request icmp code 0 ct state new counter accept
+        meta oif != 0 icmp type destination-unreachable ct state new counter accept
+        meta oif != 0 icmp type echo-request icmp code 0 ct state new counter accept
     }
 
     chain web_server_inbound {
         #
         # Rule web_server_inbound 0 (global)
         #
-        tcp dport 80 ct state new counter accept
+        meta iif != 0 tcp dport 80 ct state new counter accept
         #
         # Rule web_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new counter accept
-        icmp type echo-request icmp code 0 ct state new counter accept
+        meta iif != 0 icmp type destination-unreachable ct state new counter accept
+        meta iif != 0 icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
@@ -302,12 +302,12 @@ table ip fwf_filter {
         #
         # Rule web_server_outbound 0 (global)
         #
-        icmp type destination-unreachable ct state new counter accept
-        icmp type echo-request icmp code 0 ct state new counter accept
+        meta oif != 0 icmp type destination-unreachable ct state new counter accept
+        meta oif != 0 icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_outbound 1 (global)
         #
-        meta l4proto { tcp, udp } th dport 53 ct state new counter accept
+        meta oif != 0 meta l4proto { tcp, udp } th dport 53 ct state new counter accept
     }
 }
 

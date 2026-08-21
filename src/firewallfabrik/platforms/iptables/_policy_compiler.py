@@ -94,6 +94,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    ANY_INTERFACE,
     count_bridge_interfaces,
     forwarding_is_off,
     interface_direction_problem,
@@ -719,7 +720,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
     ) -> str:
         """Generate a new chain name based on direction and rule position."""
         parts = []
-        if iface is not None:
+        # fwbuilder is handed `Interface::cast(...)`, which answers null for
+        # the "every interface" group, so that group contributes no prefix.
+        if isinstance(iface, Interface):
             iface_name = iface.name.replace('*', '')
             parts.append(f'{iface_name}_')
 
@@ -2031,10 +2034,19 @@ class InterfaceAndDirection(PolicyRuleProcessor):
             rule.iface_label = 'nil'
             return True
 
-        if not rule.is_itf_any():
-            obj = rule.itf[0] if rule.itf else None
-            if isinstance(obj, Interface):
-                rule.iface_label = obj.name
+        if rule.is_itf_any():
+            # A direction and no interface: the rule still has to say which
+            # of the two it is, and the element is where fwbuilder says it
+            # (see ANY_INTERFACE).  Putting it here rather than inferring it
+            # in the print rule is what makes it disappear again wherever a
+            # processor resets the element - a rule moved into a temporary
+            # chain has already been narrowed by the rule that jumps there.
+            rule.itf = [ANY_INTERFACE]
+            return True
+
+        obj = rule.itf[0] if rule.itf else None
+        if isinstance(obj, Interface):
+            rule.iface_label = obj.name
 
         return True
 
@@ -2785,9 +2797,11 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             )
         ):
             rule_iface = rule.itf[0] if rule.itf else None
-            if rule_iface is None or (
-                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
-            ):
+            # "Every interface" is not an interface: fwbuilder asks
+            # `Interface::cast(getFirstItf(rule))`, which answers null for
+            # the group it puts there, so a rule that names a direction and
+            # no interface has to take the same branch it always did.
+            if not isinstance(rule_iface, Interface) or rule_iface.is_bridge_port():
                 forward_copy = rule.clone()
                 ipt_comp.set_chain(forward_copy, 'FORWARD')
                 self.tmp_queue.append(forward_copy)
@@ -2858,9 +2872,11 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             )
         ):
             rule_iface = rule.itf[0] if rule.itf else None
-            if rule_iface is None or (
-                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
-            ):
+            # "Every interface" is not an interface: fwbuilder asks
+            # `Interface::cast(getFirstItf(rule))`, which answers null for
+            # the group it puts there, so a rule that names a direction and
+            # no interface has to take the same branch it always did.
+            if not isinstance(rule_iface, Interface) or rule_iface.is_bridge_port():
                 forward_copy = rule.clone()
                 ipt_comp.set_chain(forward_copy, 'FORWARD')
                 self.tmp_queue.append(forward_copy)

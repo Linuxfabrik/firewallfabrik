@@ -81,6 +81,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    ANY_INTERFACE,
     forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
@@ -627,10 +628,17 @@ class InterfaceAndDirection(PolicyRuleProcessor):
             rule.iface_label = 'nil'
             return True
 
-        if not rule.is_itf_any():
-            obj = rule.itf[0] if rule.itf else None
-            if isinstance(obj, Interface):
-                rule.iface_label = obj.name
+        if rule.is_itf_any():
+            # A direction and no interface still has to say which of the
+            # two it is; see ANY_INTERFACE.  The iptables compiler does
+            # exactly the same, and a rule whose element a later processor
+            # resets loses the match with it.
+            rule.itf = [ANY_INTERFACE]
+            return True
+
+        obj = rule.itf[0] if rule.itf else None
+        if isinstance(obj, Interface):
+            rule.iface_label = obj.name
 
         return True
 
@@ -1386,9 +1394,11 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             )
         ):
             rule_iface = rule.itf[0] if rule.itf else None
-            if rule_iface is None or (
-                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
-            ):
+            # "Every interface" is not an interface: fwbuilder asks
+            # `Interface::cast(getFirstItf(rule))`, which answers null for
+            # the group it puts there, so a rule that names a direction and
+            # no interface has to take the same branch it always did.
+            if not isinstance(rule_iface, Interface) or rule_iface.is_bridge_port():
                 forward_copy = rule.clone()
                 forward_copy.ipt_chain = 'forward'
                 self.tmp_queue.append(forward_copy)
@@ -1504,9 +1514,11 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             )
         ):
             rule_iface = rule.itf[0] if rule.itf else None
-            if rule_iface is None or (
-                hasattr(rule_iface, 'is_bridge_port') and rule_iface.is_bridge_port()
-            ):
+            # "Every interface" is not an interface: fwbuilder asks
+            # `Interface::cast(getFirstItf(rule))`, which answers null for
+            # the group it puts there, so a rule that names a direction and
+            # no interface has to take the same branch it always did.
+            if not isinstance(rule_iface, Interface) or rule_iface.is_bridge_port():
                 forward_copy = rule.clone()
                 forward_copy.ipt_chain = 'forward'
                 self.tmp_queue.append(forward_copy)

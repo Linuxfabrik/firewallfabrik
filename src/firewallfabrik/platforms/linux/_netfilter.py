@@ -606,6 +606,33 @@ def get_tag_value(compiler, rule) -> str:
 _INTERFACE_INDEX = re.compile(r'[0-9]+$')
 
 
+class _AnyInterface:
+    """Stands for "every interface of this firewall" in a rule element.
+
+    A rule that names a direction and no interface still has to say which
+    of the two it is, and Firewall Builder says it by putting a group named
+    ``*`` into the Itf element (``PolicyCompiler_ipt::InterfaceAndDirection``
+    together with ``build_interface_groups``).  The print rules then write
+    ``-i +`` / ``-o +``, and ``optimizeForMinusIOPlus`` takes it out again
+    in the INPUT and OUTPUT chains, whose hook already answers the
+    question.  Everywhere else - a branch rule set above all, whose chain
+    is reached from INPUT *and* OUTPUT - the match is what keeps an
+    "Outbound" rule from applying to incoming traffic as well.
+
+    Deliberately not an ``Interface``: fwbuilder puts an ObjectGroup there,
+    so every ``Interface::cast`` in the compiler answers null for it, and
+    every ``isinstance(obj, Interface)`` here has to answer the same.
+    """
+
+    __slots__ = ()
+
+    name = '*'
+
+
+#: The single instance; it carries no state.
+ANY_INTERFACE = _AnyInterface()
+
+
 def interface_group_name(name: str) -> str:
     """Return the pattern that matches *name* and its siblings.
 

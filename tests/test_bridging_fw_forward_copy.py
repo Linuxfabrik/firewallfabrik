@@ -28,7 +28,7 @@ import pytest
 
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
-from firewallfabrik.core.objects import Direction, PolicyAction
+from firewallfabrik.core.objects import Direction, Interface, PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import (
     DecideOnChainIfDstFW,
     DecideOnChainIfSrcFW,
@@ -78,13 +78,14 @@ class _Address:
     name = 'fw-address'
 
 
-class _Interface:
-    def __init__(self, bridge_port):
-        self.name = 'eth0'
-        self._bridge_port = bridge_port
-
-    def is_bridge_port(self):
-        return self._bridge_port
+def _Interface(bridge_port):
+    """A real Interface: the compilers ask ``Interface::cast``, not duck typing."""
+    iface = Interface()
+    iface.id = uuid.uuid4()
+    iface.name = 'eth0'
+    iface.data = {}
+    iface.options = {'bridge_port': bridge_port}
+    return iface
 
 
 def _run(cls, compiler, slot, itf=None):

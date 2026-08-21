@@ -74,6 +74,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
     check_interface_name,
     get_tag_value,
@@ -656,16 +657,18 @@ class PrintRule(PolicyRuleProcessor):
         inbound = direction == Direction.Inbound
 
         if rule.is_itf_any():
-            # On FORWARD / PREROUTING / POSTROUTING chains, add wildcard
-            # interface match (-i + / -o +) to indicate traffic direction.
-            # INPUT/OUTPUT chains don't need this because the chain itself
-            # implies direction.  Matches fwbuilder output.
-            if rule.ipt_chain in ('FORWARD', 'PREROUTING', 'POSTROUTING'):
-                return '-i + ' if inbound else '-o + '
             return ''
 
         iface_obj = rule.itf[0] if rule.itf else None
-        if iface_obj is None or not isinstance(iface_obj, Interface):
+        if iface_obj is ANY_INTERFACE:
+            # "Every interface of this firewall", which is what a rule with
+            # a direction and no interface of its own names.  `-i +` matches
+            # every packet that has an incoming device and no packet that
+            # has none, which is the direction the rule asks for.
+            # ``OptimizeForMinusIOPlus`` has already taken it out of the
+            # INPUT and OUTPUT chains, where the chain says it.
+            return '-i + ' if inbound else '-o + '
+        if not isinstance(iface_obj, Interface):
             return ''
 
         iface_name = iface_obj.name

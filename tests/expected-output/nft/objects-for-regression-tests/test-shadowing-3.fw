@@ -357,22 +357,22 @@ table ip fwf_filter {
         #
         # Rule Policy_6 0 (global)
         #
-        ip saddr 192.168.11.0/24 counter drop
+        meta iif != 0 ip saddr 192.168.11.0/24 counter drop
         #
         # Rule Policy_6 1 (global)
         #
-        ip saddr 192.168.11.10/31 counter drop
+        meta iif != 0 ip saddr 192.168.11.10/31 counter drop
     }
 
     chain Policy_7 {
         #
         # Rule Policy_7 0 (global)
         #
-        ip saddr 192.168.11.10/31 counter drop
+        meta iif != 0 ip saddr 192.168.11.10/31 counter drop
         #
         # Rule Policy_7 1 (global)
         #
-        ip saddr 192.168.11.11 counter drop
+        meta iif != 0 ip saddr 192.168.11.11 counter drop
     }
 
     chain Policy_8 {
@@ -381,11 +381,11 @@ table ip fwf_filter {
         #
         # even though this is a trivial case,
         # I had a bug with handling networks with netmask /31 that broke it
-        ip saddr 24.56.78.90 counter drop
+        meta iif != 0 ip saddr 24.56.78.90 counter drop
         #
         # Rule Policy_8 1 (global)
         #
-        ip saddr 222.222.222.0/24 counter drop
+        meta iif != 0 ip saddr 222.222.222.0/24 counter drop
     }
 }
 

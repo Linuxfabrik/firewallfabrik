@@ -64,6 +64,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    ANY_INTERFACE,
     check_interface_name,
     get_mac_only_address,
     get_tag_value,
@@ -852,6 +853,36 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         if rule.is_itf_any():
             return ''
+
+        if rule.itf and rule.itf[0] is ANY_INTERFACE:
+            # "Every interface of this firewall", the counterpart of the
+            # iptables `-i +`.  `iifname "*"` is not the way to say it -
+            # nftables answers that with "All-wildcard strings are not
+            # supported" and refuses the whole ruleset - but `meta iif` is
+            # 0 exactly when the packet has no incoming device
+            # (``nft_meta_store_ifindex``, netfilter
+            # linux/net/netfilter/nft_meta.c), so `!= 0` asks the same
+            # question.
+            #
+            # Only where the chain does not answer it already, which is
+            # narrower than on iptables: a packet in the input, forward and
+            # prerouting hooks always has an incoming device and one in the
+            # output, forward and postrouting hooks always has an outgoing
+            # one, so the match decides nothing there.  What is left is a
+            # rule about incoming traffic in postrouting - where a locally
+            # generated packet has no incoming device - and a branch chain,
+            # which is reached from several hooks at once.  The iptables
+            # compiler writes `-i +` in all of them because fwbuilder does;
+            # repeating that here would put a match that decides nothing
+            # into 85 rules of the test corpus.
+            answered_by_the_hook = (
+                ('input', 'forward', 'prerouting')
+                if inbound
+                else ('output', 'forward', 'postrouting')
+            )
+            if rule.ipt_chain in answered_by_the_hook:
+                return ''
+            return 'meta iif != 0' if inbound else 'meta oif != 0'
 
         ifaces = [obj for obj in rule.itf if isinstance(obj, Interface) and obj.name]
         if not ifaces:
