@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     MultiAddress,
     Network,
     NetworkIPv6,
+    RoutingRuleType,
 )
 
 if TYPE_CHECKING:
@@ -83,7 +84,10 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(ValidateRoutingDestination('validate destination addresses'))
         self.add(ExpandAddressRangesInRDst('process address ranges'))
         self.add(EliminateDuplicatesInRDst('eliminate duplicates in RDst'))
+        self.add(CompetingRoutingRules('check for competing rules'))
         self.add(ConvertToAtomicForRDst('convert to atomic rules by destination'))
+        self.add(ClassifyRoutingRules('classify single path and multi path rules'))
+        self.add(EliminateDuplicateRoutingRules('eliminate duplicate rules'))
 
         self.add(RoutingPrintRule('generate ip route commands'))
         self.run_rule_processors()
@@ -303,6 +307,181 @@ class ConvertToAtomicForRDst(RoutingRuleProcessor):
         return True
 
 
+def _route_table(rule: CompRule) -> str:
+    """Return the routing table part of a rule label.
+
+    ``RoutingCompiler::createSortedDstIdsLabel`` cuts the label at the
+    opening brace, which leaves the name of the table the route goes into.
+    Two rules only compete when they install into the same table.
+    """
+    label = rule.label or ''
+    brace = label.find('(')
+    return label[brace:] if brace >= 0 else label
+
+
+def _destination_key(rule: CompRule) -> str:
+    """Return a key that is equal for two rules with the same destination.
+
+    The object ids are sorted so that a rule naming the same destinations
+    in a different order gives the same key, which is what
+    ``createSortedDstIdsLabel`` is for.
+    """
+    ids = sorted(str(getattr(obj, 'id', obj)) for obj in rule.rdst)
+    return ' '.join([_route_table(rule), *ids])
+
+
+def _next_hop_key(rule: CompRule) -> str:
+    """Return a key for the gateway and interface combination of a rule."""
+    gtw = str(getattr(rule.rgtw[0], 'id', '')) if rule.rgtw else ''
+    itf = str(getattr(rule.ritf[0], 'id', '')) if rule.ritf else ''
+    return f'{gtw}_{itf}'
+
+
+def _metric(rule: CompRule) -> str:
+    """Return the rule metric as the string the route command carries."""
+    value = rule.get_option('metric', 0)
+    try:
+        return str(int(value))
+    except (TypeError, ValueError):
+        return '0'
+
+
+class CompetingRoutingRules(RoutingRuleProcessor):
+    """Leave out a route the firewall would install twice.
+
+    ``ip route add`` for a destination that is already routed the same way
+    answers "RTNETLINK answers: File exists" and returns non-zero, so a
+    duplicate rule costs an error at activation and installs nothing.  Two
+    rules that agree on destination, gateway and interface but not on the
+    metric are worse: which of the two the administrator meant cannot be
+    guessed, and fwbuilder refuses the pair rather than pick one.
+    Corresponds to ``RoutingCompiler::competingRules``.
+    """
+
+    def __init__(self, name: str = 'check for competing rules') -> None:
+        super().__init__(name)
+        self._seen: dict[str, dict[str, tuple[str, str]]] = {}
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        destination = _destination_key(rule)
+        next_hop = _next_hop_key(rule)
+        metric = _metric(rule)
+
+        seen_for_destination = self._seen.setdefault(destination, {})
+        previous = seen_for_destination.get(next_hop)
+        if previous is not None:
+            previous_metric, previous_label = previous
+            if previous_metric == metric:
+                self.compiler.warning(
+                    rule,
+                    f'Routing rules "{previous_label}" and "{rule.label}" are '
+                    f'identical; the second one is left out',
+                )
+            else:
+                self.compiler.error(
+                    rule,
+                    f'Routing rules "{previous_label}" and "{rule.label}" are '
+                    f'identical except for the metric, so which route the '
+                    f'firewall should install cannot be decided; the second '
+                    f'one is left out',
+                )
+            return True
+
+        seen_for_destination[next_hop] = (metric, rule.label)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClassifyRoutingRules(RoutingRuleProcessor):
+    """Mark the rules that share a destination and a metric as multi path.
+
+    Two routes to the same destination with the same metric are not two
+    routes: the kernel takes the first and refuses the second with "File
+    exists", so the second path is silently not there.  What the
+    administrator asked for is one route with several next hops, which is
+    what ``ip route add <dst> nexthop ... nexthop ...`` installs.
+    Corresponds to ``RoutingCompiler::classifyRoutingRules``; like
+    fwbuilder this does not ask for an option first, because the
+    alternative is a command that fails.
+    """
+
+    def __init__(self, name: str = 'classify single path and multi path rules') -> None:
+        super().__init__(name)
+
+    def process_next(self) -> bool:
+        self.slurp()
+        if not self.tmp_queue:
+            return False
+
+        seen: dict[str, dict[str, tuple[str, CompRule]]] = {}
+        for rule in self.tmp_queue:
+            rule.routing_rule_type = RoutingRuleType.SinglePath
+
+        for rule in self.tmp_queue:
+            destination = _destination_key(rule)
+            next_hop = _next_hop_key(rule)
+            metric = _metric(rule)
+
+            seen_for_destination = seen.setdefault(destination, {})
+            if next_hop in seen_for_destination:
+                continue
+
+            for other_metric, other_rule in seen_for_destination.values():
+                if other_metric == metric:
+                    rule.routing_rule_type = RoutingRuleType.MultiPath
+                    other_rule.routing_rule_type = RoutingRuleType.MultiPath
+
+            seen_for_destination[next_hop] = (metric, rule)
+
+        return True
+
+
+class EliminateDuplicateRoutingRules(RoutingRuleProcessor):
+    """Leave out an atomic route another rule already installs.
+
+    ``CompetingRoutingRules`` compares the destination *lists* of two
+    rules, so a rule routing "A and B" and one routing "B" pass it and only
+    collide once every destination has its own command.  Corresponds to
+    ``RoutingCompiler_ipt::eliminateDuplicateRules``.
+    """
+
+    def __init__(self, name: str = 'eliminate duplicate rules') -> None:
+        super().__init__(name)
+        self._seen: dict[tuple, str] = {}
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.fallback or rule.hidden:
+            self.tmp_queue.append(rule)
+            return True
+
+        key = (
+            _route_table(rule),
+            str(getattr(rule.rdst[0], 'id', '')) if rule.rdst else '',
+            _metric(rule),
+            _next_hop_key(rule),
+        )
+        previous = self._seen.get(key)
+        if previous is not None:
+            self.compiler.warning(
+                rule,
+                f'Routing rules "{previous}" and "{rule.label}" install the '
+                f'same route; the second one is left out',
+            )
+            return True
+
+        self._seen[key] = rule.label
+        self.tmp_queue.append(rule)
+        return True
+
+
 def _parent_host(iface: Interface):
     """Return the Host, Firewall or Cluster an interface belongs to.
 
@@ -385,13 +564,57 @@ class RoutingPrintRule(RoutingRuleProcessor):
         if rule is None:
             return False
 
-        output = self._routing_rule_to_string(rule)
-        if output:
-            self.compiler.output.write(output)
-            self.compiler.output.write('\n')
+        if rule.routing_rule_type == RoutingRuleType.MultiPath:
+            self._buffer_multi_path(rule)
+        else:
+            output = self._routing_rule_to_string(rule)
+            if output:
+                self.compiler.output.write(output)
+                self.compiler.output.write('\n')
 
         self.tmp_queue.append(rule)
         return True
+
+    def _buffer_multi_path(self, rule: CompRule) -> None:
+        """Collect one leg of an equal-cost multi path route.
+
+        The legs of one route have to leave the compiler as a single
+        command, so they are buffered here and written by ``epilog()``.
+        Corresponds to the ``MultiPath`` branch of
+        ``RoutingCompiler_ipt::PrintRule::processNext``.
+        """
+        dst = self._print_rdst(rule)
+        gtw = self._print_rgtw(rule)
+        itf = self._print_ritf(rule)
+        if dst is None or gtw is None or itf is None:
+            return
+
+        metric = _metric(rule)
+        key = f'{_destination_key(rule)}#{metric}'
+        rules = self.compiler.ecmp_rules_buffer
+        comments = self.compiler.ecmp_comments_buffer
+
+        if key not in rules:
+            family = ' -6' if self._is_ipv6_route(rule) else ''
+            head = f'$IP{family} route add {dst}'
+            if metric != '0':
+                head += f' metric {metric}'
+            rules[key] = head
+            comments[key] = (
+                '# The following routing rules share a destination and a '
+                'metric, so they\n'
+                '# install one route with several next hops rather than '
+                'competing ones:\n'
+            )
+
+        comments[key] += f'# Rule {rule.label}\n'
+
+        next_hop = ' \\\n    nexthop'
+        if gtw:
+            next_hop += f' via {gtw}'
+        if itf:
+            next_hop += f' dev {itf}'
+        rules[key] += next_hop
 
     @staticmethod
     def _is_ipv6_route(rule: CompRule) -> bool:

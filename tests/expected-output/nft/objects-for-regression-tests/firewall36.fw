@@ -282,9 +282,7 @@ script_body() {
 }
 
 routing_script() {
-    $IP route add default dev eth0
-$IP route add default dev eth2
-$IP route add 192.168.2.0/24 via 192.168.1.254 dev eth1
+    $IP route add 192.168.2.0/24 via 192.168.1.254 dev eth1
 $IP route add 22.22.22.100/30 via 192.168.1.254 dev eth1
 $IP route add 22.22.22.104/30 via 192.168.1.254 dev eth1
 $IP route add 22.22.22.108/31 via 192.168.1.254 dev eth1
@@ -292,6 +290,13 @@ $IP route add 22.22.22.110 via 192.168.1.254 dev eth1
 $IP -6 route add 2001:db8::/32 dev eth1
 $IP route add 192.168.1.0/24 dev eth1
 $IP route add 192.168.2.0/24 dev eth1
+# The following routing rules share a destination and a metric, so they
+# install one route with several next hops rather than competing ones:
+# Rule 0 (main)
+# Rule 1 (main)
+$IP route add default \
+    nexthop dev eth0 \
+    nexthop dev eth2
 
 }
 

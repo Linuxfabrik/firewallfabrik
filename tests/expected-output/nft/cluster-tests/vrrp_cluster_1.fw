@@ -209,8 +209,13 @@ script_body() {
 }
 
 routing_script() {
-    $IP route add 172.24.1.0/24 via 172.24.0.100 dev eth0
-$IP route add 172.24.1.0/24 via 172.24.0.100 dev eth1
+    # The following routing rules share a destination and a metric, so they
+# install one route with several next hops rather than competing ones:
+# Rule 0 (main)
+# Rule 1 (main)
+$IP route add 172.24.1.0/24 \
+    nexthop via 172.24.0.100 dev eth0 \
+    nexthop via 172.24.0.100 dev eth1
 
 }
 
