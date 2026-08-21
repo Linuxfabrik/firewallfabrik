@@ -159,26 +159,31 @@ def _is_broadcast_or_multicast(
     return bool(recognize_multicasts and ip.is_multicast)
 
 
-def _first_inet_address(iface):
-    """The address ``Interface::getAddressObject()`` answers with, as an IP.
+def _first_inet_address_object(iface):
+    """The address object ``Interface::getAddressObject()`` answers with.
 
-    The first IPv4 of the interface, else its first IPv6, whichever family
+    The first IPv4 of the interface, else its first IPv6, whatever family
     is being compiled (Interface.cpp:461).  ``None`` when the interface
     carries no IP address at all - a MAC-only or unnumbered one.
     """
-    addresses = list(getattr(iface, 'addresses', []))
     for wanted_v6 in (False, True):
-        for addr in addresses:
+        for addr in getattr(iface, 'addresses', []):
             if addr.is_v6() != wanted_v6:
                 continue
-            text = addr.get_address() if hasattr(addr, 'get_address') else ''
-            if not text:
-                continue
-            try:
-                return ipaddress.ip_address(text)
-            except ValueError:
-                continue
+            if hasattr(addr, 'get_address') and addr.get_address():
+                return addr
     return None
+
+
+def _first_inet_address(iface):
+    """The same address as an :mod:`ipaddress` object, or ``None``."""
+    addr = _first_inet_address_object(iface)
+    if addr is None:
+        return None
+    try:
+        return ipaddress.ip_address(addr.get_address())
+    except ValueError:
+        return None
 
 
 def _is_host_mask(mask: str, version: int) -> bool:
@@ -822,7 +827,31 @@ class Compiler(BaseCompiler):
             return True
 
         if isinstance(obj, Interface):
-            return obj.device_id == fw.id
+            # ``ObjectMatcher::dispatch(Interface*)`` (ObjectMatcher.cpp:276)
+            # has five lines and the port had the first one.  An interface
+            # of *another* device whose single address is one the firewall
+            # carries is the firewall too - a machine reachable under one
+            # address described from both ends, which is the same shape the
+            # Host branch below answers for and the standalone address in
+            # ``_address_is_on_the_firewall`` one level down.
+            if obj.device_id == fw.id:
+                return True
+            if not obj.is_regular():
+                return False
+            addresses = list(getattr(obj, 'addresses', []))
+            # The C++ gives up on more than one address per family, because
+            # `getAddressPtr()` would answer for the first one alone and
+            # the others would go unasked.
+            if len([a for a in addresses if a.is_v4()]) > 1:
+                return False
+            if len([a for a in addresses if a.is_v6()]) > 1:
+                return False
+            address = _first_inet_address(obj)
+            if address is None:
+                return False
+            return self._single_address_matches(
+                address, fw, recognize_broadcasts, recognize_multicasts
+            )
 
         if isinstance(obj, Host):
             # ``ObjectMatcher::dispatch(Host*)`` (ObjectMatcher.cpp:453):
@@ -1020,6 +1049,48 @@ class Compiler(BaseCompiler):
             for addr in iface.addresses:
                 if _check_addresses_match(addr, obj1):
                     return addr
+
+        return None
+
+    def find_interface_for(self, obj1, obj2) -> Interface | None:
+        """The interface of *obj2* on the network *obj1* is on.
+
+        ``Compiler::findInterfaceFor`` (Compiler_object_match.cpp:72), the
+        same walk as :meth:`find_address_for` one method up, answering with
+        the interface rather than with the address that matched.  The two
+        are written side by side in the C++ for that reason, and here they
+        share ``_check_addresses_match`` - which since it learnt that the
+        netmask on an interface address describes the network the
+        interface is on, is a different answer than a containment test
+        written out by hand.
+
+        The identity line is the one the two NAT compilers had each
+        dropped from their own copy: an object that *is* one of the
+        interfaces answers with itself, whatever addresses it carries.
+        That is the only branch an interface with no address at all can
+        take.
+        """
+        if not isinstance(obj2, Host):
+            return None
+
+        # An Interface derives from Address in fwbuilder, so `obj1` may be
+        # one and `getAddressPtr()` then answers with the address it
+        # carries.  It does not derive from Address here, so the address
+        # object has to be picked out before the comparison.
+        target = obj1
+        if isinstance(obj1, Interface):
+            target = _first_inet_address_object(obj1)
+
+        for iface in obj2.interfaces:
+            if obj1 is not None and iface.id == getattr(obj1, 'id', None):
+                return iface
+
+            if not iface.is_regular() or target is None:
+                continue
+
+            for addr in iface.addresses:
+                if _check_addresses_match(addr, target):
+                    return iface
 
         return None
 

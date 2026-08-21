@@ -995,44 +995,6 @@ class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
     "any" or no matching interface is found.
     """
 
-    @staticmethod
-    def _find_interface_for(addr_obj, fw) -> Interface | None:
-        """Find the firewall interface on the same network as *addr_obj*."""
-        import ipaddress
-
-        target_addr_str = None
-        if isinstance(addr_obj, Address):
-            target_addr_str = addr_obj.get_address()
-        elif isinstance(addr_obj, Interface) and addr_obj.addresses:
-            target_addr_str = addr_obj.addresses[0].get_address()
-
-        if not target_addr_str:
-            return None
-
-        try:
-            target_ip = ipaddress.ip_address(target_addr_str)
-        except (ValueError, TypeError):
-            return None
-
-        for iface in fw.interfaces:
-            if not iface.is_regular():
-                continue
-            for addr in iface.addresses:
-                addr_str = addr.get_address()
-                mask_str = addr.get_netmask()
-                if not addr_str or not mask_str:
-                    continue
-                try:
-                    network = ipaddress.ip_network(
-                        f'{addr_str}/{mask_str}', strict=False
-                    )
-                    if target_ip in network:
-                        return iface
-                except (ValueError, TypeError):
-                    continue
-
-        return None
-
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
@@ -1054,8 +1016,12 @@ class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
         odst = rule.odst[0] if rule.odst else None
         osrc = rule.osrc[0] if rule.osrc else None
 
-        odst_iface = self._find_interface_for(odst, self.compiler.fw) if odst else None
-        osrc_iface = self._find_interface_for(osrc, self.compiler.fw) if osrc else None
+        odst_iface = (
+            self.compiler.find_interface_for(odst, self.compiler.fw) if odst else None
+        )
+        osrc_iface = (
+            self.compiler.find_interface_for(osrc, self.compiler.fw) if osrc else None
+        )
 
         # When ODst has single_object_negation, skip the direct match
         # and fall through to the fallback (excluding odst_iface).
@@ -2247,9 +2213,7 @@ class SplitODstForSNAT(NATRuleProcessor):
         # Group by interface
         groups: dict[str, list] = {}
         for obj in rule.odst:
-            iface = ReplaceFirewallObjectsTSrc._find_interface_for(
-                obj, self.compiler.fw
-            )
+            iface = self.compiler.find_interface_for(obj, self.compiler.fw)
             iid = str(iface.id) if iface is not None else ''
             groups.setdefault(iid, []).append(obj)
 

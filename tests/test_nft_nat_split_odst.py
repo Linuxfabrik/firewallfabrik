@@ -29,8 +29,9 @@ nearly everything through.
 import ipaddress
 import uuid
 
+from firewallfabrik.compiler._compiler import Compiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
-from firewallfabrik.core.objects import IPv4, NATRuleType
+from firewallfabrik.core.objects import Firewall, Interface, IPv4, NATRuleType
 from firewallfabrik.platforms.nftables._nat_compiler import SplitODstForSNAT
 
 
@@ -40,27 +41,34 @@ def _addr(name: str, address: str) -> IPv4:
     return obj
 
 
-class _Interface:
-    """A firewall interface with one address on a /24."""
+def _interface(name: str, address: str) -> Interface:
+    """A firewall interface with one address on a /24.
 
-    def __init__(self, name: str, address: str) -> None:
-        self.id = uuid.uuid4()
-        self.name = name
-        self.addresses = [_addr(f'{name}:0', address)]
-        self.addresses[0].inet_addr_mask['netmask'] = '255.255.255.0'
+    A real Interface rather than a stub with the right methods: the
+    compilers ask ``Interface::cast``, i.e. ``isinstance``, so a duck-typed
+    stub answers the wrong branch the moment a check is tightened.
+    """
+    iface = Interface(id=uuid.uuid4(), name=name)
+    addr = _addr(f'{name}:0', address)
+    addr.inet_addr_mask['netmask'] = '255.255.255.0'
+    # The database sets this on flush, and the answer depends on it: the
+    # netmask an interface carries describes the network the interface is
+    # on, which is what `_defines_a_subnet` asks.
+    addr.interface_id = iface.id
+    iface.addresses = [addr]
+    return iface
 
-    def is_regular(self) -> bool:
-        return True
+
+def _firewall(interfaces) -> Firewall:
+    fw = Firewall(id=uuid.uuid4(), name='fw-test')
+    fw.interfaces = list(interfaces)
+    return fw
 
 
-class _Firewall:
-    def __init__(self, interfaces) -> None:
-        self.interfaces = interfaces
-
-
-class _Compiler:
-    def __init__(self, fw) -> None:
-        self.fw = fw
+def _compiler(fw) -> Compiler:
+    compiler = Compiler.__new__(Compiler)
+    compiler.fw = fw
+    return compiler
 
 
 class _Rule:
@@ -89,9 +97,9 @@ class _Feeder(NATRuleProcessor):
         return False
 
 
-ETH0 = _Interface('eth0', '198.51.100.1')
-ETH1 = _Interface('eth1', '203.0.113.1')
-FW = _Firewall([ETH0, ETH1])
+ETH0 = _interface('eth0', '198.51.100.1')
+ETH1 = _interface('eth1', '203.0.113.1')
+FW = _firewall([ETH0, ETH1])
 
 BEHIND_ETH0 = _addr('server-a', '198.51.100.5')
 ALSO_ETH0 = _addr('server-b', '198.51.100.6')
@@ -100,7 +108,7 @@ BEHIND_ETH1 = _addr('server-c', '203.0.113.5')
 
 def _split(rule):
     proc = SplitODstForSNAT('split ODst')
-    proc.compiler = _Compiler(FW)
+    proc.compiler = _compiler(FW)
     proc.set_data_source(_Feeder(rule))
     proc.process_next()
     return [r.odst for r in proc.tmp_queue]
@@ -130,9 +138,5 @@ def test_a_negated_destination_is_never_split():
 
 def test_the_interface_lookup_is_the_one_the_rule_relies_on():
     """Guards the assumption the split rests on, not the split itself."""
-    from firewallfabrik.platforms.nftables._nat_compiler import (
-        ReplaceFirewallObjectsTSrc,
-    )
-
-    assert ReplaceFirewallObjectsTSrc._find_interface_for(BEHIND_ETH1, FW) is ETH1
+    assert _compiler(FW).find_interface_for(BEHIND_ETH1, FW) is ETH1
     assert ipaddress.ip_address('203.0.113.5') in ipaddress.ip_network('203.0.113.0/24')
