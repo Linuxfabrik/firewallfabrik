@@ -10,6 +10,8 @@
 #
 #  This firewall has no "top" rule set objects.
 #
+# firewall81: none of the Policy rule sets ("Policy", "Policy_ipv6") is the top rule set, so none of them is installed in the built-in chains. Mark the one that applies to all traffic as the top rule set, or point a rule with the Branch action at it
+# firewall81: none of the NAT rule sets ("NAT_1", "NAT_2") is the top rule set, so none of them is installed in the built-in chains. Mark the one that applies to all traffic as the top rule set, or point a rule with the Branch action at it
 # firewall81:NAT_2:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
 
 FWBDEBUG=""

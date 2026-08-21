@@ -137,6 +137,32 @@ class CompilerDriver(BaseCompiler):
         """Platform-specific compilation. Override in subclasses."""
         return ''
 
+    def warn_about_missing_top_rule_sets(self, fw, policies, nats) -> None:
+        """Say when the firewall has rule sets but none of them is the top one.
+
+        Only the top rule set is compiled into the built-in chains; every
+        other one becomes a chain of its own that runs where a rule with
+        the Branch action jumps to it.  A firewall whose only Policy rule
+        set is not marked "top" therefore compiles into a chain nothing
+        ever reaches - a script that installs no filtering at all and
+        reports success.  fwbuilder says the same thing
+        (``CompilerDriver::commonChecks2``, "Missing top level Policy
+        ruleset"); this wording adds what it costs, because the state is
+        easy to arrive at in the editor.
+        """
+        for rule_sets, what in ((policies, 'Policy'), (nats, 'NAT')):
+            if not rule_sets:
+                continue
+            if any(rs.top for rs in rule_sets):
+                continue
+            names = ', '.join(f'"{rs.name}"' for rs in rule_sets)
+            self.warning(
+                f'{fw.name}: none of the {what} rule sets ({names}) is the '
+                f'top rule set, so none of them is installed in the built-in '
+                f'chains. Mark the one that applies to all traffic as the top '
+                f'rule set, or point a rule with the Branch action at it'
+            )
+
     def check_interface_addresses(self, fw: Firewall) -> str:
         """Validate IP addresses of a firewall's regular interfaces.
 

@@ -11,6 +11,8 @@
 #  This firewall has two interfaces. Eth0 faces outside and has a dynamic address; eth1 faces inside.
 #  Policy includes basic rules to permit unrestricted outbound access and anti-spoofing rules. Access to the firewall is permitted only from internal network and only using SSH. The firewall uses one of the machines on internal network for DNS. Internal network is configured with address 192.168.1.0/255.255.255.0
 #
+# linux-1-d: none of the Policy rule sets ("Policy") is the top rule set, so none of them is installed in the built-in chains. Mark the one that applies to all traffic as the top rule set, or point a rule with the Branch action at it
+# linux-1-d: none of the NAT rule sets ("NAT") is the top rule set, so none of them is installed in the built-in chains. Mark the one that applies to all traffic as the top rule set, or point a rule with the Branch action at it
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

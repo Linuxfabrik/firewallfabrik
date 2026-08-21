@@ -215,6 +215,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     .all()
                 )
 
+                self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
+
                 have_ipv4 = False
                 have_ipv6 = False
 

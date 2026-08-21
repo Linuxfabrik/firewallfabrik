@@ -259,6 +259,8 @@ class CompilerDriver_nft(CompilerDriver):
                     .all()
                 )
 
+                self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
+
                 # Determine whether to run IPv4/IPv6 compilation passes
                 # based on the rule sets' explicit address-family flags.
                 # If no rule set enables IPv6, skip the IPv6 pass entirely.
