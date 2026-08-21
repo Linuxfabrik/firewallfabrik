@@ -63,6 +63,7 @@ from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
     SeparateUserServices,
     VerifyCustomServices,
+    VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -527,6 +528,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(GroupServicesByProtocol('split on services'))
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
+        self.add(VerifyPortRanges('verify port ranges'))
         self.add(SpecialCasesWithCustomServices('special cases with custom services'))
         self.add(SeparatePortRanges('separate port ranges'))
         self.add(SeparateUserServices('separate user services'))

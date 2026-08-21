@@ -50,6 +50,7 @@ from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
     SeparateTCPWithFlags,
     VerifyCustomServices,
+    VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -316,6 +317,7 @@ class NATCompiler_nft(NATCompiler):
         # a word, so traffic the administrator meant to translate crosses
         # the firewall untranslated.
         self.add(VerifyCustomServices('verify custom services'))
+        self.add(VerifyPortRanges('verify port ranges'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 

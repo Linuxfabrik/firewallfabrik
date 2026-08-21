@@ -59,6 +59,7 @@ from firewallfabrik.compiler.processors._policy import (
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
+    VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -405,6 +406,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(GroupServicesByProtocol('split on services'))
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
+        self.add(VerifyPortRanges('verify port ranges'))
         self.add(
             SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
         )

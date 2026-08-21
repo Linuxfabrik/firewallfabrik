@@ -193,3 +193,73 @@ class VerifyCustomServices(BasicRuleProcessor):
                     )
 
         return True
+
+
+# The slots of a rule that hold services, per rule type.  A NAT rule names
+# the service it matches on in ``osrv`` and the one it translates to in
+# ``tsrv``; both reach a command line.
+_SERVICE_SLOTS = {
+    'PolicyRule': ('srv',),
+    'NATRule': ('osrv', 'tsrv'),
+}
+
+
+def port_range_problem(srv) -> str:
+    """Return why *srv* names a port range neither tool takes, or ``''``.
+
+    A range whose end is below its start is refused outright.  iptables
+    answers ``invalid portrange (min > max)`` for ``--dport`` and
+    ``invalid portrange specified`` for ``-m multiport``, which stops the
+    activation script with the built-in policies already at DROP;
+    nftables answers ``Range negative size`` and refuses the **whole**
+    ruleset, so the firewall never gets the new policy at all.  Both
+    verified against iptables 1.8.11 and nft 1.1.6.
+
+    Firewall Builder corrects the value in its editor instead
+    (``TCPServiceDialog::applyChanges``, its bug #1695481, and the same
+    in ``UDPServiceDialog``), so its compiler never has to ask.  A data
+    file written by an older release, by another tool or by hand carries
+    whatever it carries, which is why the question is asked here.
+    """
+    if not isinstance(srv, (TCPService, UDPService)):
+        return ''
+    for what, start, end in (
+        ('source', srv.src_range_start or 0, srv.src_range_end or 0),
+        ('destination', srv.dst_range_start or 0, srv.dst_range_end or 0),
+    ):
+        # An end of 0 is "no range", not "port 0": the printers write the
+        # start alone for it.
+        if end and start > end:
+            return f'names the {what} port range {start}-{end}, which runs backwards'
+    return ''
+
+
+class VerifyPortRanges(BasicRuleProcessor):
+    """Leave out a rule whose service names a port range that runs backwards.
+
+    The condition has no place in the generated command: writing the range
+    the other way round would match traffic the administrator did not name,
+    and leaving the ports off altogether would widen the rule to the whole
+    protocol.  So the rule goes and the service is named, once per service.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _SERVICE_SLOTS.get(rule.type, ('srv',)):
+            for srv in getattr(rule, slot, None) or []:
+                problem = port_range_problem(srv)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Service "{srv.name}" {problem}; iptables and nftables '
+                    'both refuse it, so the rule is left out. Correct the '
+                    'port range in the service object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True

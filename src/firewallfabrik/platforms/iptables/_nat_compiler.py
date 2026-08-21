@@ -55,6 +55,7 @@ from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
     SeparateTCPWithFlags,
     VerifyCustomServices,
+    VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -407,6 +408,7 @@ class NATCompiler_ipt(NATCompiler):
         # the match in the print rule, so the translation went out matching
         # everything else the rule named.
         self.add(VerifyCustomServices('verify custom services'))
+        self.add(VerifyPortRanges('verify port ranges'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 
