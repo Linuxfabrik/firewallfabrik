@@ -24,9 +24,12 @@ import pytest
 from firewallfabrik.platforms.iptables._os_configurator import OSConfigurator_linux24
 from firewallfabrik.platforms.nftables._os_configurator import OSConfigurator_nft
 
-_V6_REDIRECTS = '/proc/sys/net/ipv6/conf/all/accept_redirects'
-_V6_SOURCE_ROUTE = '/proc/sys/net/ipv6/conf/all/accept_source_route'
-_V4_REDIRECTS = '/proc/sys/net/ipv4/conf/all/accept_redirects'
+# Every setting under conf/ has a copy per interface and the kernel does
+# not read the one under `all` on its own, so the script writes all of
+# them - see tests/test_kernel_conf_sysctls.py.
+_V6_REDIRECTS = '/proc/sys/net/ipv6/conf/*/accept_redirects'
+_V6_SOURCE_ROUTE = '/proc/sys/net/ipv6/conf/*/accept_source_route'
+_V4_REDIRECTS = '/proc/sys/net/ipv4/conf/*/accept_redirects'
 
 
 class _FakeFW:

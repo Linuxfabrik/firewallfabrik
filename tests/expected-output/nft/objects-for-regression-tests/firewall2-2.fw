@@ -1142,10 +1142,10 @@ ip_forward() {
 }
 
 set_kernel_variables() {
-    echo 1 > /proc/sys/net/ipv4/conf/all/rp_filter
-    echo 0 > /proc/sys/net/ipv4/conf/all/accept_source_route
-    echo 0 > /proc/sys/net/ipv4/conf/all/accept_redirects
-    echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
+    for f in /proc/sys/net/ipv4/conf/*/rp_filter ; do echo 1 > "$f" ; done
+    for f in /proc/sys/net/ipv4/conf/*/accept_source_route ; do echo 0 > "$f" ; done
+    for f in /proc/sys/net/ipv4/conf/*/accept_redirects ; do echo 0 > "$f" ; done
+    for f in /proc/sys/net/ipv4/conf/*/log_martians ; do echo 1 > "$f" ; done
     echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_all
     echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
     echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout

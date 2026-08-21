@@ -11,13 +11,24 @@
 ## {{$var}} is variable expansion
 ## {{if var}} is conditional operator.
 
+## A setting under conf/ has a copy per interface, and the kernel does not
+## take the one under conf/all on its own: rp_filter is the maximum of
+## conf/{all,interface}, log_martians their OR, accept_source_route their
+## AND, and accept_redirects their AND while the interface forwards and
+## their OR while it does not (Documentation/networking/ip-sysctl.rst).
+## Writing conf/all alone therefore takes effect in one direction only -
+## "reverse path filter off" and "accept redirects off" do nothing on a
+## distribution that sets the per-interface copy, which is the usual one.
+## The glob covers all, default and every interface the box has now;
+## default is what an interface created later starts from.
+
 {{if if_linux24_ip_dynaddr}} echo {{$linux24_ip_dynaddr}} > /proc/sys/net/ipv4/ip_dynaddr {{endif}}
-{{if if_linux24_rp_filter}} echo {{$linux24_rp_filter}} > /proc/sys/net/ipv4/conf/all/rp_filter {{endif}}
-{{if if_linux24_accept_source_route}} echo {{$linux24_accept_source_route}} > /proc/sys/net/ipv4/conf/all/accept_source_route {{endif}}
-{{if if_accept_source_route_v6}} echo {{$linux24_accept_source_route}} > /proc/sys/net/ipv6/conf/all/accept_source_route {{endif}}
-{{if if_linux24_accept_redirects}} echo {{$linux24_accept_redirects}} > /proc/sys/net/ipv4/conf/all/accept_redirects {{endif}}
-{{if if_accept_redirects_v6}} echo {{$linux24_accept_redirects}} > /proc/sys/net/ipv6/conf/all/accept_redirects {{endif}}
-{{if if_linux24_log_martians}} echo {{$linux24_log_martians}} > /proc/sys/net/ipv4/conf/all/log_martians {{endif}}
+{{if if_linux24_rp_filter}} for f in /proc/sys/net/ipv4/conf/*/rp_filter ; do echo {{$linux24_rp_filter}} > "$f" ; done {{endif}}
+{{if if_linux24_accept_source_route}} for f in /proc/sys/net/ipv4/conf/*/accept_source_route ; do echo {{$linux24_accept_source_route}} > "$f" ; done {{endif}}
+{{if if_accept_source_route_v6}} for f in /proc/sys/net/ipv6/conf/*/accept_source_route ; do echo {{$linux24_accept_source_route}} > "$f" ; done {{endif}}
+{{if if_linux24_accept_redirects}} for f in /proc/sys/net/ipv4/conf/*/accept_redirects ; do echo {{$linux24_accept_redirects}} > "$f" ; done {{endif}}
+{{if if_accept_redirects_v6}} for f in /proc/sys/net/ipv6/conf/*/accept_redirects ; do echo {{$linux24_accept_redirects}} > "$f" ; done {{endif}}
+{{if if_linux24_log_martians}} for f in /proc/sys/net/ipv4/conf/*/log_martians ; do echo {{$linux24_log_martians}} > "$f" ; done {{endif}}
 {{if if_linux24_icmp_echo_ignore_broadcasts}} echo {{$linux24_icmp_echo_ignore_broadcasts}} > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts {{endif}}
 {{if if_linux24_icmp_echo_ignore_all}} echo {{$linux24_icmp_echo_ignore_all}} > /proc/sys/net/ipv4/icmp_echo_ignore_all {{endif}}
 {{if if_linux24_icmp_ignore_bogus_error_responses}} echo {{$linux24_icmp_ignore_bogus_error_responses}} > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses {{endif}}
