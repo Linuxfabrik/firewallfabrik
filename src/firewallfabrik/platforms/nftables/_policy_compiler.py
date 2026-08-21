@@ -1233,6 +1233,10 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
             return False
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        # Not on a bridging firewall: a bridge forwards a broadcast
+        # frame, so there the question is the plain one.  fwbuilder
+        # writes both as `b=m= !bridging_fw`.
+        bridging = bool(nft_comp.fw.get_option('bridging_fw'))
         src = rule.src[0] if rule.src else None
         dst = rule.dst[0] if rule.dst else None
 
@@ -1240,8 +1244,11 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
             rule.direction != Direction.Inbound
             and src is not None
             and isinstance(src, AddressRange)
-            and nft_comp.complex_match(src, nft_comp.fw)
-            and not (dst is not None and nft_comp.complex_match(dst, nft_comp.fw))
+            and nft_comp.complex_match(src, nft_comp.fw, not bridging, not bridging)
+            and not (
+                dst is not None
+                and nft_comp.complex_match(dst, nft_comp.fw, not bridging, not bridging)
+            )
         ):
             r = rule.clone()
             r.ipt_chain = 'output'
@@ -1266,6 +1273,10 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
             return False
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        # Not on a bridging firewall: a bridge forwards a broadcast
+        # frame, so there the question is the plain one.  fwbuilder
+        # writes both as `b=m= !bridging_fw`.
+        bridging = bool(nft_comp.fw.get_option('bridging_fw'))
         src = rule.src[0] if rule.src else None
         dst = rule.dst[0] if rule.dst else None
 
@@ -1273,8 +1284,11 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
             rule.direction != Direction.Outbound
             and dst is not None
             and isinstance(dst, AddressRange)
-            and nft_comp.complex_match(dst, nft_comp.fw)
-            and not (src is not None and nft_comp.complex_match(src, nft_comp.fw))
+            and nft_comp.complex_match(dst, nft_comp.fw, not bridging, not bridging)
+            and not (
+                src is not None
+                and nft_comp.complex_match(src, nft_comp.fw, not bridging, not bridging)
+            )
         ):
             r = rule.clone()
             r.ipt_chain = 'input'
@@ -1416,7 +1430,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             # Broadcast (255.255.255.255) and multicast (224.0.0.0/4,
             # ff00::/8) destinations must count as "matches fw" so
             # Inbound rules targeting them land in input rather than
-            # forward (fwbuilder #811860, b=m=true).
+            # forward (fwbuilder #811860).
             direction = rule.direction
             matches_fw = nft_comp.complex_match(
                 dst,
@@ -1708,6 +1722,10 @@ class FinalizeChain(PolicyRuleProcessor):
         dst = rule.dst[0] if rule.dst else None
         direction = rule.direction
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        # Not on a bridging firewall: a bridge forwards a broadcast
+        # frame, so there the question is the plain one.  fwbuilder
+        # writes both as `b=m= !bridging_fw`.
+        bridging = bool(nft_comp.fw.get_option('bridging_fw'))
 
         if nft_comp.my_table == 'mangle':
             # The mangle chains sit in front of the routing decision, so a
@@ -1735,15 +1753,15 @@ class FinalizeChain(PolicyRuleProcessor):
         # Recognise broadcast / multicast destinations as matching the
         # firewall so e.g. DHCPv6 link-local -> ff00::/8 with
         # direction=Inbound ends up in ``input`` rather than
-        # ``forward`` (fwbuilder #811860, b=m=true).
+        # ``forward`` (fwbuilder #811860).
         src_matches = (
             src is not None
             and not isinstance(src, AddressRange)
             and nft_comp.complex_match(
                 src,
                 nft_comp.fw,
-                recognize_broadcasts=True,
-                recognize_multicasts=True,
+                recognize_broadcasts=not bridging,
+                recognize_multicasts=not bridging,
             )
         )
         dst_matches = (
@@ -1752,8 +1770,8 @@ class FinalizeChain(PolicyRuleProcessor):
             and nft_comp.complex_match(
                 dst,
                 nft_comp.fw,
-                recognize_broadcasts=True,
-                recognize_multicasts=True,
+                recognize_broadcasts=not bridging,
+                recognize_multicasts=not bridging,
             )
         )
 
