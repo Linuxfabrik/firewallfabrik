@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from firewallfabrik.compiler._base import BaseCompiler
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Cluster,
     Firewall,
@@ -102,6 +103,30 @@ class CompilerDriver(BaseCompiler):
         self.remote_file_names: dict[str, str] = {}
         self.all_errors: list[str] = []
         self.all_warnings: list[str] = []
+
+    def my_platform_name(self) -> str:
+        """The platform this driver compiles for.
+
+        Answered by the driver rather than read off the firewall object:
+        a firewall imported from a `.fwb` file always says "iptables",
+        because Firewall Builder has no other Linux platform, and
+        compiling it with `fwf-nft` is an ordinary thing to do.  Same
+        method, same meaning, as on the compilers.
+        """
+        raise NotImplementedError
+
+    def firewall_option(self, fw, key: str):
+        """The firewall's value for *key*, or the default of this platform.
+
+        The one accessor for a firewall option in a driver.  Reading
+        `fw.options` directly and supplying a fallback there puts a
+        second default next to the one in `defaults.yaml`, and the two
+        drift: `configure_interfaces` defaults to on in the schema and
+        every driver read it as off, so a firewall whose data file does
+        not carry the key got a script that configured no addresses
+        (docs/developer-guide/PlatformDefaults.md).
+        """
+        return fw.get_option(key, platform=self.my_platform_name())
 
     def error(self, rule_or_msg, msg: str | None = None) -> None:
         """Record an error and put it where the caller reads it.
@@ -242,7 +267,7 @@ class CompilerDriver(BaseCompiler):
     def _warn_unsupported_options(self, options: dict, fw=None) -> None:
         """Emit warnings for recognised but unimplemented firewall options."""
         for opt, msg in self._UNSUPPORTED_BOOL_OPTIONS:
-            if options.get(opt, False):
+            if option_is_true(options.get(opt, False)):
                 self.warning(msg)
         if fw is not None:
             self._warn_misspelled_options(options, fw)

@@ -178,7 +178,7 @@ options:
 
   configure_interfaces:
     type: 'bool'
-    default: false
+    default: true
     supported: true
     widget: 'configureInterfaces'
     description: >-

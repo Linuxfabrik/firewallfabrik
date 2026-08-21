@@ -133,7 +133,7 @@ class Host(Base):
 
     _GET_OPTION_SENTINEL = object()
 
-    def get_option(self, key: str) -> Any:
+    def get_option(self, key: str, platform: str | None = None) -> Any:
         """Look up a value in the device options dict.
 
         Resolution order:
@@ -141,6 +141,13 @@ class Host(Base):
         1. Explicit value in ``self.options[key]`` (if present).
         2. YAML default from ``platforms/<platform>/defaults.yaml``
            or ``platforms/<os>/defaults.yaml``.
+
+        *platform* names the schema to fall back to when it is not the
+        one the object stores.  A firewall imported from a ``.fwb`` file
+        says ``iptables``, because Firewall Builder has no other Linux
+        platform, and compiling it with ``fwf-nft`` is an ordinary thing
+        to do - so the driver names the platform it is compiling for and
+        the nftables-only keys resolve.
 
         Raises ``KeyError`` if the key is unknown in both the stored
         options and all YAML schemas.  This catches typos in compiler
@@ -161,7 +168,7 @@ class Host(Base):
         from firewallfabrik.platforms._defaults import get_option_default
 
         # get_option_default raises KeyError when the key is unknown.
-        return get_option_default(self.platform, self.host_os, key)
+        return get_option_default(platform or self.platform, self.host_os, key)
 
     # The key Firewall Builder stores the "MAC address matching" checkbox
     # under (`HostDialog.cpp:161`, read in `Compiler.cpp:485`).  It is not

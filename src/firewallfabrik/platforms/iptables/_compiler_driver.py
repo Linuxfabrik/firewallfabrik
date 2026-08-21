@@ -90,6 +90,9 @@ class CompilerDriver_ipt(CompilerDriver):
     then assembles the output into a shell script using configlets.
     """
 
+    def my_platform_name(self) -> str:
+        return 'iptables'
+
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__(db)
         self.have_connmark: bool = False
@@ -170,9 +173,9 @@ class CompilerDriver_ipt(CompilerDriver):
                 options = fw.options or {}
 
                 # Validate prolog placement with iptables-restore
-                prolog_place = options.get('prolog_place', '')
-                if prolog_place == 'after_flush' and options.get(
-                    'use_iptables_restore', False
+                prolog_place = self.firewall_option(fw, 'prolog_place')
+                if prolog_place == 'after_flush' and self.firewall_option(
+                    fw, 'use_iptables_restore'
                 ):
                     self.error(
                         'Prolog place "after policy reset" can not be used'
@@ -182,13 +185,13 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 self._warn_unsupported_options(options, fw)
 
-                flush_ruleset = options.get('flush_ruleset', True)
-                table_name = options.get('table_name', '') or 'fwf'
+                flush_ruleset = self.firewall_option(fw, 'flush_ruleset')
+                table_name = self.firewall_option(fw, 'table_name') or 'fwf'
                 # Store for use in sub-compiler methods.
                 self._flush_ruleset = flush_ruleset
                 self._table_name = table_name
 
-                debug = options.get('debug', False)
+                debug = self.firewall_option(fw, 'debug')
                 shell_dbg = 'set -x' if debug else ''
 
                 # Create OS configurator
@@ -270,7 +273,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get('ipv4_6_order', '')
+                ipv4_6_order = self.firewall_option(fw, 'ipv4_6_order')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -495,8 +498,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Prolog/epilog scripts
-                prolog_script = options.get('prolog_script', '')
-                epilog_script = options.get('epilog_script', '')
+                prolog_script = self.firewall_option(fw, 'prolog_script')
+                epilog_script = self.firewall_option(fw, 'epilog_script')
                 script_skeleton.set_variable('prolog_script', prolog_script)
                 script_skeleton.set_variable('epilog_script', epilog_script)
 
@@ -504,16 +507,16 @@ class CompilerDriver_ipt(CompilerDriver):
                 iface_buf = io.StringIO()
                 iface_buf.write('# Configure interfaces\n')
 
-                if options.get('configure_interfaces', False):
+                if self.firewall_option(fw, 'configure_interfaces'):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
-                elif options.get('manage_virtual_addr', False):
+                elif self.firewall_option(fw, 'manage_virtual_addr'):
                     # The addresses a NAT rule needs are added even when the
                     # interfaces themselves are configured elsewhere; the
                     # firewall has to carry them or it will not answer ARP for
                     # them and the translated traffic never arrives.
                     iface_buf.write(oscnf.print_virtual_addresses_for_nat_commands())
 
-                if options.get('configure_bridge_interfaces', False):
+                if self.firewall_option(fw, 'configure_bridge_interfaces'):
                     iface_buf.write(
                         oscnf.print_bridge_interface_configuration_commands()
                     )
@@ -526,7 +529,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Verify interfaces
-                if options.get('verify_interfaces', False):
+                if self.firewall_option(fw, 'verify_interfaces'):
                     script_skeleton.set_variable(
                         'verify_interfaces', oscnf.print_verify_interfaces_commands()
                     )
@@ -581,7 +584,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 script_skeleton.set_variable('database', '')
 
                 # Reset commands
-                use_ipt_restore = options.get('use_iptables_restore', False)
+                use_ipt_restore = self.firewall_option(fw, 'use_iptables_restore')
 
                 # When flush_ruleset is off, iptables-restore can't be used
                 # because it replaces entire tables atomically.
@@ -655,8 +658,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     )
 
                 # Management SSH access for block/stop actions
-                mgmt_ssh = bool(options.get('mgmt_ssh', False))
-                mgmt_addr = options.get('mgmt_addr', '')
+                mgmt_ssh = bool(self.firewall_option(fw, 'mgmt_ssh'))
+                mgmt_addr = self.firewall_option(fw, 'mgmt_addr')
                 mgmt_access = 1 if (mgmt_ssh and mgmt_addr) else 0
                 if mgmt_access and not is_valid_mgmt_address(mgmt_addr):
                     # The value goes into a shell command at the one moment
@@ -1099,7 +1102,7 @@ class CompilerDriver_ipt(CompilerDriver):
     ) -> str:
         """Assemble one AF's compilation output using configlets."""
         have_auto = bool(automatic_rules_script or automatic_mangle_script)
-        use_iptables_restore = fw.get_option('use_iptables_restore')
+        use_iptables_restore = self.firewall_option(fw, 'use_iptables_restore')
 
         if self.single_rule_compile_on:
             have_auto = False

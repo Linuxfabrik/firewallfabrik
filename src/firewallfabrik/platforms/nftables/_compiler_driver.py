@@ -149,6 +149,9 @@ class CompilerDriver_nft(CompilerDriver):
     output into a Bash shell script wrapper.
     """
 
+    def my_platform_name(self) -> str:
+        return 'nftables'
+
     def __init__(self, db: DatabaseManager) -> None:
         super().__init__(db)
         self.have_nat: bool = False
@@ -305,7 +308,7 @@ class CompilerDriver_nft(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get('ipv4_6_order', '')
+                ipv4_6_order = self.firewall_option(fw, 'ipv4_6_order')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -769,10 +772,9 @@ class CompilerDriver_nft(CompilerDriver):
         rules managed by other tools (Docker, CrowdSec, fail2ban)
         remain untouched.
         """
-        options = fw.options or {}
         # The base name comes from the firewall object, so it goes
         # through the sanitiser before it names three nft tables.
-        table_name = nft_object_name(options.get('table_name', '') or 'fwf')
+        table_name = nft_object_name(self.firewall_option(fw, 'table_name') or 'fwf')
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
         mangle_table = f'{table_name}_mangle'
@@ -960,9 +962,9 @@ class CompilerDriver_nft(CompilerDriver):
             # MSS the path cannot carry.  iptables has no such ordering
             # question - it clamps in the mangle table, which the filter
             # hooks run after.
-            if fw.get_option('clamp_mss_to_mtu'):
-                ipv4_fwd_raw = fw.get_option('linux24_ip_forward')
-                ipv6_fwd_raw = fw.get_option('linux24_ipv6_forward')
+            if self.firewall_option(fw, 'clamp_mss_to_mtu'):
+                ipv4_fwd_raw = self.firewall_option(fw, 'linux24_ip_forward')
+                ipv6_fwd_raw = self.firewall_option(fw, 'linux24_ipv6_forward')
                 _fwd_on = lambda s: (  # noqa: E731
                     str(s or '').strip()
                     in (
@@ -1067,18 +1069,17 @@ class CompilerDriver_nft(CompilerDriver):
         oscnf=None,
     ) -> str:
         """Assemble the complete shell script using the Jinja2 template."""
-        options = fw.options or {}
 
         user_name = os.environ.get('USER', 'unknown')
 
-        debug = options.get('debug', False)
+        debug = self.firewall_option(fw, 'debug')
         shell_debug = 'set -x' if debug else ''
 
-        prolog_script = options.get('prolog_script', '')
-        epilog_script = options.get('epilog_script', '')
-        prolog_place = options.get('prolog_place', '') or 'top'
+        prolog_script = self.firewall_option(fw, 'prolog_script')
+        epilog_script = self.firewall_option(fw, 'epilog_script')
+        prolog_place = self.firewall_option(fw, 'prolog_place') or 'top'
 
-        nft_path = options.get('nft_path', '') or '/usr/sbin/nft'
+        nft_path = self.firewall_option(fw, 'nft_path') or '/usr/sbin/nft'
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
@@ -1094,8 +1095,8 @@ class CompilerDriver_nft(CompilerDriver):
         # as the "mgmt_ssh" boolean plus "mgmt_addr" (same keys as the
         # iptables compiler and fwbuilder); the backup SSH rule is only
         # emitted when both are set.
-        ssh_management_address = options.get('mgmt_addr', '')
-        mgmt_access = bool(options.get('mgmt_ssh', False)) and bool(
+        ssh_management_address = self.firewall_option(fw, 'mgmt_addr')
+        mgmt_access = bool(self.firewall_option(fw, 'mgmt_ssh')) and bool(
             ssh_management_address
         )
         if mgmt_access and not is_valid_mgmt_address(ssh_management_address):
@@ -1148,9 +1149,9 @@ class CompilerDriver_nft(CompilerDriver):
                 kernel_vars_commands = textwrap.indent(raw_kernel_vars, '    ')
 
         # Interface configuration
-        configure_interfaces = options.get('configure_interfaces', False)
-        verify_interfaces_opt = options.get('verify_interfaces', False)
-        ip_path = options.get('ip_path', '') or 'ip'
+        configure_interfaces = self.firewall_option(fw, 'configure_interfaces')
+        verify_interfaces_opt = self.firewall_option(fw, 'verify_interfaces')
+        ip_path = self.firewall_option(fw, 'ip_path') or 'ip'
 
         shell_functions = ''
         configure_interfaces_code = ''
@@ -1159,14 +1160,14 @@ class CompilerDriver_nft(CompilerDriver):
         if oscnf is not None:
             # Include shell functions when any interface feature is enabled
             manage_virtual_addr = bool(
-                options.get('manage_virtual_addr', False)
+                self.firewall_option(fw, 'manage_virtual_addr')
                 and oscnf.virtual_addresses_for_nat
             )
             need_shell_functions = (
                 configure_interfaces
                 or verify_interfaces_opt
                 or manage_virtual_addr
-                or options.get('configure_bridge_interfaces', False)
+                or self.firewall_option(fw, 'configure_bridge_interfaces')
                 or any(iface.is_dynamic() for iface in fw.interfaces)
             )
             if need_shell_functions:
@@ -1176,7 +1177,7 @@ class CompilerDriver_nft(CompilerDriver):
                 buf = io.StringIO()
                 buf.write(oscnf.print_interface_configuration_commands())
 
-                if options.get('configure_bridge_interfaces', False):
+                if self.firewall_option(fw, 'configure_bridge_interfaces'):
                     buf.write(oscnf.print_bridge_interface_configuration_commands())
 
                 buf.write(oscnf.print_commands_to_clear_known_interfaces())
@@ -1207,7 +1208,7 @@ class CompilerDriver_nft(CompilerDriver):
         # Named table support — only flush our own tables
         # The base name comes from the firewall object, so it goes
         # through the sanitiser before it names three nft tables.
-        table_name = nft_object_name(options.get('table_name', '') or 'fwf')
+        table_name = nft_object_name(self.firewall_option(fw, 'table_name') or 'fwf')
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
         mangle_table = f'{table_name}_mangle'
@@ -1238,7 +1239,7 @@ class CompilerDriver_nft(CompilerDriver):
             'verify_interfaces_code': verify_interfaces_code,
             'filter_family': filter_family,
             'filter_table': filter_table,
-            'flush_ruleset': options.get('flush_ruleset', True),
+            'flush_ruleset': self.firewall_option(fw, 'flush_ruleset'),
             'ip_path': ip_path,
             'nat_table': nat_table,
             'mangle_table': mangle_table,
@@ -1317,12 +1318,12 @@ class CompilerDriver_nft(CompilerDriver):
         """Generate IP forwarding sysctl commands."""
         lines = []
 
-        ipv4_fwd = str(fw.get_option('linux24_ip_forward') or '')
+        ipv4_fwd = str(self.firewall_option(fw, 'linux24_ip_forward') or '')
         if ipv4_fwd:
             val = 1 if ipv4_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv4/ip_forward')
 
-        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward') or '')
+        ipv6_fwd = str(self.firewall_option(fw, 'linux24_ipv6_forward') or '')
         if ipv6_fwd:
             val = 1 if ipv6_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv6/conf/all/forwarding')
