@@ -8,6 +8,7 @@
 #
 # files: * fw-A.fw /sw/FWbuilder/fw-A.fw
 #
+# Rule 0 (main): Object "gw_200" is used as the gateway but 200.200.200.200 is on none of the local networks of this firewall, so the route cannot be installed; give the interface facing it an address in that network. The rule is left out
 # the generated script does not create or remove bonding interfaces; they have to exist on the firewall before it runs
 # the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs
 
@@ -287,8 +288,7 @@ script_body() {
 }
 
 routing_script() {
-    $IP route add default via 200.200.200.200 dev eth3
-$IP route add 192.168.101.0/24 via 192.168.1.200 dev bond0.1
+    $IP route add 192.168.101.0/24 via 192.168.1.200 dev bond0.1
 $IP route add 192.168.102.0/24 via 192.168.2.200 dev bond0.2
 $IP route add 192.168.111.0/24 via 192.168.11.200 dev bond1
 $IP route add 192.168.211.0/24 via 192.168.201.200 dev eth2.201

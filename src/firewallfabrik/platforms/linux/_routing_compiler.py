@@ -82,6 +82,8 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         self.add(ValidateRoutingDestination('validate destination addresses'))
+        self.add(ReachableGateway('check that the gateway is reachable'))
+        self.add(GatewayOnRoutingInterface('check the gateway against RItf'))
         self.add(ExpandAddressRangesInRDst('process address ranges'))
         self.add(EliminateDuplicatesInRDst('eliminate duplicates in RDst'))
         self.add(CompetingRoutingRules('check for competing rules'))
@@ -248,6 +250,158 @@ class ValidateRoutingDestination(RoutingRuleProcessor):
                     f'out',
                 )
                 return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+def _interface_networks(fw, want_v6: bool) -> list:
+    """Return the networks the firewall is directly attached to.
+
+    Only the addresses of the family being asked about: a gateway is
+    reachable through an address of its own family and through no other.
+    The C++ walks ``IPv4`` children alone
+    (``RoutingCompiler::reachableAddressInRGtw::checkReachableIPAddress``),
+    which answers "unreachable" for every IPv6 gateway there is.
+    """
+    networks = []
+    for iface in fw.interfaces:
+        for addr in iface.addresses:
+            address = addr.get_address()
+            netmask = addr.get_netmask()
+            if not address or not netmask:
+                continue
+            try:
+                network = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
+            except ValueError:
+                continue
+            if (network.version == 6) == want_v6:
+                networks.append((iface, network))
+    return networks
+
+
+def _gateway_address(obj):
+    """Return the one address an object offers as a next hop, or None."""
+    if isinstance(obj, Interface):
+        for addr in obj.addresses:
+            address = addr.get_address()
+            if address:
+                try:
+                    return ipaddress.ip_address(address)
+                except ValueError:
+                    return None
+        return None
+    if isinstance(obj, Host):
+        for iface in obj.interfaces:
+            found = _gateway_address(iface)
+            if found is not None:
+                return found
+        return None
+    if isinstance(obj, (IPv4, IPv6)):
+        address = obj.get_address()
+        if not address:
+            return None
+        try:
+            return ipaddress.ip_address(address)
+        except ValueError:
+            return None
+    # A network, an address range or anything else is not a single next
+    # hop; the C++ answers "reachable" for those rather than guess.
+    return None
+
+
+class ReachableGateway(RoutingRuleProcessor):
+    """Report a gateway that is on none of the firewall's own networks.
+
+    ``ip route add ... via <gw>`` needs the next hop to sit on a network
+    the box is attached to; the kernel answers anything else with "Error:
+    Nexthop has invalid gateway" and installs nothing (verified against
+    iproute2 in a network namespace).  Without this the mistake surfaces
+    only at activation time, as one line of stderr in the middle of the
+    routing block, and the route the rule was written for is simply not
+    there.  Corresponds to ``RoutingCompiler::reachableAddressInRGtw``.
+    """
+
+    def __init__(self, name: str = 'check that the gateway is reachable') -> None:
+        super().__init__(name)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        for obj in rule.rgtw:
+            gateway = _gateway_address(obj)
+            if gateway is None:
+                continue
+            networks = _interface_networks(self.compiler.fw, gateway.version == 6)
+            if any(gateway in network for _iface, network in networks):
+                continue
+            self.compiler.error(
+                rule,
+                f'Object "{obj.name}" is used as the gateway but {gateway} is '
+                f'on none of the local networks of this firewall, so the '
+                f'route cannot be installed; give the interface facing it an '
+                f'address in that network. The rule is left out',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class GatewayOnRoutingInterface(RoutingRuleProcessor):
+    """Report a gateway that is not on the network of the named interface.
+
+    ``dev`` says which interface the next hop is reached through, so the
+    gateway has to be on *that* interface's network; the kernel refuses
+    the pair with "Error: Nexthop has invalid gateway" the same way it
+    refuses an unreachable one.  Corresponds to
+    ``RoutingCompiler::contradictionRGtwAndRItf``, including its early
+    exit for a rule that names no interface.
+    """
+
+    def __init__(self, name: str = 'check the gateway against RItf') -> None:
+        super().__init__(name)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.ritf:
+            self.tmp_queue.append(rule)
+            return True
+
+        iface = rule.ritf[0]
+        if not isinstance(iface, Interface):
+            self.tmp_queue.append(rule)
+            return True
+
+        for obj in rule.rgtw:
+            gateway = _gateway_address(obj)
+            if gateway is None:
+                continue
+            networks = [
+                network
+                for other, network in _interface_networks(
+                    self.compiler.fw, gateway.version == 6
+                )
+                if other.id == iface.id
+            ]
+            if not networks or any(gateway in network for network in networks):
+                # An interface with no address of this family gets its
+                # address while the firewall runs, so nothing can be said
+                # about it here; the C++ falls through the same way.
+                continue
+            self.compiler.error(
+                rule,
+                f'Object "{obj.name}" is used as the gateway but {gateway} is '
+                f'not on the network of interface "{iface.name}", which the '
+                f'rule routes through, so the route cannot be installed. The '
+                f'rule is left out',
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True

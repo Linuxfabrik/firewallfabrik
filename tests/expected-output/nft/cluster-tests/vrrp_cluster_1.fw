@@ -8,6 +8,7 @@
 #
 # files: * vrrp_cluster_1.fw /etc/fwf.sh
 #
+# Rule 1 (main): Object "gw1" is used as the gateway but 172.24.0.100 is not on the network of interface "eth1", which the rule routes through, so the route cannot be installed. The rule is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -209,13 +210,7 @@ script_body() {
 }
 
 routing_script() {
-    # The following routing rules share a destination and a metric, so they
-# install one route with several next hops rather than competing ones:
-# Rule 0 (main)
-# Rule 1 (main)
-$IP route add 172.24.1.0/24 \
-    nexthop via 172.24.0.100 dev eth0 \
-    nexthop via 172.24.0.100 dev eth1
+    $IP route add 172.24.1.0/24 via 172.24.0.100 dev eth0
 
 }
 
