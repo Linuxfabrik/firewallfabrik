@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, ClassVar
 import sqlalchemy
 import sqlalchemy.orm
 
+from firewallfabrik.core._options import option_is_true
+
 from ._base import Base
 from ._types import JSONEncodedSet
 
@@ -210,7 +212,7 @@ class Service(Base):
                 if any(masks.values()):
                     return False
                 established = (self.data or {}).get('established', False)
-                if str(established).lower() in ('true', '1'):
+                if option_is_true(established):
                     return False
             return True
         return False

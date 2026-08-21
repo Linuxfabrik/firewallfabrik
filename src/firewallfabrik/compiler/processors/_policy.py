@@ -22,6 +22,7 @@ import ipaddress as _ipa
 import uuid
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     AddressRange,
     Direction,
@@ -549,17 +550,11 @@ def is_mangle_only_rule_set(rule_set) -> bool:
     if rule_set is None:
         return False
     options = rule_set.options or {}
-    value = options.get('mangle_only_rule_set', False)
-    if isinstance(value, str):
-        return value.lower() == 'true'
-    return bool(value)
+    return option_is_true(options.get('mangle_only_rule_set', False))
 
 
 def _rule_option(rule, key) -> bool:
-    value = (rule.options or {}).get(key, False)
-    if isinstance(value, str):
-        return value.lower() == 'true'
-    return bool(value)
+    return option_is_true((rule.options or {}).get(key, False))
 
 
 def rule_set_has_mangle_rules(rule_set) -> bool:

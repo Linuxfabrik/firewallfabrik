@@ -28,6 +28,7 @@ from typing import Any
 
 import sqlalchemy
 
+from firewallfabrik.core._options import option_bool, option_is_true
 from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
@@ -162,12 +163,7 @@ class CompRule:
     def get_option(self, key: str, default: Any = None) -> Any:
         if self.options:
             val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
+            return option_bool(val, val)
         return default
 
     def set_option(self, key: str, value: object) -> None:
@@ -323,11 +319,7 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
         # Check disabled via options
         disabled = False
         if rule.options:
-            val = rule.options.get('disabled', False)
-            if isinstance(val, str):
-                disabled = val.lower() in ('true', '1', 'yes')
-            else:
-                disabled = bool(val)
+            disabled = option_is_true(rule.options.get('disabled', False))
 
         comp_rule = CompRule(
             id=rule.id,

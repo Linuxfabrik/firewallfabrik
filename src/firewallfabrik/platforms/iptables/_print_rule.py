@@ -31,6 +31,7 @@ from firewallfabrik.compiler._interval_helpers import (
     parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
@@ -92,9 +93,9 @@ if TYPE_CHECKING:
     from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 
 
-def _is_true(val) -> bool:
-    """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
-    return str(val) == 'True'
+# A data-dict value may be a Python bool or the string a data file
+# carries, on a line of its own if that is how the file was written.
+_is_true = option_is_true
 
 
 # Map symbolic syslog level names to numeric values.  Matches the order

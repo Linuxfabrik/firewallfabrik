@@ -17,6 +17,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QWidget
 
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Widget name → options key mapping.
@@ -354,7 +355,7 @@ class RuleOptionsPanel(QWidget):
 def _to_bool(val):
     """Convert a value to bool, handling string representations."""
     if isinstance(val, str):
-        return val.lower() in ('true', '1')
+        return option_is_true(val)
     return bool(val)
 
 

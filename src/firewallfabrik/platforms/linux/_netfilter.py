@@ -19,6 +19,7 @@ import re
 import uuid
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Host,
     Interface,
@@ -212,7 +213,7 @@ def has_ip_options(data: dict) -> bool:
     would widen the rule to every packet - which is why the callers report
     it and leave the rule out of the IPv6 ruleset.
     """
-    return any(str(data.get(flag)) == 'True' for flag in _IP_OPTION_FLAGS)
+    return any(option_is_true(data.get(flag)) for flag in _IP_OPTION_FLAGS)
 
 
 # Spellings Firewall Builder 2.1 stored for the key a rate limit counts

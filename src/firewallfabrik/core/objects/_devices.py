@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy
 import sqlalchemy.orm
 
+from firewallfabrik.core._options import option_bool, option_is_true
+
 from ._base import Base
 from ._types import JSONEncodedSet
 
@@ -145,18 +147,16 @@ class Host(Base):
         code at the earliest possible moment.
 
         String ``"True"``/``"False"`` values are coerced to Python
-        bools so that values loaded from XML work correctly.
+        bools so that values loaded from XML work correctly, in the
+        line-wrapped spelling a data file may carry as well
+        (:func:`firewallfabrik.core._options.option_bool`).
         """
         _S = self._GET_OPTION_SENTINEL
         if self.options:
             val = self.options.get(key, _S)
             if val is not _S:
-                if isinstance(val, str):
-                    if val.lower() == 'true':
-                        return True
-                    if val.lower() == 'false':
-                        return False
-                return val
+                coerced = option_bool(val, _S)
+                return val if coerced is _S else coerced
         # Fall back to YAML platform / OS defaults.
         from firewallfabrik.platforms._defaults import get_option_default
 
@@ -182,9 +182,7 @@ class Host(Base):
             value = (source or {}).get(key)
             if value is None:
                 continue
-            if isinstance(value, str):
-                return value.strip().lower() == 'true'
-            return bool(value)
+            return option_is_true(value)
         return False
 
     def set_matches_by_mac(self, value: bool) -> None:
@@ -347,12 +345,7 @@ class Interface(Base):
         """Look up a value in the interface options dict."""
         if self.options:
             val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
+            return option_bool(val, val)
         return default
 
     def is_loopback(self) -> bool:

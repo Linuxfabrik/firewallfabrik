@@ -4505,16 +4505,12 @@ class ClearLogInMangle(PolicyRuleProcessor):
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
-        rs = ipt_comp.source_ruleset
-        if rs is not None:
-            mangle_only = (
-                rs.options.get('mangle_only_rule_set', False) if rs.options else False
-            )
-            if isinstance(mangle_only, str):
-                mangle_only = mangle_only.lower() == 'true'
-            if mangle_only:
-                self.tmp_queue.append(rule)
-                return True
+        # The same question `DropMangleTableRules` asks, so it has to be
+        # asked by the same helper: a second spelling of "is this rule set
+        # mangle only" is a second answer waiting to drift.
+        if is_mangle_only_rule_set(ipt_comp.source_ruleset):
+            self.tmp_queue.append(rule)
+            return True
 
         if ipt_comp.my_table == 'mangle':
             rule.set_option('log', False)

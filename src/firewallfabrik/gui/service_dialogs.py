@@ -14,15 +14,13 @@
 
 from PySide6.QtCore import Slot
 
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
 def _is_true(val):
-    """Return True for bool True or string 'True'/'true'."""
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.lower() == 'true'
+    """Return True for bool True or the string a data file carries."""
+    return option_is_true(val)
     return bool(val)
 
 
@@ -51,7 +49,7 @@ class TCPServiceDialog(BaseObjectDialog):
         self.ds.setValue(self._obj.dst_range_start or 0)
         self.de.setValue(self._obj.dst_range_end or 0)
         data = self._obj.data or {}
-        self.established.setChecked(data.get('established') == 'True')
+        self.established.setChecked(_is_true(data.get('established')))
         flags = self._obj.tcp_flags or {}
         masks = self._obj.tcp_flags_masks or {}
         for flag in _TCP_FLAGS:

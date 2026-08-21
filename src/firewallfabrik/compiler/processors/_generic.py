@@ -33,6 +33,7 @@ from firewallfabrik.compiler._rule_processor import (
     NATRuleProcessor,
     PolicyRuleProcessor,
 )
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
@@ -1223,11 +1224,7 @@ def _srv_contains(s1, s2) -> bool:
         if s1.get_protocol_number() != 0:
             return False
         data = s1.data or {}
-        for flag in _IP_FLAGS:
-            val = data.get(flag)
-            if val is not None and str(val) == 'True':
-                return False
-        return True
+        return all(not option_is_true(data.get(flag)) for flag in _IP_FLAGS)
 
     return False
 
@@ -1301,7 +1298,7 @@ class CheckForTCPEstablished(BasicRuleProcessor):
         for srv in srv_slot:
             if isinstance(srv, TCPService):
                 established = (srv.data or {}).get('established', False)
-                if str(established).lower() in ('true', '1'):
+                if option_is_true(established):
                     self.compiler.abort(
                         rule,
                         f'TCPService object with option "established" is not '

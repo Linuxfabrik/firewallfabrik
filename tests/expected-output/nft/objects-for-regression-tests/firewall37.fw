@@ -323,8 +323,8 @@ load_interface_address() {
 
 load_address_tables() {
     :
-    load_dns_name "ip" "fwf_filter" "_6bone.net__rt_" "6bone.net" "-4"
-    load_dns_name "ip" "fwf_filter" "ny6ix.net__rt_" "ny6ix.net" "-4"
+    load_dns_name "ip" "fwf_mangle" "_6bone.net__rt_" "6bone.net" "-4"
+    load_dns_name "ip" "fwf_mangle" "ny6ix.net__rt_" "ny6ix.net" "-4"
 }
 
 nft_ruleset() {
@@ -337,6 +337,17 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_mangle {
+    set _6bone.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set ny6ix.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain prerouting {
         type filter hook prerouting priority mangle; policy accept;
         counter meta mark set ct mark
@@ -402,10 +413,68 @@ table ip fwf_mangle {
         #
         counter jump mymark
         #
+        # Rule mangle_rules 0 (global)
+        #
+        meta mark != 0 ct state new counter accept
+        #
         # Rule mangle_rules 1 (global)
         #
         tcp dport 80 ct state new counter meta mark set 1
         tcp dport 80 ct state new counter ct mark set mark
+        #
+        # Rule mangle_rules 4 (global)
+        #
+        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 5 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 6 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 11 (global)
+        #
+        ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 12 (global)
+        #
+        ip saddr != 1.1.1.1 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 13 (global)
+        #
+        ip saddr != 157.112.176.24 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 14 (global)
+        #
+        ip saddr != @_6bone.net__rt_ meta mark 1 ct state new counter accept
+    }
+
+    chain input {
+        type filter hook input priority mangle; policy accept;
+        #
+        # Rule mangle_rules 0 (global)
+        #
+        meta mark != 0 ct state new counter accept
+        #
+        # Rule mangle_rules 4 (global)
+        #
+        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 5 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 6 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 10 (global)
+        #
+        meta mark 1 ct state new counter accept
     }
 
     chain forward {
@@ -522,10 +591,26 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         oifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
         #
+        # Rule mangle_rules 0 (global)
+        #
+        meta mark != 0 ct state new counter accept
+        #
         # Rule mangle_rules 1 (global)
         #
         tcp dport 80 ct state new counter meta mark set 1
         tcp dport 80 ct state new counter ct mark set mark
+        #
+        # Rule mangle_rules 8 (global)
+        #
+        meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 9 (global)
+        #
+        ip saddr 22.22.23.22 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 10 (global)
+        #
+        ip daddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
     }
 
     chain postrouting {
@@ -624,6 +709,19 @@ table ip fwf_mangle {
         # Rule mangle_rules 2 (global)
         #
         meta mark 1 counter meta priority set 1:12
+        #
+        # Rule mangle_rules 15 (global)
+        #
+        # rules in mangle-only ruleset with action
+        # Accept normally go to PREROUTING,
+        # but if direction is set to outbound,
+        # they go to POSTROUTING. This is just
+        # a convention since there is no better
+        # criteria as to how to tell the compiler
+        # that such rule should be placed in
+        # POSTROUTING.
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
     }
 
     chain mymark {
@@ -639,17 +737,6 @@ table ip fwf_mangle {
 }
 
 table ip fwf_filter {
-    set _6bone.net__rt_ {
-        type ipv4_addr
-        flags interval
-        auto-merge
-    }
-    set ny6ix.net__rt_ {
-        type ipv4_addr
-        flags interval
-        auto-merge
-    }
-
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -789,59 +876,6 @@ table ip fwf_filter {
         # Rule 38 (global)
         #
         counter log prefix "RULE 38 -- DENY " level info drop
-        #
-        # Rule mangle_rules 0 (global)
-        #
-        meta mark != 0 ct state new counter accept
-        #
-        # Rule mangle_rules 1 (global)
-        #
-        tcp dport 80 ct state new counter accept
-        #
-        # Rule mangle_rules 2 (global)
-        #
-        meta mark 1 counter accept
-        #
-        # Rule mangle_rules 4 (global)
-        #
-        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 5 (global)
-        #
-        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 6 (global)
-        #
-        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 8 (global)
-        #
-        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 9 (global)
-        #
-        ip saddr 22.22.23.22 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 10 (global)
-        #
-        meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 11 (global)
-        #
-        ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 12 (global)
-        #
-        ip saddr != 1.1.1.1 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 13 (global)
-        #
-        ip saddr != 157.112.176.24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 14 (global)
-        #
-        ip saddr != @_6bone.net__rt_ meta mark 1 ct state new counter accept
     }
 
     chain forward {
@@ -997,60 +1031,6 @@ table ip fwf_filter {
         # Rule 38 (global)
         #
         counter log prefix "RULE 38 -- DENY " level info drop
-        #
-        # Rule mangle_rules 0 (global)
-        #
-        meta mark != 0 ct state new counter accept
-        #
-        # Rule mangle_rules 1 (global)
-        #
-        tcp dport 80 ct state new counter accept
-        #
-        # Rule mangle_rules 2 (global)
-        #
-        meta mark 1 counter accept
-        #
-        # Rule mangle_rules 4 (global)
-        #
-        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 5 (global)
-        #
-        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 6 (global)
-        #
-        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 11 (global)
-        #
-        ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 12 (global)
-        #
-        ip saddr != 1.1.1.1 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 13 (global)
-        #
-        ip saddr != 157.112.176.24 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 14 (global)
-        #
-        ip saddr != @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 15 (global)
-        #
-        # rules in mangle-only ruleset with action
-        # Accept normally go to PREROUTING,
-        # but if direction is set to outbound,
-        # they go to POSTROUTING. This is just
-        # a convention since there is no better
-        # criteria as to how to tell the compiler
-        # that such rule should be placed in
-        # POSTROUTING.
-        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
-        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
     }
 
     chain output {
@@ -1231,30 +1211,6 @@ table ip fwf_filter {
         # Rule 38 (global)
         #
         counter log prefix "RULE 38 -- DENY " level info drop
-        #
-        # Rule mangle_rules 0 (global)
-        #
-        meta mark != 0 ct state new counter accept
-        #
-        # Rule mangle_rules 1 (global)
-        #
-        tcp dport 80 ct state new counter accept
-        #
-        # Rule mangle_rules 2 (global)
-        #
-        meta mark 1 counter accept
-        #
-        # Rule mangle_rules 8 (global)
-        #
-        meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 9 (global)
-        #
-        ip saddr 22.22.23.22 meta mark 1 ct state new counter accept
-        #
-        # Rule mangle_rules 10 (global)
-        #
-        ip daddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
     }
 
     chain mymark {

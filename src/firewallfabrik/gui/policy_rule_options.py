@@ -17,6 +17,8 @@ no Qt or model dependencies, reusable by any module that needs to inspect
 rule options.
 """
 
+from firewallfabrik.core._options import option_is_true
+
 
 def build_options_display(opts, rule_set_type='Policy'):
     """Build a list of (id, label, icon_type) triples from rule options.
@@ -143,7 +145,7 @@ def opt_bool(opts, key):
     """Return a boolean for *key*, coercing ``'True'``/``'False'`` strings."""
     val = opts.get(key)
     if isinstance(val, str):
-        return val.lower() == 'true'
+        return option_is_true(val)
     return bool(val)
 
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
     AddressTable,
@@ -260,7 +261,7 @@ def ipv4_options_match(data: dict, version: str) -> tuple[str, str]:
     """
 
     def is_set(key: str) -> bool:
-        return str(data.get(key)) == 'True'
+        return option_is_true(data.get(key))
 
     modern = version_compare(version, '1.4.3') >= 0
 
