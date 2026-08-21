@@ -40,7 +40,7 @@ Each option entry contains:
 | `values` | (enum only) List of allowed values |
 | `inverted` | (bool only) Whether the checkbox has inverted semantics |
 | `label` | (linux only) Associated QLabel widget name, for disabling |
-| `nftables_supported` | (linux only) Whether the option is relevant for nftables |
+| `nftables_supported` | (linux only) Whether the option is relevant for nftables — the editor greys the field out when it is false, so it has to be true for anything the generated nftables script uses |
 
 Example from `nftables/defaults.yaml`:
 
@@ -101,6 +101,10 @@ If the key is not found in either tier, `get_option()` raises a **`KeyError`**. 
 
 The method accepts **no caller-supplied fallback**. All defaults live in the YAML files. Compiler call sites simply call `fw.get_option('some_key')` without a second argument.
 
+The second argument it *does* take is a **platform**, and only a driver passes it. `get_option()` resolves the schema through `fw.platform`, and a firewall imported from a `.fwb` file says `iptables` whatever it is compiled with, because Firewall Builder has no other Linux platform. `CompilerDriver.firewall_option(fw, key)` names the platform the driver compiles for, so the nftables driver reads the nftables schema. Read a firewall option in a driver through that method and nowhere else: `fw.options.get(key, something)` puts a second default beside the one in the YAML file, and the two drift.
+
+A boolean is compared after every whitespace character is removed from it, the way `FWObject::getBool` does it (`firewallfabrik.core._options.option_is_true`). A data file may write the value on a line of its own, and `'\n True \n' == 'true'` is False while `bool('\n False \n')` is True - so without the removal the same file answers the same question both ways. The removal belongs to the boolean test alone: a log prefix ends in a space on purpose.
+
 > **Note**: `rule.get_option(key, default)` on `CompRule` objects is a *different method* that still accepts a caller-supplied default, because rules have their own per-rule options dict and no YAML schema.
 
 String values `"True"` / `"False"` (common in XML imports) are coerced to Python bools.
@@ -127,7 +131,7 @@ The dialog's `_apply_placeholders()` method checks `placeholder` first, then fal
 
 ## Adding a New Option
 
-1. Add the entry to the appropriate `defaults.yaml` file (alphabetical order).
+1. Add the entry to the appropriate `defaults.yaml` file (alphabetical order). If both platforms have the option, give it the **same** default in both: the same option means the same thing on either, and a firewall switched from one to the other must not change what its script does. `tests/test_option_defaults_are_the_only_defaults.py` asserts that, and that no driver reads such a key out of the raw options dict.
 2. If it needs a GUI widget, add the widget to the `.ui` file and set the `widget` field.
 3. The settings dialog will pick it up automatically via the YAML-driven widget maps.
 4. The compiler reads the value via `fw.get_option('key')` -- the YAML default is returned automatically if the option is absent from the stored JSON. If you forget to add the YAML entry, `get_option()` raises `KeyError` immediately.
