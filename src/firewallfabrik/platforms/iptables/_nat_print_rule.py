@@ -47,6 +47,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     is_valid_packet_mark,
     is_valid_user_id,
+    normalize_mac_address,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
@@ -321,7 +322,10 @@ class NATPrintRule(NATRuleProcessor):
             # error, "unexpected ! flag before --match" (iptables
             # xshared.c, command_match).
             neg = self._print_single_option_with_negation(
-                '--mac-source', rule, 'osrc', osrc.get_phys_address()
+                '--mac-source',
+                rule,
+                'osrc',
+                normalize_mac_address(osrc.get_phys_address()),
             )
             cmd += f'-m mac {neg}'
             addr_str = self._print_addr(osrc.address)
@@ -474,7 +478,7 @@ class NATPrintRule(NATRuleProcessor):
         a rule no packet can ever match; fwbuilder leaves such an object out
         of the ruleset instead, and so does this.
         """
-        mac = obj.get_address()
+        mac = normalize_mac_address(obj.get_address())
         if not mac:
             self.compiler.warning(
                 rule,

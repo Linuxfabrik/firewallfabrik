@@ -547,6 +547,12 @@ def get_mac_only_address(obj) -> str:
     A PhysAddress, or an Interface / Host whose only address is a MAC, can
     only be matched on the ethernet header.  Rendering such an object as an
     IP address produces a ruleset the packet filter refuses to load.
+
+    The value is returned as it is stored, because the guards that ask
+    whether an object carries a MAC at all have to see one even when it is
+    unusable - ``VerifyMacAddresses`` is what decides that, and it leaves
+    the whole rule out.  Only the print rules normalise, on the way into
+    the command.
     """
     if isinstance(obj, PhysAddress):
         return obj.get_address() or ''

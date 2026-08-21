@@ -55,6 +55,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     TCPUDPService,
     group_membership,
+    normalize_mac_address,
 )
 
 
@@ -1836,6 +1837,86 @@ def address_range_problem(obj) -> str:
     if start_ip.version != end_ip.version or start_ip <= end_ip:
         return ''
     return f'runs from {start} down to {end}, which is not a range'
+
+
+def _macs_in(obj) -> list[str]:
+    """Every MAC address *obj* contributes to a rule element.
+
+    Deliberately not ``get_mac_only_address``, which answers the different
+    question of whether an object can be matched on the ethernet header
+    *alone*.  A host that carries an IP and a MAC contributes both, and the
+    MAC half is emitted next to the address, so it has to be asked here
+    too.
+    """
+    if isinstance(obj, CombinedAddress):
+        return [obj.get_phys_address()] if obj.has_phys_address() else []
+    if isinstance(obj, PhysAddress):
+        return [obj.get_address() or '']
+    if isinstance(obj, Interface):
+        children = list(getattr(obj, 'addresses', []))
+    elif isinstance(obj, Host):
+        children = [
+            addr
+            for iface in getattr(obj, 'interfaces', [])
+            for addr in getattr(iface, 'addresses', [])
+        ]
+    else:
+        return []
+    return [
+        addr.get_address() or '' for addr in children if isinstance(addr, PhysAddress)
+    ]
+
+
+def mac_address_problem(obj) -> str:
+    """Return why *obj* names a MAC neither tool takes, or ``''``.
+
+    A physAddress carries free text from its editor and nothing has ever
+    checked it - not here and not in Firewall Builder, whose
+    ``physAddress`` class stores the string unread.  The value then goes
+    straight into ``-m mac --mac-source`` and into ``ether saddr``, where
+    iptables answers "Invalid MAC address specified." and stops the
+    activation script with every chain already at DROP, and nftables
+    answers a syntax error and refuses the whole ruleset.
+
+    An object that carries no MAC at all is not this check's business: the
+    print rules have reported and dropped that one since they were
+    written, and a Host that simply has no physAddress must not lose its
+    rule over it.
+    """
+    for mac in _macs_in(obj):
+        if mac and not normalize_mac_address(mac):
+            return f'"{mac}" is not a MAC address'
+    return ''
+
+
+class VerifyMacAddresses(BasicRuleProcessor):
+    """Leave out a rule naming a MAC address neither packet filter takes.
+
+    Dropping the object instead would widen the rule to every host, and
+    letting it through costs the activation on iptables and the whole
+    ruleset on nftables, so the rule goes and the message names the value.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _ADDRESS_SLOTS.get(rule.type, ('src', 'dst')):
+            for obj in getattr(rule, slot, None) or []:
+                problem = mac_address_problem(obj)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'{problem}; iptables stops the activation over it and '
+                    'nftables refuses the whole ruleset, so the rule is left '
+                    'out. Correct the MAC address of the object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class VerifyAddressRanges(BasicRuleProcessor):

@@ -61,6 +61,7 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     is_valid_packet_mark,
     is_valid_user_id,
+    normalize_mac_address,
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -974,9 +975,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             if isinstance(obj, CombinedAddress) and obj.has_phys_address():
                 addr = self._print_addr(obj.address, rule)
                 if addr:
-                    pairs.append((obj.get_phys_address(), addr))
+                    pairs.append((normalize_mac_address(obj.get_phys_address()), addr))
                     continue
-            mac = get_mac_only_address(obj)
+            mac = normalize_mac_address(get_mac_only_address(obj))
             if mac:
                 macs.append(mac)
                 continue

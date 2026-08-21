@@ -56,6 +56,7 @@ from firewallfabrik.core.objects import (
     is_valid_packet_mark,
     is_valid_tos,
     is_valid_user_id,
+    normalize_mac_address,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
@@ -909,7 +910,7 @@ class PrintRule(PolicyRuleProcessor):
         a rule no packet can ever match; fwbuilder leaves such an object out
         of the ruleset instead, and so does this.
         """
-        mac = obj.get_address()
+        mac = normalize_mac_address(obj.get_address())
         if not mac:
             self.compiler.warning(
                 rule,
@@ -956,7 +957,7 @@ class PrintRule(PolicyRuleProcessor):
         """Print an address object in iptables format."""
         if isinstance(obj, CombinedAddress):
             addr = self._print_addr_basic(obj.address)
-            mac = obj.get_phys_address()
+            mac = normalize_mac_address(obj.get_phys_address())
             if mac:
                 return f'{addr} -m mac --mac-source {mac}'
             return addr

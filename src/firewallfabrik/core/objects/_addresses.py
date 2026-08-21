@@ -17,6 +17,7 @@ from __future__ import (
 )
 
 import ipaddress
+import re
 import uuid
 from typing import TYPE_CHECKING
 
@@ -278,6 +279,53 @@ class MultiAddressRunTime(Address):
     """Run-time variant of MultiAddress, used internally by compilers."""
 
     __mapper_args__ = {'polymorphic_identity': 'MultiAddressRunTime'}
+
+
+# Six groups of one or two hex digits, separated by a colon or by a dash.
+# The colon form is what both packet filters take.  The dash form is the
+# other common spelling of the same address and only nftables reads it,
+# which is why it is recognised here and written back out as colons.
+_MAC_ADDRESS_RE = re.compile(
+    r'[0-9A-Fa-f]{1,2}([:-])(?:[0-9A-Fa-f]{1,2}\1){4}[0-9A-Fa-f]{1,2}'
+)
+
+
+def normalize_mac_address(value: str) -> str:
+    """Return *value* as a MAC both back ends take, or an empty string.
+
+    A physAddress carries its MAC as free text from its editor - Firewall
+    Builder does not check it either - and the value reaches both back ends
+    unchecked: ``-m mac --mac-source`` on iptables, ``ether saddr`` /
+    ``ether daddr`` on nftables.  Neither takes a word.  iptables answers
+    "Invalid MAC address specified." and stops the activation script with
+    every built-in policy already set to DROP; nftables answers a syntax
+    error and refuses the **whole** ruleset, so the firewall keeps whatever
+    it was running.  And on iptables the value goes into the generated
+    script as a bare shell word, where a semicolon starts a second command
+    - as root, at exactly that moment.  The ToS value, the packet mark and
+    the rate-limit table name next door are guarded for the same reason.
+
+    The two tools also disagree on one spelling, which makes a data file
+    carrying it compile on one platform and cost the whole ruleset on the
+    other: nftables reads ``aa-bb-cc-dd-ee-ff`` and prints it back with
+    colons, iptables refuses it (``xtopt_parse_ethermac`` in
+    libxtables/xtoptions.c splits on ``:`` alone).  Both spellings mean the
+    same address, so this answers with the colon form for either.
+
+    Everything else is refused.  iptables is the more permissive of the two
+    - ``strtoul`` accepts an empty group and a leading sign, so ``:::::``
+    and ``-1:2:3:4:5:6`` load there - but nftables' scanner does not
+    (src/scanner.l, ``macaddr``), and a value only one platform takes is
+    the portability bug this is here to stop.  Verified against iptables
+    1.8.11 and nft 1.1.6.
+    """
+    if not value:
+        return ''
+    text = value.strip()
+    match = _MAC_ADDRESS_RE.fullmatch(text)
+    if match is None:
+        return ''
+    return ':'.join(f'{int(part, 16):02x}' for part in text.split(match.group(1)))
 
 
 def range_to_cidr(start: str, end: str) -> str | None:

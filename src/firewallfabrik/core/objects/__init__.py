@@ -26,6 +26,7 @@ from ._addresses import (
     Network,
     NetworkIPv6,
     PhysAddress,
+    normalize_mac_address,
     range_to_cidr,
 )
 from ._base import (
@@ -167,6 +168,7 @@ __all__ = [
     'is_valid_packet_mark',
     'is_valid_tos',
     'is_valid_user_id',
+    'normalize_mac_address',
     'range_to_cidr',
     'rule_elements',
 ]
