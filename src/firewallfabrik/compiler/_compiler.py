@@ -582,6 +582,16 @@ class Compiler(BaseCompiler):
     def _expand_interface(self, iface: Interface, use_mac: bool) -> list:
         """Return what one interface contributes to an expanded element.
 
+        A dynamic interface contributes *itself*: its address is only known
+        on the firewall, and Firewall Builder stores a placeholder child of
+        0.0.0.0 for it (``Compiler::_expand_interface`` returns the
+        interface before it looks at any child).  Taking that placeholder
+        instead writes ``-s 0.0.0.0`` - which iptables reads as
+        ``0.0.0.0/32`` and no packet carries - where the rule has to become
+        the run-time loop over the interface's addresses.  On an
+        anti-spoofing rule that is a hole: the address the rule is written
+        about is never matched.
+
         A MAC address belongs to no address family, so the family filter
         must not touch it: an interface known only by its MAC has to survive
         both passes, otherwise the element silently loses its only object.
@@ -590,6 +600,9 @@ class Compiler(BaseCompiler):
         is left out; the element it came from then either still names
         something or is reported empty.
         """
+        if iface.is_dynamic():
+            return [iface]
+
         addresses = []
         phys_address = None
         for addr in iface.addresses:

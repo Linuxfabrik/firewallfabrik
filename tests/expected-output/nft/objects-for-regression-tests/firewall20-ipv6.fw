@@ -404,6 +404,7 @@ table inet fwf_filter {
         # Rule 8 (global)
         #
         ip6 daddr { 2001:470:1f05:590::1, fe80::1 } tcp dport 22 ct state new counter accept
+        ip6 daddr @i_ppp__v6 tcp dport 22 ct state new counter accept
         #
         # Rule 9 (global)
         #

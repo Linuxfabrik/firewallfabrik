@@ -334,6 +334,7 @@ load_interface_address() {
 
 load_address_tables() {
     :
+    load_interface_address "ip" "fwf_filter" "i_ppp0" "ppp0" "-4"
     load_interface_address "ip" "fwf_nat" "i_ppp0" "ppp0" "-4"
 }
 
@@ -345,6 +346,12 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    set i_ppp0 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -363,6 +370,7 @@ table ip fwf_filter {
         #
         # anti-spoofing rule
         iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } counter log prefix "RULE 2 -- DENY " level info drop
+        iifname "ppp0" ip saddr @i_ppp0 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 3 (ppp0)
         #
@@ -388,6 +396,7 @@ table ip fwf_filter {
         #
         # anti-spoofing rule
         iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } counter log prefix "RULE 2 -- DENY " level info drop
+        iifname "ppp0" ip saddr @i_ppp0 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 4 (global)
         #

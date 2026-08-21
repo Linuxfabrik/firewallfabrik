@@ -10,14 +10,6 @@
 #
 #  this object is used to test a configuration where firewall has dynamic address
 #
-# Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 3 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 5 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 6 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall4:Policy:14: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
@@ -340,6 +332,7 @@ load_interface_address() {
 
 load_address_tables() {
     :
+    load_interface_address "ip" "fwf_filter" "i_eth1" "eth1" "-4"
     load_interface_address "ip" "fwf_nat" "i_eth1" "eth1" "-4"
 }
 
@@ -351,15 +344,20 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    set i_eth1 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         #
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-        iifname "eth1" ip saddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
-        # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
+        iifname "eth1" ip saddr @i_eth1 counter log level debug drop
         iifname "eth1" ip saddr 192.168.1.0/24 counter log level debug drop
         #
         # Rule 2 (eth1)
@@ -368,8 +366,8 @@ table ip fwf_filter {
         #
         # Rule 3 (eth1)
         #
-        # Rule 3 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-        iifname "eth1" ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 22 ct state new counter accept
+        iifname "eth1" ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 22 ct state new counter accept
+        iifname "eth1" ip daddr @i_eth1 tcp dport 22 ct state new counter accept
         #
         # Rule 4 (eth1)
         #
@@ -380,8 +378,8 @@ table ip fwf_filter {
         # INTPUT with "-i +"
         # the "-i +" option is redundant if chain is INPUT,
         # it should be removed by optimization
-        # Rule 6 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip saddr 1.1.1.1 ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter accept
+        ip saddr 1.1.1.1 ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter accept
+        ip saddr 1.1.1.1 ip daddr @i_eth1 counter accept
         #
         # Rule 8 (global)
         #
@@ -395,8 +393,8 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
-        # Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr @i_eth1 icmp type destination-unreachable counter log level debug drop
         #
         # Rule 12 (global)
         #
@@ -411,8 +409,8 @@ table ip fwf_filter {
         # that are used in NAT rules
         # and are added as virtual
         # addresses
-        # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 25 ct state new counter accept
+        ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 25 ct state new counter accept
+        ip daddr @i_eth1 tcp dport 25 ct state new counter accept
         #
         # Rule 17 (global)
         #
@@ -421,8 +419,7 @@ table ip fwf_filter {
         #
         # Rule 18 (global)
         #
-        # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip saddr 192.168.1.0/24 ip daddr != { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr != @i_eth1 ip daddr != { 192.168.1.1, 192.168.2.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 19 (global)
         #
@@ -436,15 +433,13 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-        iifname "eth1" ip saddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
-        # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
+        iifname "eth1" ip saddr @i_eth1 counter log level debug drop
         iifname "eth1" ip saddr 192.168.1.0/24 counter log level debug drop
         #
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         oifname "eth1" ip saddr != 192.168.1.0/24 counter log level debug drop
         #
         # Rule 2 (eth1)
@@ -501,7 +496,6 @@ table ip fwf_filter {
         #
         # Rule 18 (global)
         #
-        # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 19 (global)
@@ -516,8 +510,7 @@ table ip fwf_filter {
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-        oifname "eth1" ip saddr != { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
+        oifname "eth1" ip saddr != @i_eth1 ip saddr != { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
         #
         # Rule 2 (eth1)
         #
@@ -530,8 +523,8 @@ table ip fwf_filter {
         # Rule 5 (global)
         #
         # OUTPUT
-        # Rule 5 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip saddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } ip daddr 1.1.1.1 counter accept
+        ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } ip daddr 1.1.1.1 counter accept
+        ip saddr @i_eth1 ip daddr 1.1.1.1 counter accept
         #
         # Rule 7 (global)
         #
@@ -545,8 +538,8 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
-        # Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr @i_eth1 icmp type destination-unreachable counter log level debug drop
         #
         # Rule 12 (global)
         #
@@ -573,8 +566,8 @@ table ip fwf_filter {
         # that are used in NAT rules
         # and are added as virtual
         # addresses
-        # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
-        ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 25 ct state new counter accept
+        ip daddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 25 ct state new counter accept
+        ip daddr @i_eth1 tcp dport 25 ct state new counter accept
         #
         # Rule 17 (global)
         #
@@ -583,7 +576,6 @@ table ip fwf_filter {
         #
         # Rule 18 (global)
         #
-        # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 19 (global)
