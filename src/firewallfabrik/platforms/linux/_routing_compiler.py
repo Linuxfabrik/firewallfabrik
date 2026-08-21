@@ -30,6 +30,7 @@ from firewallfabrik.compiler.processors._generic import (
     ExpandGroups,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
+    VerifyAddressRanges,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -76,6 +77,7 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(EmptyRGtwAndRItf('check if RGtw and RItf are both empty'))
         self.add(SingleAddressInRGtw('check that the gateway has one address'))
         self.add(RItfChildOfFw('check that RItf is an interface of this firewall'))
+        self.add(VerifyAddressRanges('verify address ranges'))
 
         self.add(ExpandGroups('expand groups'))
         self.add(ExpandMultipleAddressesInRouting('expand objects with addresses'))

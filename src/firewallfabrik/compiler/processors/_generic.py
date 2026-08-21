@@ -1794,3 +1794,76 @@ class VerifyRules(NATRuleProcessor):
 
         self.tmp_queue.append(rule)
         return True
+
+
+# The rule elements that can hold an address, per rule type.  A service
+# element cannot, and an interface element holds interfaces.
+_ADDRESS_SLOTS = {
+    'PolicyRule': ('src', 'dst'),
+    'NATRule': ('osrc', 'odst', 'tsrc', 'tdst'),
+    'RoutingRule': ('rdst', 'rgtw'),
+}
+
+
+def address_range_problem(obj) -> str:
+    """Return why *obj* names an address range neither tool takes, or ``''``.
+
+    A range whose end is below its start describes nothing.  The two
+    packet filters disagree about how bad that is: iptables takes the
+    command and says "xt_iprange: range 10.0.0.9-10.0.0.1 is reversed and
+    will never match", so the rule is installed and dead; nftables answers
+    "Range negative size" and refuses the **whole** ruleset, so the
+    firewall never gets the new policy at all.  Both verified against
+    iptables 1.8.11 and nft 1.1.6.
+
+    Firewall Builder corrects the value in its editor
+    (``AddressRangeDialog::applyChanges`` moves the end up to the start)
+    and its compiler never asks again.  A data file written by another
+    tool, by hand, or by a FirewallFabrik older than this release carries
+    whatever it carries.
+    """
+    if not isinstance(obj, AddressRange):
+        return ''
+    start = obj.get_start_address()
+    end = obj.get_end_address()
+    if not start or not end:
+        return ''
+    try:
+        start_ip = _ipa.ip_address(start)
+        end_ip = _ipa.ip_address(end)
+    except ValueError:
+        return ''
+    if start_ip.version != end_ip.version or start_ip <= end_ip:
+        return ''
+    return f'runs from {start} down to {end}, which is not a range'
+
+
+class VerifyAddressRanges(BasicRuleProcessor):
+    """Leave out a rule naming an address range that runs backwards.
+
+    Writing the ends the other way round would cover addresses the
+    administrator did not name, and dropping the element would widen the
+    rule to every address, so the rule goes.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _ADDRESS_SLOTS.get(rule.type, ('src', 'dst')):
+            for obj in getattr(rule, slot, None) or []:
+                problem = address_range_problem(obj)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Address range "{obj.name}" {problem}; iptables installs a '
+                    'rule that can never match and nftables refuses the whole '
+                    'ruleset, so the rule is left out. Correct the range in the '
+                    'address range object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True

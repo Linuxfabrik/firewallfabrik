@@ -44,6 +44,7 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
     SingleRuleFilter,
+    VerifyAddressRanges,
 )
 from firewallfabrik.compiler.processors._policy import (
     DropRuleWithImpossibleInterface,
@@ -407,6 +408,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
+        self.add(VerifyAddressRanges('verify address ranges'))
         self.add(
             SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
         )

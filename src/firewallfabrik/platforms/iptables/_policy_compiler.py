@@ -46,6 +46,7 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
     SingleRuleFilter,
+    VerifyAddressRanges,
 )
 from firewallfabrik.compiler.processors._policy import (
     AddressRangesInDst,
@@ -529,6 +530,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
+        self.add(VerifyAddressRanges('verify address ranges'))
         self.add(SpecialCasesWithCustomServices('special cases with custom services'))
         self.add(SeparatePortRanges('separate port ranges'))
         self.add(SeparateUserServices('separate user services'))

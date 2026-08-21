@@ -41,6 +41,7 @@ from firewallfabrik.compiler.processors._generic import (
     RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
+    VerifyAddressRanges,
     VerifyRules,
 )
 from firewallfabrik.compiler.processors._policy import (
@@ -318,6 +319,7 @@ class NATCompiler_nft(NATCompiler):
         # the firewall untranslated.
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
+        self.add(VerifyAddressRanges('verify address ranges'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 
