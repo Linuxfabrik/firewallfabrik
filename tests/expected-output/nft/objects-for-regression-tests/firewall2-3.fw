@@ -335,6 +335,13 @@ table ip fwf_filter {
         ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "RULE 16 - DENY **" level debug
         ip saddr 192.168.1.0/24 counter drop
         #
+        # Rule 17 (global)
+        #
+        # host-fw2 has the same address as
+        #         one of the firewall's interfaces
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 17 - ACCEPT **" level debug
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
+        #
         # Rule 18 (global)
         #
         ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 18 - ACCEPT **" level debug
@@ -431,13 +438,6 @@ table ip fwf_filter {
         #
         ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "RULE 16 - DENY **" level debug
         ip saddr 192.168.1.0/24 counter drop
-        #
-        # Rule 17 (global)
-        #
-        # host-fw2 has the same address as
-        #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 17 - ACCEPT **" level debug
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
         #
         # Rule 19 (global)
         #

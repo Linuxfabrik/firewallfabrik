@@ -247,6 +247,22 @@ table ip fwf_filter {
         #
         iifname "eth*" ct state new counter accept
         #
+        # Rule 7 (global)
+        #
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr 192.168.1.255 udp dport 68 ct state new counter accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr 224.0.1.141 ct state new counter accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr 224.0.0.5 ct state new counter accept
+        #
         # Rule 13 (global)
         #
         # this rule should generate commands
@@ -295,11 +311,11 @@ table ip fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
+        ip daddr { 192.168.1.255, 192.168.1.10 } udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
+        ip daddr { 224.0.1.141, 192.168.1.20 } ct state new counter accept
         #
         # Rule 10 (global)
         #
@@ -343,11 +359,11 @@ table ip fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
+        ip daddr { 192.168.1.255, 192.168.1.10 } udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
+        ip daddr { 224.0.1.141, 192.168.1.20 } ct state new counter accept
         #
         # Rule 10 (global)
         #

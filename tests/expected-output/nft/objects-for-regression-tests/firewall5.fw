@@ -371,6 +371,11 @@ table ip fwf_filter {
         ip daddr @i_ppp0 tcp dport 22 ct state new counter accept
         ip daddr @i_ppp1 tcp dport 22 ct state new counter accept
         #
+        # Rule 5 (global)
+        #
+        # hostF has the same IP address as firewal.
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new counter log accept
+        #
         # Rule 6 (global)
         #
         tcp dport 22 ct state new counter accept
@@ -378,6 +383,10 @@ table ip fwf_filter {
         # Rule 7 (global)
         #
         ip daddr 192.168.1.1 tcp dport 22 ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 12 (global)
         #
@@ -420,15 +429,6 @@ table ip fwf_filter {
         iifname "ppp1" ip saddr != @i_ppp1 counter log drop
         iifname "ppp0" ip saddr != 192.168.1.0/24 counter log drop
         iifname "ppp1" ip saddr != 192.168.1.0/24 counter log drop
-        #
-        # Rule 5 (global)
-        #
-        # hostF has the same IP address as firewal.
-        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new counter log accept
-        #
-        # Rule 8 (global)
-        #
-        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 9 (global)
         #

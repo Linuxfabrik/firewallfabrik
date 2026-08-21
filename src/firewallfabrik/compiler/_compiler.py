@@ -143,6 +143,44 @@ def _is_broadcast_address(ip) -> bool:
     return ip.is_multicast and ip.packed[1] & 0x0F == 0x02
 
 
+def _is_broadcast_or_multicast(
+    ip, recognize_broadcasts: bool, recognize_multicasts: bool
+) -> bool:
+    """The head of ``checkComplexMatchForSingleAddress``.
+
+    Such a packet is delivered locally, can be sent by the firewall itself
+    and is never routed, so a rule naming one belongs in INPUT and OUTPUT.
+    ``InetAddr::isAny()`` reads the address alone, where ``Address.is_any()``
+    also wants a zero netmask - which is why the "old broadcast" 0.0.0.0 is
+    asked about here and not through the object.
+    """
+    if recognize_broadcasts and (_is_broadcast_address(ip) or int(ip) == 0):
+        return True
+    return bool(recognize_multicasts and ip.is_multicast)
+
+
+def _first_inet_address(iface):
+    """The address ``Interface::getAddressObject()`` answers with, as an IP.
+
+    The first IPv4 of the interface, else its first IPv6, whichever family
+    is being compiled (Interface.cpp:461).  ``None`` when the interface
+    carries no IP address at all - a MAC-only or unnumbered one.
+    """
+    addresses = list(getattr(iface, 'addresses', []))
+    for wanted_v6 in (False, True):
+        for addr in addresses:
+            if addr.is_v6() != wanted_v6:
+                continue
+            text = addr.get_address() if hasattr(addr, 'get_address') else ''
+            if not text:
+                continue
+            try:
+                return ipaddress.ip_address(text)
+            except ValueError:
+                continue
+    return None
+
+
 def _is_host_mask(mask: str, version: int) -> bool:
     """Whether *mask* covers a single address (``InetAddr::isHostMask``)."""
     try:
@@ -787,7 +825,38 @@ class Compiler(BaseCompiler):
             return obj.device_id == fw.id
 
         if isinstance(obj, Host):
-            return False
+            # ``ObjectMatcher::dispatch(Host*)`` (ObjectMatcher.cpp:453):
+            # a host is the firewall when *every* one of its interfaces
+            # is, which is how a machine modelled twice - once as the
+            # Firewall object and once as a Host, in another library or
+            # in a rule written before the firewall object existed - is
+            # still recognised.  The port answered False for every host
+            # there is, so such a rule was chained as if it were about
+            # some other machine: into FORWARD, where the firewall's own
+            # traffic never goes.  Same shape as the standalone address
+            # of ``_address_is_on_the_firewall`` one level up.
+            #
+            # ``dispatch(Firewall*)`` and ``dispatch(Cluster*)`` end in
+            # the same loop, and both derive from Host here, so they are
+            # covered by it.
+            #
+            # A host with no interfaces at all answers True, because the
+            # C++ starts from ``res = true`` and never enters the loop.
+            # Faithful and harmless: such an object contributes no
+            # address, so the rule element is emptied and the rule is
+            # dropped long before the chain decision matters.
+            for iface in getattr(obj, 'interfaces', []):
+                address = _first_inet_address(iface)
+                if address is None:
+                    # ``checkComplexMatchForSingleAddress(Address*, ...)``
+                    # answers False for an object with no address at all,
+                    # so one unnumbered interface is enough to say no.
+                    return False
+                if not self._single_address_matches(
+                    address, fw, recognize_broadcasts, recognize_multicasts
+                ):
+                    return False
+            return True
 
         if isinstance(obj, AddressRange):
             # Matches if any of the firewall's interface addresses
@@ -852,13 +921,9 @@ class Compiler(BaseCompiler):
             except ValueError:
                 return False
 
-            if recognize_broadcasts and _is_broadcast_address(ip):
-                return True
-            # The "old broadcast": ``InetAddr::isAny()`` reads the address
-            # alone, where ``Address.is_any()`` also wants a zero netmask.
-            if recognize_broadcasts and int(ip) == 0:
-                return True
-            if recognize_multicasts and ip.is_multicast:
+            if _is_broadcast_or_multicast(
+                ip, recognize_broadcasts, recognize_multicasts
+            ):
                 return True
 
             if isinstance(obj, (Network, NetworkIPv6)):
@@ -874,6 +939,19 @@ class Compiler(BaseCompiler):
             return self._address_is_on_the_firewall(ip, fw, recognize_broadcasts)
 
         return False
+
+    def _single_address_matches(
+        self, ip, fw, recognize_broadcasts: bool, recognize_multicasts: bool
+    ) -> bool:
+        """Whether one bare address is the firewall.
+
+        ``ObjectMatcher::checkComplexMatchForSingleAddress(const InetAddr*,
+        FWObject*)`` whole: the broadcast / multicast shortcut, and then
+        every address of every interface of the firewall.
+        """
+        return _is_broadcast_or_multicast(
+            ip, recognize_broadcasts, recognize_multicasts
+        ) or self._address_is_on_the_firewall(ip, fw, recognize_broadcasts)
 
     @staticmethod
     def _address_is_on_the_firewall(ip, fw, recognize_broadcasts: bool) -> bool:

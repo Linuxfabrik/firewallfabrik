@@ -39,7 +39,15 @@ import sqlalchemy
 
 import firewallfabrik.core
 from firewallfabrik.compiler._compiler import Compiler
-from firewallfabrik.core.objects import AddressRange, Firewall, IPv4, IPv6, Network
+from firewallfabrik.core.objects import (
+    AddressRange,
+    Firewall,
+    Host,
+    Interface,
+    IPv4,
+    IPv6,
+    Network,
+)
 
 from .conftest import FIXTURES_DIR
 
@@ -190,3 +198,59 @@ def test_a_range_reaching_the_firewall(firewall, start, end):
 def test_a_range_that_reaches_nothing_of_the_firewall(firewall):
     compiler = Compiler.__new__(Compiler)
     assert not compiler.complex_match(_range('203.0.113.1', '203.0.113.9'), firewall)
+
+
+def _host(*interface_addresses):
+    """A Host whose interfaces carry exactly *interface_addresses*.
+
+    One tuple per interface; an empty tuple is an interface with no
+    address at all.
+    """
+    host = Host(id=uuid.uuid4(), name='probe')
+    for position, addresses in enumerate(interface_addresses):
+        iface = Interface(id=uuid.uuid4(), name=f'eth{position}')
+        iface.addresses = [
+            _address(IPv4, address, '255.255.255.255') for address in addresses
+        ]
+        host.interfaces.append(iface)
+    return host
+
+
+@pytest.mark.parametrize(
+    'interface_addresses',
+    [
+        # The firewall modelled a second time as a plain Host - in
+        # another library, or in a rule written before the firewall
+        # object existed.
+        [('198.51.100.1',)],
+        [('198.51.100.1',), ('192.168.1.1',)],
+        # ``Interface::getAddressObject()`` answers with the first
+        # address, so the second one is not asked about.
+        [('192.168.1.1', '203.0.113.9')],
+        # A host standing for a multicast group.
+        [('224.0.0.5',)],
+        # No interfaces at all: the C++ starts from ``res = true`` and
+        # never enters the loop.  Such an object contributes no address,
+        # so the rule is dropped long before the chain decision matters.
+        [],
+    ],
+)
+def test_a_host_whose_interfaces_are_all_the_firewall(firewall, interface_addresses):
+    compiler = Compiler.__new__(Compiler)
+    assert compiler.complex_match(_host(*interface_addresses), firewall)
+
+
+@pytest.mark.parametrize(
+    'interface_addresses',
+    [
+        [('203.0.113.9',)],
+        # *All* interfaces have to match, so one that does not is enough.
+        [('198.51.100.1',), ('203.0.113.9',)],
+        # An interface with no address answers False in
+        # ``checkComplexMatchForSingleAddress(Address*, ...)``.
+        [('198.51.100.1',), ()],
+    ],
+)
+def test_a_host_that_is_not_the_firewall(firewall, interface_addresses):
+    compiler = Compiler.__new__(Compiler)
+    assert not compiler.complex_match(_host(*interface_addresses), firewall)

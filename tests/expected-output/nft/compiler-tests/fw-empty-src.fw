@@ -8,6 +8,7 @@
 #
 # files: * fw-empty-src.fw /etc/fwf.sh
 #
+# fw-empty-src:Policy:0: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
