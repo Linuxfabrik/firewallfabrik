@@ -75,6 +75,19 @@ Blocks it skips, with the reason:
     no rendering for `-m ipv4options`, `--icmp-type 8/0` and a few others,
     so the answer key has a hole there, not us.
 
+Conditions it folds away in the default comparison:
+
+  * `meta l4proto` next to a port or ICMP-type clause, which carries its
+    own protocol dependency in nftables;
+  * `meta l4proto !=`, which is how nftables writes "every protocol this
+    negated element does not name" and iptables writes by leaving `-p` off
+    the action rule of its temporary chain;
+  * `-i +` / `-o +` against `meta iif != 0` / `meta oif != 0`, both of
+    which ask whether the packet has an incoming (outgoing) device.
+    `iptables-translate` throws the iptables half away, because it cannot
+    know the rule is in a user chain, where the condition decides
+    something.
+
 The temporary chains iptables needs for negation and logging are *not*
 skipped.  They spread one rule's conditions over a jump rule and the rules
 it jumps to, and nftables says the same thing in a single rule, so both
@@ -556,6 +569,15 @@ def compare(
             'meta l4proto !=' in rule for rule in nft_groups.get(key, [])
         ):
             extra.remove('ip protocol')
+        # "The packet has an incoming (outgoing) device", which a rule with
+        # a direction and no interface of its own asks for.  iptables writes
+        # `-i +` / `-o +` and nftables `meta iif != 0`, and
+        # `iptables-translate` throws the iptables half away - it has no way
+        # to know the rule is in a user chain, where the condition decides
+        # something.  Same rule, and only one side has a keyword left.
+        for option, keyword in (('-i +', 'iifname'), ('-o +', 'oifname')):
+            if keyword in extra and any(option in args for args, _ in commands):
+                extra.remove(keyword)
         if missing or extra:
             report.append((section, label, missing, extra))
     return report
