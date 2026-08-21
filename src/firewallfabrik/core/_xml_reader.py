@@ -75,7 +75,7 @@ _OPTIONS_TAGS = frozenset(
 )
 
 # Attributes handled explicitly -- everything else goes into ``data``.
-_COMMON_KNOWN = frozenset({'id', 'name', 'comment', 'ro'})
+_COMMON_KNOWN = frozenset({'id', 'name', 'comment', 'keywords', 'ro'})
 
 
 def _enum_value(enum_cls, name, default=0):
@@ -117,6 +117,21 @@ def _int(value, default=0):
 def _extra_attrs(elem, known):
     """Return a dict of XML attributes not in *known*, with bool coercion."""
     return {k: _coerce_bool(v) for k, v in elem.attrib.items() if k not in known}
+
+
+def _keywords(elem):
+    """The object's tags, as ``FWObject::fromXML`` reads them.
+
+    Firewall Builder writes them as one comma-separated attribute on every
+    object (`FWObject::toXML`, `setToString`) and reads them back with
+    `stringToSet`, which drops an empty last field and keeps everything
+    else verbatim.  They are what a Dynamic Group selects on, so losing
+    them empties every group that names one.
+    """
+    raw = elem.get('keywords')
+    if not raw:
+        return set()
+    return {part for part in raw.split(',') if part}
 
 
 def _coerce_bool(value):
@@ -494,6 +509,7 @@ class XmlReader:
         group.id = self._register(elem.get('id', ''))
         group.name = elem.get('name', '')
         group.comment = elem.get('comment', '')
+        group.keywords = _keywords(elem)
         group.ro = _bool(elem.get('ro', 'False'))
         group.data = _extra_attrs(elem, _COMMON_KNOWN)
         group.library = library
@@ -533,6 +549,7 @@ class XmlReader:
         device.id = self._register(elem.get('id', ''))
         device.name = elem.get('name', '')
         device.comment = elem.get('comment', '')
+        device.keywords = _keywords(elem)
         device.ro = _bool(elem.get('ro', 'False'))
         device.data = _extra_attrs(elem, _COMMON_KNOWN)
         device.library = library
@@ -562,6 +579,7 @@ class XmlReader:
         iface.id = self._register(elem.get('id', ''))
         iface.name = elem.get('name', '')
         iface.comment = elem.get('comment', '')
+        iface.keywords = _keywords(elem)
         iface.data = _extra_attrs(elem, _COMMON_KNOWN)
         iface.library = library
         iface.device = device
@@ -591,6 +609,7 @@ class XmlReader:
         addr.id = self._register(elem.get('id', ''))
         addr.name = elem.get('name', '')
         addr.comment = elem.get('comment', '')
+        addr.keywords = _keywords(elem)
 
         known = set(_COMMON_KNOWN)
         _address_type_attrs(addr, elem, known)
@@ -613,6 +632,7 @@ class XmlReader:
         svc.id = self._register(elem.get('id', ''))
         svc.name = elem.get('name', '')
         svc.comment = elem.get('comment', '')
+        svc.keywords = _keywords(elem)
         svc.library = library
 
         known = set(_COMMON_KNOWN)
@@ -632,6 +652,7 @@ class XmlReader:
         itv.id = self._register(elem.get('id', ''))
         itv.name = elem.get('name', '')
         itv.comment = elem.get('comment', '')
+        itv.keywords = _keywords(elem)
         itv.data = _extra_attrs(elem, _COMMON_KNOWN)
         itv.library = library
 
