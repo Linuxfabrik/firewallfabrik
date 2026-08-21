@@ -56,6 +56,7 @@ from firewallfabrik.compiler.processors._policy import (
     SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
+    SpecialCaseWithFWInDstAndOutbound,
     branches_into_mangle_only,
     is_mangle_only_rule_set,
 )
@@ -4786,87 +4787,6 @@ class SetChainPreroutingForTag(PolicyRuleProcessor):
             and rule.is_itf_any()
         ):
             ipt_comp.set_chain(rule, 'PREROUTING')
-
-        self.tmp_queue.append(rule)
-        return True
-
-
-class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
-    """Drop outbound FORWARD rules where dst matches fw.
-
-    In outbound direction with a non-OUTPUT chain and an interface
-    belonging to the firewall: if src does not match fw but dst does,
-    the packet would go to INPUT (not be forwarded), so the rule is
-    dropped. Preserves rules with negated src or bridging fw with
-    broadcast/multicast dst.
-
-    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseWithFWInDstAndOutbound``.
-    """
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-
-        itf = rule.itf[0] if rule.itf else None
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
-        chain = rule.ipt_chain
-
-        if (
-            rule.direction == Direction.Outbound
-            and isinstance(itf, Interface)
-            and itf.device_id == ipt_comp.fw.id
-            and chain != 'OUTPUT'
-        ):
-            # Bridging fw with broadcast/multicast dst: keep rule
-            if (
-                dst is not None
-                and hasattr(dst, 'is_broadcast')
-                and (dst.is_broadcast() or dst.is_multicast())
-                and ipt_comp.fw.get_option('bridging_fw')
-            ):
-                self.tmp_queue.append(rule)
-                return True
-
-            # Negated src: keep rule
-            if rule.get_neg('src') or rule.src_single_object_negation:
-                self.tmp_queue.append(rule)
-                return True
-
-            rule_afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-
-            src_matches = (
-                ipt_comp.complex_match(src, ipt_comp.fw) if src is not None else False
-            )
-            dst_matches = (
-                ipt_comp.complex_match(dst, ipt_comp.fw) if dst is not None else False
-            )
-
-            # If afpa is off, network objects don't match unless host mask
-            if (
-                not rule_afpa
-                and src is not None
-                and (rule.is_src_any() or isinstance(src, (Network, NetworkIPv6)))
-                and not (hasattr(src, 'is_host_mask') and src.is_host_mask())
-            ):
-                src_matches = False
-            if (
-                not rule_afpa
-                and dst is not None
-                and (rule.is_dst_any() or isinstance(dst, (Network, NetworkIPv6)))
-                and not (hasattr(dst, 'is_host_mask') and dst.is_host_mask())
-            ):
-                dst_matches = False
-
-            if not src_matches and dst_matches:
-                # src does not match, dst matches: drop the rule
-                return True
-
-            self.tmp_queue.append(rule)
-            return True
 
         self.tmp_queue.append(rule)
         return True

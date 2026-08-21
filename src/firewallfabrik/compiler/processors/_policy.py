@@ -696,3 +696,95 @@ class KeepMangleTableRules(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
 
         return True
+
+
+class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
+    """Drop an outbound forwarding rule whose destination is the firewall.
+
+    A packet that is not from the firewall and is addressed to it goes
+    into the input chain and is never forwarded, so it cannot cross an
+    interface outbound and a rule written that way would never see it.
+    Ports ``PolicyCompiler_ipt::specialCaseWithFWInDstAndOutbound``
+    (PolicyCompiler_ipt.cpp:2761), which has four guards before it drops
+    anything, and each of them keeps a rule the administrator wrote:
+
+    * the interface has to be one of *this* firewall's;
+    * a bridging firewall forwards a broadcast and a multicast frame, so a
+      rule naming one as its destination is legitimate there;
+    * a negated source may well be the firewall, so the packet may be one
+      the firewall generated;
+    * and with "assume firewall is part of any and networks" off, a
+      network object is not the firewall unless its mask covers a single
+      address - which is what makes "outbound to ff00::/8" a rule to keep.
+
+    Shared, because a rule this drops is dropped without a word: the
+    nftables copy had the first, second and fourth guard missing while its
+    docstring described them, and one rule of the reference corpus
+    disappeared from the nftables ruleset and stayed in the iptables one.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        itf = rule.itf[0] if rule.itf else None
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+
+        if not (
+            rule.direction == Direction.Outbound
+            and isinstance(itf, Interface)
+            and itf.device_id == self.compiler.fw.id
+            # iptables spells the chain OUTPUT and nftables output.
+            and (rule.ipt_chain or '').lower() != 'output'
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        if (
+            dst is not None
+            and hasattr(dst, 'is_broadcast')
+            and (dst.is_broadcast() or dst.is_multicast())
+            and self.compiler.fw.get_option('bridging_fw')
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_neg('src') or rule.src_single_object_negation:
+            self.tmp_queue.append(rule)
+            return True
+
+        rule_afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+
+        src_matches = (
+            self.compiler.complex_match(src, self.compiler.fw)
+            if src is not None
+            else False
+        )
+        dst_matches = (
+            self.compiler.complex_match(dst, self.compiler.fw)
+            if dst is not None
+            else False
+        )
+
+        if (
+            not rule_afpa
+            and src is not None
+            and (rule.is_src_any() or isinstance(src, (Network, NetworkIPv6)))
+            and not (hasattr(src, 'is_host_mask') and src.is_host_mask())
+        ):
+            src_matches = False
+        if (
+            not rule_afpa
+            and dst is not None
+            and (rule.is_dst_any() or isinstance(dst, (Network, NetworkIPv6)))
+            and not (hasattr(dst, 'is_host_mask') and dst.is_host_mask())
+        ):
+            dst_matches = False
+
+        if not src_matches and dst_matches:
+            return True  # drop
+
+        self.tmp_queue.append(rule)
+        return True
