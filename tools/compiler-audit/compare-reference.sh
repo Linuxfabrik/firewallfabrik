@@ -22,10 +22,12 @@
 # like.  A single total hides that.
 #
 # The comparison normalises what carries no meaning: the lock timeout, the
-# generated chain names, the conntrack spelling of the state match, and a few
-# protocol numbers the two compilers write differently.  Rules wrapped in a
-# run-time loop (address tables, dynamic interfaces) are no longer plain
-# command lines and count as missing, so the number is pessimistic by design.
+# `2>/dev/null` on a chain creation, the generated chain names, the conntrack
+# spelling of the state match, the trailing space inside an iptables-restore
+# `echo`, and a few protocol numbers the two compilers write differently.
+# Rules wrapped in a run-time loop (address tables, dynamic interfaces) are no
+# longer plain command lines and count as missing, so the number is
+# pessimistic by design.
 #
 # Usage: compare-reference.sh <output-directory> [reference-directory] [fixture-name]
 #
@@ -43,14 +45,22 @@ if [ -z "$REFERENCE" ] || [ ! -d "$REFERENCE" ]; then
     exit 2
 fi
 
+# Only `script_body()` installs the policy.  Both compilers put every rule
+# there and nothing else: the reset helpers, the coexistence jump setup,
+# `check_tools` and the block/stop actions exist in every script, differ by
+# design, and hold `$IPTABLES` without installing a rule of the policy.
+# Counting them added about 2000 to `missing` and 6800 to `extra`, both
+# constant, both hiding the number that means something.
 normalise() {
-    grep -E '\$(IPTABLES|IP6TABLES)|echo "-[AI] ' "$1" |
+    awk '/^[a-zA-Z_][a-zA-Z0-9_]*\(\) *\{/{inb = ($1 == "script_body()")} inb' "$1" |
+        grep -E '\$(IPTABLES|IP6TABLES)([^_A-Za-z]|$)|echo "-[AI] ' |
         sed -e 's/-w [0-9]*//' -e 's/-w //' \
+            -e 's/ 2>\/dev\/null//' \
             -e 's/C[0-9a-fA-F]\{6,\}\.[0-9]*/CHAIN/g' \
             -e 's/Cid[0-9A-Za-z]*\.[0-9]*/CHAIN/g' \
             -e 's/-m conntrack --ctstate/-m state --state/' \
             -e 's/-p 0 /-p all /' -e 's/-p 51 /-p ah /' -e 's/-p 50 /-p esp /' \
-            -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//' | sort
+            -e 's/[[:space:]]\+/ /g' -e 's/ *"$//' -e 's/^ //' -e 's/ $//' | sort
 }
 
 compared=0

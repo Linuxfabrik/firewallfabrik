@@ -80,6 +80,13 @@ produce and must never grow — a correct fix leaves it untouched. **extra**
 counts rules the reference never emitted, and dropping it is what progress
 looks like. A single total hides both.
 
+Only `script_body()` is compared, because that is the function both compilers
+install the policy from. The reset helpers, the coexistence jump setup,
+`check_tools` and the block/stop actions hold `$IPTABLES` too, exist in every
+script and differ by design; counting them added about 2000 to `missing` and
+6800 to `extra` and hid the number that means something. **A baseline taken
+before 2026-08-21 was measured the old way and is not comparable.**
+
 The number is pessimistic on purpose: a rule wrapped in a run-time loop (an
 address table, a dynamic interface address) is no longer a plain command line
 and counts as missing even though it is right.
