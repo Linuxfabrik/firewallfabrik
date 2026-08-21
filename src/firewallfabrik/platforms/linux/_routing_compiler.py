@@ -600,7 +600,12 @@ class EliminateDuplicateRoutingRules(RoutingRuleProcessor):
     ``CompetingRoutingRules`` compares the destination *lists* of two
     rules, so a rule routing "A and B" and one routing "B" pass it and only
     collide once every destination has its own command.  Corresponds to
-    ``RoutingCompiler_ipt::eliminateDuplicateRules``.
+    ``RoutingCompiler_ipt::eliminateDuplicateRules`` and, for the silent
+    half, to ``RoutingCompiler_ipt::optimize3``: two copies of the *same*
+    rule are an artifact of the atomic split - two destination objects
+    holding the same address - and there is nothing an administrator could
+    do about them, so only a collision between two different rules is
+    worth a word.
     """
 
     def __init__(self, name: str = 'eliminate duplicate rules') -> None:
@@ -624,11 +629,12 @@ class EliminateDuplicateRoutingRules(RoutingRuleProcessor):
         )
         previous = self._seen.get(key)
         if previous is not None:
-            self.compiler.warning(
-                rule,
-                f'Routing rules "{previous}" and "{rule.label}" install the '
-                f'same route; the second one is left out',
-            )
+            if previous != rule.label:
+                self.compiler.warning(
+                    rule,
+                    f'Routing rules "{previous}" and "{rule.label}" install '
+                    f'the same route; the second one is left out',
+                )
             return True
 
         self._seen[key] = rule.label

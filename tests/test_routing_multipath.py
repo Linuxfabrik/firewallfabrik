@@ -189,3 +189,15 @@ def test_a_destination_named_by_two_rules_is_routed_once():
 
     assert len(out) == 1
     assert len(compiler.warnings) == 1
+
+
+def test_two_copies_of_one_rule_are_dropped_without_a_word():
+    """The atomic split can produce them; nobody can act on the message."""
+    shared = _network('shared', '10.2.0.0')
+    gw = _gateway()
+    itf = _interface('eth0')
+    rules = [_rule(0, [shared], gw, itf), _rule(0, [shared], gw, itf)]
+    compiler, out = _run(EliminateDuplicateRoutingRules(), rules)
+
+    assert len(out) == 1
+    assert compiler.warnings == []
