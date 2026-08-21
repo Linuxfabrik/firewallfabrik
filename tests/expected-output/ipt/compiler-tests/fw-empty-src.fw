@@ -12,7 +12,7 @@
 # Compiled for iptables (any version)
 #
 
-# fw-empty-src:Policy:0: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# fw-empty-src:Policy:0: warning: Rule is left out because "empty-ip" contributes no address to it
 
 FWBDEBUG=""
 RETVAL=0

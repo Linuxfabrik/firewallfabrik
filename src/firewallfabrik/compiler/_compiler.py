@@ -159,6 +159,20 @@ def _is_broadcast_or_multicast(
     return bool(recognize_multicasts and ip.is_multicast)
 
 
+def _carries_ip_address(iface) -> bool:
+    """Does *iface* carry an IP address of either family?
+
+    Asked to tell the two reasons an expansion can come out empty apart:
+    an interface with an address of the other family is the ordinary case
+    of a single-stack object in the wrong pass, one with no IP address at
+    all is not.  A MAC address belongs to no family and does not count.
+    """
+    return any(
+        not isinstance(addr, PhysAddress) and addr.get_address()
+        for addr in getattr(iface, 'addresses', [])
+    )
+
+
 def _first_inet_address_object(iface):
     """The address object ``Interface::getAddressObject()`` answers with.
 
@@ -612,6 +626,13 @@ class Compiler(BaseCompiler):
         ``DropRulesByAddressFamilyAndServiceType`` compares the element
         before and after the filtering and drops the rule when the filtering
         turned it into "any" (libfwbuilder/fwcompiler/Compiler.cpp).
+
+        Which of the two reasons emptied the element decides whether the
+        rule's disappearance is worth a word.  The address family is the
+        ordinary fate of a single-stack rule in the other family's pass
+        and stays silent there, because the rule is compiled for the
+        family it names; a host that carries no usable address at all is
+        a different matter and has to be said, whichever pass finds it.
         """
         elements = getattr(comp_rule, slot)
         if not elements:
@@ -625,24 +646,38 @@ class Compiler(BaseCompiler):
                 on_loopback = True
 
         new_elements = []
+        contributed_nothing = []
         for obj in elements:
             if isinstance(obj, Host) and not isinstance(obj, Interface):
                 use_mac = host_matches_by_mac(obj)
+                before = len(new_elements)
+                other_family = False
                 # Expand host to its interface addresses
                 for iface in obj.interfaces:
                     if iface.is_loopback() and not on_loopback:
                         continue
-                    new_elements.extend(self._expand_interface(iface, use_mac))
+                    expanded = self._expand_interface(iface, use_mac)
+                    new_elements.extend(expanded)
+                    if not expanded and _carries_ip_address(iface):
+                        other_family = True
+                if len(new_elements) == before and not other_family:
+                    contributed_nothing.append(obj.name)
             else:
                 new_elements.append(obj)
 
         if not new_elements:
             comp_rule.has_empty_re = True
-            comp_rule.empty_re_family_only = True
-            comp_rule.empty_re_reason = (
-                'none of the addresses it names belong to the address family '
-                'being compiled'
-            )
+            if contributed_nothing:
+                comp_rule.empty_re_family_only = False
+                comp_rule.empty_re_reason = (
+                    f'"{contributed_nothing[0]}" contributes no address to it'
+                )
+            else:
+                comp_rule.empty_re_family_only = True
+                comp_rule.empty_re_reason = (
+                    'none of the addresses it names belong to the address family '
+                    'being compiled'
+                )
 
         # Sort by address
         new_elements.sort(key=_addr_sort_key)

@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a rule left out because one of the objects it names carries no address at all says so, and says which object. It was reported as naming addresses of the wrong family, which is a different thing: that one is the ordinary fate of a single-stack rule in the other family's pass and is deliberately kept quiet on a dual-stack firewall - so a rule that was gone from *both* rulesets disappeared without a word.
+
 * Compiler (nftables): the "Path to ip" and "Path to logger" settings of the Linux host settings dialog reach the generated script. Both fields were greyed out for an nftables firewall and the compiler read a key of its own that no field writes, so a firewall whose binaries are not in the usual place got a script calling the wrong ones - and every rule matching a dynamic interface address, every address table and every routing rule needs `ip` to work.
 
 * Compiler (iptables, nftables): a firewall setting the data file does not carry takes the default the settings dialog shows. Both compilers read a handful of settings straight out of the stored data with a fallback of their own, and that fallback said "off" where the default is "on" - so "Configure interfaces", "Add virtual addresses for NAT" and "Verify interfaces" did nothing on a firewall whose file predates them, and on every cluster. On nftables the default came from the iptables settings, because a firewall imported from Firewall Builder says "iptables" whatever it is compiled with; "Configure interfaces" was also declared off there while iptables has it on, so the same firewall behaved differently on the two platforms.

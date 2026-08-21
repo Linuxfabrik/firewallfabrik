@@ -17,8 +17,8 @@
 #
 # Rule 0 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
 # Rule 1 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
-# firewall23-3:Policy:0: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall23-3:Policy:1: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall23-3:Policy:0: warning: Rule is left out because "firewall23-3" contributes no address to it
+# firewall23-3:Policy:1: warning: Rule is left out because "firewall23-3" contributes no address to it
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
