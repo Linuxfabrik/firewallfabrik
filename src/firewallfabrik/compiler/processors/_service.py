@@ -203,6 +203,12 @@ _SERVICE_SLOTS = {
     'NATRule': ('osrv', 'tsrv'),
 }
 
+# A port number is 16 bits.  iptables bounds it in `xtables_parse_port`
+# (netfilter iptables libxtables/xtables.c) and nftables answers
+# "Service out of range"; both editors bound the field, so only a
+# hand-edited or corrupt data file can carry more.
+MAX_PORT_NUMBER = 65535
+
 
 def port_range_problem(srv) -> str:
     """Return why *srv* names a port range neither tool takes, or ``''``.
@@ -227,6 +233,12 @@ def port_range_problem(srv) -> str:
         ('source', srv.src_range_start or 0, srv.src_range_end or 0),
         ('destination', srv.dst_range_start or 0, srv.dst_range_end or 0),
     ):
+        for port in (start, end):
+            # A port number is 16 bits: `xtables_parse_port` bounds it at
+            # UINT16_MAX ("invalid port/service `%s' specified") and
+            # nftables answers "Service out of range".
+            if not 0 <= port <= MAX_PORT_NUMBER:
+                return f'names the {what} port {port}, which is not a port number'
         # An end of 0 is "no range", not "port 0": the printers write the
         # start alone for it.
         if end and start > end:

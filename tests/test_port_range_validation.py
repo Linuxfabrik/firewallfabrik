@@ -10,9 +10,9 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""A TCP or UDP service whose port range runs backwards.
+"""A TCP or UDP service whose port range neither packet filter takes.
 
-Neither packet filter takes one.  iptables answers
+Two shapes.  A range whose end is below its start: iptables answers
 ``invalid portrange (min > max)`` for ``--dport`` and ``invalid portrange
 specified`` for ``-m multiport``, which stops the activation script with
 the built-in policies already at DROP; nftables answers ``Range negative
@@ -30,7 +30,10 @@ import uuid
 
 import pytest
 
-from firewallfabrik.compiler.processors._service import port_range_problem
+from firewallfabrik.compiler.processors._service import (
+    MAX_PORT_NUMBER,
+    port_range_problem,
+)
 from firewallfabrik.core.objects import ICMPService, TCPService, UDPService
 
 
@@ -75,3 +78,26 @@ def test_a_range_both_tools_take(cls, ranges):
 def test_a_service_without_ports_is_not_asked():
     """Only TCP and UDP carry port ranges."""
     assert not port_range_problem(ICMPService(id=uuid.uuid4(), name='probe'))
+
+
+@pytest.mark.parametrize('cls', [TCPService, UDPService])
+@pytest.mark.parametrize(
+    'ranges',
+    [
+        {'dst_range_start': MAX_PORT_NUMBER + 1},
+        {'dst_range_start': 80, 'dst_range_end': MAX_PORT_NUMBER + 1},
+        {'src_range_start': 100000, 'src_range_end': 100001},
+        # A negative number is not a port either.
+        {'dst_range_start': -1},
+    ],
+)
+def test_a_port_outside_the_16_bits_it_has(cls, ranges):
+    """`xtables_parse_port` bounds it at UINT16_MAX, nft says "out of range"."""
+    assert port_range_problem(_service(cls, **ranges))
+
+
+@pytest.mark.parametrize('cls', [TCPService, UDPService])
+def test_the_highest_port_there_is(cls):
+    assert not port_range_problem(
+        _service(cls, dst_range_start=MAX_PORT_NUMBER, dst_range_end=MAX_PORT_NUMBER),
+    )
