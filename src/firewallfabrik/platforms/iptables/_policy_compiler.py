@@ -97,6 +97,7 @@ from firewallfabrik.platforms.iptables._utils import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
+    INVALID_STATE_LOG_PREFIX,
     count_bridge_interfaces,
     forwarding_is_off,
     interface_direction_problem,
@@ -1022,7 +1023,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # quotes around the prefix have to be escaped for the shell, the same
         # way the print rule quotes a per-rule log prefix.
         quote = '\\"' if use_restore else '"'
-        conf.set_variable('invalid_match_log_prefix', f'{quote}INVALID {quote}')
+        conf.set_variable(
+            'invalid_match_log_prefix',
+            f'{quote}{INVALID_STATE_LOG_PREFIX}{quote}',
+        )
 
         return conf.expand()
 

@@ -273,7 +273,7 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         tcp dport 22 ip saddr 192.168.1.100 ct state new,established counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
         # Rule 0 (eth1)
@@ -489,7 +489,7 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
         # Rule 0 (eth1)
@@ -714,7 +714,7 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         tcp sport 22 ip daddr 192.168.1.100 ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
         # Rule 3 (eth1)

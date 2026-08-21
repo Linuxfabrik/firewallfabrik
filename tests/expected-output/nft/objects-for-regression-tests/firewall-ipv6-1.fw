@@ -398,7 +398,7 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         tcp dport 22 ip saddr 1.1.1.2 ct state new,established counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
         #
         # Rule 4 (global)
@@ -503,7 +503,7 @@ table inet fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         #
         # Rule 10 (global)
         #
@@ -569,7 +569,7 @@ table inet fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         tcp sport 22 ip daddr 1.1.1.2 ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
         #
         # Rule 11 (global)

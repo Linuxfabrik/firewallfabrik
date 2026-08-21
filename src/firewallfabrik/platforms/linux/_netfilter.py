@@ -335,6 +335,15 @@ def normalize_rate_unit(suffix: str) -> str | None:
 _LOG_PREFIX_DROPPED = frozenset('$`\\')
 
 
+#: What the rule that logs an invalid-state packet writes in front of it.
+#: Firewall Builder hardcodes this string at the one call site that fills
+#: the `automatic_rules` configlet
+#: (`PolicyCompiler_ipt::PrintRule::_printOptionalGlobalRules`, which hands
+#: it to `_printLogPrefix` with no macro in it), so it is the prefix an
+#: administrator's log alerting is keyed on after a migration.
+INVALID_STATE_LOG_PREFIX = 'INVALID state -- DENY '
+
+
 def sanitize_log_prefix(prefix: str) -> str:
     """Return *prefix* with the characters no back end can carry removed.
 

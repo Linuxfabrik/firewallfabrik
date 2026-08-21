@@ -29,6 +29,7 @@ from firewallfabrik.driver._interface_properties import (
     get_interface_var_name,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    INVALID_STATE_LOG_PREFIX,
     forwarding_is_off,
     is_valid_mgmt_address,
     mgmt_address_family,
@@ -96,9 +97,9 @@ class OSConfigurator_nft(OSConfigurator):
                 qthreshold = 1
             if qthreshold > 1:
                 parts.append(f'queue-threshold {qthreshold}')
-            parts.append('prefix "INVALID "')
+            parts.append(f'prefix "{INVALID_STATE_LOG_PREFIX}"')
             return ' '.join(parts)
-        return 'log prefix "INVALID " level debug'
+        return f'log prefix "{INVALID_STATE_LOG_PREFIX}" level debug'
 
     def _backup_ssh_rules(self, chain: str, have_ipv6: bool) -> list[str]:
         """Return the backup ssh rules of one filter chain.
