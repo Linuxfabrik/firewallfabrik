@@ -1151,7 +1151,18 @@ class CompilerDriver_nft(CompilerDriver):
         # Interface configuration
         configure_interfaces = self.firewall_option(fw, 'configure_interfaces')
         verify_interfaces_opt = self.firewall_option(fw, 'verify_interfaces')
-        ip_path = self.firewall_option(fw, 'ip_path') or 'ip'
+        # `linux24_path_ip` is the key the Linux host settings dialog
+        # writes, on either platform; `ip_path` is the nftables schema's
+        # own and has no widget, so reading only that one threw the
+        # admin's setting away.  Same order as the iptables side, which
+        # asks `linux24_path_<tool>` first and falls back to a default
+        # (OSConfigurator_linux24.print_path_for_all_tools).
+        ip_path = (
+            self.firewall_option(fw, 'linux24_path_ip')
+            or self.firewall_option(fw, 'ip_path')
+            or 'ip'
+        )
+        logger_path = self.firewall_option(fw, 'linux24_path_logger') or 'logger'
 
         shell_functions = ''
         configure_interfaces_code = ''
@@ -1241,6 +1252,7 @@ class CompilerDriver_nft(CompilerDriver):
             'filter_table': filter_table,
             'flush_ruleset': self.firewall_option(fw, 'flush_ruleset'),
             'ip_path': ip_path,
+            'logger_path': logger_path,
             'nat_table': nat_table,
             'mangle_table': mangle_table,
             'address_table_file_checks': self._address_table_file_checks(),

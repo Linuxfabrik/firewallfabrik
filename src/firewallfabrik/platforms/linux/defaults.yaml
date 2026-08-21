@@ -199,7 +199,7 @@ options:
     type: 'str'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_path_ip'
     placeholder: '/sbin/ip'
     description: >-
@@ -265,7 +265,7 @@ options:
     type: 'str'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_path_logger'
     placeholder: '/usr/bin/logger'
     description: >-
