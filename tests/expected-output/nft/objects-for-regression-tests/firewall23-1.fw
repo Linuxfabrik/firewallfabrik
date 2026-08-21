@@ -24,7 +24,6 @@
 # Rule 9 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
 # Rule 10 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
 # Rule 11 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
-# Rule 12 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
 # Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
 # Rule 13 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
 # Rule 14 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out

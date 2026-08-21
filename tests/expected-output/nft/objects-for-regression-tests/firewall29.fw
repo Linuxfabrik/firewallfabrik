@@ -371,8 +371,8 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        ip daddr @i_eth0.200 udp dport { 68, 67 } ct state new counter accept
         ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        ip daddr @i_eth0.200 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 3 (global)
         #
@@ -418,8 +418,8 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        ip daddr @i_eth0.200 udp dport { 68, 67 } ct state new counter accept
         ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        ip daddr @i_eth0.200 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (global)
         #

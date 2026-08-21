@@ -448,19 +448,6 @@ table ip fwf_filter {
         iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 3 - DENY **" level debug
         iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
         #
-        # Rule 4 (eth1,eth3)
-        #
-        # testing choice of chains in case when several
-        # interfaces are used and rule matches 'any' or
-        # broadcast
-        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
-        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
-        #
-        # Rule 6 (eth1,eth3)
-        #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
-        #
         # Rule 7 (global)
         #
         tcp flags & (syn | rst | ack) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug

@@ -736,14 +736,21 @@ class Compiler(BaseCompiler):
         self,
         obj,
         fw: Firewall,
-        recognize_broadcasts: bool = False,
-        recognize_multicasts: bool = False,
+        recognize_broadcasts: bool = True,
+        recognize_multicasts: bool = True,
     ) -> bool:
         """Check if an address object matches the firewall.
 
         Returns True if obj is the firewall itself, one of its interfaces,
-        an address on one of its interfaces, or (when flags set) a
-        broadcast/multicast address.
+        an address on one of its interfaces, or (when the flags are on) a
+        broadcast or multicast address.
+
+        Both flags default to on, the way ``Compiler::complexMatch``
+        declares them (``Compiler.h:955``).  A broadcast is delivered
+        locally *and* can be sent by the firewall itself, and it is never
+        routed, so a rule naming one belongs in INPUT and OUTPUT and not
+        in FORWARD.  Only the two chain decisions of a bridging firewall
+        ask with the flags off, and they say so at the call site.
         """
         if obj is None or fw is None:
             return False

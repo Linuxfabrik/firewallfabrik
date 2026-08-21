@@ -386,12 +386,6 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (eth0)
-        #
-        # using address range object
-        # 255.255.255.255-255.255.255.255
-        oifname "eth0" ip daddr 255.255.255.255 counter log prefix "RULE 0 -- DENY " level info drop
-        #
         # Rule 2 (ppp0)
         #
         # anti-spoofing rule
