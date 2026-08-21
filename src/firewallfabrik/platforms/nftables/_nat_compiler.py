@@ -65,6 +65,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     build_interface_groups,
+    destination_port_half,
     get_mac_only_address,
     interface_group_object,
     nat_interface_problem,
@@ -1189,13 +1190,15 @@ class SplitSDNATRule(NATRuleProcessor):
         r2.odst = list(rule.tdst)
         r2.set_neg('odst', False)
         # The first rule already translated the destination port, so the
-        # second one has to match the translated port, not the original.
+        # second one has to match the translated port, not the original -
+        # and only the destination half of it, because a destination
+        # translation never writes a source port.
         if (
             isinstance(tsrv, TCPUDPService)
             and not rule.is_tsrv_any()
             and (tsrv.dst_range_start or 0) != 0
         ):
-            r2.osrv = [tsrv]
+            r2.osrv = [destination_port_half(tsrv)]
         if translates_dst_port:
             r2.tsrv = []
         self.tmp_queue.append(r2)

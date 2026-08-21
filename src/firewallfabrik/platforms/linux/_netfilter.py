@@ -18,7 +18,13 @@ import ipaddress
 import re
 import uuid
 
-from firewallfabrik.core.objects import Host, Interface, PhysAddress, TagService
+from firewallfabrik.core.objects import (
+    Host,
+    Interface,
+    PhysAddress,
+    TagService,
+    TCPUDPService,
+)
 
 # A packet only carries the device it goes out on once the routing decision
 # is made, so the PRE_ROUTING and LOCAL_IN hooks cannot match an outgoing
@@ -39,6 +45,60 @@ NO_OUTBOUND_DEVICE_CHAINS = frozenset({'input', 'prerouting'})
 # a question about the back end and not about the packet, which is what
 # the *iif_in_postrouting* argument below answers.
 NO_INBOUND_DEVICE_CHAINS = frozenset({'output'})
+
+
+def tsrv_translation(osrv, tsrv) -> tuple[bool, bool]:
+    """Report whether the translated service changes the src or dst port.
+
+    Returns ``(translates_src_port, translates_dst_port)``.  A translated
+    service that repeats the port of the original service translates
+    nothing.  Mirrors ``NATCompiler::classifyNATRule``.
+    """
+    if not isinstance(osrv, TCPUDPService) or not isinstance(tsrv, TCPUDPService):
+        return (False, False)
+
+    src = (tsrv.src_range_start or 0) != 0 and (tsrv.dst_range_start or 0) == 0
+    dst = (tsrv.src_range_start or 0) == 0 and (tsrv.dst_range_start or 0) != 0
+
+    if dst and (
+        (osrv.dst_range_start or 0) == (tsrv.dst_range_start or 0)
+        and (osrv.dst_range_end or 0) == (tsrv.dst_range_end or 0)
+    ):
+        dst = False
+    if src and (
+        (osrv.src_range_start or 0) == (tsrv.src_range_start or 0)
+        and (osrv.src_range_end or 0) == (tsrv.src_range_end or 0)
+    ):
+        src = False
+
+    return (src, dst)
+
+
+def destination_port_half(tsrv):
+    """Return the destination-port half of a translated service.
+
+    An SDNAT rule becomes a destination translation followed by a source
+    translation, and the second one has to match what the first one left
+    behind.  Where the translated service changes *both* ports, matching on
+    it whole asks for the translated source port as well - a port the first
+    rule never wrote, because a destination translation cannot change it.
+    The rule then matches nothing and the source is never translated.
+    fwbuilder builds a service carrying the destination half alone for that
+    match (``NATCompiler_ipt::splitSDNATRule``, the ``_dport`` service).
+
+    Returns *tsrv* itself when it translates the destination port only, so
+    the caller can use the answer unconditionally.
+    """
+    if (tsrv.src_range_start or 0) == 0:
+        return tsrv
+
+    half = type(tsrv)()
+    half.id = uuid.uuid4()
+    half.name = f'{tsrv.name}_dport'
+    half.dst_range_start = tsrv.dst_range_start
+    half.dst_range_end = tsrv.dst_range_end
+    half.named_protocols = tsrv.named_protocols
+    return half
 
 
 def interface_direction_problem(

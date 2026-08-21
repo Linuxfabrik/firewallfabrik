@@ -81,6 +81,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     build_interface_groups,
     count_bridge_interfaces,
+    destination_port_half,
     interface_group_object,
     nat_interface_problem,
 )
@@ -1981,14 +1982,17 @@ class SplitSDNATRule(NATRuleProcessor):
         # ODst = original TDst (translated destination becomes match for SNAT)
         r_snat.odst = list(rule.tdst)
 
-        # If TSrv translated dst port, match it in OSrv of second rule
+        # If TSrv translated dst port, match it in OSrv of second rule.
+        # Only the destination half of it: the first rule is a destination
+        # translation and cannot have written a source port, so matching on
+        # one would leave the source untranslated.
         if (
             tsrv_obj
             and not rule.is_tsrv_any()
             and isinstance(tsrv_obj, TCPUDPService)
             and (tsrv_obj.dst_range_start or 0) != 0
         ):
-            r_snat.osrv = [tsrv_obj]
+            r_snat.osrv = [destination_port_half(tsrv_obj)]
 
         r_snat.tdst = []
         if tsrv_translates_dst_port:
