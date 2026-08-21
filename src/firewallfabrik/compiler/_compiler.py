@@ -129,6 +129,32 @@ def _matches_dynamic_criteria(
     return all(active)
 
 
+def _is_broadcast_address(ip) -> bool:
+    """Whether *ip* is what ``InetAddr::isBroadcast()`` calls a broadcast.
+
+    For IPv4 that is 255.255.255.255 alone.  IPv6 has no broadcast, and
+    fwbuilder answers with link-local multicast there (``InetAddr.h``,
+    ``IN6_IS_ADDR_MC_LINKLOCAL``), which is what carries neighbour
+    discovery and the routing protocols - the same traffic the IPv4
+    broadcast carries.
+    """
+    if ip.version == 4:
+        return int(ip) == 0xFFFFFFFF
+    return ip.is_multicast and ip.packed[1] & 0x0F == 0x02
+
+
+def _is_host_mask(mask: str, version: int) -> bool:
+    """Whether *mask* covers a single address (``InetAddr::isHostMask``)."""
+    try:
+        if mask.isdigit():
+            return int(mask) == (32 if version == 4 else 128)
+        return int(ipaddress.ip_address(mask)) == (
+            0xFFFFFFFF if version == 4 else (1 << 128) - 1
+        )
+    except ValueError:
+        return False
+
+
 class Compiler(BaseCompiler):
     """Base compiler. Manages the rule processor pipeline."""
 
@@ -782,18 +808,18 @@ class Compiler(BaseCompiler):
                 end_ip = ipaddress.ip_address(end)
             except ValueError:
                 return False
-            if (
-                recognize_broadcasts
-                and start_ip == end_ip
-                and str(start_ip) == '255.255.255.255'
-            ):
+            # ``ObjectMatcher::dispatch(AddressRange*)`` asks the two ends
+            # separately, and one of them answering is enough.
+            for end_point in (start_ip, end_ip):
+                if int(end_point) == 0:
+                    continue
+                if recognize_broadcasts and _is_broadcast_address(end_point):
+                    return True
+                if recognize_multicasts and end_point.is_multicast:
+                    return True
+            # The "old broadcast" 0.0.0.0-0.0.0.0 of the standard library.
+            if recognize_broadcasts and start_ip == end_ip and int(start_ip) == 0:
                 return True
-            if recognize_multicasts:
-                try:
-                    if start_ip.is_multicast and end_ip.is_multicast:
-                        return True
-                except AttributeError:
-                    pass
             for iface in fw.interfaces:
                 for addr in getattr(iface, 'addresses', []):
                     addr_str = (
@@ -819,18 +845,78 @@ class Compiler(BaseCompiler):
                         return True
 
             addr_str = obj.get_address()
-            if addr_str:
-                if recognize_broadcasts and obj.is_broadcast():
-                    return True
-                if recognize_broadcasts and obj.is_any():
-                    return True
-                try:
-                    ip = ipaddress.ip_address(addr_str)
-                    if recognize_multicasts and ip.is_multicast:
-                        return True
-                except ValueError:
-                    pass
+            if not addr_str:
+                return False
+            try:
+                ip = ipaddress.ip_address(addr_str)
+            except ValueError:
+                return False
 
+            if recognize_broadcasts and _is_broadcast_address(ip):
+                return True
+            # The "old broadcast": ``InetAddr::isAny()`` reads the address
+            # alone, where ``Address.is_any()`` also wants a zero netmask.
+            if recognize_broadcasts and int(ip) == 0:
+                return True
+            if recognize_multicasts and ip.is_multicast:
+                return True
+
+            if isinstance(obj, (Network, NetworkIPv6)):
+                # ``ObjectMatcher::dispatch(Network*)`` stops here unless
+                # the mask covers a single address.  A network the firewall
+                # merely has an address on is not the firewall - whether it
+                # counts is the "assume firewall is part of any and
+                # networks" question, which the callers ask separately.
+                mask = obj.get_netmask()
+                if not mask or not _is_host_mask(mask, ip.version):
+                    return False
+
+            return self._address_is_on_the_firewall(ip, fw, recognize_broadcasts)
+
+        return False
+
+    @staticmethod
+    def _address_is_on_the_firewall(ip, fw, recognize_broadcasts: bool) -> bool:
+        """Whether *ip* is an address of one of the firewall's interfaces.
+
+        Ports the tail of
+        ``ObjectMatcher::checkComplexMatchForSingleAddress``, which walks
+        every address of every interface of the firewall and compares
+        through ``matchRHS``.  With broadcasts recognised that comparison
+        also answers for the network address and the broadcast address of
+        the subnet each interface address defines - a packet to either
+        travels in a broadcast frame and is delivered locally, which is
+        fwbuilder's bug #1040773.
+
+        The port only ever asked whether the object *is* a child of an
+        interface, so a standalone address object carrying the firewall's
+        own address was not the firewall, and every rule naming one was
+        chained as if it were about some other host.
+        """
+        for iface in fw.interfaces:
+            for addr in getattr(iface, 'addresses', []):
+                addr_str = addr.get_address() if hasattr(addr, 'get_address') else ''
+                if not addr_str:
+                    continue
+                try:
+                    rhs = ipaddress.ip_address(addr_str)
+                except ValueError:
+                    continue
+                if rhs.version != ip.version:
+                    continue
+                if rhs == ip:
+                    return True
+                if not recognize_broadcasts:
+                    continue
+                mask = addr.get_netmask() if hasattr(addr, 'get_netmask') else ''
+                if not mask:
+                    continue
+                try:
+                    net = ipaddress.ip_network(f'{addr_str}/{mask}', strict=False)
+                except ValueError:
+                    continue
+                if ip in (net.network_address, net.broadcast_address):
+                    return True
         return False
 
     def find_address_for(self, obj1, obj2) -> Address | Interface | None:

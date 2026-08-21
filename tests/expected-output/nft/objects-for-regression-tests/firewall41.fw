@@ -382,6 +382,10 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
+        #
+        # Rule 2 (global)
+        #
+        ip saddr { 1.1.1.1, 2.2.2.2 } ip daddr 1.1.1.1 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
     }
 
     chain forward {

@@ -262,6 +262,10 @@ table ip fwf_filter {
         #
         iifname "tun*" ip daddr != 192.168.1.0/24 ct state new counter accept
         #
+        # Rule 12 (global)
+        #
+        ip daddr 192.168.1.0 udp dport 68 ct state new counter accept
+        #
         # Rule 17 (global)
         #
         ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
@@ -323,10 +327,6 @@ table ip fwf_filter {
         # Rule 11 (global)
         #
         ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
-        #
-        # Rule 12 (global)
-        #
-        ip daddr 192.168.1.0 udp dport 68 ct state new counter accept
         #
         # Rule 13 (global)
         #

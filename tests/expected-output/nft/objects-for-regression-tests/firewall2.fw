@@ -357,13 +357,13 @@ table ip fwf_filter {
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        ip daddr != 192.168.1.0 udp dport 161 ct state new counter accept
         #
         # Rule 18 (global)
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip saddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        ip saddr != 192.168.1.10-192.168.1.100 udp dport 161 ct state new counter accept
         #
         # Rule 19 (global)
         #
@@ -514,21 +514,13 @@ table ip fwf_filter {
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        ip daddr != 192.168.1.10-192.168.1.100 udp dport 161 ct state new counter accept
         #
         # Rule 18 (global)
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip saddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
-        #
-        # Rule 19 (global)
-        #
-        # using module iprange if
-        # iptables version is >= 1.2.11
-        # also test for bug #2526173
-        ip saddr 0.0.0.0 limit rate 5/second counter log prefix "RULE 19 - DENY **" level debug
-        ip saddr 0.0.0.0 counter drop
+        ip saddr != 192.168.1.10-192.168.1.100 udp dport 161 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -646,13 +638,21 @@ table ip fwf_filter {
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        ip daddr != 192.168.1.10-192.168.1.100 udp dport 161 ct state new counter accept
         #
         # Rule 18 (global)
         #
         # using module iprange if
         # iptables version is >= 1.2.11
-        ip saddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        ip saddr != 192.168.1.0 udp dport 161 ct state new counter accept
+        #
+        # Rule 19 (global)
+        #
+        # using module iprange if
+        # iptables version is >= 1.2.11
+        # also test for bug #2526173
+        ip saddr 0.0.0.0 limit rate 5/second counter log prefix "RULE 19 - DENY **" level debug
+        ip saddr 0.0.0.0 counter drop
         #
         # Rule 20 (global)
         #

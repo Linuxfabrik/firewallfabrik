@@ -247,16 +247,16 @@ table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # address 192.168.1.11 should not be considered a broadcast on the subnet attached to eth0
         ip daddr 192.168.1.11 ct state new counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
     }
 
     chain output {
