@@ -52,12 +52,20 @@ NFT_STRUCTURE = re.compile(
 )
 # A named counter object is structure; the counter statement of a rule is not.
 NFT_COUNTER_DECL = re.compile(r'^counter\s+\S+\s*\{')
+# Which table and chain the rules that follow are in.  A rule that moves
+# between chains is a different rule - the iptables side says so in the
+# command (`-A input`) and the nftables side only in the block around it,
+# so without these two the whole policy of a firewall can move from the
+# filter table to the mangle table and read as no change at all.
+NFT_TABLE = re.compile(r'^table\s+(\S+)\s+(\S+)\s*\{')
+NFT_CHAIN = re.compile(r'^chain\s+(\S+)\s*\{')
 
 
 def rules(path: Path, platform: str) -> list[str]:
     """Return the normalised rule lines of one generated script."""
     out: list[str] = []
     in_ruleset = False
+    where = ''
     for raw in path.read_text(errors='replace').splitlines():
         line = raw.strip()
         if platform == 'nft':
@@ -69,6 +77,14 @@ def rules(path: Path, platform: str) -> list[str]:
                 continue
             if not in_ruleset or not line or line.startswith('#'):
                 continue
+            table = NFT_TABLE.match(line)
+            if table:
+                where = f'{table.group(1)} {table.group(2)}'
+                continue
+            chain = NFT_CHAIN.match(line)
+            if chain:
+                where = f'{where.split(" @ ")[0]} @ {chain.group(1)}'
+                continue
             if NFT_STRUCTURE.match(line) or NFT_COUNTER_DECL.match(line):
                 continue
         elif not line or line.startswith('#') or not IPT_RULE.search(line):
@@ -79,7 +95,7 @@ def rules(path: Path, platform: str) -> list[str]:
         line = re.sub(r'-m conntrack --ctstate', '-m state --state', line)
         line = re.sub(r'\bcounter ', '', line)
         line = re.sub(r'\s+', ' ', line).strip()
-        out.append(line)
+        out.append(f'{where}: {line}' if platform == 'nft' else line)
     return sorted(out)
 
 

@@ -101,6 +101,13 @@ statement is normalised away. Both matter: without them an unchanged corpus
 reads as a hundred percent changed, because `counter` decides nothing and
 `reset_all` contains `$IPTABLES` without installing a rule.
 
+Every nftables rule is compared together with the table and chain it sits
+in. An iptables command names its chain (`-A input`), an nft rule only has
+the block around it, so without that the whole policy of a firewall can
+move from the filter table to the mangle table and read as no change at
+all. **Check a hundred percent against a plain `diff` before believing
+it.**
+
 ## Using your own corpus
 
 `--corpus` takes a data file, a directory of them, or a file listing one path
