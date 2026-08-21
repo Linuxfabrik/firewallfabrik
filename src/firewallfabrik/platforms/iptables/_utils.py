@@ -580,23 +580,41 @@ def get_address_table_var_name(at: AddressTable) -> str:
 
 
 # ipset stores a set name in a field of IPSET_MAXNAMELEN bytes (32, see
-# include/linux/netfilter/ipset/ip_set.h in the netfilter ipset tree), so 31
-# characters is the longest name that can be created.  fwbuilder only
-# replaces the characters that would break the shell command around the name.
+# include/libipset/linux_ip_set.h in the netfilter ipset tree), so 31
+# characters is the longest name it takes: `check_setname` in lib/parse.c
+# answers a longer one with "setname '%s' is longer than 31 characters".
+# fwbuilder does not check the length at all.
 IPSET_MAX_NAME_LENGTH = 31
+
+# The set the rules match on is a `setlist`, and the shell function that
+# fills it creates two subsets beside it, `<name>:ip` and `<name>:net`
+# (configlets/linux24/run_time_address_tables).  Those names have to fit
+# as well - and they are created without stopping the script when they do
+# not, so the setlist ends up empty and every rule matching the table
+# matches nothing: a block list that blocks nobody.
+_IPSET_SUBSET_SUFFIX_LENGTH = len(':net')
 
 
 def normalize_set_name(name: str, ipv6: bool = False) -> str:
-    """Normalize an ipset set name (max 31 chars, valid chars only).
+    """Normalize an ipset set name, so it survives both ipset and the shell.
 
     A set carries one address family, so an address table used by both
     rulesets needs one set per family; the IPv6 one gets a ``_v6`` suffix,
     the same way the interface address variables are named.
+
+    The name goes into ``-m set --match-set <name>`` as a bare shell word
+    and into the ``reload_address_table`` call as a double-quoted one, so
+    the alphabet is the shell's question and not ipset's - ipset checks no
+    characters at all.  fwbuilder replaces six of them; every other
+    character outside the alphabet is replaced here for the same reason
+    the chain and interface names are checked, and both sides of the rule
+    use the same answer, so the rule still matches the set it fills.
     """
-    result = re.sub(r'[ +*!#|]', '_', name)
+    result = re.sub(r'[^0-9A-Za-z_.:-]', '_', name)
     suffix = '_v6' if ipv6 else ''
-    if len(result) + len(suffix) > IPSET_MAX_NAME_LENGTH:
-        result = result[: IPSET_MAX_NAME_LENGTH - len(suffix)]
+    budget = IPSET_MAX_NAME_LENGTH - _IPSET_SUBSET_SUFFIX_LENGTH - len(suffix)
+    if len(result) > budget:
+        result = result[:budget]
     return result + suffix
 
 
