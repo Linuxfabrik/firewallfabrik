@@ -21,6 +21,14 @@ from PySide6.QtGui import QCursor, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+from firewallfabrik.gui.netmask import (
+    NetmaskRejected,
+    is_any_address,
+    netmask_for_ipv4_address,
+    netmask_for_ipv6_address,
+    netmask_for_network,
+    netmask_for_network_ipv6,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,36 +63,19 @@ def _validate_ipv6(address_text):
         return None
 
 
-def _validate_ipv4_netmask(netmask_text):
-    """Validate an IPv4 netmask (dotted-decimal or CIDR prefix length).
-
-    Returns the normalised netmask string or *None*.
-    """
-    text = netmask_text.strip()
-    if not text:
-        return None
-    # CIDR prefix length (e.g. "24").
-    try:
-        prefix = int(text)
-        if 0 <= prefix <= 32:
-            net = ipaddress.IPv4Network(f'0.0.0.0/{prefix}', strict=False)
-            return str(net.netmask)
-        return None
-    except ValueError:
-        pass
-    # Dotted-decimal (e.g. "255.255.255.0").
-    try:
-        addr = ipaddress.IPv4Address(text)
-        # Verify it's a valid contiguous netmask by round-tripping
-        # through IPv4Network.
-        ipaddress.IPv4Network(f'0.0.0.0/{addr}', strict=False)
-        return str(addr)
-    except ValueError:
-        return None
-
-
 class _BaseAddressDialog(BaseObjectDialog):
-    """Base for IPv4/IPv6/Network/NetworkIPv6 dialogs (name + address + netmask)."""
+    """Base for IPv4/IPv6/Network/NetworkIPv6 dialogs (name + address + netmask).
+
+    Address and netmask are validated before anything is written, the way
+    fwbuilder splits ``validate()`` from ``applyChanges()``: a value the
+    editor refuses leaves the object as it was.  What is written is the
+    *normalised* netmask, because that is what fwbuilder stores - it puts
+    an ``InetAddr`` back, so a mask typed as a bit length is written
+    dotted for IPv4 and as a length for IPv6.
+    """
+
+    #: Message for an address the dialog cannot read (per family).
+    illegal_address_message = "Illegal IP address '%1'"
 
     def _populate(self):
         inet = self._obj.inet_addr_mask or {}
@@ -93,12 +84,52 @@ class _BaseAddressDialog(BaseObjectDialog):
         self.netmask.setText(inet.get('netmask', ''))
         self._apply_netmask_visibility()
 
+    def _validate_address(self, address_text):
+        """Return the address normalised, or ``None``.  Overridden per family."""
+        raise NotImplementedError
+
+    def _validate_netmask(self, netmask_text):
+        """Return the netmask in the spelling the data file carries.
+
+        Raises :class:`~firewallfabrik.gui.netmask.NetmaskRejected` with
+        the message fwbuilder shows.  Overridden per object type.
+        """
+        raise NotImplementedError
+
     def _apply_changes(self):
+        address_text = self.address.text().strip()
+        if address_text and self._validate_address(address_text) is None:
+            QMessageBox.warning(
+                self,
+                self.tr('Invalid Address'),
+                self.tr(self.illegal_address_message).replace('%1', address_text),
+            )
+            return
+
+        netmask = None
+        if self._netmask_applies():
+            netmask_text = self.netmask.text()
+            if not netmask_text.strip() and not self._netmask_required():
+                netmask = ''
+            else:
+                try:
+                    netmask = self._validate_netmask(netmask_text)
+                except NetmaskRejected as rejected:
+                    QMessageBox.warning(
+                        self,
+                        self.tr('Invalid Netmask'),
+                        rejected.message,
+                    )
+                    return
+
         self._obj.name = self.obj_name.text()
         inet = dict(self._obj.inet_addr_mask or {})
         inet['address'] = self.address.text()
-        if self._netmask_applies():
-            inet['netmask'] = self.netmask.text()
+        if netmask is not None:
+            inet['netmask'] = netmask
+            # Show what was stored, the way fwbuilder's dialog comes back
+            # holding the InetAddr its applyChanges() put on the object.
+            self.netmask.setText(netmask)
         self._obj.inet_addr_mask = inet
 
     def _netmask_applies(self):
@@ -106,6 +137,17 @@ class _BaseAddressDialog(BaseObjectDialog):
 
         Network/NetworkIPv6 always carry a netmask, so the base returns
         ``True``.  Host-address dialogs override this.
+        """
+        return True
+
+    def _netmask_required(self):
+        """Whether an empty netmask field is an error.
+
+        A network object without a netmask is one fwbuilder refuses.  For
+        an address object an empty field stays empty instead of becoming
+        0.0.0.0, which is what fwbuilder's ``InetAddr("")`` makes of it:
+        a /0 on an interface address would go into the generated ``ip
+        addr add`` command.
         """
         return True
 
@@ -132,6 +174,9 @@ class _HostAddressDialog(_BaseAddressDialog):
     def _netmask_applies(self):
         return self._obj is not None and self._obj.interface_id is not None
 
+    def _netmask_required(self):
+        return False
+
     def _apply_netmask_visibility(self):
         visible = self._netmask_applies()
         self.netmaskLabel.setVisible(visible)
@@ -142,25 +187,11 @@ class IPv4Dialog(_HostAddressDialog):
     def __init__(self, parent=None):
         super().__init__('ipv4dialog_q.ui', parent)
 
-    def _apply_changes(self):
-        addr = self.address.text().strip()
-        if addr and _validate_ipv4(addr) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Address'),
-                self.tr("Illegal IP address '%1'").replace('%1', addr),
-            )
-            return
-        if self._netmask_applies():
-            nm = self.netmask.text().strip()
-            if nm and _validate_ipv4_netmask(nm) is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Netmask'),
-                    self.tr("Illegal netmask '%1'").replace('%1', nm),
-                )
-                return
-        super()._apply_changes()
+    def _validate_address(self, address_text):
+        return _validate_ipv4(address_text)
+
+    def _validate_netmask(self, netmask_text):
+        return netmask_for_ipv4_address(netmask_text)
 
     @Slot()
     def addressEntered(self):
@@ -199,33 +230,16 @@ class IPv4Dialog(_HostAddressDialog):
 
 
 class IPv6Dialog(_HostAddressDialog):
+    illegal_address_message = "Illegal IPv6 address '%1'"
+
     def __init__(self, parent=None):
         super().__init__('ipv6dialog_q.ui', parent)
 
-    def _apply_changes(self):
-        addr = self.address.text().strip()
-        if addr and _validate_ipv6(addr) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Address'),
-                self.tr("Illegal IPv6 address '%1'").replace('%1', addr),
-            )
-            return
-        if self._netmask_applies():
-            nm = self.netmask.text().strip()
-            if nm:
-                try:
-                    prefix = int(nm)
-                    if prefix < 0 or prefix > 128:
-                        raise ValueError
-                except ValueError:
-                    QMessageBox.warning(
-                        self,
-                        self.tr('Invalid Netmask'),
-                        self.tr("Illegal netmask '%1'").replace('%1', nm),
-                    )
-                    return
-        super()._apply_changes()
+    def _validate_address(self, address_text):
+        return _validate_ipv6(address_text)
+
+    def _validate_netmask(self, netmask_text):
+        return netmask_for_ipv6_address(netmask_text)
 
     @Slot()
     def addressEntered(self):
@@ -271,24 +285,14 @@ class NetworkDialog(_BaseAddressDialog):
     def __init__(self, parent=None):
         super().__init__('networkdialog_q.ui', parent)
 
-    def _apply_changes(self):
-        addr = self.address.text().strip()
-        if addr and _validate_ipv4(addr) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Address'),
-                self.tr("Illegal IP address '%1'").replace('%1', addr),
-            )
-            return
-        nm = self.netmask.text().strip()
-        if nm and _validate_ipv4_netmask(nm) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Netmask'),
-                self.tr("Illegal netmask '%1'").replace('%1', nm),
-            )
-            return
-        super()._apply_changes()
+    def _validate_address(self, address_text):
+        return _validate_ipv4(address_text)
+
+    def _validate_netmask(self, netmask_text):
+        return netmask_for_network(
+            netmask_text,
+            address_is_any=is_any_address(self.address.text()),
+        )
 
     @Slot()
     def addressEntered(self):
@@ -305,32 +309,16 @@ class NetworkDialog(_BaseAddressDialog):
 
 
 class NetworkDialogIPv6(_BaseAddressDialog):
+    illegal_address_message = "Illegal IPv6 address '%1'"
+
     def __init__(self, parent=None):
         super().__init__('networkdialogipv6_q.ui', parent)
 
-    def _apply_changes(self):
-        addr = self.address.text().strip()
-        if addr and _validate_ipv6(addr) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Address'),
-                self.tr("Illegal IPv6 address '%1'").replace('%1', addr),
-            )
-            return
-        nm = self.netmask.text().strip()
-        if nm:
-            try:
-                prefix = int(nm)
-                if prefix < 0 or prefix > 128:
-                    raise ValueError
-            except ValueError:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Netmask'),
-                    self.tr("Illegal netmask '%1'").replace('%1', nm),
-                )
-                return
-        super()._apply_changes()
+    def _validate_address(self, address_text):
+        return _validate_ipv6(address_text)
+
+    def _validate_netmask(self, netmask_text):
+        return netmask_for_network_ipv6(netmask_text)
 
     @Slot()
     def addressEntered(self):

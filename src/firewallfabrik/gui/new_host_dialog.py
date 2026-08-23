@@ -28,6 +28,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from firewallfabrik.gui.netmask import (
+    EMPTY_ADDRESS_OR_NETMASK,
+    NetmaskRejected,
+    netmask_for_interface_address,
+)
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _PAGE_NAME = 0
@@ -251,10 +256,17 @@ class NewHostDialog(QDialog):
                         )
                         self.interfaceEditor.setCurrentIndex(i)
                         break
-                    if mask and not self._is_valid_netmask(mask, is_v4):
+                    if not mask:
                         errors.append(
-                            f'Tab "{name}", row {row + 1}: '
-                            f"'{mask}' is not a valid netmask."
+                            f'Tab "{name}", row {row + 1}: {EMPTY_ADDRESS_OR_NETMASK}.'
+                        )
+                        self.interfaceEditor.setCurrentIndex(i)
+                        break
+                    try:
+                        netmask_for_interface_address(mask, is_v4=is_v4)
+                    except NetmaskRejected as rejected:
+                        errors.append(
+                            f'Tab "{name}", row {row + 1}: {rejected.message}.'
                         )
                         self.interfaceEditor.setCurrentIndex(i)
                         break
@@ -274,22 +286,17 @@ class NewHostDialog(QDialog):
             return False
 
     @staticmethod
-    def _is_valid_netmask(mask, is_v4):
-        """Return True if *mask* is a valid netmask (CIDR or dotted)."""
+    def _normalized_netmask(mask, is_v4):
+        """Return *mask* as it is stored, or unchanged if it is unreadable.
+
+        ``get_result()`` runs after ``_validate_interfaces()`` has passed,
+        so an unreadable mask only reaches this when the caller skipped
+        validation; it is then handed on as typed rather than dropped.
+        """
         try:
-            prefix = int(mask)
-            max_prefix = 32 if is_v4 else 128
-            return 0 <= prefix <= max_prefix
-        except ValueError:
-            pass
-        # Try dotted notation (IPv4 only).
-        if is_v4:
-            try:
-                ipaddress.IPv4Address(mask)
-                return True
-            except ValueError:
-                pass
-        return False
+            return netmask_for_interface_address(mask, is_v4=is_v4)
+        except NetmaskRejected:
+            return mask
 
     # ------------------------------------------------------------------
     # Page navigation
@@ -384,7 +391,9 @@ class NewHostDialog(QDialog):
                             {
                                 'address': addr,
                                 'ipv4': is_v4,
-                                'netmask': mask,
+                                # Store the mask in the spelling the data
+                                # file carries, the way the editors do.
+                                'netmask': self._normalized_netmask(mask, is_v4),
                             }
                         )
 
