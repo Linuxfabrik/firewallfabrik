@@ -3149,17 +3149,16 @@ class DecideOnTarget(PolicyRuleProcessor):
                 )
                 return True
             rule.ipt_target = branch_name
-            # Only a rule set of this firewall that is not the top one ends
-            # up as a chain carrying rules.  The top rule set compiles into
-            # the built-in chains, and a rule set of another firewall object
-            # is not compiled into this script at all - Firewall Builder
-            # pulls those in, fwf does not (issue #90).  Either way the
-            # print rule creates the chain and jumps into it, iptables takes
-            # both commands, and the chain stays empty: the packet returns
-            # and the rule does nothing.  Without a word about it the
-            # administrator has a script that activates cleanly and a policy
-            # that is not the one in the file.  nftables has reported this
-            # since branch support landed there.
+            # What is left after `find_imported_rule_sets` has pulled in the
+            # rule sets of other firewall objects is the firewall's own top
+            # rule set: it compiles into the built-in chains, so there is no
+            # chain of that name to jump to.  The print rule creates one and
+            # jumps into it, iptables takes both commands, and the chain
+            # stays empty: the packet returns and the rule does nothing.
+            # Without a word about it the administrator has a script that
+            # activates cleanly and a policy that is not the one in the
+            # file.  Firewall Builder emits the same empty chain there,
+            # which is why its reference output never showed it.
             if branch_name not in self.compiler.branch_chains:
                 self.compiler.error(
                     rule,

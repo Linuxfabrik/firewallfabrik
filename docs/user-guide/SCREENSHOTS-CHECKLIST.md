@@ -173,7 +173,7 @@ The installer uses OpenSSH `ssh`/`scp` directly, so the SSH parameter shots diff
 118 images need a fixture that does not exist yet:
 
 - [ ] Tagging Packets (16) - packet tagging fixture
-- [ ] Branching Rules (4) and the external-script SSH-scan recipe (2) - branch fixture, blocked by #90
+- [ ] Branching Rules (4) and the external-script SSH-scan recipe (2) - branch fixture
 - [ ] Web Server Cluster Running Linux (26) - cluster fixture, blocked by #84
 - [ ] Linux Cluster Using VRRPd (18) - cluster fixture
 - [ ] Linux Cluster Using Heartbeat (24) - cluster fixture
@@ -222,7 +222,6 @@ Anything showing Cisco, PF, ipfw, ipfilter, HP ProCurve or PuTTY has no counterp
 |-------------------------------------------------------------------|-----------------------------------------------------------------|
 | [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84) Cluster support incomplete, [#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78) Failover Group | chapter 08 (8), 3 shots in chapter 10, 4 in chapter 05, 96 in the cookbook |
 | [#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85) AttachedNetworksDialog missing | 4 `obj-attached-network-*` shots in chapter 05                    |
-| [#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90) Branch action incomplete | 6 cookbook images                                                 |
 
 ## Fixture coverage
 
