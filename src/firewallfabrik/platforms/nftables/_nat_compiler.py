@@ -51,6 +51,7 @@ from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
     SeparateTCPWithFlags,
     VerifyCustomServices,
+    VerifyIcmpTypes,
     VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
@@ -318,6 +319,7 @@ class NATCompiler_nft(NATCompiler):
         # the firewall untranslated.
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
+        self.add(VerifyIcmpTypes('verify ICMP types'))
         self.add(VerifyAddressRanges('verify address ranges'))
         self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))

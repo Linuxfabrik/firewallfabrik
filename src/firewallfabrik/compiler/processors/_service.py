@@ -22,6 +22,7 @@ from __future__ import annotations
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core.objects import (
     CustomService,
+    ICMPService,
     TagService,
     TCPService,
     UDPService,
@@ -246,6 +247,40 @@ def port_range_problem(srv) -> str:
     return ''
 
 
+# An ICMP type and an ICMP code are one byte each in the header, and both
+# tools bound them there: iptables reads the pair with
+# `xtables_strtoui(str, ..., 0, 255)` and answers "Unknown ICMP type" or
+# "Unknown ICMP code" (netfilter iptables extensions/libxt_icmp.h), which
+# stops the activation script with the built-in policies already at DROP,
+# and nftables answers "Value 300 exceeds valid range 0-255" and refuses
+# the whole ruleset.  Both editors bound the field to -1..255, so only a
+# hand-edited or foreign data file can carry more.
+MAX_ICMP_TYPE = 255
+
+
+def icmp_type_problem(srv) -> str:
+    """Return why *srv* names an ICMP type or code neither tool takes.
+
+    ``-1`` is the model's "any", which is what the print rules read the
+    absence of the attribute as, so only a value above the byte the
+    header has - or one that is no number at all - is a problem.
+    """
+    if not isinstance(srv, ICMPService):
+        return ''
+    codes = getattr(srv, 'codes', None) or srv.data or {}
+    for what in ('type', 'code'):
+        raw = codes.get(what, -1)
+        if raw is None or raw == '':
+            continue
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return f'names the ICMP {what} "{raw}", which is not a number'
+        if value > MAX_ICMP_TYPE:
+            return f'names the ICMP {what} {value}, and the header has one byte for it'
+    return ''
+
+
 class VerifyPortRanges(BasicRuleProcessor):
     """Leave out a rule whose service names a port range that runs backwards.
 
@@ -270,6 +305,37 @@ class VerifyPortRanges(BasicRuleProcessor):
                     f'Service "{srv.name}" {problem}; iptables and nftables '
                     'both refuse it, so the rule is left out. Correct the '
                     'port range in the service object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyIcmpTypes(BasicRuleProcessor):
+    """Leave out a rule whose ICMP service names a type or code there is not.
+
+    Dropping the type instead would widen the rule from one ICMP message
+    to every one of them, so the rule goes and the service is named.  See
+    ``icmp_type_problem`` for what each tool answers.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _SERVICE_SLOTS.get(rule.type, ('srv',)):
+            for srv in getattr(rule, slot, None) or []:
+                problem = icmp_type_problem(srv)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Service "{srv.name}" {problem}; iptables stops the '
+                    'activation over it and nftables refuses the whole '
+                    'ruleset, so the rule is left out. Correct the service '
+                    'object.',
                 )
                 return True
 
