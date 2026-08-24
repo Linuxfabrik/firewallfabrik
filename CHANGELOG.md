@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
 * Compiler (iptables, nftables): a logging rule whose netlink group is unusable logs to the default group instead of breaking the activation.
+* Compiler (iptables, nftables): a logging rule whose NFLOG copy range or queue threshold is unusable is logged without it instead of breaking the activation.
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a rule written for "any interface except these" is no longer reported as shadowing an unrelated rule.
 * Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.

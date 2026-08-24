@@ -70,7 +70,9 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
+    get_log_copy_range,
     get_log_netlink_group,
+    get_log_queue_threshold,
     get_mac_only_address,
     get_tag_value,
     has_ip_options,
@@ -2281,19 +2283,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             # them to `snaplen` and `queue-threshold`). Same thresholds as
             # the iptables print rule so both platforms emit or omit them
             # together.
-            cprange = self.compiler.fw.get_option('ulog_cprange')
-            try:
-                cprange = int(cprange)
-            except (TypeError, ValueError):
-                cprange = 0
+            cprange = get_log_copy_range(self.compiler, rule)
             if cprange > 0:
                 parts.append(f'snaplen {cprange}')
 
-            qthreshold = self.compiler.fw.get_option('ulog_qthreshold')
-            try:
-                qthreshold = int(qthreshold)
-            except (TypeError, ValueError):
-                qthreshold = 1
+            qthreshold = get_log_queue_threshold(self.compiler, rule)
             if qthreshold > 1:
                 parts.append(f'queue-threshold {qthreshold}')
 

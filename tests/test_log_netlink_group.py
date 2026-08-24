@@ -44,8 +44,8 @@ class _Compiler:
         self.fw = _Firewall(firewall_value)
         self.warnings: list[str] = []
 
-    def warning(self, _rule, msg: str) -> None:
-        self.warnings.append(msg)
+    def warning(self, rule_or_msg, msg: str | None = None) -> None:
+        self.warnings.append(rule_or_msg if msg is None else msg)
 
 
 def _rule(rule_value=None):
@@ -108,3 +108,19 @@ def test_the_firewall_setting_is_asked_the_same_question():
     compiler = _Compiler('70000')
     assert get_log_netlink_group(compiler, _rule()) == ''
     assert compiler.warnings
+
+
+def test_the_rules_the_compiler_writes_itself_ask_without_a_rule():
+    """The automatic rules and the invalid-state log rule have no rule.
+
+    They read the same firewall setting, so they have to get the same
+    answer - and the message then names the firewall instead of a rule
+    position.
+    """
+    compiler = _Compiler('70000')
+    assert get_log_netlink_group(compiler) == ''
+    assert compiler.warnings
+
+    compiler = _Compiler('7')
+    assert get_log_netlink_group(compiler) == '7'
+    assert compiler.warnings == []

@@ -104,6 +104,9 @@ from firewallfabrik.platforms.linux._netfilter import (
     INVALID_STATE_LOG_PREFIX,
     count_bridge_interfaces,
     forwarding_is_off,
+    get_log_copy_range,
+    get_log_netlink_group,
+    get_log_queue_threshold,
     interface_direction_problem,
     is_valid_mgmt_address,
     mgmt_address_family,
@@ -1037,18 +1040,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         cprange = 0
         qthreshold = 1
         if use_nflog:
-            try:
-                nlgroup = int(self.fw.get_option('ulog_nlgroup') or 1)
-            except (TypeError, ValueError):
-                nlgroup = 1
-            try:
-                cprange = int(self.fw.get_option('ulog_cprange') or 0)
-            except (TypeError, ValueError):
-                cprange = 0
-            try:
-                qthreshold = int(self.fw.get_option('ulog_qthreshold') or 1)
-            except (TypeError, ValueError):
-                qthreshold = 1
+            nlgroup = int(get_log_netlink_group(self) or 1)
+            cprange = get_log_copy_range(self)
+            qthreshold = get_log_queue_threshold(self)
 
         # The configlet writes `--nflog-size`, which is the only option that
         # actually shortens what NFLOG copies: `--nflog-range` sets the length

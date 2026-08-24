@@ -31,6 +31,9 @@ from firewallfabrik.driver._interface_properties import (
 from firewallfabrik.platforms.linux._netfilter import (
     INVALID_STATE_LOG_PREFIX,
     forwarding_is_off,
+    get_log_copy_range,
+    get_log_netlink_group,
+    get_log_queue_threshold,
     is_valid_mgmt_address,
     mgmt_address_family,
 )
@@ -75,26 +78,17 @@ class OSConfigurator_nft(OSConfigurator):
         console, so the level is spelled out.
         """
         if self.fw.get_option('use_NFLOG'):
-            try:
-                nlgroup = int(self.fw.get_option('ulog_nlgroup'))
-            except (TypeError, ValueError):
-                nlgroup = 1
+            nlgroup = get_log_netlink_group(self) or '1'
             parts = ['log', f'group {nlgroup}']
             # The copy range and the queue threshold belong to the log
             # statement the same way they belong to the NFLOG target
             # (netfilter extensions/libxt_NFLOG.c maps them to `snaplen` and
             # `queue-threshold`).  Same thresholds as the per-rule log
             # statement in the print rule, so both places obey the setting.
-            try:
-                cprange = int(self.fw.get_option('ulog_cprange'))
-            except (TypeError, ValueError):
-                cprange = 0
+            cprange = get_log_copy_range(self)
             if cprange > 0:
                 parts.append(f'snaplen {cprange}')
-            try:
-                qthreshold = int(self.fw.get_option('ulog_qthreshold'))
-            except (TypeError, ValueError):
-                qthreshold = 1
+            qthreshold = get_log_queue_threshold(self)
             if qthreshold > 1:
                 parts.append(f'queue-threshold {qthreshold}')
             parts.append(f'prefix "{INVALID_STATE_LOG_PREFIX}"')

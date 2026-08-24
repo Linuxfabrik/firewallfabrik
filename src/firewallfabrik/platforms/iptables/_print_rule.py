@@ -80,7 +80,9 @@ from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
     check_interface_name,
+    get_log_copy_range,
     get_log_netlink_group,
+    get_log_queue_threshold,
     get_tag_value,
     has_ip_options,
     is_valid_traffic_class,
@@ -2130,11 +2132,7 @@ class PrintRule(PolicyRuleProcessor):
         if log_prefix:
             parts.append(f'--nflog-prefix {self._quote(log_prefix)}')
 
-        cprange = self.compiler.fw.get_option('ulog_cprange')
-        try:
-            cprange = int(cprange)
-        except (TypeError, ValueError):
-            cprange = 0
+        cprange = get_log_copy_range(self.compiler, rule)
         if cprange > 0:
             # --nflog-range sets the length but not XT_NFLOG_F_COPY_LEN, so
             # the kernel ignores it (netfilter iptables commit 7070b1f3,
@@ -2151,11 +2149,7 @@ class PrintRule(PolicyRuleProcessor):
                     'left out and the whole packet is copied',
                 )
 
-        qthreshold = self.compiler.fw.get_option('ulog_qthreshold')
-        try:
-            qthreshold = int(qthreshold)
-        except (TypeError, ValueError):
-            qthreshold = 1
+        qthreshold = get_log_queue_threshold(self.compiler, rule)
         if qthreshold > 1:
             parts.append(f'--nflog-threshold {qthreshold}')
 

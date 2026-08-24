@@ -662,7 +662,7 @@ def get_tag_value(compiler, rule) -> str:
 MAX_LOG_NETLINK_GROUP = 65535
 
 
-def get_log_netlink_group(compiler, rule) -> str:
+def get_log_netlink_group(compiler, rule=None) -> str:
     """Return the netlink group a logging rule sends its messages to.
 
     Two sources, asked in the order fwbuilder asks them
@@ -678,7 +678,7 @@ def get_log_netlink_group(compiler, rule) -> str:
     rule logs to the default group - the same answer the log level two
     lines away in the print rules gives to a level neither tool knows.
     """
-    value = str(rule.get_option('ulog_nlgroup', '') or '').strip()
+    value = str(rule.get_option('ulog_nlgroup', '') or '').strip() if rule else ''
     if not value:
         value = str(compiler.fw.get_option('ulog_nlgroup') or '').strip()
     if not value:
@@ -694,13 +694,87 @@ def get_log_netlink_group(compiler, rule) -> str:
             if number > MAX_LOG_NETLINK_GROUP
             else 'is not a netlink group number'
         )
-        compiler.warning(
-            rule,
+        text = (
             f'The netlink group "{value}" {what}; iptables refuses it '
-            'outright, so the rule logs to the default group instead',
+            'outright, so the messages go to the default group instead'
         )
+        if rule is None:
+            compiler.warning(text)
+        else:
+            compiler.warning(rule, text)
         return ''
     return value
+
+
+#: How much of a packet NFLOG copies to userspace.  iptables declares
+#: ``--nflog-size`` (and the ``--nflog-range`` it replaced) as
+#: ``XTTYPE_UINT32`` and ``--nflog-threshold`` as ``XTTYPE_UINT16``
+#: (netfilter extensions/libxt_NFLOG.c); nftables keeps the two as
+#: ``snaplen`` (32 bit) and ``queue-threshold`` (16 bit).  The two tools
+#: answer a larger number the same way they answer a larger netlink
+#: group, and for the same reason: iptables refuses it ("bad value for
+#: option \"--nflog-size\", or out of range (0-4294967295)") and the
+#: activation script stops there with the built-in policies already at
+#: DROP, while nft takes it and truncates - ``queue-threshold 70000``
+#: lists back as ``4464`` and ``snaplen 5000000000`` as ``705032704``,
+#: so the copy range or the batching silently becomes something else.
+#: Both verified against iptables 1.8.11 and nft 1.1.6.
+MAX_LOG_COPY_RANGE = 0xFFFFFFFF
+MAX_LOG_QUEUE_THRESHOLD = 0xFFFF
+
+
+def _log_number(compiler, rule, key: str, ceiling: int, what: str, unset: int) -> int:
+    """Return a firewall-wide NFLOG number, or *unset* when unusable.
+
+    The netlink group next door is a two-tier read; these two are not -
+    ``PolicyCompiler_PrintRule.cpp`` asks the firewall setting alone for
+    both, and neither editor puts them on a rule.  ``rule`` is ``None``
+    where the value goes into a rule the compiler writes by itself, so
+    the message names the firewall rather than a rule position.
+    """
+    value = str(compiler.fw.get_option(key) or '').strip()
+    if not value:
+        return unset
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = -1
+    if 0 <= number <= ceiling:
+        return number
+    how = (
+        f'is above the {ceiling} it has room for, and nftables would '
+        f'read it as {number % (ceiling + 1)}'
+        if number > ceiling
+        else 'is not a number'
+    )
+    text = (
+        f'The NFLOG {what} "{value}" {how}; iptables refuses it outright, '
+        f'so the messages are logged without it'
+    )
+    if rule is None:
+        compiler.warning(text)
+    else:
+        compiler.warning(rule, text)
+    return unset
+
+
+def get_log_copy_range(compiler, rule=None) -> int:
+    """Return how many bytes of a packet NFLOG copies, 0 for "all of it"."""
+    return _log_number(
+        compiler, rule, 'ulog_cprange', MAX_LOG_COPY_RANGE, 'copy range', 0
+    )
+
+
+def get_log_queue_threshold(compiler, rule=None) -> int:
+    """Return how many messages NFLOG batches, 1 for "send each one"."""
+    return _log_number(
+        compiler,
+        rule,
+        'ulog_qthreshold',
+        MAX_LOG_QUEUE_THRESHOLD,
+        'queue threshold',
+        1,
+    )
 
 
 # Interfaces whose names differ only in a trailing number are one group,
