@@ -344,7 +344,7 @@ class XmlReader:
         self._deferred_rule_elements = []
         self._deferred_option_refs = []
         self._deferred_branch_refs = []
-        self._rule_set_names = {}
+        self._rule_sets_by_xml_id = {}
 
     def _register(self, xml_id):
         """Map *xml_id* to a new UUID (or return an existing one)."""
@@ -376,7 +376,7 @@ class XmlReader:
         self._deferred_rule_elements.clear()
         self._deferred_option_refs.clear()
         self._deferred_branch_refs.clear()
-        self._rule_set_names.clear()
+        self._rule_sets_by_xml_id.clear()
 
         tree = defusedxml.ElementTree.parse(path)
         database = self._parse_database(tree.getroot(), exclude_libraries or set())
@@ -409,14 +409,20 @@ class XmlReader:
         # (`PolicyRule::getBranch()`), so the id wins here too.
         for rule in self._deferred_branch_refs:
             options = rule.options or {}
-            name = self._rule_set_names.get(options.get('branch_id'))
-            if name is None:
+            target = self._rule_sets_by_xml_id.get(options.get('branch_id'))
+            if target is None:
                 logger.warning(
                     'Unresolved branch rule set reference: %s',
                     options.get('branch_id'),
                 )
                 continue
-            options['branch_name'] = name
+            options['branch_name'] = target.name
+            # And the object itself, because the name does not identify it:
+            # almost every firewall has a rule set called "Policy", and the
+            # target may belong to another firewall object, which is what
+            # lets Firewall Builder compile that rule set into this script
+            # (CompilerDriver::findImportedRuleSets).
+            options['branch_id'] = str(target.id)
             rule.options = options
 
         group_positions: dict = {}
@@ -669,7 +675,7 @@ class XmlReader:
         rs.ipv6 = _bool(elem.get('ipv6_rule_set', 'False'))
         rs.top = _bool(elem.get('top_rule_set', 'False'))
         rs.device = device
-        self._rule_set_names[elem.get('id', '')] = rs.name
+        self._rule_sets_by_xml_id[elem.get('id', '')] = rs
 
         for child in elem:
             tag = _tag(child)

@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
+* Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.
 
 
 ## [v2.0.0] - 2026-08-24

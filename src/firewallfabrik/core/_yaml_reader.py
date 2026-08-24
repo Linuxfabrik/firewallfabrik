@@ -23,7 +23,7 @@ from ._util import (
     ADDRESS_CLASSES,
     DEVICE_CLASSES,
     GROUP_CLASSES,
-    OPTION_REF_KEY,
+    OPTION_REF_KEYS,
     RULE_CLASSES,
     RULESET_CLASSES,
     SERVICE_CLASSES,
@@ -370,7 +370,7 @@ class YamlReader:
 
         # Rule sets
         for rs_data in data.get('rule_sets', []):
-            self._parse_ruleset(rs_data, dev)
+            self._parse_ruleset(rs_data, dev, dev_path)
 
         return dev
 
@@ -408,7 +408,7 @@ class YamlReader:
 
         return iface
 
-    def _parse_ruleset(self, data, device):
+    def _parse_ruleset(self, data, device, parent_path=''):
         type_name = data.get('type', 'Policy')
         cls = _RULESET_CLASSES.get(type_name, objects.Policy)
         rs = cls()
@@ -420,6 +420,14 @@ class YamlReader:
         rs.ipv6 = data.get('ipv6', False)
         rs.top = data.get('top', False)
         rs.device = device
+
+        # A Branch rule names the rule set it jumps into by path, and that
+        # rule set may belong to another firewall object, so it has to be
+        # findable in the reference index like any other target.
+        if parent_path:
+            self._register_ref(
+                f'{parent_path}/{type_name}:{escape_obj_name(rs.name)}', rs.id
+            )
 
         # Rules
         for rule_data in data.get('rules', []):
@@ -467,8 +475,9 @@ class YamlReader:
 
         # A tagging rule names its Tag Service in its options, and the
         # writer stores that reference as a tree path like every other one.
-        if (rule.options or {}).get(OPTION_REF_KEY):
-            self._deferred_option_refs.append((rule, OPTION_REF_KEY))
+        for key in OPTION_REF_KEYS:
+            if (rule.options or {}).get(key):
+                self._deferred_option_refs.append((rule, key))
 
         # Rule elements (slot references)
         for slot_name in SLOT_VALUES:

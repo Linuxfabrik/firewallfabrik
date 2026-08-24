@@ -21,7 +21,7 @@ import sqlalchemy
 import yaml
 
 from . import objects
-from ._util import ENUM_FIELDS, OPTION_REF_KEY, escape_obj_name
+from ._util import ENUM_FIELDS, OPTION_REF_KEYS, escape_obj_name
 
 logger = logging.getLogger(__name__)
 
@@ -290,6 +290,18 @@ class YamlWriter:
         for iface in sorted(top_ifaces, key=lambda i: i.name):
             self._walk_interface(seen_paths, iface, dev_path)
 
+        # A rule set is a reference target too: a Branch rule names the one
+        # it jumps into, and that one may belong to another firewall object
+        # entirely, which is the whole point of the option.
+        for rule_set in sorted(
+            getattr(dev, 'rule_sets', []) or [], key=lambda r: (r.type, r.name)
+        ):
+            self._register_ref(
+                seen_paths,
+                f'{dev_path}/{rule_set.type}:{escape_obj_name(rule_set.name)}',
+                rule_set.id,
+            )
+
     def _walk_interface(self, seen_paths, iface, parent_path):
         """Walk an interface and its sub-interfaces, registering ref-paths."""
         iface_path = f'{parent_path}/Interface:{escape_obj_name(iface.name)}'
@@ -553,20 +565,23 @@ class YamlWriter:
         # moment the file is read back: the ids are assigned per load, so a
         # tagging rule came back pointing at nothing and was reported and
         # left out, which is every packet mark of the policy gone.
-        ref = (d.get('options') or {}).get(OPTION_REF_KEY)
-        if ref:
+        for key in OPTION_REF_KEYS:
+            ref = (d.get('options') or {}).get(key)
+            if not ref:
+                continue
             try:
                 path = self._ref_path(uuid.UUID(str(ref)))
             except ValueError:
                 # Not an id at all - a hand-edited file whose path the
                 # reader could not resolve keeps what it says, so the
-                # person who wrote it can see it and correct it.
-                logger.warning(
-                    'Rule option %s is not an object id: %s', OPTION_REF_KEY, ref
-                )
+                # person who wrote it can see it and correct it.  A file
+                # written before the branch reference was resolved carries
+                # the Firewall Builder XML id here and lands in the same
+                # place; the rule still compiles by name.
+                logger.warning('Rule option %s is not an object id: %s', key, ref)
                 path = ref
             options = dict(d['options'])
-            options[OPTION_REF_KEY] = path
+            options[key] = path
             d['options'] = options
 
         # Negations — only include slots that are True
