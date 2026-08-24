@@ -849,6 +849,51 @@ class PolicyCompiler_ipt(PolicyCompiler):
         result += 'echo ":OUTPUT DROP [0:0]"\n'
         return result
 
+    def clamp_tcp_to_mss_rule(self) -> str:
+        """Return the TCPMSS clamping rule, or a comment, or nothing.
+
+        Ports ``PolicyCompiler_ipt::PrintRule::_clampTcpToMssRule``
+        (iptlib/PolicyCompiler_PrintRule.cpp:1717).  Which table the rule
+        goes into is the caller's question and depends on the release:
+        fwbuilder puts it in the filter table below 1.3.0
+        (``PolicyCompiler_ipt::printAutomaticRules``) and in the mangle
+        table from 1.3.0 on
+        (``MangleTableCompiler_ipt::printAutomaticRulesForMangleTable``),
+        with the same comment above both call sites - "iptables accepted
+        TCPMSS target in filter table, FORWARD chain in the older
+        versions, but requires it to be in mangle filter starting
+        somewhere 1.3.x".  Current kernels take the target in either
+        table (``xt_TCPMSS`` registers no ``.table``, verified against
+        iptables 1.8.11), so the old form still loads.
+
+        The rule only makes sense on a firewall that forwards, and
+        ip6tables has no TCPMSS target before 1.3.8 (fwbuilder bug
+        #2477775; ``libip6t_TCPMSS.c`` first ships in that release).
+        Saying so is what tells the administrator that path MTU discovery
+        is not being helped along, which is the whole point of the option.
+        """
+        if not self.fw.get_option('clamp_mss_to_mtu'):
+            return ''
+
+        ipv6 = self.ipv6_policy
+        version = self.version
+        forwards = not forwarding_is_off(self.fw, ipv6)
+
+        if ipv6 and version_compare(version, '1.3.8') < 0:
+            if not forwards:
+                return ''
+            message = 'target TCPMSS is not supported by ip6tables before v1.3.8'
+            self.warning(message)
+            return f'# {message}\n\n'
+
+        if not forwards:
+            return ''
+
+        return (
+            'FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
+            '-j TCPMSS --clamp-mss-to-pmtu'
+        )
+
     def print_automatic_rules(self) -> str:
         """Generate automatic rules using the automatic_rules configlet."""
         from firewallfabrik.driver._configlet import Configlet
@@ -1034,7 +1079,17 @@ class PolicyCompiler_ipt(PolicyCompiler):
             f'{quote}{INVALID_STATE_LOG_PREFIX}{quote}',
         )
 
-        return conf.expand()
+        # Below 1.3.0 the TCPMSS clamp belongs to the filter table, above the
+        # rest of the automatic rules, which is where the reference output
+        # for firewall10 and firewall2-1 carries it.  From 1.3.0 on the mangle
+        # compiler emits it instead.
+        clamp = ''
+        if version_compare(version, '1.3.0') < 0:
+            clamp = self.clamp_tcp_to_mss_rule()
+            if clamp and not clamp.startswith('#'):
+                clamp = f'{begin_rule} {clamp}{end_rule}\n\n'
+
+        return clamp + conf.expand()
 
     def commit(self) -> str:
         """Generate COMMIT for iptables-restore format."""

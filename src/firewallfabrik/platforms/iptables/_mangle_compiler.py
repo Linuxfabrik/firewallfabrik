@@ -114,28 +114,18 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         if have_connmark_in_output and connmark_ok:
             result += self._automatic_rule_line('OUTPUT -j CONNMARK --restore-mark')
 
-        # TCPMSS clamping.  Matches fwbuilder's
-        # PolicyCompiler_PrintRule::_clampTcpToMssRule (and
-        # MangleTableCompiler_ipt::print_automatic_rules): the rule is
-        # emitted on the FORWARD chain (not POSTROUTING) of the mangle
-        # table, guarded by the platform's IP-forwarding option.  For
-        # IPv6 the TCPMSS target requires ip6tables >= 1.3.8.
-        if version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
-            'clamp_mss_to_mtu'
-        ):
-            if ipv6:
-                ipforw_raw = self.fw.get_option('linux24_ipv6_forward')
-                min_version_ok = version_compare(version, '1.3.8') >= 0
-            else:
-                ipforw_raw = self.fw.get_option('linux24_ip_forward')
-                min_version_ok = True
-            ipforw_str = str(ipforw_raw or '').strip()
-            ipforw = ipforw_str in ('', '1', 'On', 'on', 'True', 'true')
-            if ipforw and min_version_ok:
-                result += self._automatic_rule_line(
-                    'FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
-                    '-j TCPMSS --clamp-mss-to-pmtu'
-                )
+        # TCPMSS clamping.  From 1.3.0 on the rule belongs to the mangle
+        # table; the filter-table form the older releases want is emitted
+        # by PolicyCompiler_ipt.print_automatic_rules, from the same
+        # method, so the two tables cannot disagree about whether the
+        # firewall gets one at all
+        # (MangleTableCompiler_ipt::printAutomaticRulesForMangleTable).
+        if version_compare(version, '1.3.0') >= 0:
+            clamp = self.clamp_tcp_to_mss_rule()
+            if clamp.startswith('#'):
+                result += clamp
+            elif clamp:
+                result += self._automatic_rule_line(clamp)
 
         return result
 
