@@ -449,6 +449,32 @@ def is_valid_packet_mark(value: str) -> bool:
     return True
 
 
+def packet_mark_clear_mask(value: str) -> int | None:
+    """Return the bits ``--set-mark value/mask`` clears, ``None`` if none.
+
+    ``--set-mark`` is ``--set-xmark`` with the clear mask computed as
+    ``value | mask`` (netfilter extensions/libxt_MARK.c, ``mark_tg_parse``:
+    ``O_SET_MARK`` assigns ``info->mask = cb->val.mark | cb->val.mask``),
+    and nftables has no such shorthand - it has to be written out as a
+    bitwise expression, which needs the number rather than the text.
+
+    Both halves are read the way C reads a number with base 0, which is
+    what :func:`is_valid_packet_mark` accepts: ``Python int(s, 0)`` agrees
+    about hex and refuses the leading-zero octal spelling both tools take,
+    so reading them here rather than at the call site keeps the two
+    answers from disagreeing.  ``None`` means the value carries no mask,
+    or none that can be read.
+    """
+    head, sep, tail = value.strip().partition('/')
+    if not sep:
+        return None
+    left = _strtoul(head)
+    right = _strtoul(tail)
+    if left is None or right is None:
+        return None
+    return left | right
+
+
 # A user name both packet filters hand to getpwnam, or a numeric id, or a
 # range of them.  The alphabet is the portable one plus the dot and the
 # dash a range needs; it deliberately leaves out everything the shell

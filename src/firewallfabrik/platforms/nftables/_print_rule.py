@@ -65,6 +65,7 @@ from firewallfabrik.core.objects import (
     max_prefix_length,
     netmask_prefix_length,
     normalize_mac_address,
+    packet_mark_clear_mask,
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -239,13 +240,9 @@ def print_mark_set(tag_code: str) -> str:
     ``mark_tg_xlate``), and a packet that already carries bit ``0x40`` comes
     out of both rules with the bit set.
     """
-    value, sep, mask = tag_code.partition('/')
-    value = value.strip()
-    if not sep:
-        return f'meta mark set {value}'
-    try:
-        clear = int(value, 0) | int(mask.strip(), 0)
-    except ValueError:
+    value = tag_code.partition('/')[0].strip()
+    clear = packet_mark_clear_mask(tag_code)
+    if clear is None:
         return f'meta mark set {value}'
     keep = (~clear) & 0xFFFFFFFF
     return f'meta mark set mark and {keep:#010x} xor {value}'

@@ -89,6 +89,7 @@ from ._services import (
     is_valid_packet_mark,
     is_valid_tos,
     is_valid_user_id,
+    packet_mark_clear_mask,
 )
 from ._types import (
     Direction,
@@ -173,6 +174,7 @@ __all__ = [
     'max_prefix_length',
     'netmask_prefix_length',
     'normalize_mac_address',
+    'packet_mark_clear_mask',
     'range_to_cidr',
     'rule_elements',
 ]

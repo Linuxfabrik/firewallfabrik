@@ -23,6 +23,7 @@ they can be reproduced with
 
 import pytest
 
+from firewallfabrik.core.objects import is_valid_packet_mark
 from firewallfabrik.platforms.nftables._print_rule import (
     print_connmark,
     print_mark_set,
@@ -45,12 +46,33 @@ from firewallfabrik.platforms.nftables._print_rule import (
         # mask` shortcut here and writes `mark or 0x40`; the long form says
         # the same thing, (m & ~0x40) ^ 0x40 sets the bit and keeps the rest.
         ('0x40/0x40', 'meta mark set mark and 0xffffffbf xor 0x40'),
+        # The leading-zero octal spelling both tools take.  iptables reads
+        # `--set-mark 020/010` with base 0 and stores `--set-xmark
+        # 0x10/0x18` (verified against 1.8.11), so the bits kept are
+        # ~0x18 = 0xffffffe7 - the same answer as the decimal `16/8`.
+        # Python's `int(s, 0)` refuses that spelling, which used to send
+        # this value down the fallback below and throw the mask away.
+        ('020/010', 'meta mark set mark and 0xffffffe7 xor 020'),
+        ('16/8', 'meta mark set mark and 0xffffffe7 xor 16'),
         # Not a number: fall back to assigning the value as it stands.
         ('0x40/nonsense', 'meta mark set 0x40'),
     ],
 )
 def test_print_mark_set(tag_code, expected):
     assert print_mark_set(tag_code) == expected
+
+
+def test_the_octal_spelling_the_validator_accepts_keeps_its_mask():
+    """A value the editor takes must not lose half its meaning here.
+
+    ``is_valid_packet_mark`` reads both halves the way C reads a number
+    with base 0, so ``020/010`` passes it; assigning the value alone
+    would replace the whole mark instead of the three bits the mask
+    names, and a packet already carrying another mark would lose it on
+    nftables and keep it on iptables.
+    """
+    assert is_valid_packet_mark('020/010')
+    assert print_mark_set('020/010') == print_mark_set('16/8').replace('16', '020')
 
 
 def test_print_connmark():
