@@ -20,10 +20,8 @@
 # heartbeat_cluster_1_d:NAT:3: warning: Rule is left out because the addresses it names carry nothing this rule can match on
 # Rule '13 (eth0)' shadows rule '17 (eth0)' below it
 # Rule '13 (eth0)' shadows rule '18 (eth0,eth1)' below it
-# Rule '14 (eth0,eth1)' shadows rule '18 (eth0,eth1)' below it
 # Rule '13 (eth0)' shadows rule '19 (eth0)' below it
 # Rule '13 (eth0)' shadows rule '20 (eth0,eth1)' below it
-# Rule '14 (eth0,eth1)' shadows rule '20 (eth0,eth1)' below it
 # Rule '12 (global)' shadows rule '21 (eth0)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
 # Rule '12 (global)' shadows rule '22 (eth0,eth1)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'
 # Rule '12 (global)' shadows rule '23 (eth0)' below it, for destination 'heartbeat_cluster_1_d:eth1:ip'

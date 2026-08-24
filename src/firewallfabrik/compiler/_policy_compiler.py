@@ -38,6 +38,7 @@ from firewallfabrik.compiler.processors._generic import (
 from firewallfabrik.compiler.processors._policy import (
     ExpandMultipleAddresses,
     InterfacePolicyRules,
+    ItfNegation,
 )
 from firewallfabrik.core.objects import (
     Firewall,
@@ -149,8 +150,9 @@ class PolicyCompiler(Compiler):
         processing so negated rule elements are still flagged as negated and
         are correctly skipped by DetectShadowing.
 
-        Pipeline: Begin -> ConvertAnyToNotFWForShadowing ->
-        ConvertToAtomic (full Cartesian product) -> DetectShadowing.
+        Pipeline: Begin -> ItfNegation -> InterfacePolicyRules ->
+        ConvertAnyToNotFWForShadowing -> ConvertToAtomic (full Cartesian
+        product) -> DetectShadowing.
 
         Corresponds to fwbuilder's separate shadowing detection pass.
         """
@@ -174,6 +176,15 @@ class PolicyCompiler(Compiler):
         # the filter pass compares the rules of a mangle-only rule set,
         # which it drops right afterwards.
         self.add_rule_filter()
+        # "Not eth1" is not a rule about eth1.  InterfacePolicyRules splits
+        # the element into one rule per interface and does not ask whether
+        # it is negated, so without this the comparison below is made
+        # against exactly the interfaces the rule was written to leave out:
+        # a shadowed pair goes unreported and an unrelated one is reported.
+        # The C++ runs the full negation here for that reason, and says so
+        # (PolicyCompiler_ipt::compile: "use full negation rule processor in
+        # shadowing detection").
+        self.add(ItfNegation('process negation in Itf'))
         # One rule per interface, or two rules naming different interfaces,
         # which can never see the same packet, are compared as if they could.
         self.add(InterfacePolicyRules('process interface policy rules'))
