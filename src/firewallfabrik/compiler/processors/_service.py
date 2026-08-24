@@ -23,6 +23,7 @@ from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core.objects import (
     CustomService,
     ICMPService,
+    IPService,
     TagService,
     TCPService,
     UDPService,
@@ -281,6 +282,45 @@ def icmp_type_problem(srv) -> str:
     return ''
 
 
+# An IP protocol number is one byte of the header, and both tools bound it
+# there.  iptables reads the argument of `-p` with `xtables_strtoui(s, NULL,
+# &proto, 0, UINT8_MAX)` and falls through to a name lookup for anything
+# larger, which ends in `unknown protocol "300" specified` (netfilter
+# iptables libxtables/xtables.c, xtables_parse_protocol) and stops the
+# activation script with the built-in policies already at DROP; nftables
+# answers `meta l4proto 300` with "Protocol out of range" and refuses the
+# whole ruleset.  Both editors bound the field to 0..255 with a spin box, so
+# only a hand-edited or foreign data file can carry more.
+MAX_IP_PROTOCOL = 255
+
+
+def ip_protocol_problem(srv) -> str:
+    """Return why *srv* names an IP protocol neither tool takes, or ``''``.
+
+    A value that is no number at all is the worse half: every print rule
+    reads it with ``int()`` and writes no protocol match when that fails,
+    so a rule written for one protocol goes out matching all of them.
+    Only the decimal spelling counts, because that is the one the print
+    rules read and the one Firewall Builder writes; a value in any other
+    notation reaches neither tool as itself and is reported instead.
+
+    An IPService that names no protocol at all is the model's "any" and
+    stays silent.
+    """
+    if not isinstance(srv, IPService):
+        return ''
+    raw = str(srv.get_protocol_name() or '').strip()
+    if not raw:
+        return ''
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return f'names the IP protocol "{raw}", which is not a protocol number'
+    if not 0 <= value <= MAX_IP_PROTOCOL:
+        return f'names the IP protocol {value}, and the header has one byte for it'
+    return ''
+
+
 class VerifyPortRanges(BasicRuleProcessor):
     """Leave out a rule whose service names a port range that runs backwards.
 
@@ -336,6 +376,36 @@ class VerifyIcmpTypes(BasicRuleProcessor):
                     'activation over it and nftables refuses the whole '
                     'ruleset, so the rule is left out. Correct the service '
                     'object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyIpProtocols(BasicRuleProcessor):
+    """Leave out a rule whose IP service names a protocol there is not.
+
+    Writing the rule without its protocol would widen it from one
+    protocol to every one of them, so the rule goes and the service is
+    named.  See ``ip_protocol_problem`` for what each tool answers.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _SERVICE_SLOTS.get(rule.type, ('srv',)):
+            for srv in getattr(rule, slot, None) or []:
+                problem = ip_protocol_problem(srv)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Service "{srv.name}" {problem}; the rule would match '
+                    'every protocol instead of that one, so it is left out. '
+                    'Correct the service object.',
                 )
                 return True
 

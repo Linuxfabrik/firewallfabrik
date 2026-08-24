@@ -65,6 +65,7 @@ from firewallfabrik.compiler.processors._policy import (
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
     VerifyIcmpTypes,
+    VerifyIpProtocols,
     VerifyPortRanges,
 )
 from firewallfabrik.core.objects import (
@@ -414,6 +415,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
         self.add(VerifyIcmpTypes('verify ICMP types'))
+        self.add(VerifyIpProtocols('verify IP protocols'))
         self.add(VerifyAddressRanges('verify address ranges'))
         self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
