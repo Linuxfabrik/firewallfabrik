@@ -10,13 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Compiler (iptables): a firewall pinned to an iptables release before 1.3.0 gets its TCPMSS clamping rule again, and an ip6tables release without the target says so instead of leaving the rule out in silence.
-* Compiler (iptables, nftables): a netlink group that is no group number is reported and the rule logs to the default group, instead of stopping the activation on iptables and logging to an arbitrary group on nftables.
-* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday there is not is reported at compile time instead of ending the compile or the activation.
-* Compiler (iptables, nftables): a rule written for every interface except the ones it names is no longer reported as shadowed by, or as shadowing, a rule on exactly those interfaces.
-* Compiler (iptables, nftables): an ICMP service naming a type or code outside the byte the header has is reported at compile time instead of stopping the activation.
-* Compiler (iptables, nftables): the netlink group a logging rule sends its messages to is read from the rule, not only from the firewall settings.
-* Compiler (nftables): the generated script checks that `nft` and `ip` are there before it touches the firewall, the way the iptables script does.
+* Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
+* Compiler (iptables, nftables): a logging rule whose netlink group is unusable logs to the default group instead of breaking the activation.
+* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
+* Compiler (iptables, nftables): a rule written for "any interface except these" is no longer reported as shadowing an unrelated rule.
+* Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
+* Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
+* Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
 
 
 ## [v2.0.0] - 2026-08-24
