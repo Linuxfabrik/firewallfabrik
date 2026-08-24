@@ -28,6 +28,12 @@ import os
 
 import pytest
 
+# The GUI is an optional extra and the test runner installs the package
+# without it, so this has to say so before the first Qt import rather than
+# fail to collect.  The panel, the drop area and the context menu all
+# reach for PySide6; `object_tree_data` does not.
+pytest.importorskip('PySide6', reason='the GUI extra is not installed')
+
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from firewallfabrik.core.objects import NATAction, PolicyAction
