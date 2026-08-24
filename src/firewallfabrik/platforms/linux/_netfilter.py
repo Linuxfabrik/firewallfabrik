@@ -777,6 +777,27 @@ def get_log_queue_threshold(compiler, rule=None) -> int:
     )
 
 
+# The two connection states a Custom Service can do its own matching on.
+# fwbuilder splits such a service into a rule of its own and marks that
+# rule stateless, so the compiler does not put its own "NEW" next to it
+# (PolicyCompiler_ipt::specialCasesWithCustomServices), and it looks for
+# the two words with a case-sensitive `find()`.  Both tools read the state
+# names case-insensitively - `strncasecmp` in netfilter
+# extensions/libxt_conntrack.c and libxt_state.c, verified against
+# iptables 1.8.11, which prints `--ctstate established` back as
+# `RELATED,ESTABLISHED` - and nftables knows the lowercase spelling and no
+# other.  So an administrator may write either case, and asking about it
+# in one case only left one Custom Service compiled stateless on one
+# platform and stateful on the other.
+_CONNECTION_STATE_WORDS = ('established', 'related')
+
+
+def custom_service_matches_state(code: str) -> bool:
+    """Whether a Custom Service's code matches on the connection state."""
+    lowered = (code or '').lower()
+    return any(word in lowered for word in _CONNECTION_STATE_WORDS)
+
+
 # Interfaces whose names differ only in a trailing number are one group,
 # named after the pattern that matches them all: eth0, eth1 and eth2
 # become `eth+`.  fwbuilder builds that map once per compiler

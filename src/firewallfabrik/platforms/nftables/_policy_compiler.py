@@ -90,6 +90,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
+    custom_service_matches_state,
     forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
@@ -3092,9 +3093,7 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         for srv in rule.srv:
             if isinstance(srv, CustomService):
                 code = (srv.codes or {}).get(platform, '')
-                if code and (
-                    'established' in code.lower() or 'related' in code.lower()
-                ):
+                if custom_service_matches_state(code):
                     to_separate.append(srv)
 
         for srv in to_separate:

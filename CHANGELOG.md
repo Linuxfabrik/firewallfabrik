@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
+* Compiler (iptables): a custom service that matches on the connection state in lower case is recognised, the way nftables already did.
 * Compiler (iptables, nftables): a logging rule whose netlink group is unusable logs to the default group instead of breaking the activation.
 * Compiler (iptables, nftables): a logging rule whose NFLOG copy range or queue threshold is unusable is logged without it instead of breaking the activation.
 * Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
