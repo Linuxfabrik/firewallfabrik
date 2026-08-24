@@ -87,6 +87,63 @@ def date_problem(date: Date) -> str:
     return ''
 
 
+def interval_problem(data: dict) -> str:
+    """Return what is wrong with the daily window *data* names, or ``''``.
+
+    An Interval carries a time of day and a set of weekdays, and neither
+    is checked anywhere between the data file and the generated rule.
+    The editor bounds both, so this only ever fires for a file written by
+    an older release, another tool or by hand - the same reasoning as for
+    a port range that runs backwards.
+
+    What the two packet filters do with a value outside the bounds:
+
+    * A time of day past 23:59 is refused by iptables outright ("invalid
+      time ... within the boundaries", netfilter
+      extensions/libxt_time.c: time_parse_minutes), which stops the
+      activation script with every chain already set to drop, and the
+      kernel refuses the same window a second time (net/netfilter/
+      xt_time.c: time_mt_check, -EDOM).  nftables answers it with
+      "Can't parse trailing input" (nftables src/meta.c:
+      hour_type_parse) and refuses the whole ruleset over it.
+    * A weekday outside the seven a week has is not a day either side
+      knows: nftables lists Sunday to Saturday and nothing else
+      (src/meta.c: day_type_tbl; ``meta day 7`` is a ``;fail`` line in
+      its own tests/py/any/meta.t), and iptables takes the number without
+      a bound while the kernel keeps the mask in a ``__u8``
+      (include/uapi/linux/netfilter/xt_time.h: weekdays_match), so an
+      eighth day silently becomes no day at all and the rule stops
+      matching.
+    """
+    for label, hour_key, minute_key, time_key in (
+        ('start', 'from_hour', 'from_minute', 'from_time'),
+        ('stop', 'to_hour', 'to_minute', 'to_time'),
+    ):
+        raw_time = data.get(time_key, '')
+        if raw_time:
+            hour, minute = _split_time(raw_time)
+            if hour < 0 or minute < 0:
+                return f'its {label} time "{raw_time}" is not a time of day'
+        else:
+            hour = _safe_int(data.get(hour_key, -1))
+            minute = _safe_int(data.get(minute_key, -1))
+        if hour > 23:
+            return f'there is no hour {hour} in a day, so its {label} time is none'
+        if minute > 59:
+            return (
+                f'there is no minute {minute} in an hour, so its {label} time is none'
+            )
+
+    for day in str(data.get('days_of_week', '')).split(','):
+        day = day.strip()
+        if not day:
+            continue
+        if _safe_int(day) not in DOW_NAMES_FULL:
+            return f'"{day}" is not one of the seven days of the week'
+
+    return ''
+
+
 # Day-of-week names following fwbuilder convention (0=Sun).
 DOW_NAMES_FULL = {
     0: 'Sunday',
@@ -128,17 +185,13 @@ def parse_interval_data(
     to_time = data.get('to_time', '')
 
     if from_time:
-        parts = from_time.split(':')
-        start_h = int(parts[0])
-        start_m = int(parts[1]) if len(parts) > 1 else 0
+        start_h, start_m = _split_time(from_time)
     else:
         start_h = _safe_int(data.get('from_hour', -1))
         start_m = _safe_int(data.get('from_minute', -1))
 
     if to_time:
-        parts = to_time.split(':')
-        end_h = int(parts[0])
-        end_m = int(parts[1]) if len(parts) > 1 else 0
+        end_h, end_m = _split_time(to_time)
     else:
         end_h = _safe_int(data.get('to_hour', -1))
         end_m = _safe_int(data.get('to_minute', -1))
@@ -156,7 +209,7 @@ def parse_interval_data(
     # -- Days of week --
     days_str = data.get('days_of_week', '')
     if days_str:
-        days = sorted(int(d) for d in days_str.split(',') if d.strip())
+        days = sorted(_safe_int(d) for d in str(days_str).split(',') if d.strip())
     else:
         days = _days_from_weekday_range(
             _safe_int(data.get('from_weekday', -1)),
@@ -245,6 +298,19 @@ def is_any_interval(data: dict) -> bool:
         and sorted(days) == list(range(7))
         and parse_interval_dates(data) == (None, None)
     )
+
+
+def _split_time(value: str) -> tuple[int, int]:
+    """Split a stored ``"HH:mm"`` into hour and minute.
+
+    Anything that is not a number reads as -1, the "not set" value the
+    rest of this module already knows, so a data file written by hand
+    cannot stop a compile before ``interval_problem`` gets to name it.
+    """
+    parts = str(value).split(':')
+    hour = _safe_int(parts[0])
+    minute = _safe_int(parts[1]) if len(parts) > 1 else 0
+    return hour, minute
 
 
 def _safe_int(value, default: int = -1) -> int:

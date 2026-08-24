@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday there is not is reported at compile time instead of ending the compile or the activation.
 
 
 ## [v2.0.0] - 2026-08-24

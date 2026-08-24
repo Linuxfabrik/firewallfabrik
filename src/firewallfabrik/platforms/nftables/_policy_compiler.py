@@ -47,6 +47,7 @@ from firewallfabrik.compiler.processors._generic import (
     VerifyAddresses,
     VerifyAddressRanges,
     VerifyMacAddresses,
+    VerifyTimeIntervals,
 )
 from firewallfabrik.compiler.processors._policy import (
     DropRuleWithImpossibleInterface,
@@ -414,6 +415,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(VerifyAddressRanges('verify address ranges'))
         self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
+        self.add(VerifyTimeIntervals('verify time intervals'))
         self.add(
             SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
         )

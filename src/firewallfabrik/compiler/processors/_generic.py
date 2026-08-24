@@ -28,6 +28,7 @@ from firewallfabrik.compiler._combined_address import (
     host_matches_by_mac,
 )
 from firewallfabrik.compiler._comp_rule import CompRule
+from firewallfabrik.compiler._interval_helpers import interval_problem
 from firewallfabrik.compiler._rule_processor import (
     BasicRuleProcessor,
     NATRuleProcessor,
@@ -2037,6 +2038,38 @@ class VerifyAddressRanges(BasicRuleProcessor):
                     'address range object.',
                 )
                 return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyTimeIntervals(BasicRuleProcessor):
+    """Leave out a rule whose time object names an hour or a day there is not.
+
+    Neither packet filter can carry the value: iptables stops the
+    activation script over a time of day past 23:59 and silently drops an
+    eighth weekday, nftables refuses the whole ruleset over either.  See
+    ``interval_problem`` for the netfilter sources that say so.  Rendering
+    the rule without its time restriction would run it around the clock,
+    so the rule goes and the message names the time object.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for interval in getattr(rule, 'when', None) or []:
+            problem = interval_problem(interval.data or {})
+            if not problem:
+                continue
+            self.compiler.error(
+                rule,
+                f'Time object "{interval.name}": {problem}. Neither iptables '
+                'nor nftables can carry it, so the rule is left out. Correct '
+                'the time object.',
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True

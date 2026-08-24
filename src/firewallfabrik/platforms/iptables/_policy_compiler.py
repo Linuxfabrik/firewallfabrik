@@ -48,6 +48,7 @@ from firewallfabrik.compiler.processors._generic import (
     VerifyAddresses,
     VerifyAddressRanges,
     VerifyMacAddresses,
+    VerifyTimeIntervals,
 )
 from firewallfabrik.compiler.processors._policy import (
     AddressRangesInDst,
@@ -536,6 +537,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(VerifyAddressRanges('verify address ranges'))
         self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
+        self.add(VerifyTimeIntervals('verify time intervals'))
         self.add(SpecialCasesWithCustomServices('special cases with custom services'))
         self.add(SeparatePortRanges('separate port ranges'))
         self.add(SeparateUserServices('separate user services'))
