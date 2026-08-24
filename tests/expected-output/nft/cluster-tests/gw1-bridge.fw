@@ -201,11 +201,25 @@ clear_addresses_except_known_interfaces() {
          done
 }
 
-check_nft() {
-    if [ ! -x "$NFT" ]; then
-        echo "Error: nft not found at $NFT"
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
         exit 1
-    fi
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+    # $IP fills the sets a rule matching a dynamic interface address or an
+    # address table points at, and installs the routing rules.  Without it
+    # those sets stay empty - a set no packet is in - and the activation
+    # still reports success.
+    find_program "$IP"
 }
 
 verify_interfaces() {
@@ -455,7 +469,7 @@ test -z "$cmd" && {
 case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
-        check_nft
+        check_tools
         prolog_commands
         configure_interfaces
         verify_interfaces
@@ -471,19 +485,19 @@ case "$cmd" in
         ;;
 
     stop)
-        check_nft
+        check_tools
         stop_action
         RETVAL=$?
         ;;
 
     status)
-        check_nft
+        check_tools
         status_action
         RETVAL=$?
         ;;
 
     block)
-        check_nft
+        check_tools
         block_action
         RETVAL=$?
         ;;
