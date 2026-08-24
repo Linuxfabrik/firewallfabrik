@@ -10,20 +10,28 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Netmask validation for the address editors, the way fwbuilder does it.
+"""Address and netmask validation for the address editors, the way fwbuilder does it.
 
-Every editor that takes a netmask refuses the same values Firewall
-Builder refuses, with the message Firewall Builder shows, and hands back
-the value in the spelling that goes into the data file: dotted for IPv4
-and a bit length for IPv6 (``NetworkIPv6::toXML`` writes the length,
-``Network::setNetmask`` writes ``InetAddr::toString``).
+Every editor that takes an address or a netmask refuses the same values
+Firewall Builder refuses, with the message Firewall Builder shows, and
+hands back the value in the spelling that goes into the data file:
+dotted for IPv4 and a bit length for IPv6 (``NetworkIPv6::toXML`` writes
+the length, ``Network::setNetmask`` writes ``InetAddr::toString``).
 
-Normalising here is what keeps a mask the compilers can read out of the
-file.  fwbuilder stores the result of ``InetAddr(...)``, so a mask typed
-as ``8`` is written as ``255.0.0.0``; storing the raw text instead let a
-value through that passed validation and that nothing downstream could
-parse, and the compilers then dropped the netmask and matched a single
-address where a whole network was meant.
+Normalising here is what keeps an address and a mask the compilers can
+read out of the file.  fwbuilder stores the result of ``InetAddr(...)``,
+so a mask typed as ``8`` is written as ``255.0.0.0``; storing the raw
+text of the field instead let a value through that passed validation and
+that nothing downstream could parse, and the compilers then dropped the
+netmask and matched a single address where a whole network was meant.
+
+The address field is the same case.  Validation trims the field, so a
+value carrying a space or a non-breaking space - what a paste out of a
+wiki page or a PDF brings along, and what nothing in the editor shows -
+passes as an address and is then stored untrimmed.
+``ipaddress.ip_network('192.168.2.0 /255.0.0.0')`` raises, so a whole
+network again became the single address 192.168.2.0, in a script that
+installs without a word.
 """
 
 import ipaddress
@@ -63,11 +71,12 @@ def _bit_length(text: str) -> int | None:
 
 
 def _dotted(text: str) -> str | None:
-    """Read *text* as a dotted IPv4 mask, or return ``None``."""
-    try:
-        return str(ipaddress.IPv4Address(text.strip()))
-    except ValueError:
-        return None
+    """Read *text* as a dotted IPv4 mask, or return ``None``.
+
+    A dotted mask is an address, and fwbuilder reads it with the same
+    ``InetAddr`` constructor, so the two share the one reader.
+    """
+    return address_for_ipv4(text)
 
 
 def _is_contiguous(dotted: str) -> bool:
@@ -86,6 +95,33 @@ def _is_contiguous(dotted: str) -> bool:
 def _mask_of_length(prefix: int) -> str:
     """The dotted IPv4 mask of *prefix* bits."""
     return str(ipaddress.IPv4Network(f'0.0.0.0/{prefix}').netmask)
+
+
+def address_for_ipv4(text: str) -> str | None:
+    """Return the IPv4 address of *text* normalised, or ``None``.
+
+    The value that goes into the data file, not the text of the field:
+    ``InetAddr::toString()`` writes back what ``inet_pton()`` read, which
+    is what makes the stored address one ``ipaddress`` can pair with a
+    netmask again.
+    """
+    try:
+        return str(ipaddress.IPv4Address(text.strip()))
+    except ValueError:
+        return None
+
+
+def address_for_ipv6(text: str) -> str | None:
+    """Return the IPv6 address of *text* normalised, or ``None``.
+
+    Same contract as :func:`address_for_ipv4`; for IPv6 the normal form
+    also lowercases the digits and collapses the longest run of zeroes,
+    the way ``inet_ntop()`` writes it.
+    """
+    try:
+        return str(ipaddress.IPv6Address(text.strip()))
+    except ValueError:
+        return None
 
 
 def is_any_address(text: str) -> bool:

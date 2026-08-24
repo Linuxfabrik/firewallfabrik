@@ -23,6 +23,8 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.netmask import (
     NetmaskRejected,
+    address_for_ipv4,
+    address_for_ipv6,
     is_any_address,
     netmask_for_ipv4_address,
     netmask_for_ipv6_address,
@@ -47,31 +49,23 @@ def _resolve_name(hostname, af_type):
     return ''
 
 
-def _validate_ipv4(address_text):
-    """Validate an IPv4 address string.  Return the normalised address or *None*."""
-    try:
-        return str(ipaddress.IPv4Address(address_text.strip()))
-    except ValueError:
-        return None
-
-
-def _validate_ipv6(address_text):
-    """Validate an IPv6 address string.  Return the normalised address or *None*."""
-    try:
-        return str(ipaddress.IPv6Address(address_text.strip()))
-    except ValueError:
-        return None
-
-
 class _BaseAddressDialog(BaseObjectDialog):
     """Base for IPv4/IPv6/Network/NetworkIPv6 dialogs (name + address + netmask).
 
     Address and netmask are validated before anything is written, the way
     fwbuilder splits ``validate()`` from ``applyChanges()``: a value the
-    editor refuses leaves the object as it was.  What is written is the
-    *normalised* netmask, because that is what fwbuilder stores - it puts
-    an ``InetAddr`` back, so a mask typed as a bit length is written
-    dotted for IPv4 and as a length for IPv6.
+    editor refuses leaves the object as it was.  What is written are the
+    *normalised* address and netmask, because that is what fwbuilder
+    stores - it puts an ``InetAddr`` back, so a mask typed as a bit
+    length is written dotted for IPv4 and as a length for IPv6, and an
+    address is written the way ``inet_ntop()`` writes it.
+
+    Storing the text of the field instead is what issue #154 was: a
+    netmask, and to this day an address, that the editor had trimmed for
+    the check and then wrote back untrimmed.  ``ip_network()`` refuses
+    such a pair, and every compiler answers that by dropping the netmask
+    and matching the single address - a rule written for a whole network,
+    installed without a word of warning, that never matches.
     """
 
     #: Message for an address the dialog cannot read (per family).
@@ -98,13 +92,16 @@ class _BaseAddressDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         address_text = self.address.text().strip()
-        if address_text and self._validate_address(address_text) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Address'),
-                self.tr(self.illegal_address_message).replace('%1', address_text),
-            )
-            return
+        address = ''
+        if address_text:
+            address = self._validate_address(address_text)
+            if address is None:
+                QMessageBox.warning(
+                    self,
+                    self.tr('Invalid Address'),
+                    self.tr(self.illegal_address_message).replace('%1', address_text),
+                )
+                return
 
         netmask = None
         if self._netmask_applies():
@@ -124,7 +121,15 @@ class _BaseAddressDialog(BaseObjectDialog):
 
         self._obj.name = self.obj_name.text()
         inet = dict(self._obj.inet_addr_mask or {})
-        inet['address'] = self.address.text()
+        # What is stored is the validated address, not the text of the
+        # field: a value the field carries but ``ipaddress`` cannot pair
+        # with a netmask again costs the netmask in every compiler.
+        inet['address'] = address
+        # Show what was stored, the way fwbuilder's dialog comes back
+        # holding the InetAddr its applyChanges() put on the object.  It
+        # is also the only place a space or a non-breaking space that
+        # came along with a paste becomes visible: it is gone.
+        self.address.setText(address)
         if netmask is not None:
             inet['netmask'] = netmask
             # Show what was stored, the way fwbuilder's dialog comes back
@@ -188,7 +193,7 @@ class IPv4Dialog(_HostAddressDialog):
         super().__init__('ipv4dialog_q.ui', parent)
 
     def _validate_address(self, address_text):
-        return _validate_ipv4(address_text)
+        return address_for_ipv4(address_text)
 
     def _validate_netmask(self, netmask_text):
         return netmask_for_ipv4_address(netmask_text)
@@ -236,7 +241,7 @@ class IPv6Dialog(_HostAddressDialog):
         super().__init__('ipv6dialog_q.ui', parent)
 
     def _validate_address(self, address_text):
-        return _validate_ipv6(address_text)
+        return address_for_ipv6(address_text)
 
     def _validate_netmask(self, netmask_text):
         return netmask_for_ipv6_address(netmask_text)
@@ -286,7 +291,7 @@ class NetworkDialog(_BaseAddressDialog):
         super().__init__('networkdialog_q.ui', parent)
 
     def _validate_address(self, address_text):
-        return _validate_ipv4(address_text)
+        return address_for_ipv4(address_text)
 
     def _validate_netmask(self, netmask_text):
         return netmask_for_network(
@@ -315,7 +320,7 @@ class NetworkDialogIPv6(_BaseAddressDialog):
         super().__init__('networkdialogipv6_q.ui', parent)
 
     def _validate_address(self, address_text):
-        return _validate_ipv6(address_text)
+        return address_for_ipv6(address_text)
 
     def _validate_netmask(self, netmask_text):
         return netmask_for_network_ipv6(netmask_text)
