@@ -161,6 +161,7 @@ class CompilerDriver_nft(CompilerDriver):
         # and, through that, whether a rule has to name its family itself.
         self._any_rs_ipv6: bool = False
         self._branch_chains: set[str] = set()
+        self._imported_rule_sets: set = set()
         self._mangle_only_branch_chains: set[str] = set()
         self._mangle_branch_chains: set[str] = set()
         self._classifying_branch_chains: set[str] = set()
@@ -263,6 +264,23 @@ class CompilerDriver_nft(CompilerDriver):
                 )
 
                 self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
+
+                # A Branch rule may point at a rule set of another firewall
+                # object; that rule set is compiled into this ruleset, or
+                # the jump names a chain nothing declares and nft refuses
+                # the whole thing
+                # (CompilerDriver::findImportedRuleSets, issue #156).
+                imported_policies = self.find_imported_rule_sets(
+                    session, fw, list(all_policies), Policy
+                )
+                imported_nat = self.find_imported_rule_sets(
+                    session, fw, list(all_nat), NAT
+                )
+                self._imported_rule_sets = {
+                    rs.id for rs in (*imported_policies, *imported_nat)
+                }
+                all_policies = [*all_policies, *imported_policies]
+                all_nat = [*all_nat, *imported_nat]
 
                 # Determine whether to run IPv4/IPv6 compilation passes
                 # based on the rule sets' explicit address-family flags.
@@ -1364,7 +1382,16 @@ class CompilerDriver_nft(CompilerDriver):
         return True
 
     def _is_top_ruleset(self, ruleset: RuleSet) -> bool:
-        """Check if a rule set is the top-level rule set."""
+        """Check if a rule set is the top-level rule set.
+
+        A rule set imported from another firewall object is never the top
+        one *here*: the top rule set fills the hooked chains, and then
+        there would be no chain for the branching rule to jump to.
+        fwbuilder clears the flag on the object for the same reason
+        (``CompilerDriver::findImportedRuleSets``).
+        """
+        if ruleset.id in self._imported_rule_sets:
+            return False
         return bool(ruleset.top)
 
     def info(self, msg: str) -> None:

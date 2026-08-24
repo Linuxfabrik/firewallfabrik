@@ -19,6 +19,7 @@ and output file management.
 from __future__ import annotations
 
 import ipaddress
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -29,7 +30,10 @@ from firewallfabrik.core.objects import (
     Cluster,
     Firewall,
     MultiAddressRunTime,
+    NATAction,
     PhysAddress,
+    PolicyAction,
+    RuleSet,
     netmask_prefix_length,
 )
 from firewallfabrik.platforms._defaults import get_known_keys
@@ -191,6 +195,117 @@ class CompilerDriver(BaseCompiler):
                 f'chains. Mark the one that applies to all traffic as the top '
                 f'rule set, or point a rule with the Branch action at it'
             )
+
+    def find_imported_rule_sets(self, session, fw, rule_sets, rule_set_class) -> list:
+        """Return the rule sets of *other* objects this firewall branches into.
+
+        A Branch rule may point at a rule set that belongs to another
+        firewall or cluster.  Firewall Builder compiles that rule set into
+        the script of the firewall that jumps to it
+        (``CompilerDriver::findImportedRuleSets``, called for the policies
+        and for the NAT rule sets before anything else happens), because
+        otherwise the jump lands in a chain nothing ever fills: the packet
+        returns, the rule does nothing and the activation reports success.
+
+        Two kinds of target are deliberately *not* imported.  One that
+        belongs to this firewall is compiled anyway, and one that belongs
+        to the cluster this firewall is a member of has been merged into it
+        already.  Everything else is followed recursively, because a branch
+        may branch on; a rule set reached twice from one rule is a loop and
+        is said out loud rather than followed again.
+
+        The imported rule sets are compiled as ordinary chains whatever
+        their own "top" flag says.  The C++ clears that flag on the object
+        and the comment above it spells out why: a top rule set goes into
+        the built-in chains, so there would be no chain for the jump to
+        name.  Here the answer is per compile run instead of a write into
+        the database, see ``_is_top_ruleset``.
+        """
+        own = {rs.id for rs in rule_sets}
+        cluster_id = getattr(fw, 'parent_cluster_id', None)
+
+        imported: list = []
+        seen: set = set()
+
+        def follow(rule_set, reached: dict) -> None:
+            count = reached.get(rule_set.id, 0) + 1
+            reached[rule_set.id] = count
+            if count > 1:
+                return
+            # Several rules of one rule set may branch to the same target;
+            # that is not a loop, so it is followed once
+            # (`local_branch_ruleset_counters` in the C++).
+            followed: set = set()
+            for rule in rule_set.rules:
+                target = self._branch_target(session, rule)
+                if target is None or target.id in followed:
+                    continue
+                followed.add(target.id)
+                follow(target, reached)
+
+        for rule_set in rule_sets:
+            for rule in rule_set.rules:
+                target = self._branch_target(session, rule)
+                if target is None:
+                    continue
+                reached: dict = {}
+                follow(target, reached)
+                for target_id, count in reached.items():
+                    candidate = session.get(RuleSet, target_id)
+                    if candidate is None:
+                        continue
+                    if count > 1:
+                        self.warning(
+                            f'{fw.name}: rule {rule.position} of rule set '
+                            f'"{rule_set.name}" branches to rule set '
+                            f'"{candidate.name}", which branches back to it, '
+                            f'creating a loop'
+                        )
+                    if target_id in own or target_id in seen:
+                        continue
+                    # A rule set of the cluster this firewall belongs to is
+                    # already part of what is compiled.
+                    if cluster_id and candidate.device_id == cluster_id:
+                        continue
+                    # The policies and the NAT rule sets are collected in
+                    # two passes and a branch never crosses between them.
+                    if not isinstance(candidate, rule_set_class):
+                        continue
+                    seen.add(target_id)
+                    imported.append(candidate)
+
+        return imported
+
+    @staticmethod
+    def _branch_target(session, rule):
+        """Return the rule set a Branch rule points at, or ``None``.
+
+        The action decides first: ``PolicyRule::getBranch`` and
+        ``NATRule::getBranch`` (Rule.cpp:488 and :920) answer ``nullptr``
+        for anything that is not a Branch rule, whatever the options say.
+        An editor leaves a `branch_id` behind when the action is changed,
+        and three firewalls of the reference corpus carry one on an
+        ordinary Accept - following it would compile a rule set the
+        firewall does not use.
+
+        The reference is then the id both readers resolve.  The name is
+        only a fallback *within the firewall's own rule sets* in the C++
+        too, which is where the compilers already look it up, so a rule
+        that carries nothing else is left to them.
+        """
+        if not (
+            rule.policy_action == PolicyAction.Branch
+            or rule.nat_action == NATAction.Branch
+        ):
+            return None
+        ref = (getattr(rule, 'options', None) or {}).get('branch_id')
+        if not ref:
+            return None
+        try:
+            target_id = uuid.UUID(str(ref))
+        except (TypeError, ValueError):
+            return None
+        return session.get(RuleSet, target_id)
 
     def check_interface_addresses(self, fw: Firewall) -> str:
         """Validate IP addresses of a firewall's regular interfaces.

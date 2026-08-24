@@ -8,17 +8,25 @@
 #
 # files: * firewall33-1.fw /etc/fw/firewall33-1.fw
 #
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
+# DNSName "buildmaster (ct)" cannot resolve "buildmaster": DNS lookup failed
+# Rule 2 (global): Empty group or address table object 'buildmaster (ct)' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 6 (global): Empty group or address table object 'buildmaster (ct)' is used in the rule but option 'Ignore rules with empty groups' is off
+# firewall33-1:Policy:2: warning: Rule is left out because "buildmaster (ct)" resolves to no address at all
+# firewall33-1:Policy:6: warning: Rule is left out because "buildmaster (ct)" resolves to no address at all
 
 FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
 NFT="/usr/sbin/nft"
-IP="ip"
+IP="/sbin/ip"
 LOGGER="logger"
 
 log() {
@@ -193,11 +201,25 @@ clear_addresses_except_known_interfaces() {
          done
 }
 
-check_nft() {
-    if [ ! -x "$NFT" ]; then
-        echo "Error: nft not found at $NFT"
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
         exit 1
-    fi
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+    # $IP fills the sets a rule matching a dynamic interface address or an
+    # address table points at, and installs the routing rules.  Without it
+    # those sets stay empty - a set no packet is in - and the activation
+    # still reports success.
+    find_program "$IP"
 }
 
 verify_interfaces() {
@@ -234,44 +256,236 @@ configure_interfaces() {
     update_addresses_of_interface "eth1 192.168.1.1/24" ""
 }
 
-script_body() {
-    $NFT -f /dev/stdin <<'NFT_RULES'
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        return 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+    load_dns_name "ip" "fwf_filter" "_6bone.net__rt_" "6bone.net" "-4"
+    load_dns_name "ip" "fwf_filter" "buildmaster__rt_" "buildmaster" "-4"
+    load_dns_name "ip" "fwf_filter" "cnn__rt_" "www.cnn.com" "-4"
+    load_dns_name "ip" "fwf_filter" "google__rt_" "www.google.com" "-4"
+    load_dns_name "ip" "fwf_filter" "ny6ix.net__rt_" "ny6ix.net" "-4"
+}
+
+nft_ruleset() {
+    cat <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    set _6bone.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set buildmaster__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set cnn__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set google__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set ny6ix.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # branches to firewall33:Policy which uses DNSName objects
         # testing for bug 1485
+        counter jump Policy
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # branches to firewall33:Policy which uses DNSName objects
         # testing for bug 1485
+        counter jump Policy
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # branches to firewall33:Policy which uses DNSName objects
         # testing for bug 1485
+        counter jump Policy
+    }
+
+    chain Policy {
+        #
+        # Rule 0 (global)
+        #
+        ip saddr { 151.101.3.5, 151.101.67.5, 151.101.131.5, 151.101.195.5 } ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr @cnn__rt_ ct state new counter accept
+        #
+        # Rule 3 (global)
+        #
+        ip saddr @buildmaster__rt_ ct state new counter accept
+        #
+        # Rule 4 (global)
+        #
+        ip daddr != { 151.101.3.5, 151.101.67.5, 151.101.131.5, 151.101.195.5 } counter drop
+        #
+        # Rule 5 (global)
+        #
+        ip daddr != @cnn__rt_ counter drop
+        #
+        # Rule 7 (global)
+        #
+        ip daddr != @buildmaster__rt_ ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr != { 142.251.150.119, 142.251.151.119, 142.251.152.119, 142.251.153.119, 142.251.154.119, 142.251.155.119, 142.251.156.119, 142.251.157.119, 151.101.3.5, 151.101.67.5, 151.101.131.5, 151.101.195.5 } ct state new counter accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr != @cnn__rt_ ip daddr != @google__rt_ ct state new counter accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr != @google__rt_ ip daddr != { 151.101.3.5, 151.101.67.5, 151.101.131.5, 151.101.195.5 } ct state new counter accept
+        #
+        # Rule 11 (global)
+        #
+        # test for bug #1905718
+        # Group of DNS Name objects considered empty
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
+        # Rule 12 (global)
+        #
+        ip daddr { 157.112.176.24, 207.251.84.150 } ct state new counter accept
+        #
+        # Rule 13 (global)
+        #
+        counter log prefix "RULE 13 -- DENY " level info drop
     }
 }
 
 NFT_RULES
+}
+
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+script_body() {
+    nft_ruleset | $NFT -f /dev/stdin
+    load_address_tables
 }
 
 ip_forward() {
@@ -285,6 +499,13 @@ flush_own_tables() {
     $NFT delete table ip fwf_filter 2>/dev/null
     $NFT delete table inet fwf_nat 2>/dev/null
     $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
 }
 
 flush_legacy_iptables() {
@@ -304,6 +525,9 @@ flush_legacy_iptables() {
             "$ipt" -t "$table" -X 2>/dev/null
         done
     done
+    # Same as in flush_own_tables: a table the kernel does not offer makes
+    # the last command fail, which must not become the caller's exit code.
+    return 0
 }
 
 block_action() {
@@ -351,32 +575,35 @@ test -z "$cmd" && {
 case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
-        check_nft
+        check_tools
         prolog_commands
         configure_interfaces
         verify_interfaces
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
         stop_action
         script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
         log "Firewall script is done"
-        RETVAL=$?
         ;;
 
     stop)
-        check_nft
+        check_tools
         stop_action
         RETVAL=$?
         ;;
 
     status)
-        check_nft
+        check_tools
         status_action
         RETVAL=$?
         ;;
 
     block)
-        check_nft
+        check_tools
         block_action
         RETVAL=$?
         ;;
@@ -400,6 +627,7 @@ case "$cmd" in
 
     *)
         echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        RETVAL=1
         ;;
 
 esac

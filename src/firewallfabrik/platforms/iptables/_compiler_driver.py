@@ -105,6 +105,7 @@ class CompilerDriver_ipt(CompilerDriver):
         self._nat_branch_chains: dict[str, list[str]] = {}
         # The names of the policy rule sets a Branch rule can jump to.
         self._branch_chains: set[str] = set()
+        self._imported_rule_sets: set = set()
         self._mangle_only_branch_chains: set[str] = set()
         self._mangle_branch_chains: set[str] = set()
         self._classifying_branch_chains: set[str] = set()
@@ -219,6 +220,22 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
+
+                # A Branch rule may point at a rule set of another firewall
+                # object; that rule set is compiled into this script, or the
+                # jump lands in a chain nothing fills
+                # (CompilerDriver::findImportedRuleSets, issue #156).
+                imported_policies = self.find_imported_rule_sets(
+                    session, fw, list(all_policies), Policy
+                )
+                imported_nat = self.find_imported_rule_sets(
+                    session, fw, list(all_nat), NAT
+                )
+                self._imported_rule_sets = {
+                    rs.id for rs in (*imported_policies, *imported_nat)
+                }
+                all_policies = [*all_policies, *imported_policies]
+                all_nat = [*all_nat, *imported_nat]
 
                 have_ipv4 = False
                 have_ipv6 = False
@@ -1164,7 +1181,17 @@ class CompilerDriver_ipt(CompilerDriver):
 
         The ``top`` column on ``RuleSet`` is populated from the
         ``top_rule_set`` XML attribute by the XML reader.
+
+        A rule set imported from another firewall object is never the top
+        one *here*, whatever it says about itself: the top rule set is
+        compiled into the built-in chains, and then there would be no chain
+        for the branching rule to jump to.  fwbuilder clears the flag on
+        the object for the same reason
+        (``CompilerDriver::findImportedRuleSets``); answering it per compile
+        run keeps the firewall the rule set belongs to unchanged.
         """
+        if ruleset.id in self._imported_rule_sets:
+            return False
         return bool(ruleset.top)
 
     def info(self, msg: str) -> None:

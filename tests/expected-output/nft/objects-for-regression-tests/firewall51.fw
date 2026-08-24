@@ -12,11 +12,6 @@
 #  at rule sets defined in object
 #  firewall-base-rulesets
 #
-# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to; the rule is left out
-# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to; the rule is left out
-# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to; the rule is left out
-# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to; the rule is left out
-# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to; the rule is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -79,6 +74,18 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.10 counter jump mail_server_outbound
+        #
+        # Rule 3 (global)
+        #
+        ip saddr 192.168.1.20 counter jump web_server_outbound
+        #
+        # Rule 4 (global)
+        #
+        counter jump base-ruleset
+        #
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 counter jump rule2_branch
@@ -87,6 +94,26 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        ip daddr 192.168.1.10 counter jump mail_server_inbound
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.10 counter jump mail_server_outbound
+        #
+        # Rule 2 (global)
+        #
+        ip daddr 192.168.1.20 counter jump web_server_inbound
+        #
+        # Rule 3 (global)
+        #
+        ip saddr 192.168.1.20 counter jump web_server_outbound
+        #
+        # Rule 4 (global)
+        #
+        counter jump base-ruleset
         #
         # Rule 5 (global)
         #
@@ -97,9 +124,53 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 0 (global)
+        #
+        ip daddr 192.168.1.10 counter jump mail_server_inbound
+        #
+        # Rule 2 (global)
+        #
+        ip daddr 192.168.1.20 counter jump web_server_inbound
+        #
+        # Rule 4 (global)
+        #
+        counter jump base-ruleset
+        #
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 counter jump rule2_branch
+    }
+
+    chain base-ruleset {
+        #
+        # Rule base-ruleset 0 (global)
+        #
+        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } tcp dport 22 ct state new counter accept
+    }
+
+    chain mail_server_inbound {
+        #
+        # Rule mail_server_inbound 0 (global)
+        #
+        meta iif != 0 tcp dport 25 ct state new counter accept
+        #
+        # Rule mail_server_inbound 1 (global)
+        #
+        meta iif != 0 icmp type destination-unreachable ct state new counter accept
+        meta iif != 0 icmp type echo-request icmp code 0 ct state new counter accept
+    }
+
+    chain mail_server_outbound {
+        #
+        # Rule mail_server_outbound 0 (global)
+        #
+        meta oif != 0 tcp dport { 53, 25 } ct state new counter accept
+        meta oif != 0 udp dport 53 ct state new counter accept
+        #
+        # Rule mail_server_outbound 1 (global)
+        #
+        meta oif != 0 icmp type destination-unreachable ct state new counter accept
+        meta oif != 0 icmp type echo-request icmp code 0 ct state new counter accept
     }
 
     chain rule2_branch {
@@ -107,6 +178,34 @@ table ip fwf_filter {
         # Rule rule2_branch 0 (global)
         #
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
+    }
+
+    chain web_server_inbound {
+        #
+        # Rule web_server_inbound 0 (global)
+        #
+        meta iif != 0 tcp dport 80 ct state new counter accept
+        #
+        # Rule web_server_inbound 1 (global)
+        #
+        meta iif != 0 icmp type destination-unreachable ct state new counter accept
+        meta iif != 0 icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule web_server_inbound 2 (global)
+        #
+        tcp dport 3306 counter log prefix "web_server_inbound/2 -- DENY" level debug drop
+    }
+
+    chain web_server_outbound {
+        #
+        # Rule web_server_outbound 0 (global)
+        #
+        meta oif != 0 icmp type destination-unreachable ct state new counter accept
+        meta oif != 0 icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule web_server_outbound 1 (global)
+        #
+        meta oif != 0 meta l4proto { tcp, udp } th dport 53 ct state new counter accept
     }
 }
 
