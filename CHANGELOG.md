@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v2.0.0] - 2026-08-24
+
 **Highlights:** Both compilers went through a full correctness pass against Firewall Builder. Rules that used to compile into something other than what the GUI shows are now either compiled correctly or reported at compile time, instead of silently matching every address, every service or nothing at all. Every generated nftables ruleset loads and every generated iptables script parses across the whole test corpus. Recompile and review your rulesets after updating, and read the breaking changes first.
 
 ### Breaking Changes
@@ -393,7 +398,8 @@ Initial public beta pre-release.
 * Standard service library expanded with the Wikipedia multi-service ports.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...HEAD
+[v2.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...v2.0.0
 [v1.9.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.8.1...v1.9.0
 [v1.8.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.8.0...v1.8.1
 [v1.8.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.7.0...v1.8.0
