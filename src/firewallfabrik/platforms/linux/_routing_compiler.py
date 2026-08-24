@@ -78,6 +78,7 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(SingleAddressInRGtw('check that the gateway has one address'))
         self.add(RItfChildOfFw('check that RItf is an interface of this firewall'))
         self.add(VerifyAddressRanges('verify address ranges'))
+        self.add(VerifyRouteMetrics('verify route metrics'))
 
         self.add(ExpandGroups('expand groups'))
         self.add(ExpandMultipleAddressesInRouting('expand objects with addresses'))
@@ -216,6 +217,35 @@ class ExpandMultipleAddressesInRouting(RoutingRuleProcessor):
 
         self.compiler.expand_addr(rule, 'rdst')
         self.compiler.expand_addr(rule, 'rgtw')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyRouteMetrics(RoutingRuleProcessor):
+    """Report a metric ``ip route`` cannot carry, and route without it.
+
+    Two rules to one destination are told apart by their metric, so a
+    metric the command refuses is not a detail: iproute2 answers it with
+    `"metric" value is invalid` and installs nothing at all, and the
+    activation carries on without that route.  Compiling the route
+    without the metric at least installs it; which of two competing
+    routes wins is then the kernel's choice rather than the
+    administrator's, which is why it is said out loud.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if route_metric(rule) is None:
+            self.compiler.warning(
+                rule,
+                f'"{rule.get_option("metric", 0)}" is not a route metric; it '
+                f'takes a number up to {MAX_ROUTE_METRIC}, and iproute2 '
+                f'refuses anything else. The route is installed without one',
+            )
+
         self.tmp_queue.append(rule)
         return True
 
@@ -493,13 +523,38 @@ def _next_hop_key(rule: CompRule) -> str:
     return f'{gtw}_{itf}'
 
 
+# `ip route add ... metric N` carries a 32-bit number: iproute2 reads it
+# with `get_u32(&metric, *argv, 0)` (iproute2 ip/iproute.c) and answers
+# anything else with `Error: argument "..." is wrong: "metric" value is
+# invalid`, which leaves that one route uninstalled while the rest of the
+# activation carries on.  Verified in a network namespace: 4294967295 is
+# taken, 5000000000 and -5 are not.  The editor bounds the field with a
+# spin box, so only a hand-edited or foreign data file can carry more.
+MAX_ROUTE_METRIC = 0xFFFFFFFF
+
+
+def route_metric(rule: CompRule) -> int | None:
+    """Return the metric of *rule*, or ``None`` when the value is not one.
+
+    An absent metric is zero, which is what iproute2 uses when the option
+    is left off, and which every caller here reads as "no metric".
+    """
+    value = rule.get_option('metric', 0)
+    if value is None or value == '':
+        return 0
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= number <= MAX_ROUTE_METRIC:
+        return None
+    return number
+
+
 def _metric(rule: CompRule) -> str:
     """Return the rule metric as the string the route command carries."""
-    value = rule.get_option('metric', 0)
-    try:
-        return str(int(value))
-    except (TypeError, ValueError):
-        return '0'
+    number = route_metric(rule)
+    return str(number if number is not None else 0)
 
 
 class CompetingRoutingRules(RoutingRuleProcessor):
@@ -819,12 +874,14 @@ class RoutingPrintRule(RoutingRuleProcessor):
         itf = self._print_ritf(rule)
         if itf is None:
             return ''
-        metric = rule.get_option('metric', 0)
+        metric = _metric(rule)
 
         parts.append(dst)
         # fwbuilder writes the metric right behind the destination
-        # (RoutingCompiler_ipt_writers.cpp RoutingRuleToString).
-        if metric and int(metric) > 0:
+        # (RoutingCompiler_ipt_writers.cpp RoutingRuleToString).  The
+        # multi-path branch reads the same value through the same helper,
+        # or the two spellings of one metric would end up in two commands.
+        if metric != '0':
             parts.append(f'metric {metric}')
         if gtw:
             parts.append(f'via {gtw}')

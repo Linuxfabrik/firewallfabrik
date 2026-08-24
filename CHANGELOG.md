@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a logging rule whose NFLOG copy range or queue threshold is unusable is logged without it instead of breaking the activation.
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a rule written for "any interface except these" is no longer reported as shadowing an unrelated rule.
+* Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
 * Compiler (iptables, nftables): an IP service naming a protocol number that does not exist is reported instead of matching every protocol.
 * Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
