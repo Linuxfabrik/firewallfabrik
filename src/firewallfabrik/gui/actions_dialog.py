@@ -12,12 +12,13 @@
 
 """Action parameters editor panel for iptables policy rules."""
 
+import uuid
 from pathlib import Path
 
 from PySide6.QtWidgets import QWidget
 
 from firewallfabrik.core._options import option_is_true
-from firewallfabrik.core.objects import PolicyAction
+from firewallfabrik.core.objects import NATAction, PolicyAction
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Reject type combo box items: (display_text, stored_value).
@@ -34,6 +35,12 @@ _REJECT_ITEMS = (
     ('TCP RST', 'TCP RST'),
 )
 
+# What a Branch rule may point at.  fwbuilder resolves a policy branch
+# through `Policy::TYPENAME` and a NAT branch through `NAT::TYPENAME`
+# (`PolicyRule::getBranch`, `NATRule::getBranch`), so a rule set of the
+# wrong kind is not a branch target at all.
+_BRANCH_TARGET_TYPES = frozenset({'NAT', 'Policy'})
+
 # Map action enum → stacked-widget page name.
 _ACTION_PAGE = {
     PolicyAction.Accept: 'NonePage',
@@ -44,6 +51,13 @@ _ACTION_PAGE = {
     PolicyAction.Deny: 'NonePage',
     PolicyAction.Pipe: 'NonePage',
     PolicyAction.Reject: 'RejectPage',
+}
+
+# The same, for a NAT rule: its action is a different enum in a column of
+# its own, and only the branch has parameters.
+_NAT_ACTION_PAGE = {
+    NATAction.Branch: 'BranchChainPage',
+    NATAction.Translate: 'NonePage',
 }
 
 
@@ -61,6 +75,13 @@ class ActionsPanel(QWidget):
         self._rule_id = None
         self._loading = False
         self._signals_connected = False
+
+        # The branch drop area takes a rule set and nothing else: that is
+        # what a Branch rule points at.  Which kind follows from the rule
+        # being edited and is set in `load_rule`.
+        if hasattr(self, 'iptBranchDropArea'):
+            self.iptBranchDropArea.set_helper_text('Drop a rule set here')
+            self.iptBranchDropArea.set_accepted_types(_BRANCH_TARGET_TYPES)
 
         # Populate reject combo box.
         if hasattr(self, 'rejectvalue'):
@@ -88,17 +109,19 @@ class ActionsPanel(QWidget):
         try:
             opts = self._read_rule_options()
             row_data = self._get_row_data()
-            action_int = row_data.action_int if row_data is not None else 0
 
-            # Switch to the correct page.
-            try:
-                action = PolicyAction(action_int)
-            except (TypeError, ValueError):
-                action = PolicyAction.Accept
-            page_name = _ACTION_PAGE.get(action, 'NonePage')
+            # Switch to the correct page.  A NAT rule carries its action in
+            # a column of its own and in an enum of its own, so the page it
+            # needs cannot be looked up with the policy one.
+            page_name = self._page_for_rule(row_data)
             page = getattr(self, page_name, None)
             if page is not None and hasattr(self, 'widgetStack'):
                 self.widgetStack.setCurrentWidget(page)
+
+            if hasattr(self, 'iptBranchDropArea'):
+                self.iptBranchDropArea.set_accepted_types(
+                    {'NAT'} if self._is_nat_rule() else {'Policy'}
+                )
 
             # Reject page.
             if hasattr(self, 'rejectvalue'):
@@ -121,6 +144,8 @@ class ActionsPanel(QWidget):
                 self.ipt_branch_in_mangle.setChecked(
                     _to_bool(opts.get('ipt_branch_in_mangle')),
                 )
+            if hasattr(self, 'iptBranchDropArea'):
+                self._load_branch_target(opts)
         finally:
             self._loading = False
 
@@ -142,9 +167,17 @@ class ActionsPanel(QWidget):
         if hasattr(self, 'custom_str'):
             opts['custom_str'] = self.custom_str.text()
 
-        # Branch.
+        # Branch.  The id is what identifies the rule set - the name does
+        # not, because a branch may point at a rule set of another firewall
+        # object and almost every one of them owns a "Policy".  The name is
+        # written beside it because that is the chain the rule jumps to and
+        # what the rule summary shows.
         if hasattr(self, 'ipt_branch_in_mangle'):
             opts['ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
+        if hasattr(self, 'iptBranchDropArea'):
+            target_id = self.iptBranchDropArea.get_object_id()
+            opts['branch_id'] = str(target_id) if target_id else ''
+            opts['branch_name'] = self.iptBranchDropArea.get_object_name() or ''
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}
@@ -158,6 +191,54 @@ class ActionsPanel(QWidget):
         # Re-resolve so subsequent saves use a valid index.
         if self._rule_id is not None:
             self._index = self._model.index_for_rule(self._rule_id)
+
+    def _is_nat_rule(self):
+        """Whether the rule being edited belongs to a NAT rule set."""
+        return getattr(self._model, 'rule_set_type', '') == 'NAT'
+
+    def _page_for_rule(self, row_data):
+        """Return the name of the stacked-widget page this rule needs."""
+        if row_data is None:
+            return 'NonePage'
+        if self._is_nat_rule():
+            try:
+                nat_action = NATAction(row_data.nat_action_int)
+            except (TypeError, ValueError):
+                return 'NonePage'
+            return _NAT_ACTION_PAGE.get(nat_action, 'NonePage')
+        try:
+            action = PolicyAction(row_data.action_int)
+        except (TypeError, ValueError):
+            action = PolicyAction.Accept
+        return _ACTION_PAGE.get(action, 'NonePage')
+
+    def _load_branch_target(self, opts):
+        """Show the rule set the branch points at, or clear the area.
+
+        The stored value is the rule set's id.  A file written before the
+        reference was resolved carries the Firewall Builder XML id there,
+        which resolves to nothing; the name beside it is then all there is
+        and the area stays empty rather than showing something that is not
+        the target.
+        """
+        from firewallfabrik.core.objects import RuleSet
+
+        ref = str(opts.get('branch_id') or '')
+        target = None
+        if ref and self._model is not None:
+            try:
+                target_id = uuid.UUID(ref)
+            except ValueError:
+                target_id = None
+            if target_id is not None:
+                with self._model._db_manager.session() as session:
+                    rule_set = session.get(RuleSet, target_id)
+                    if rule_set is not None:
+                        target = (rule_set.id, rule_set.name, rule_set.type)
+        if target is None:
+            self.iptBranchDropArea.delete_object()
+        else:
+            self.iptBranchDropArea.insert_object(*target)
 
     def _on_widget_changed(self):
         """Auto-save whenever any widget value changes."""
@@ -178,10 +259,14 @@ class ActionsPanel(QWidget):
         row_data = self._get_row_data()
         if row_data is None:
             return {}
-        from firewallfabrik.core.objects import PolicyRule
+        from firewallfabrik.core.objects import Rule
 
+        # `Rule`, not `PolicyRule`: the panel is opened for a NAT rule too,
+        # and asking for the wrong subclass answers None - the options then
+        # read as empty and the next save writes that emptiness back over
+        # everything the rule carries.
         with self._model._db_manager.session() as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(Rule, row_data.rule_id)
             if rule is not None:
                 return dict(rule.options or {})
         return {}
@@ -202,6 +287,9 @@ class ActionsPanel(QWidget):
             self.custom_str.editingFinished.connect(self._on_widget_changed)
         if hasattr(self, 'ipt_branch_in_mangle'):
             self.ipt_branch_in_mangle.toggled.connect(self._on_widget_changed)
+        if hasattr(self, 'iptBranchDropArea'):
+            self.iptBranchDropArea.objectInserted.connect(self._on_widget_changed)
+            self.iptBranchDropArea.objectDeleted.connect(self._on_widget_changed)
         self._signals_connected = True
 
     def _disconnect_signals(self):
@@ -218,6 +306,9 @@ class ActionsPanel(QWidget):
             self.custom_str.editingFinished.disconnect(self._on_widget_changed)
         if hasattr(self, 'ipt_branch_in_mangle'):
             self.ipt_branch_in_mangle.toggled.disconnect(self._on_widget_changed)
+        if hasattr(self, 'iptBranchDropArea'):
+            self.iptBranchDropArea.objectInserted.disconnect(self._on_widget_changed)
+            self.iptBranchDropArea.objectDeleted.disconnect(self._on_widget_changed)
         self._signals_connected = False
 
 

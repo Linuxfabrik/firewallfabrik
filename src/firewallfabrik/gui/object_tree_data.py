@@ -180,7 +180,11 @@ MODEL_MAP = {
 RULE_SET_TYPES = frozenset({'NAT', 'Policy', 'Routing'})
 
 # Types that cannot be dragged (structural / container items).
-NON_DRAGGABLE_TYPES = frozenset({'Library', 'NAT', 'Policy', 'Routing'})
+# A rule set is draggable: the Branch action's drop area is what it is
+# dragged to, and a drag out of the tree is reference-only (see
+# `ObjectTree.startDrag`), so nothing in the tree moves.  A rule set is in
+# no `VALID_TYPES_BY_SLOT` set, so a rule element still refuses it.
+NON_DRAGGABLE_TYPES = frozenset({'Library'})
 
 # Types for which "Duplicate ..." is not offered (structural / internal).
 NO_DUPLICATE_TYPES = frozenset(

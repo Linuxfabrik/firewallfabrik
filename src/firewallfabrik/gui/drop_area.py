@@ -43,6 +43,7 @@ class FWObjectDropArea(QFrame):
         super().__init__(parent)
         self._obj: _DroppedObject | None = None
         self._helper_text = 'Drop object here'
+        self._accepted_types: frozenset[str] | None = None
 
         self.setAcceptDrops(True)
         self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Sunken)
@@ -111,14 +112,46 @@ class FWObjectDropArea(QFrame):
         if self._obj is None:
             self._text_label.setText(text)
 
+    def set_accepted_types(self, types):
+        """Only take objects of these types, or of any type when ``None``.
+
+        A branch rule points at a rule set and at nothing else, and a
+        policy rule cannot branch into a NAT rule set, so the area that
+        receives it says which types it means rather than storing whatever
+        is dropped on it.
+        """
+        self._accepted_types = frozenset(types) if types is not None else None
+
+    def accepts_type(self, obj_type):
+        """Whether an object of *obj_type* can be dropped here."""
+        return self._accepted_types is None or obj_type in self._accepted_types
+
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat(FWF_MIME_TYPE):
+        if event.mimeData().hasFormat(FWF_MIME_TYPE) and self._drag_is_accepted(
+            event.mimeData()
+        ):
             self.setProperty('dragOver', True)
             self.style().unpolish(self)
             self.style().polish(self)
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    def _drag_is_accepted(self, mime):
+        """Whether the payload holds an object this area takes.
+
+        Answered while the pointer is still moving, so a rule set is not
+        offered a drop target that would refuse it.
+        """
+        if self._accepted_types is None:
+            return True
+        try:
+            payload = json.loads(bytes(mime.data(FWF_MIME_TYPE)).decode())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return False
+        if isinstance(payload, list):
+            payload = payload[0] if payload else {}
+        return self.accepts_type(payload.get('type', ''))
 
     def dragLeaveEvent(self, event):
         self.setProperty('dragOver', False)
@@ -152,7 +185,7 @@ class FWObjectDropArea(QFrame):
         obj_id = payload.get('id')
         obj_type = payload.get('type', '')
         obj_name = payload.get('name', '')
-        if not obj_id:
+        if not obj_id or not self.accepts_type(obj_type):
             event.ignore()
             return
 
