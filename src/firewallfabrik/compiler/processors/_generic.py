@@ -19,6 +19,7 @@ rewritten for CompRule dataclasses.
 from __future__ import annotations
 
 import ipaddress as _ipa
+import re
 import sys
 
 import sqlalchemy
@@ -41,6 +42,7 @@ from firewallfabrik.core.objects import (
     AddressRange,
     CustomService,
     Direction,
+    DNSName,
     Group,
     Host,
     ICMP6Service,
@@ -58,7 +60,9 @@ from firewallfabrik.core.objects import (
     Service,
     TCPService,
     TCPUDPService,
+    get_address_table_source,
     group_membership,
+    is_run_time_address_table,
     netmask_prefix_length,
     normalize_mac_address,
 )
@@ -2036,6 +2040,92 @@ class VerifyAddressRanges(BasicRuleProcessor):
                     'rule that can never match and nftables refuses the whole '
                     'ruleset, so the rule is left out. Correct the range in the '
                     'address range object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+# Three things an object is named after do not go into an iptables or nft
+# rule, they go into the shell script the rules are wrapped in, and every
+# guard written so far looked at the rule.  The data file of a run-time
+# address table is read with `grep -Ev ... <file>` on iptables and handed
+# to `check_address_table_file "<file>"` on nftables; a run-time DNS name
+# is a bare word in `$IPTABLES -s <name>` and an argument of
+# `load_dns_name "..." "<name>" ...`; and the name of a dynamic interface
+# reaches `getaddr <iface>` and `load_interface_address "..." "<iface>"
+# ...`.  A bare word is shell syntax outright, and inside double quotes a
+# `$`, a backtick and a backslash are still expansion, substitution and
+# escape - so a name holding one of them runs a command as root at the
+# moment every chain is already set to DROP.
+#
+# Only a positive alphabet settles that, the same reasoning as for the
+# rate-limit table name, the ToS value and the chain name.  A host name
+# has letters, digits, dots, dashes and underscores; a path adds the
+# separator and the `%DATADIR%` marker a stored file name may still carry;
+# an interface name adds the colon of an alias and the wildcard the
+# compiler turns into a glob.
+_SCRIPT_HOST_NAME_RE = re.compile(r'[0-9A-Za-z_.-]+')
+_SCRIPT_DATA_FILE_RE = re.compile(r'[0-9A-Za-z_./%-]+')
+_SCRIPT_INTERFACE_RE = re.compile(r'[0-9A-Za-z_.:-]+[*+]?')
+
+_SCRIPT_LITERAL_PROBLEM = (
+    'which the generated activation script passes to a shell command: "$", '
+    'a backtick, a semicolon and the like are syntax there and would run as '
+    'root at the moment every chain is already set to drop'
+)
+
+
+def script_literal_problem(obj, fw=None) -> str:
+    """Return why *obj*'s name cannot reach the script, or an empty string.
+
+    Only the three run-time kinds are asked.  A compile-time address table
+    and a compile-time DNS name are resolved by the compiler itself and
+    never reach the script, and an interface with an address contributes
+    the address rather than its name.
+    """
+    if is_run_time_address_table(obj):
+        value = get_address_table_source(obj, fw)
+        if value and not _SCRIPT_DATA_FILE_RE.fullmatch(value):
+            return f'is read from the file "{value}", {_SCRIPT_LITERAL_PROBLEM}'
+        return ''
+    if isinstance(obj, DNSName) and _is_runtime(obj):
+        value = (obj.data or {}).get('dnsrec') or obj.name
+        if value and not _SCRIPT_HOST_NAME_RE.fullmatch(str(value)):
+            return f'resolves the name "{value}", {_SCRIPT_LITERAL_PROBLEM}'
+        return ''
+    if isinstance(obj, Interface) and obj.is_dynamic():
+        value = obj.name or ''
+        if value and not _SCRIPT_INTERFACE_RE.fullmatch(value):
+            return f'is the interface "{value}", {_SCRIPT_LITERAL_PROBLEM}'
+    return ''
+
+
+class VerifyScriptLiterals(BasicRuleProcessor):
+    """Leave out a rule whose object names reach the script as shell text.
+
+    A run-time address table, a run-time DNS name and a dynamic interface
+    are the three objects the compiler cannot resolve itself, so their
+    names travel into the generated script and are read there.  Emitting
+    the rule without the object would widen it to every address, so the
+    rule goes and the object is named.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        fw = getattr(self.compiler, 'fw', None)
+        for slot in _ADDRESS_SLOTS.get(rule.type, ('src', 'dst')):
+            for obj in getattr(rule, slot, None) or []:
+                problem = script_literal_problem(obj, fw)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Object "{obj.name}" {problem}. The rule is left out; rename it.',
                 )
                 return True
 

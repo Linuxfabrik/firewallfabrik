@@ -48,6 +48,7 @@ from firewallfabrik.compiler.processors._generic import (
     VerifyAddressRanges,
     VerifyMacAddresses,
     VerifyRules,
+    VerifyScriptLiterals,
 )
 from firewallfabrik.compiler.processors._policy import (
     expand_interface_negation,
@@ -417,6 +418,7 @@ class NATCompiler_ipt(NATCompiler):
         self.add(VerifyIcmpTypes('verify ICMP types'))
         self.add(VerifyIpProtocols('verify IP protocols'))
         self.add(VerifyAddressRanges('verify address ranges'))
+        self.add(VerifyScriptLiterals('verify names reaching the script'))
         self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
         self.add(VerifyRules2('check correctness of TSrv'))
