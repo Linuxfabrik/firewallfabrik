@@ -648,6 +648,24 @@ def get_tag_value(compiler, rule) -> str:
     return str(rule.get_option('tagvalue', '') or '').strip()
 
 
+def get_log_netlink_group(compiler, rule) -> str:
+    """Return the netlink group a logging rule sends its messages to.
+
+    Two sources, asked in the order fwbuilder asks them
+    (iptlib/PolicyCompiler_PrintRule.cpp:725 and :741): the rule's own
+    option first, the firewall setting as the fallback.  Both editors put
+    a "Netlink group" spin box in the rule options dialog next to the
+    firewall-wide one (``RuleOptionsDialog.cpp:148`` registers it under
+    the same key), so reading only the firewall setting threw away what
+    the administrator set on the rule and sent every rule's messages to
+    one group.
+    """
+    value = str(rule.get_option('ulog_nlgroup', '') or '').strip()
+    if value:
+        return value
+    return str(compiler.fw.get_option('ulog_nlgroup') or '').strip()
+
+
 # Interfaces whose names differ only in a trailing number are one group,
 # named after the pattern that matches them all: eth0, eth1 and eth2
 # become `eth+`.  fwbuilder builds that map once per compiler

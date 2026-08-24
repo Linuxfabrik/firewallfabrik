@@ -70,6 +70,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
+    get_log_netlink_group,
     get_mac_only_address,
     get_tag_value,
     has_ip_options,
@@ -2260,9 +2261,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         parts = ['log']
 
         if use_nflog:
-            nlgroup = self.compiler.fw.get_option('ulog_nlgroup')
             try:
-                nlgroup = int(nlgroup)
+                nlgroup = int(get_log_netlink_group(self.compiler, rule))
             except (TypeError, ValueError):
                 nlgroup = 1
             parts.append(f'group {nlgroup}')

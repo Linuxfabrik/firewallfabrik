@@ -80,6 +80,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
     check_interface_name,
+    get_log_netlink_group,
     get_tag_value,
     has_ip_options,
     is_valid_traffic_class,
@@ -2119,9 +2120,8 @@ class PrintRule(PolicyRuleProcessor):
         """
         parts = []
 
-        nlgroup = self.compiler.fw.get_option('ulog_nlgroup')
         try:
-            nlgroup = int(nlgroup)
+            nlgroup = int(get_log_netlink_group(self.compiler, rule))
         except (TypeError, ValueError):
             nlgroup = 1
         parts.append(f'--nflog-group {nlgroup}')
