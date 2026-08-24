@@ -648,6 +648,20 @@ def get_tag_value(compiler, rule) -> str:
     return str(rule.get_option('tagvalue', '') or '').strip()
 
 
+#: The netlink group is a 16-bit number on both sides: iptables declares
+#: ``--nflog-group`` as ``XTTYPE_UINT16`` (netfilter
+#: extensions/libxt_NFLOG.c) and nftables keeps ``log group`` in a
+#: ``__u16``.  The two answer a larger number differently, which is what
+#: makes it worth asking: iptables refuses it ("bad value for option
+#: \"--nflog-group\", or out of range (0-65535)") and the activation
+#: script stops there with the built-in policies already at DROP, while
+#: nft takes it and stores it modulo 65536 - ``log group 70000`` lists
+#: back as ``log group 4464``, so the messages go to a group nothing is
+#: listening on and the logging stops without a word.  Both verified
+#: against iptables 1.8.11 and nft 1.1.6.
+MAX_LOG_NETLINK_GROUP = 65535
+
+
 def get_log_netlink_group(compiler, rule) -> str:
     """Return the netlink group a logging rule sends its messages to.
 
@@ -659,11 +673,34 @@ def get_log_netlink_group(compiler, rule) -> str:
     the same key), so reading only the firewall setting threw away what
     the administrator set on the rule and sent every rule's messages to
     one group.
+
+    A number outside the group space is reported and left out, so the
+    rule logs to the default group - the same answer the log level two
+    lines away in the print rules gives to a level neither tool knows.
     """
     value = str(rule.get_option('ulog_nlgroup', '') or '').strip()
-    if value:
-        return value
-    return str(compiler.fw.get_option('ulog_nlgroup') or '').strip()
+    if not value:
+        value = str(compiler.fw.get_option('ulog_nlgroup') or '').strip()
+    if not value:
+        return ''
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = -1
+    if not 0 <= number <= MAX_LOG_NETLINK_GROUP:
+        what = (
+            f'is above the {MAX_LOG_NETLINK_GROUP} groups there are, and '
+            f'nftables would read it as {number % (MAX_LOG_NETLINK_GROUP + 1)}'
+            if number > MAX_LOG_NETLINK_GROUP
+            else 'is not a netlink group number'
+        )
+        compiler.warning(
+            rule,
+            f'The netlink group "{value}" {what}; iptables refuses it '
+            'outright, so the rule logs to the default group instead',
+        )
+        return ''
+    return value
 
 
 # Interfaces whose names differ only in a trailing number are one group,
