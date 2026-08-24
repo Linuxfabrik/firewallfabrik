@@ -503,11 +503,7 @@ class Compiler(BaseCompiler):
         seen: set[str] = set()
         results: list[Address] = []
         addr_type = IPv6 if self.ipv6_policy else IPv4
-        netmask = (
-            'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
-            if self.ipv6_policy
-            else '255.255.255.255'
-        )
+        netmask = '128' if self.ipv6_policy else '255.255.255.255'
         for info in infos:
             ip_str = str(info[4][0])
             if ip_str in seen:
@@ -592,8 +588,16 @@ class Compiler(BaseCompiler):
                     type='NetworkIPv6',
                     name=addr_str,
                     inet_addr_mask={
+                        # A length, not the address form: that is what
+                        # NetworkIPv6::toXML writes and what every reader
+                        # here expects.  str(net.netmask) is
+                        # ffff:ffff:ffff:ffff:: for a /64, which
+                        # ip_network() cannot pair with an address again,
+                        # so the print rules dropped the netmask and
+                        # matched the single address fe80:: where the
+                        # whole /64 was meant.
                         'address': str(net.network_address),
-                        'netmask': str(net.netmask),
+                        'netmask': str(net.prefixlen),
                     },
                 )
                 results.append(addr)
@@ -829,7 +833,9 @@ class Compiler(BaseCompiler):
                     )
                 stand_in.inet_addr_mask = {
                     'address': str(net.network_address),
-                    'netmask': str(net.netmask),
+                    'netmask': str(net.netmask)
+                    if net.version == 4
+                    else str(net.prefixlen),
                 }
                 new_elements.append(stand_in)
             changed = True

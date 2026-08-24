@@ -25,8 +25,12 @@ from typing import TYPE_CHECKING, ClassVar
 from firewallfabrik.compiler._base import BaseCompiler
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
+    AddressRange,
     Cluster,
     Firewall,
+    MultiAddressRunTime,
+    PhysAddress,
+    netmask_prefix_length,
 )
 from firewallfabrik.platforms._defaults import get_known_keys
 
@@ -199,6 +203,12 @@ class CompilerDriver(BaseCompiler):
         a netmask of /0 is almost always a misconfiguration and makes
         the generated rules ambiguous, so the compile is aborted.
 
+        A value neither ``ipaddress`` nor the tools can read is aborted on
+        as well.  It used to be skipped here, and the compilers answer
+        such a netmask by leaving it out and matching the address alone -
+        so the interface of a firewall silently stood for one host instead
+        of for its network, in a script that loads without a word.
+
         Returns a human-readable error string, or an empty string on
         success.
         """
@@ -206,13 +216,24 @@ class CompilerDriver(BaseCompiler):
             if not iface.is_regular():
                 continue
             for addr in iface.addresses:
+                # Only an address/netmask pair is this check's business.  A
+                # physAddress child of the same interface carries a MAC,
+                # which VerifyMacAddresses checks, and neither an address
+                # range nor a run-time object carries a netmask at all.
+                if isinstance(addr, (AddressRange, MultiAddressRunTime, PhysAddress)):
+                    continue
                 addr_str = addr.get_address()
                 if not addr_str:
                     continue
                 try:
                     ip = ipaddress.ip_address(addr_str)
                 except ValueError:
-                    continue
+                    return (
+                        f'Interface {iface.name} (id={iface.id}) has IP '
+                        f'address {addr_str}, which is not an address any '
+                        'compiler can read. Give it the address it has on '
+                        'the firewall.'
+                    )
                 if int(ip) == 0:
                     # Naming the address alone leaves the administrator with
                     # nothing to act on, and the two ways out are not
@@ -227,11 +248,15 @@ class CompilerDriver(BaseCompiler):
                 mask_str = addr.get_netmask()
                 if not mask_str:
                     continue
-                try:
-                    nm = ipaddress.ip_address(mask_str)
-                except ValueError:
-                    continue
-                if int(nm) == 0:
+                prefix = netmask_prefix_length(addr_str, mask_str)
+                if prefix is None:
+                    return (
+                        f'Interface {iface.name} (id={iface.id}) has '
+                        f'netmask {mask_str}, which is not a netmask. Every '
+                        f'rule naming this interface would match the single '
+                        f'address {addr_str} instead of its network.'
+                    )
+                if prefix == 0:
                     return (
                         f'Interface {iface.name} (id={iface.id}) has '
                         f'invalid netmask {mask_str}. Every rule naming this '

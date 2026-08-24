@@ -111,11 +111,59 @@ class TestRegularInterface:
             'Interface eth0 (id=id-eth0) has invalid netmask 0.0.0.0.'
         )
 
-    def test_invalid_address_string_is_ignored(self):
-        # garbage in the address field (e.g. malformed import) should not
-        # raise — the check just skips the entry.
+    def test_address_no_compiler_can_read_aborts(self):
+        """Skipping it here is how it became a rule about something else.
+
+        The check used to walk past a value ``ipaddress`` cannot read.
+        The compilers do not: they write it into the script, where
+        iptables stops the activation with every chain already at DROP
+        and nftables refuses the whole ruleset.  Naming it before the
+        script is written is the only place it costs nothing.
+        """
         iface = _FakeInterface('eth0', [_FakeAddress('not-an-ip', '')])
+        assert 'is not an address any compiler can read' in _check([iface])
+
+    def test_netmask_no_compiler_can_read_aborts(self):
+        """The silent half of the same gap, and the one issue #154 was.
+
+        A netmask the print rules cannot read is left out by all of them,
+        which matches the address alone - so a firewall interface stood
+        for one host instead of for its network, in a script that loads
+        without a word.
+        """
+        iface = _FakeInterface(
+            'eth0',
+            [_FakeAddress('192.0.2.1', '255.0.255.0')],
+            iface_id='id-eth0',
+        )
+        err = _check([iface])
+        assert 'is not a netmask' in err
+        assert 'single address 192.0.2.1' in err
+
+    def test_a_netmask_carrying_a_stray_space_still_compiles(self):
+        """One reader takes every spelling, so this costs no rule.
+
+        The value is what came out of the editors before this release.
+        Reporting it would take out a rule whose netmask is perfectly
+        clear; reading it is the answer, and only a value that means
+        nothing at all is refused above.
+        """
+        iface = _FakeInterface('eth0', [_FakeAddress('192.0.2.1', '255.255.255.0 ')])
         assert _check([iface]) == ''
+
+    def test_an_ipv6_netmask_is_read_as_a_length(self):
+        """``NetworkIPv6::toXML`` writes the length, so /64 is not /0."""
+        iface = _FakeInterface('eth0', [_FakeAddress('2001:db8::1', '64')])
+        assert _check([iface]) == ''
+
+    def test_an_ipv6_netmask_of_zero_aborts(self):
+        """The /0 branch reaches IPv6 too now that the length is read."""
+        iface = _FakeInterface(
+            'eth0',
+            [_FakeAddress('2001:db8::1', '0')],
+            iface_id='id-eth0',
+        )
+        assert 'invalid netmask 0' in _check([iface])
 
     def test_first_bad_interface_wins(self):
         good = _FakeInterface(

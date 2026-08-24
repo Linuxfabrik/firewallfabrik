@@ -20,7 +20,6 @@ Generates iptables -t nat command strings (shell or iptables-restore format).
 
 from __future__ import annotations
 
-import ipaddress
 from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
@@ -48,6 +47,8 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     is_valid_packet_mark,
     is_valid_user_id,
+    max_prefix_length,
+    netmask_prefix_length,
     normalize_mac_address,
     range_to_cidr,
 )
@@ -1284,17 +1285,21 @@ class NATPrintRule(NATRuleProcessor):
         if print_mask and isinstance(obj, (Network, NetworkIPv6)):
             mask_str = obj.get_netmask()
             if mask_str:
-                try:
-                    net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
-                    length = net.prefixlen
-                    # Same host-mask rule as the policy print rule, and the
-                    # same one NATCompiler_PrintRule.cpp applies: a mask
-                    # covering a single address is left out, and which mask
-                    # that is depends on the address family.
-                    if length != net.max_prefixlen:
-                        return f'{addr_str}/{length}'
-                except ValueError:
-                    pass
+                # netmask_prefix_length() is the reader, not ip_network():
+                # it takes every spelling a netmask reaches here in, and
+                # ip_network() answers two of the three with a raise.  This
+                # used to swallow that raise and print the address alone,
+                # so a rule about a network came out as a rule about one
+                # host, in a script that loads without a word.
+                length = netmask_prefix_length(addr_str, mask_str)
+                # A host mask says nothing and is left out, the way
+                # fwbuilder's InetAddr::isHostMask() decides it: what
+                # counts as one depends on the address family.  Testing
+                # against 32 alone would strip the prefix off an IPv6
+                # /32 -- the size of a provider allocation -- and turn
+                # the match into a single host.
+                if length is not None and length != max_prefix_length(addr_str):
+                    return f'{addr_str}/{length}'
 
         return addr_str
 

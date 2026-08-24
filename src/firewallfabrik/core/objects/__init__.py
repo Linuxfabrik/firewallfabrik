@@ -26,6 +26,8 @@ from ._addresses import (
     Network,
     NetworkIPv6,
     PhysAddress,
+    max_prefix_length,
+    netmask_prefix_length,
     normalize_mac_address,
     range_to_cidr,
 )
@@ -168,6 +170,8 @@ __all__ = [
     'is_valid_packet_mark',
     'is_valid_tos',
     'is_valid_user_id',
+    'max_prefix_length',
+    'netmask_prefix_length',
     'normalize_mac_address',
     'range_to_cidr',
     'rule_elements',

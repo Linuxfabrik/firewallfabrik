@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a Branch rule jumps into the rule set it names, including packet-marking rule sets, NAT branches and branches imported from a `.fwb` file.
 * Compiler (iptables, nftables): a compile the compiler refuses writes no script, says so and exits non-zero.
 * Compiler (iptables, nftables): a dual-stack firewall keeps each single-stack rule in the address family it names.
+* Compiler (iptables, nftables): a netmask is read in every spelling a data file carries it in, so an IPv6 rule written for a whole network no longer matches a single address; a value that is no netmask at all is reported at compile time instead ([#154](https://github.com/Linuxfabrik/firewallfabrik/issues/154)).
 * Compiler (iptables, nftables): a Reject rule sends the ICMP message its reject type names, and falls back to the default type where a TCP reset cannot apply.
 * Compiler (iptables, nftables): a rule about the firewall's own addresses, its networks, broadcast and multicast traffic or its bridged paths lands in the chains that traffic really takes.
 * Compiler (iptables, nftables): a rule limited to a calendar window keeps that window.

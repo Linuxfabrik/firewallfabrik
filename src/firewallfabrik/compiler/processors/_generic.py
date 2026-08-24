@@ -46,6 +46,8 @@ from firewallfabrik.core.objects import (
     ICMPService,
     Interface,
     IPService,
+    IPv4,
+    IPv6,
     MultiAddress,
     NATRuleType,
     Network,
@@ -56,6 +58,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     TCPUDPService,
     group_membership,
+    netmask_prefix_length,
     normalize_mac_address,
 )
 
@@ -1689,19 +1692,12 @@ def _prefix_length(obj) -> int | None:
     """Return the prefix length of a network object, or None.
 
     A netmask is stored as written, dotted for IPv4 and as a length for
-    IPv6, so both spellings have to answer the same question.
+    IPv6, so both spellings have to answer the same question -
+    :func:`netmask_prefix_length` is the one reader that takes all of them.
     """
     if not isinstance(obj, (Network, NetworkIPv6)):
         return None
-    netmask = obj.get_netmask()
-    if netmask in (None, ''):
-        return None
-    try:
-        if isinstance(netmask, int) or str(netmask).isdigit():
-            return int(netmask)
-        return _ipa.ip_network(f'0.0.0.0/{netmask}', strict=False).prefixlen
-    except ValueError:
-        return None
+    return netmask_prefix_length(obj.get_address(), obj.get_netmask())
 
 
 class VerifyRules(NATRuleProcessor):
@@ -1836,6 +1832,76 @@ def address_range_problem(obj) -> str:
     return f'runs from {start} down to {end}, which is not a range'
 
 
+#: The object types whose editors write an address and a netmask that the
+#: compilers read back as a pair.  PhysAddress carries a MAC, AddressRange
+#: carries two endpoints and DNSName / AddressTable carry a name or a file,
+#: so none of them is asked here.
+_INET_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
+
+
+def _inet_addresses_in(obj) -> list:
+    """Every address object *obj* contributes that carries such a pair.
+
+    Same walk as :func:`_macs_in`: an interface contributes its own
+    addresses and a host or firewall the addresses of all its interfaces,
+    because that is what the rule element ends up standing for.
+    """
+    if isinstance(obj, _INET_ADDRESS_TYPES):
+        return [obj]
+    if isinstance(obj, Interface):
+        children = list(getattr(obj, 'addresses', []))
+    elif isinstance(obj, Host):
+        children = [
+            addr
+            for iface in getattr(obj, 'interfaces', [])
+            for addr in getattr(iface, 'addresses', [])
+        ]
+    else:
+        return []
+    return [addr for addr in children if isinstance(addr, _INET_ADDRESS_TYPES)]
+
+
+def inet_address_problem(obj) -> str:
+    """Return why the address of *obj* cannot be compiled, or ``''``.
+
+    The print rules pair the address with the netmask and print what comes
+    out.  They used to answer a pair they could not read by leaving the
+    netmask out and matching the address alone, so a rule written for a
+    whole network was installed as a rule about a single host, in a script
+    that loads without a word - which is what issue #154 was.
+
+    :func:`netmask_prefix_length` closed most of that by taking every
+    spelling a netmask reaches the compilers in.  What is left is a value
+    that means nothing at all, and this is where it stops instead of
+    turning into a rule about something else.  It is no longer reachable
+    from the GUI - the editors normalise since this release - but a data
+    file written by another tool, by hand, or by an older FirewallFabrik
+    carries whatever it carries.
+    """
+    for addr in _inet_addresses_in(obj):
+        address = addr.get_address()
+        if not address:
+            continue
+        try:
+            _ipa.ip_address(address)
+        except ValueError:
+            return (
+                f'The address of "{addr.name}" is "{address}", which is not an '
+                'IP address; iptables stops the activation over it and nftables '
+                'refuses the whole ruleset.'
+            )
+        mask = addr.get_netmask()
+        if not mask:
+            continue
+        if netmask_prefix_length(address, mask) is None:
+            return (
+                f'The netmask of "{addr.name}" is "{mask}", which is not a '
+                f'netmask; the rule would match the single address {address} '
+                'where a whole network is meant.'
+            )
+    return ''
+
+
 def _macs_in(obj) -> list[str]:
     """Every MAC address *obj* contributes to a rule element.
 
@@ -1884,6 +1950,35 @@ def mac_address_problem(obj) -> str:
         if mac and not normalize_mac_address(mac):
             return f'"{mac}" is not a MAC address'
     return ''
+
+
+class VerifyAddresses(BasicRuleProcessor):
+    """Leave out a rule naming an address or netmask the compilers cannot read.
+
+    Dropping the netmask instead is what the print rules do on their own,
+    and that narrows a rule about a network down to a rule about one host
+    without saying so, so the rule goes and the message names the value.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in _ADDRESS_SLOTS.get(rule.type, ('src', 'dst')):
+            for obj in getattr(rule, slot, None) or []:
+                problem = inet_address_problem(obj)
+                if not problem:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'{problem} The rule is left out. Correct the address in '
+                    'the object.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class VerifyMacAddresses(BasicRuleProcessor):

@@ -489,7 +489,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80::/64 } ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
@@ -563,7 +563,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80::/64 } ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #

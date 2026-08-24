@@ -282,6 +282,72 @@ class MultiAddressRunTime(Address):
 
 
 # Six groups of one or two hex digits, separated by a colon or by a dash.
+def max_prefix_length(address: str) -> int | None:
+    """Return the host-mask length of *address*'s family, or ``None``.
+
+    ``InetAddr::addressLengthBits()``: 32 for IPv4, 128 for IPv6.  What a
+    host mask is depends on the family, and testing a prefix against 32
+    alone strips the prefix off an IPv6 /32 - the size of a provider
+    allocation - and turns the match into a single host.
+    """
+    try:
+        return ipaddress.ip_address(address.strip()).max_prefixlen
+    except (AttributeError, ValueError):
+        return None
+
+
+def netmask_prefix_length(address: str, netmask: str) -> int | None:
+    """Return the prefix length *netmask* stands for, or ``None``.
+
+    A netmask reaches the compilers in three spellings and they all mean
+    the same thing.  Firewall Builder writes a bit length for IPv6
+    (``NetworkIPv6::toXML``) and a dotted mask for IPv4
+    (``Network::setNetmask``); a data file older than either, or written
+    by another tool, carries a bit length for IPv4 as well; and the
+    compilers themselves build an all-ones IPv6 mask in address form
+    where ``InetAddr::getAllOnes()`` is what fwbuilder uses.
+
+    ``ipaddress.ip_network()`` takes only two of the three, which is why
+    this exists: it is the reader that answers what the netmask *means*,
+    next to the print rules, which answer what the compilers currently
+    *do* with it.  Where the two disagree, a rule matches something other
+    than what it names, and that is what the verify pass reports.
+
+    ``None`` means the value is no netmask at all.
+    """
+    if netmask is None:
+        return None
+    text = str(netmask).strip()
+    if not text:
+        return None
+    try:
+        family = ipaddress.ip_address(address.strip())
+    except (AttributeError, ValueError):
+        return None
+    max_prefix = family.max_prefixlen
+
+    if text.isascii() and text.isdigit():
+        prefix = int(text)
+        return prefix if prefix <= max_prefix else None
+
+    # The address form, for either family.  Only a mask of ones followed
+    # by zeros is one: InetAddr::isValidV4Netmask() refuses the rest, and
+    # the inverted spelling 0.255.255.255 is a host mask to ip_network()
+    # while fwbuilder calls it zeroes in the middle.
+    try:
+        bits = int(ipaddress.ip_address(text))
+    except ValueError:
+        return None
+    if len(ipaddress.ip_address(text).packed) * 8 != max_prefix:
+        return None
+    prefix = 0
+    top = 1 << (max_prefix - 1)
+    while bits & top:
+        prefix += 1
+        bits = (bits << 1) & ((1 << max_prefix) - 1)
+    return prefix if bits == 0 else None
+
+
 # The colon form is what both packet filters take.  The dash form is the
 # other common spelling of the same address and only nftables reads it,
 # which is why it is recognised here and written back out as colons.

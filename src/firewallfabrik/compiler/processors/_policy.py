@@ -431,7 +431,7 @@ class SpecialCaseAddressRangeInRE(PolicyRuleProcessor):
                     )
                     new_addr.inet_addr_mask = {
                         'address': start_addr,
-                        'netmask': 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+                        'netmask': '128',
                     }
                 new_elements.append(new_addr)
             else:

@@ -44,6 +44,7 @@ from firewallfabrik.compiler.processors._generic import (
     ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
     SimplePrintProgress,
+    VerifyAddresses,
     VerifyAddressRanges,
     VerifyMacAddresses,
     VerifyRules,
@@ -412,6 +413,7 @@ class NATCompiler_ipt(NATCompiler):
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
         self.add(VerifyAddressRanges('verify address ranges'))
+        self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))

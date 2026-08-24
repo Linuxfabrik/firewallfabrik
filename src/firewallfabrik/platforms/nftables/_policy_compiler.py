@@ -44,6 +44,7 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
     SingleRuleFilter,
+    VerifyAddresses,
     VerifyAddressRanges,
     VerifyMacAddresses,
 )
@@ -411,6 +412,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyPortRanges('verify port ranges'))
         self.add(VerifyAddressRanges('verify address ranges'))
+        self.add(VerifyAddresses('verify addresses'))
         self.add(VerifyMacAddresses('verify MAC addresses'))
         self.add(
             SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
