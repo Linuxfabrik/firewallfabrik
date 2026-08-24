@@ -2087,6 +2087,24 @@ def script_literal_problem(obj, fw=None) -> str:
     """
     if is_run_time_address_table(obj):
         value = get_address_table_source(obj, fw)
+        if fw is not None and '%DATADIR%' in value:
+            # The token stands for the firewall's own "Data directory"
+            # setting, and it is only resolved for a table read *on* the
+            # firewall (AddressTable::getFilename).  With the setting empty
+            # the token stays in the path and the script reads a directory
+            # of that name, which does not exist: the activation stops on
+            # the firewall over a file the compiler could have named here.
+            # fwbuilder refuses to compile at all
+            # (MultiAddressRunTime::getSourceNameAsPath answers an empty
+            # path and processMultiAddressObjectsInRE aborts over it).
+            # Without a firewall the token is what the resolution leaves
+            # behind and says nothing about the setting, so it is only a
+            # problem once a firewall has been asked.
+            return (
+                'is read from a file below "%DATADIR%" and the firewall names '
+                'no data directory, so the script would look for a directory '
+                'called "%DATADIR%"'
+            )
         if value and not _SCRIPT_DATA_FILE_RE.fullmatch(value):
             return f'is read from the file "{value}", {_SCRIPT_LITERAL_PROBLEM}'
         return ''

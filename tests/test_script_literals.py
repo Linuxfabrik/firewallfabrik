@@ -79,7 +79,6 @@ def _interface(name, dynamic=True):
     [
         'block-hosts.tbl',
         '/var/lib/fwf/block-hosts.tbl',
-        '%DATADIR%/block-hosts.tbl',
         'addr-table-1.tbl',
     ],
 )
@@ -99,6 +98,35 @@ def test_a_data_file_the_script_can_read(filename):
 )
 def test_a_data_file_the_shell_would_read_as_syntax(filename):
     assert script_literal_problem(_table(filename))
+
+
+class _Firewall:
+    def __init__(self, data_dir=''):
+        self._data_dir = data_dir
+
+    def get_option(self, key, default=None):
+        assert key == 'linux24_data_dir'
+        return self._data_dir
+
+
+def test_a_data_file_below_the_data_directory():
+    table = _table('%DATADIR%/block-hosts.tbl')
+    assert not script_literal_problem(table, _Firewall('/var/lib/fwf'))
+
+
+def test_a_data_directory_the_firewall_does_not_name():
+    """fwbuilder refuses to compile such a firewall at all.
+
+    ``MultiAddressRunTime::getSourceNameAsPath`` answers an empty path
+    when the file name holds ``%DATADIR%`` and the firewall's data
+    directory is unset, and ``processMultiAddressObjectsInRE`` aborts
+    over it.  Leaving the token in the path ships a script that looks
+    for a directory called "%DATADIR%" and stops the activation on the
+    firewall over something the compiler could have said.
+    """
+    table = _table('%DATADIR%/block-hosts.tbl')
+    assert script_literal_problem(table, _Firewall(''))
+    assert not script_literal_problem(table, _Firewall('/var/lib/fwf'))
 
 
 def test_a_compile_time_table_never_reaches_the_script():
