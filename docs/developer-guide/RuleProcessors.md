@@ -1512,6 +1512,7 @@ NATCheckForDynamicInterfacesOfOtherObjects →
 VerifyRuleWithMAC → CheckUserServiceInWrongChains →
 NATExpandAddressRanges → SplitMultiSrcAndDst →
 GroupServicesByProtocol → SeparateTCPWithFlags → VerifyCustomServices →
+Verify{PortRanges,IcmpTypes,IpProtocols,AddressRanges,Addresses,MacAddresses,ScriptLiterals} →
 VerifyRules2 → SeparatePortRanges → SeparateSrcPort → SeparateSrcAndDstPort →
 PrepareForMultiport → SplitMultipleICMP → ConvertToAtomicForAddresses →
 AddVirtualAddress → AssignInterface → VerifyRules3 →
@@ -1532,6 +1533,7 @@ rule names, expand it, then check what the expansion left".
 Begin → PrintTotalNumberOfRules → SingleRuleFilter (auto) →
 RecursiveGroupsInRE(rdst) → EmptyGroupsInRE(rdst) →
 EmptyRGtwAndRItf → SingleAddressInRGtw → RItfChildOfFw →
+VerifyAddressRanges → VerifyRouteMetrics →
 ExpandGroups → ExpandMultipleAddressesInRouting → DropRuleWithEmptyRE →
 ValidateRoutingDestination → ExpandAddressRangesInRDst →
 EliminateDuplicatesInRDst → ConvertToAtomicForRDst →
@@ -1634,6 +1636,37 @@ for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
   carries, and both packet filters refuse such a range - iptables the command,
   nftables the whole ruleset.  The same processors bound a port number at
   65535, which is what `xtables_parse_port` does.
+- The other `Verify*` processors have no C++ counterpart for the same
+  reason: the editor bounds the field and the compiler then trusts it, so a
+  data file written elsewhere carries whatever it carries.
+  `VerifyIcmpTypes` and `VerifyIpProtocols`
+  (`compiler/processors/_service.py`) bound the ICMP type and code and the
+  IP protocol number at 255, `VerifyTimeIntervals`
+  (`compiler/processors/_generic.py`) the hour and the weekday of an
+  Interval, `VerifyMacAddresses` the spelling of a MAC address and
+  `VerifyRouteMetrics` (`platforms/linux/_routing_compiler.py`) the metric
+  of a route.  All of them are wired into every pipeline that can carry the
+  value; a check added late has to be checked against every *other* reader
+  of the same field, because a Verify processor only guards what runs after
+  it.
+- `SpecialCasesWithCustomServices` asks whether a Custom Service does its
+  own connection-state matching case-insensitively, where the C++ uses a
+  case-sensitive `find("ESTABLISHED")`.  Both tools read the state names
+  with `strncasecmp` (netfilter `extensions/libxt_conntrack.c` and
+  `libxt_state.c`) and nftables knows the lowercase spelling and no other,
+  so an administrator may write either - and the two platforms have to
+  give one and the same object the same answer.  The predicate is
+  `custom_service_matches_state` in `platforms/linux/_netfilter.py`.
+- `VerifyScriptLiterals` (`compiler/processors/_generic.py`) asks a
+  question none of those do: three objects cannot be resolved by the
+  compiler, so their names travel into the generated shell script and are
+  read there - the data file of a run-time address table, the name a
+  run-time DNS name resolves and the name of a dynamic interface.  A bare
+  word is shell syntax and a double-quoted one still expands `$`, a
+  backtick and a backslash, so each of them is checked against a positive
+  alphabet.  The same processor answers the C++
+  `processMultiAddressObjectsInRE` abort for a file name below `%DATADIR%`
+  on a firewall that names no data directory.
 
 ### What counts as "the firewall"
 
@@ -1710,6 +1743,11 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `verifyCustomServices` | `compiler/processors/_service.py:VerifyCustomServices` |
 | — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyPortRanges` |
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyAddressRanges` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyIcmpTypes` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyIpProtocols` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyMacAddresses` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyScriptLiterals` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyTimeIntervals` |
 | `CheckForTCPEstablished` | `compiler/processors/_generic.py:CheckForTCPEstablished` |
 | `dropMangleTableRules` | `platforms/iptables/_policy_compiler.py:DropMangleTableRules` |
 | `checkActionInMangleTable` | `platforms/iptables/_policy_compiler.py:CheckActionInMangleTable` |
@@ -1769,6 +1807,11 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `verifyCustomServices` | `compiler/processors/_service.py:VerifyCustomServices` |
 | — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyPortRanges` |
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyAddressRanges` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyIcmpTypes` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:VerifyIpProtocols` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyMacAddresses` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyScriptLiterals` |
+| — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyTimeIntervals` |
 | `specialCasesWithCustomServices` | `platforms/iptables/_policy_compiler.py:SpecialCasesWithCustomServices` |
 | `separatePortRanges` | `platforms/iptables/_policy_compiler.py:SeparatePortRanges` |
 | `separateUserServices` | `compiler/processors/_service.py:SeparateUserServices` |
@@ -2119,7 +2162,9 @@ CheckInterfaceAgainstAddressFamily →
 CheckForUnnumbered → CheckForDynamicInterfacesOfOtherObjects →
 [BridgingFw (if bridging firewall)] →
 ConvertToAtomicForInterfaces → ConvertToAtomicForIntervals → GroupServicesByProtocol →
-VerifyCustomServices → SpecialCasesWithCustomServices →
+VerifyCustomServices →
+Verify{PortRanges,IcmpTypes,IpProtocols,AddressRanges,Addresses,MacAddresses,ScriptLiterals,TimeIntervals} →
+SpecialCasesWithCustomServices →
 CheckForStatefulICMP6Rules →
 Optimize3 → CheckMACInOUTPUTChain → CheckUserServiceInWrongChains →
 CheckForZeroAddr → CheckForObjectsWithErrors →
@@ -2154,6 +2199,7 @@ ExpandMultipleAddresses → DropRuleWithEmptyRE →
 NATCheckForDynamicInterfacesOfOtherObjects →
 VerifyRuleWithMAC → CheckUserServiceInWrongChains →
 GroupServicesByProtocol → SeparateTCPWithFlags → VerifyCustomServices →
+Verify{PortRanges,IcmpTypes,IpProtocols,AddressRanges,Addresses,MacAddresses,ScriptLiterals} →
 VerifyRules2 → SeparatePortRanges →
 SeparateSrcPort → SplitMultipleServices → ConvertToAtomicForAddresses → AssignInterface →
 ConvertToAtomicForItfInb → ConvertToAtomicForItfOutb →
