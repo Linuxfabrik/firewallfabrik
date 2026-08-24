@@ -10,12 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday there is not is reported at compile time instead of ending the compile or the activation.
-* Compiler (iptables, nftables): an ICMP service naming a type or code outside the byte the header has is reported at compile time instead of stopping the activation.
-* Compiler (iptables, nftables): a rule written for every interface except the ones it names is no longer reported as shadowed by, or as shadowing, a rule on exactly those interfaces.
 * Compiler (iptables): a firewall pinned to an iptables release before 1.3.0 gets its TCPMSS clamping rule again, and an ip6tables release without the target says so instead of leaving the rule out in silence.
-* Compiler (iptables, nftables): the netlink group a logging rule sends its messages to is read from the rule, not only from the firewall settings.
 * Compiler (iptables, nftables): a netlink group that is no group number is reported and the rule logs to the default group, instead of stopping the activation on iptables and logging to an arbitrary group on nftables.
+* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday there is not is reported at compile time instead of ending the compile or the activation.
+* Compiler (iptables, nftables): a rule written for every interface except the ones it names is no longer reported as shadowed by, or as shadowing, a rule on exactly those interfaces.
+* Compiler (iptables, nftables): an ICMP service naming a type or code outside the byte the header has is reported at compile time instead of stopping the activation.
+* Compiler (iptables, nftables): the netlink group a logging rule sends its messages to is read from the rule, not only from the firewall settings.
 * Compiler (nftables): the generated script checks that `nft` and `ip` are there before it touches the firewall, the way the iptables script does.
 
 
