@@ -154,7 +154,15 @@ def other_protocols_for(services: list, ipv6: bool) -> list[str]:
             names.add(srv.get_protocol_name())
         elif isinstance(srv, (ICMPService, ICMP6Service)):
             codes = getattr(srv, 'codes', None) or srv.data or {}
-            if int(codes.get('type', -1) or -1) < 0:
+            # This runs long before `VerifyIcmpTypes` leaves the rule out
+            # over a stored type that is not a number, so it has to answer
+            # rather than raise: "cannot say what the element leaves out"
+            # is the right answer for a value nobody can read anyway.
+            try:
+                icmp_type = int(codes.get('type', -1) or -1)
+            except (TypeError, ValueError):
+                return []
+            if icmp_type < 0:
                 return []
             names.add('ipv6-icmp' if ipv6 else 'icmp')
         else:

@@ -47,6 +47,7 @@ from firewallfabrik.core.objects import (
     PolicyAction,
     TCPService,
 )
+from firewallfabrik.platforms.nftables._print_rule import other_protocols_for
 
 
 def _srv(cls=ICMPService, **data):
@@ -153,3 +154,20 @@ def test_an_ordinary_icmp_rule_passes_through():
     proc = _run(_rule([_srv(type='8', code='0')]))
     assert len(proc.tmp_queue) == 1
     assert proc.compiler.messages == []
+
+
+@pytest.mark.parametrize('value', ['abc', '', None, '-1'])
+def test_the_negated_service_split_answers_before_the_check_runs(value):
+    """``AddOtherProtocolsForNegatedService`` is far ahead of VerifyIcmpTypes.
+
+    It sits at the front of the nftables policy chain, so a stored type
+    that is not a number reached ``int()`` there and ended the compile
+    with no script at all - ahead of the check that leaves the rule out
+    and names the service.  "Cannot say what the element leaves out" is
+    the right answer for a value nobody can read.
+    """
+    assert other_protocols_for([_srv(type=value)], ipv6=False) == []
+
+
+def test_the_negated_service_split_still_names_a_real_type():
+    assert other_protocols_for([_srv(type='8')], ipv6=False) == ['icmp']
