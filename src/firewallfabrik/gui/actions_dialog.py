@@ -119,9 +119,20 @@ class ActionsPanel(QWidget):
                 self.widgetStack.setCurrentWidget(page)
 
             if hasattr(self, 'iptBranchDropArea'):
+                is_nat = self._is_nat_rule()
                 self.iptBranchDropArea.set_accepted_types(
-                    {'NAT'} if self._is_nat_rule() else {'Policy'}
+                    {'NAT'} if is_nat else {'Policy'}
                 )
+                # fwbuilder's own dialog is policy-only - it hardcodes
+                # `addAcceptedTypes("Policy")` and has the NAT line
+                # commented out (ActionsDialog.cpp:72) - so its label can
+                # say "Policy" and be right.  This panel is opened for a
+                # NAT rule as well, and a NAT rule branches into a NAT rule
+                # set, so the label has to say which kind is meant.
+                if hasattr(self, 'textLabel1_3'):
+                    self.textLabel1_3.setText(
+                        'NAT ruleset object:' if is_nat else 'Policy ruleset object:'
+                    )
 
             # Reject page.
             if hasattr(self, 'rejectvalue'):

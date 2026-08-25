@@ -119,6 +119,60 @@ def test_the_panel_wires_the_branch_area(qt_app):
     assert not panel.iptBranchDropArea.accepts_type('IPv4')
 
 
+class _RowData:
+    """The two fields the panel reads off the model's row."""
+
+    def __init__(self, action_int=0, nat_action_int=0):
+        self.action_int = action_int
+        self.nat_action_int = nat_action_int
+        self.rule_id = None
+
+
+class _Model:
+    """Stands in for the rule-set model, which is all the panel asks."""
+
+    def __init__(self, rule_set_type):
+        self.rule_set_type = rule_set_type
+
+
+def _panel_for(rule_set_type, row_data):
+    from firewallfabrik.gui import ui_loader
+
+    panel = ui_loader.CUSTOM_WIDGET_MAP['ActionsDialog']()
+    panel._model = _Model(rule_set_type)
+    panel._index = object()
+    panel._get_row_data = lambda: row_data
+    panel._read_rule_options = dict
+    panel._load_options()
+    return panel
+
+
+def test_the_branch_page_names_the_kind_of_rule_set_it_means(qt_app):
+    """fwbuilder's dialog is policy-only, so its label can say "Policy".
+
+    This one is opened for a NAT rule as well, and a NAT rule branches
+    into a NAT rule set.
+    """
+    policy = _panel_for('Policy', _RowData(action_int=PolicyAction.Branch))
+    assert policy.textLabel1_3.text() == 'Policy ruleset object:'
+    assert policy.iptBranchDropArea.accepts_type('Policy')
+    assert not policy.iptBranchDropArea.accepts_type('NAT')
+
+    nat = _panel_for('NAT', _RowData(nat_action_int=NATAction.Branch))
+    assert nat.textLabel1_3.text() == 'NAT ruleset object:'
+    assert nat.iptBranchDropArea.accepts_type('NAT')
+    assert not nat.iptBranchDropArea.accepts_type('Policy')
+
+
+def test_a_nat_rule_reaches_the_branch_page_at_all(qt_app):
+    """Its action is a different enum in a column of its own."""
+    nat = _panel_for('NAT', _RowData(nat_action_int=NATAction.Branch))
+    assert nat.widgetStack.currentWidget() is nat.BranchChainPage
+
+    translate = _panel_for('NAT', _RowData(nat_action_int=NATAction.Translate))
+    assert translate.widgetStack.currentWidget() is translate.NonePage
+
+
 def test_the_panel_reads_a_nat_rules_options_too(qt_app):
     """It is opened for a NAT rule as well, and asked the wrong subclass.
 
