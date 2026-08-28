@@ -12,7 +12,6 @@
 # Compiled for iptables (any version)
 #
 
-# Rule '0 (global)' shadows rule '1 (global)' below it, for destination 'fw-empty-groups:eth1:ip' and service 'ssh'
 # fw-empty-groups:Policy:0: warning: Empty group or address table object 'empty-group'
 # fw-empty-groups:Policy:0: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule 0 (global) because option 'Ignore rules with empty groups' is in effect
 

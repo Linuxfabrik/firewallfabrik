@@ -24,7 +24,6 @@
 # Rule '14 (global)' shadows rule '16 (global)' below it, for service 'ipv6 ping request'
 # Rule '14 (global)' shadows rule '17 (global)' below it, for service 'ipv6 ping request'
 # Rule '13 (global)' shadows rule '17 (global)' below it, for service 'ping request'
-# firewall-ipv6-1:Policy_ipv6:2: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
 # Rule 'Policy_ipv6 4 (global)' shadows rule 'Policy_ipv6 5 (global)' below it, for destination 'firewall-ipv6-1:eth0:ipv6'
 # Rule 'Policy_ipv6 4 (global)' shadows rule 'Policy_ipv6 6 (global)' below it, for destination 'firewall-ipv6-1:eth0:ipv6' and service 'ipv6 any ICMP6'
 # Rule 'Policy_ipv6 4 (global)' shadows rule 'Policy_ipv6 7 (global)' below it, for destination 'firewall-ipv6-1:eth0:ipv6' and service 'ipv6 any ICMP6'

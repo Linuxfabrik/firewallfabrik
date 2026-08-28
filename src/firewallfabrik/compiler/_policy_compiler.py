@@ -198,7 +198,7 @@ class PolicyCompiler(Compiler):
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
-        self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
+        self.add(DropRuleWithEmptyRE('drop rules with empty rule elements', quiet=True))
         self.add(ConvertToAtomic('convert to atomic rules'))
         self.add(DetectShadowing('Detect shadowing'))
 

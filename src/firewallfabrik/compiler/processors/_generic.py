@@ -699,8 +699,15 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
     element results from all objects being removed by earlier processors.
     """
 
-    def __init__(self, name: str = 'Drop rules with empty RE') -> None:
+    def __init__(
+        self, name: str = 'Drop rules with empty RE', quiet: bool = False
+    ) -> None:
         super().__init__(name)
+        #: The shadowing pass runs on copies and installs nothing, so a
+        #: rule it drops is one the main pass drops too and reports there.
+        #: Repeating it would say twice, in two wordings, that one rule is
+        #: gone.
+        self._quiet = quiet
 
     def process_next(self) -> bool:
 
@@ -722,8 +729,9 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
             # buries the reports that matter under one line per rule on
             # every dual-stack firewall.  Where the other family is not
             # compiled at all the rule really is gone, and then it is said.
-            quiet = getattr(rule, 'empty_re_family_only', False) and getattr(
-                self.compiler, 'other_family_is_compiled', False
+            quiet = self._quiet or (
+                getattr(rule, 'empty_re_family_only', False)
+                and getattr(self.compiler, 'other_family_is_compiled', False)
             )
             if not quiet:
                 # Saying so matters: the rule is in the policy, the GUI shows

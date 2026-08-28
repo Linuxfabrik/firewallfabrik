@@ -393,7 +393,12 @@ class Compiler(BaseCompiler):
                 members = self._expand_multi_address_member(obj, emptied_by)
                 new_elements.extend(members)
             elif isinstance(obj, Group):
-                for member in expand_group(self.session, obj):
+                members = expand_group(self.session, obj)
+                if not members:
+                    # A group nobody filled contributes nothing, exactly
+                    # like a DNS name that resolves to nothing.
+                    emptied_by.append(obj.name)
+                for member in members:
                     if isinstance(member, MultiAddress):
                         new_elements.extend(
                             self._expand_multi_address_member(member, emptied_by),
@@ -404,12 +409,15 @@ class Compiler(BaseCompiler):
                 new_elements.append(obj)
         if not new_elements and emptied_by:
             # An element nothing is left in reads as "any" everywhere
-            # downstream, so a rule written for the addresses behind these
-            # objects would match every address there is.
+            # downstream, so a rule written for the objects that emptied it
+            # would match every address, or every interface, there is.
+            # `EmptyGroupsInRE` catches an empty group ahead of the
+            # expansion wherever a pipeline asks it - which is every policy
+            # element but only the six address and service elements of a
+            # NAT rule, the two interface ones having no such check in
+            # Firewall Builder either.  The shadowing pass asks nowhere.
             comp_rule.has_empty_re = True
-            comp_rule.empty_re_reason = (
-                f'"{emptied_by[0]}" resolves to no address at all'
-            )
+            comp_rule.empty_re_reason = f'"{emptied_by[0]}" holds nothing at all'
         new_elements.sort(key=lambda obj: getattr(obj, 'name', ''))
         setattr(comp_rule, slot, new_elements)
 
