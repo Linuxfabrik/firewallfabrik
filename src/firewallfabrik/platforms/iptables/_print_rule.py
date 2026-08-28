@@ -202,11 +202,23 @@ HASHLIMIT_REVISION_2_SINCE = '1.6.1'
 # or a pipe is not part of a word but an instruction - and the command runs
 # at activation time as root.  So the alphabet is the one an identifier is
 # made of rather than "anything without a space or a slash"; the same
-# reasoning as _MGMT_ADDRESS_RE in platforms/linux/_netfilter.py.  NAME_MAX
-# bounds the field of the current revisions; revision 1 has only IFNAMSIZ
-# and truncates silently, which no compile-time check can tell apart from
-# here.
-_HASHLIMIT_NAME_RE = re.compile(r'[0-9A-Za-z._-]{1,254}')
+# reasoning as _MGMT_ADDRESS_RE in platforms/linux/_netfilter.py.
+_HASHLIMIT_NAME_RE = re.compile(r'[0-9A-Za-z._-]+')
+
+# How long that name may be.  The match carries it in a fixed field and
+# `xtopt_parse_string` cuts anything longer without a word
+# (netfilter libxtables/xtoptions.c: `if (z >= entry->size) z =
+# entry->size - 1`), the same way it cuts a log prefix.  Revisions 0 and 1
+# of the match declare `char name[IFNAMSIZ]` and revisions 2 and 3
+# `char name[NAME_MAX]` (netfilter include/linux/netfilter/xt_hashlimit.h),
+# and the "dstlimit" spelling of the match is revision 0 under its old name
+# (`strncpy(r->name, optarg, sizeof(r->name))` on a `char name[IFNAMSIZ]`,
+# netfilter extensions/libipt_dstlimit.c before its removal).  One byte of
+# each field is the terminator.  The cut matters because the kernel looks a
+# hash table up by name alone: two rules whose names differ only past it
+# end up counting into one table at the rate of whichever came first.
+MAX_HASHLIMIT_NAME_V1 = 15
+MAX_HASHLIMIT_NAME_V2 = 254
 
 # Reject types that the REJECT target only learnt along the way.  Everything
 # else in reject_table dates from the first release that has the target at
@@ -1694,6 +1706,7 @@ class PrintRule(PolicyRuleProcessor):
                 'an underscore are; the rule is left out',
             )
             return None
+        name = self._truncate_hashlimit_name(rule, name, module, revision_2)
         parts.append(f'--{module}-name {name}')
         self._check_hashlimit_table(rule, name, limit, mode)
 
@@ -1708,6 +1721,36 @@ class PrintRule(PolicyRuleProcessor):
                 parts.append(f'--{module}-{option} {value}')
 
         return ' ' + ' '.join(parts) + ' '
+
+    def _truncate_hashlimit_name(
+        self, rule: CompRule, name: str, module: str, revision_2: bool
+    ) -> str:
+        """Cut the hash table name to what the match can carry, and say so.
+
+        Same shape as ``_truncate_log_prefix``: iptables takes the longer
+        name and stores the first bytes of it without a word.  Here the
+        silence costs more than a shortened log line, because the kernel
+        finds a hash table by its name (net/netfilter/xt_hashlimit.c,
+        ``htable_find_get``) and hands the existing one back with its own
+        rate and key - so two rules whose names agree up to the cut stop
+        limiting what they say they limit.  Returning the cut name is also
+        what lets ``_check_hashlimit_table`` see that collision at all.
+        """
+        limit_length = (
+            MAX_HASHLIMIT_NAME_V2
+            if module == 'hashlimit' and revision_2
+            else MAX_HASHLIMIT_NAME_V1
+        )
+        if len(name) <= limit_length:
+            return name
+        cut = name[:limit_length]
+        self.compiler.warning(
+            rule,
+            f'Rate limit table name "{name}" is longer than the '
+            f'{limit_length} characters this iptables can carry and has been '
+            f'truncated to "{cut}"',
+        )
+        return cut
 
     def _check_hashlimit_table(
         self, rule: CompRule, name: str, limit: int, mode: str
