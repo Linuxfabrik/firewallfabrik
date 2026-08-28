@@ -11,10 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
-* Compiler (iptables): a custom service that matches on the connection state in lower case is recognised, the way nftables already did.
+* Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
-* Compiler (iptables, nftables): a logging rule whose netlink group is unusable logs to the default group instead of breaking the activation.
-* Compiler (iptables, nftables): a logging rule whose NFLOG copy range or queue threshold is unusable is logged without it instead of breaking the activation.
+* Compiler (iptables, nftables): a logging rule whose netlink group, NFLOG copy range or queue threshold is unusable falls back to the default instead of breaking the activation.
 * Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a rule branching into a rule set of another firewall or cluster compiles that rule set into the script instead of jumping into an empty chain ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156)).
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
@@ -34,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v2.0.0] - 2026-08-24
 
-**Highlights:** Both compilers went through a full correctness pass against Firewall Builder. Rules that used to compile into something other than what the GUI shows are now either compiled correctly or reported at compile time, instead of silently matching every address, every service or nothing at all. Every generated nftables ruleset loads and every generated iptables script parses across the whole test corpus. Recompile and review your rulesets after updating, and read the breaking changes first.
+**Highlights:** Both compilers went through a full correctness pass against Firewall Builder. Rules that used to compile into something other than what the GUI shows are now either compiled correctly or reported at compile time, instead of silently matching every address, every service or nothing at all. Recompile and review your rulesets after updating, and read the breaking changes first.
 
 ### Breaking Changes
 
@@ -69,15 +68,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a Branch rule jumps into the rule set it names, including packet-marking rule sets, NAT branches and branches imported from a `.fwb` file.
 * Compiler (iptables, nftables): a compile the compiler refuses writes no script, says so and exits non-zero.
 * Compiler (iptables, nftables): a dual-stack firewall keeps each single-stack rule in the address family it names.
-* Compiler (iptables, nftables): a netmask is read in every spelling a data file carries it in, so an IPv6 rule written for a whole network no longer matches a single address; a value that is no netmask at all is reported at compile time instead ([#154](https://github.com/Linuxfabrik/firewallfabrik/issues/154)).
 * Compiler (iptables, nftables): a Reject rule sends the ICMP message its reject type names, and falls back to the default type where a TCP reset cannot apply.
 * Compiler (iptables, nftables): a rule about the firewall's own addresses, its networks, broadcast and multicast traffic or its bridged paths lands in the chains that traffic really takes.
 * Compiler (iptables, nftables): a rule limited to a calendar window keeps that window.
 * Compiler (iptables, nftables): a rule naming a host or interface whose address comes from DHCP or PPP matches the address the machine has.
-* Compiler (iptables, nftables): a rule the compiler cannot express is reported and left out instead of being installed without the condition it could not express.
+* Compiler (iptables, nftables): a rule the compiler cannot express is reported and left out instead of being installed without that condition.
 * Compiler (iptables, nftables): a rule whose source, destination or service resolves to nothing is left out instead of matching every address or every protocol.
 * Compiler (iptables, nftables): a rule written for "any interface except these" no longer produces rules on loopback, unprotected, bridge-port and cluster interfaces.
 * Compiler (iptables, nftables): an address table whose file is empty or unreadable no longer matches every address, and the file is checked before the running ruleset is replaced.
+* Compiler (iptables, nftables): an IPv6 rule written for a whole network no longer matches a single address, and a value that is no netmask is reported at compile time ([#154](https://github.com/Linuxfabrik/firewallfabrik/issues/154)).
 * Compiler (iptables, nftables): log prefixes, log levels and the NFLOG "Copy range" and "Queue threshold" settings reach the generated ruleset, and an over-long prefix is reported instead of cut.
 * Compiler (iptables, nftables): NAT rules translate what the editor shows, among them port-only translations, one-to-one network maps, load balancing over several backends, MASQUERADE and exclusions.
 * Compiler (iptables, nftables): rate limits and connection limits are enforced at the rate the editor names, and values the packet filter cannot take are reported at compile time.
@@ -85,12 +84,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): rules that tag packets, assign a traffic class or match a tag do so, and a Tag Service survives saving and reopening the file ([#122](https://github.com/Linuxfabrik/firewallfabrik/issues/122)).
 * Compiler (iptables, nftables): the check for rules hidden by an earlier rule reports each finding once and names its rule set ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
 * Compiler (iptables, nftables): the kernel-hardening, connection-tracking and packet-forwarding settings take effect, and a setting the file does not carry takes the default the dialog shows.
-* Compiler (nftables): a negated address, service, interface or time restriction matches the opposite of what it names, the way iptables always compiled it.
+* Compiler (nftables): a negated address, service, interface or time restriction matches the opposite of what it names.
 * Compiler (nftables): a rule matching a DNS name, a dynamic interface or an address table read on the firewall is filled in at activation time instead of being left out.
 * Compiler (nftables): a rule set or object whose name collides with an nftables keyword or a chain name is renamed and the rename reported.
 * Compiler (nftables): a ruleset nftables refuses leaves the running rules in place instead of the host with none.
 * Compiler (nftables): generated rules carry a counter, so `nft list ruleset` shows per-rule hit counts.
-* Compiler (nftables): the generated activation script reports success when the ruleset loaded and answers an unknown command with the usage line.
+* Compiler (nftables): the generated activation script reports success when the ruleset loaded.
 * Editor: a netmask or an address the compilers cannot read is refused where it is typed.
 * GUI: deleting an object disables the rules whose last source, destination or service it was.
 * GUI: File > Import Library works.
