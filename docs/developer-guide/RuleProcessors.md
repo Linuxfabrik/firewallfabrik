@@ -1537,24 +1537,33 @@ VerifyAddressRanges → VerifyRouteMetrics →
 ExpandGroups → ExpandMultipleAddressesInRouting → DropRuleWithEmptyRE →
 ValidateRoutingDestination → ReachableGateway →
 GatewayOnRoutingInterface → ExpandAddressRangesInRDst →
-EliminateDuplicatesInRDst → CompetingRoutingRules →
+EliminateDuplicatesInRDst → FindDefaultRoute → CompetingRoutingRules →
 ConvertToAtomicForRDst → ClassifyRoutingRules →
 EliminateDuplicateRoutingRules → RoutingPrintRule
 ```
+
+`RoutingPrintRule` writes the `routing_functions` configlet before the
+first route command and `RoutingCompilerLinux.epilog()` closes the block
+with `restore_script_output`, the way
+`RoutingCompiler_ipt::PrintRule::processNext` and its `epilog()` do.  The
+configlet saves the routing table the box has, defines
+`route_command_error`, and takes the terminal out of the way so a route
+that changes the route to the administrator does not leave the session
+hanging.  Every command is followed by `|| route_command_error "<label>"`,
+or by a warning when the rule carries the `no_fail` option the routing
+options dialog writes as "non-critical rule".  `FindDefaultRoute` decides
+the configlet's `proto_filter`: with a default route of its own to install
+the script may delete the one that is there, without one it has to keep
+it.  None of this is emitted in single-rule compile mode, where there are
+no shell functions to call.
 
 Not ported from the C++ pass, and what it costs:
 
 | C++ processor | Consequence |
 |---|---|
-| `FindDefaultRoute` | Only feeds the `routing_functions` configlet, which is unrendered (see below) |
 | `createSortedDstIdsLabel` | Ported as the `_destination_key` helper the two rules below share, not as a processor |
 | `checkForObjectsWithErrors` | An object a rule names that failed to load is reported by the policy and NAT passes but not by this one |
 | `DropIPv6RulesWithWarning` | Deliberate: fwf compiles an IPv6 route as `$IP -6 route add`, which fwbuilder cannot |
-
-The `routing_functions` configlet, which holds the rollback of the previous
-routing table and the `route_command_error` handler the C++ output wraps
-every command in, is still unrendered
-([#125](https://github.com/Linuxfabrik/firewallfabrik/issues/125)).
 
 ---
 

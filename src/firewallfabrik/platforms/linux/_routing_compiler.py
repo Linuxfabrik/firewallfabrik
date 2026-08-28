@@ -32,6 +32,7 @@ from firewallfabrik.compiler.processors._generic import (
     RecursiveGroupsInRE,
     VerifyAddressRanges,
 )
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
     Cluster,
@@ -45,6 +46,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     RoutingRuleType,
 )
+from firewallfabrik.driver._configlet import Configlet
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -62,6 +64,15 @@ class RoutingCompilerLinux(RoutingCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.ecmp_rules_buffer: dict[str, str] = {}
         self.ecmp_comments_buffer: dict[str, str] = {}
+        # Whether any rule installs a default route.  It decides which
+        # routes the script deletes before it installs its own, see
+        # `RoutingPrintRule._write_routing_functions`.
+        self.have_default_route = False
+        # Whether `routing_functions` was written, and with it the two
+        # shell functions the rules behind it call.  A firewall whose
+        # routing rules were all dropped never gets them, and then nothing
+        # may call them either.
+        self.defined_restore_script_output = False
 
     def compile(self) -> None:
         banner = f" Compiling routing rules for '{self.fw.name}'"
@@ -89,6 +100,7 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(GatewayOnRoutingInterface('check the gateway against RItf'))
         self.add(ExpandAddressRangesInRDst('process address ranges'))
         self.add(EliminateDuplicatesInRDst('eliminate duplicates in RDst'))
+        self.add(FindDefaultRoute('note whether a default route is installed'))
         self.add(CompetingRoutingRules('check for competing rules'))
         self.add(ConvertToAtomicForRDst('convert to atomic rules by destination'))
         self.add(ClassifyRoutingRules('classify single path and multi path rules'))
@@ -98,14 +110,33 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.run_rule_processors()
 
     def epilog(self) -> None:
-        """Output ECMP routing rules if any exist."""
+        """Write the multi-path routes and hand the terminal back.
+
+        Ports the tail of ``RoutingCompiler_ipt::epilog``.  The multi-path
+        routes are numbered rather than labelled, because each of them is
+        made of several rules; the C++ counts them the same way.
+        """
+        rollback = (
+            self.defined_restore_script_output
+            and not self.in_single_rule_compile_mode()
+        )
         if self.ecmp_rules_buffer:
-            for key, comment in self.ecmp_comments_buffer.items():
+            for number, (key, comment) in enumerate(
+                self.ecmp_comments_buffer.items(), start=1
+            ):
                 self.output.write(comment)
                 rule_cmd = self.ecmp_rules_buffer.get(key, '')
                 if rule_cmd:
                     self.output.write(rule_cmd)
+                    if rollback:
+                        self.output.write(f' \\\n|| route_command_error "{number}"')
                     self.output.write('\n')
+        if rollback:
+            # Without this the script keeps writing into the temporary file
+            # `routing_functions` redirected stdout to, and everything after
+            # the routing block is lost together with the file.
+            self.output.write('\nrestore_script_output\n')
+            self.output.write('echo "...done."\n')
 
 
 class EmptyRGtwAndRItf(RoutingRuleProcessor):
@@ -493,6 +524,41 @@ class ConvertToAtomicForRDst(RoutingRuleProcessor):
         return True
 
 
+def route_address(obj) -> str:
+    """Return an address object the way ``ip route`` takes it, or ``''``.
+
+    ``default`` is the answer for the "any" address, matching
+    ``RoutingCompiler_ipt::PrintRule::_printAddr``, which writes it when
+    address and netmask are both zero.  The prefix is left out for a host
+    mask there as well, which is why a single address never comes out as
+    ``/32``.
+
+    It is a module function rather than a method because `FindDefaultRoute`
+    has to ask the same question well before the print rule runs, and two
+    answers to "is this the default route?" is one too many.
+    """
+    if not isinstance(obj, Address):
+        return ''
+
+    addr_str = obj.get_address()
+    mask_str = obj.get_netmask()
+    if not addr_str:
+        return ''
+
+    if mask_str and isinstance(obj, (Network, NetworkIPv6)):
+        try:
+            net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
+        except ValueError:
+            return addr_str
+        if int(net.network_address) == 0 and net.prefixlen == 0:
+            return 'default'
+        if net.prefixlen == net.max_prefixlen:
+            return str(net.network_address)
+        return str(net)
+
+    return addr_str
+
+
 def _route_table(rule: CompRule) -> str:
     """Return the routing table part of a rule label.
 
@@ -555,6 +621,32 @@ def _metric(rule: CompRule) -> str:
     """Return the rule metric as the string the route command carries."""
     number = route_metric(rule)
     return str(number if number is not None else 0)
+
+
+class FindDefaultRoute(RoutingRuleProcessor):
+    """Note whether any rule installs a default route.
+
+    Ports ``RoutingCompiler_ipt::FindDefaultRoute``.  The answer decides
+    which routes the generated script deletes before it installs its own:
+    with a default route of its own to put back it may drop the one that is
+    there, and without one it has to keep it, or the box loses its way out
+    the moment the script runs.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.rdst:
+            # An empty destination element is "any", which is what a
+            # default route says; `_print_rdst` writes "default" for it.
+            self.compiler.have_default_route = True
+        elif any(route_address(obj) == 'default' for obj in rule.rdst):
+            self.compiler.have_default_route = True
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class CompetingRoutingRules(RoutingRuleProcessor):
@@ -775,11 +867,16 @@ class RoutingPrintRule(RoutingRuleProcessor):
 
     def __init__(self, name: str = 'generate ip route commands') -> None:
         super().__init__(name)
+        self.print_once_on_top = True
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
+
+        if self.print_once_on_top and not self.compiler.in_single_rule_compile_mode():
+            self._write_routing_functions()
+            self.print_once_on_top = False
 
         if rule.routing_rule_type == RoutingRuleType.MultiPath:
             self._buffer_multi_path(rule)
@@ -791,6 +888,62 @@ class RoutingPrintRule(RoutingRuleProcessor):
 
         self.tmp_queue.append(rule)
         return True
+
+    def _write_routing_functions(self) -> None:
+        """Write the rollback machinery the route commands behind it need.
+
+        Ports the ``print_once_on_top`` block of
+        ``RoutingCompiler_ipt::PrintRule::processNext``.  The configlet
+        saves the routing table the box has, defines
+        ``route_command_error`` and ``restore_script_output``, and takes
+        the terminal out of the way so a route that changes the route to
+        the administrator does not leave the session hanging.
+
+        ``proto_filter`` decides which of the existing routes the script
+        deletes before installing its own.  With a default route of its
+        own to put back it may drop the one that is there; without one it
+        has to keep it, or the box loses its way out the moment the script
+        runs.
+        """
+        if self.compiler.have_default_route:
+            proto_filter = "'proto kernel'"
+        else:
+            proto_filter = "'\\( proto kernel \\)\\|\\(default via \\)'"
+
+        configlet = Configlet('linux24', 'routing_functions')
+        configlet.remove_comments()
+        configlet.set_variable('proto_filter', proto_filter)
+        self.compiler.output.write(configlet.expand())
+        self.compiler.output.write('\n')
+        self.compiler.defined_restore_script_output = True
+
+    def _rollback_tail(self, rule: CompRule) -> str:
+        """Return what follows a route command, error handling included.
+
+        Ports the tail of ``RoutingRuleToString``.  A route that fails to
+        install used to be passed over in silence: the script went on,
+        finished and reported success while the box sat behind the new
+        packet filter with half a routing table.  ``route_command_error``
+        puts the old table back and stops.
+
+        The rule option the routing options dialog writes as "non-critical
+        rule" says the opposite - keep going and say so - and nothing had
+        ever read it.
+
+        In single-rule compile mode there is no rollback machinery in the
+        script at all, so nothing may call it.
+        """
+        if (
+            not self.compiler.defined_restore_script_output
+            or self.compiler.in_single_rule_compile_mode()
+        ):
+            return ''
+        if option_is_true(rule.get_option('no_fail', False)):
+            return (
+                ' \\\n|| echo "*** Warning: routing rule '
+                f'{rule.label} failed. ignored. ***"'
+            )
+        return f' \\\n|| route_command_error "{rule.label}"'
 
     def _buffer_multi_path(self, rule: CompRule) -> None:
         """Collect one leg of an equal-cost multi path route.
@@ -888,7 +1041,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         if itf:
             parts.append(f'dev {itf}')
 
-        return ' '.join(parts)
+        return ' '.join(parts) + self._rollback_tail(rule)
 
     def _print_rdst(self, rule: CompRule) -> str | None:
         """Print the routing destination, or None when there is none to print.
@@ -945,31 +1098,5 @@ class RoutingPrintRule(RoutingRuleProcessor):
         return None
 
     def _print_addr(self, obj) -> str:
-        """Print an address object the way ``ip route`` takes it.
-
-        ``default`` is the answer for the "any" address, matching
-        ``RoutingCompiler_ipt::PrintRule::_printAddr``, which writes it when
-        address and netmask are both zero.  The prefix is left out for a
-        host mask there as well, which is why a single address never comes
-        out as ``/32``.
-        """
-        if not isinstance(obj, Address):
-            return ''
-
-        addr_str = obj.get_address()
-        mask_str = obj.get_netmask()
-        if not addr_str:
-            return ''
-
-        if mask_str and isinstance(obj, (Network, NetworkIPv6)):
-            try:
-                net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
-            except ValueError:
-                return addr_str
-            if int(net.network_address) == 0 and net.prefixlen == 0:
-                return 'default'
-            if net.prefixlen == net.max_prefixlen:
-                return str(net.network_address)
-            return str(net)
-
-        return addr_str
+        """Print an address object the way ``ip route`` takes it."""
+        return route_address(obj)
