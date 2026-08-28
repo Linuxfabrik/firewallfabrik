@@ -13,6 +13,8 @@
 #  testing shadowing when rules have non-default options
 #
 # Rule 'Policy_1 0 (eth0)' shadows rule 'Policy_1 1 (eth0)' below it
+# test-shadowing-3:Policy_4:0: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
+# test-shadowing-3:Policy_5:1: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
 # Rule 'Policy_6 0 (global)' shadows rule 'Policy_6 1 (global)' below it
 # Rule 'Policy_7 0 (global)' shadows rule 'Policy_7 1 (global)' below it
 
@@ -336,6 +338,7 @@ table ip fwf_filter {
         # Rule Policy_4 0 (eth0)
         #
         # 30/sec
+        # test-shadowing-3:Policy_4:0: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
         oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 30/second } counter accept
         #
         # Rule Policy_4 1 (eth0)
@@ -364,6 +367,7 @@ table ip fwf_filter {
         # Rule Policy_5 1 (eth0)
         #
         # 30/sec
+        # test-shadowing-3:Policy_5:1: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
         oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 30/second } counter accept
     }
 

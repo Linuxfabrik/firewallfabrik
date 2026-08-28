@@ -31,11 +31,12 @@ import sqlalchemy
 from firewallfabrik.core import DatabaseManager
 from firewallfabrik.core.objects import Firewall
 from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
+from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nft
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 
 
-def _compile(tmp_path):
+def _compile(tmp_path, driver_class=CompilerDriver_ipt):
     db = DatabaseManager()
     db.load(str(FIXTURES / 'objects-for-regression-tests.fwb'))
     with db.session() as session:
@@ -46,7 +47,7 @@ def _compile(tmp_path):
             .scalar_one()
             .id
         )
-    driver = CompilerDriver_ipt(db)
+    driver = driver_class(db)
     driver.wdir = str(tmp_path)
     driver.source_dir = str(FIXTURES)
     driver.file_name_setting = 'test-shadowing-3.fw'
@@ -62,3 +63,23 @@ def test_a_table_reused_by_a_second_rule_set_is_reported(tmp_path):
         if 'rate limit table "test"' in warning
     }
     assert {'Policy_3', 'Policy_4', 'Policy_5'} <= reported, driver.all_warnings
+
+
+def test_the_nftables_meter_reports_the_same_sharing(tmp_path):
+    """A meter is the nftables answer to the hash table, and it shares too.
+
+    The rate sits in the element, not in the set, and the element belongs
+    to whichever rule saw the key first (net/netfilter/nft_dynset.c,
+    nft_dynset_eval), so the second rule limits at the first one's rate.
+    nftables takes such a ruleset without a word, which is why this is a
+    warning here as it is on iptables.  Policy_2 is missing from the list
+    because its rule names no key, and a rate limit without a key is a
+    plain `limit rate` with no meter to share.
+    """
+    driver = _compile(tmp_path, CompilerDriver_nft)
+    reported = {
+        warning.split(':')[1]
+        for warning in driver.all_warnings
+        if 'rate limit table "test"' in warning
+    }
+    assert {'Policy_4', 'Policy_5'} <= reported, driver.all_warnings

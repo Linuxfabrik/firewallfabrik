@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
 * Compiler (iptables, nftables): an IP service naming a protocol number that does not exist is reported instead of matching every protocol.
 * Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
+* Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
 * Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.

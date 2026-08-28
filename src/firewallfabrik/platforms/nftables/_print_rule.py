@@ -1828,7 +1828,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         parts.append(rate)
 
         name = self._meter_name(rule)
-        if not self._meter_shape_fits(rule, name, key, timeout, size):
+        if not self._meter_fits(rule, name, key, timeout, size, rate):
             # Emitting the rule anyway is worse than leaving it out.  The
             # set is created with the key type of the first rule that named
             # it, and nftables takes the second rule without a word: a
@@ -1839,14 +1839,29 @@ class PrintRule_nft(PolicyRuleProcessor):
             return None
         return f'meter {name}{size} {{ {" ".join(parts)} }}'
 
-    def _meter_shape_fits(
-        self, rule: CompRule, name: str, key: str, timeout: str, size: str
+    def _meter_fits(
+        self,
+        rule: CompRule,
+        name: str,
+        key: str,
+        timeout: str,
+        size: str,
+        rate: str,
     ) -> bool:
         """Report whether this rule's meter agrees with the one already there.
 
         A meter is a typed set, so every rule naming one has to agree on
         the type of its key, on whether its elements time out and on how
-        many of them it holds.
+        many of them it holds.  Those three are answered with an error,
+        because the ruleset either does not load at all or counts something
+        other than what the rule says.
+
+        The rate is answered with a warning, the way the iptables side
+        answers the same question about a shared hash table: nftables takes
+        two rates on one meter without a word, and the rate that applies to
+        a given source is the one of whichever rule saw it first (see
+        `PolicyCompiler_nft.register_meter`).  So the ruleset loads and the
+        second rule silently limits at the first one's rate.
 
         Registering it while the compiler is muted would claim the name for
         a rule `Optimize3` is only rehearsing and may then drop, and the
@@ -1856,16 +1871,26 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         if getattr(self.compiler, 'muted_now', False):
             return True
-        if self.compiler.register_meter(name, key, timeout, size):
-            return True
-        self.compiler.error(
-            rule,
-            f'the rate limit table "{name}" is already in use by another '
-            'rule that keys it differently, expires its entries '
-            'differently or holds a different number of them; give one '
-            'of the two its own name. The rule is left out',
+        shape_fits, rate_agrees = self.compiler.register_meter(
+            name, key, timeout, size, rate
         )
-        return False
+        if not shape_fits:
+            self.compiler.error(
+                rule,
+                f'the rate limit table "{name}" is already in use by another '
+                'rule that keys it differently, expires its entries '
+                'differently or holds a different number of them; give one '
+                'of the two its own name. The rule is left out',
+            )
+            return False
+        if not rate_agrees:
+            self.compiler.warning(
+                rule,
+                f'the rate limit table "{name}" is already in use by another '
+                'rule with a different rate; the kernel keeps the rate of '
+                'the first one for every source both rules see',
+            )
+        return True
 
     def _meter_name(self, rule: CompRule) -> str:
         """Return the name of the meter this rule's rate limit counts in.

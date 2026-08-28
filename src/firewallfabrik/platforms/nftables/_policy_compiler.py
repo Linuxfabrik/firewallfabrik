@@ -166,7 +166,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         # The driver replaces this with one dict shared by every rule set and
         # by both table passes: a meter is an object of the table, so two
         # rule sets naming the same one have to agree on its shape.
-        self.meters: dict[str, tuple[str, str, str]] = {}
+        self.meters: dict[str, tuple[str, str, str, str]] = {}
 
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
@@ -512,19 +512,35 @@ class PolicyCompiler_nft(PolicyCompiler):
         """
         self.dynamic_sets.setdefault(name, addr_type)
 
-    def register_meter(self, name: str, keys: str, timeout: str, size: str) -> bool:
-        """Remember a meter, and report whether it fits the one already there.
+    def register_meter(
+        self, name: str, keys: str, timeout: str, size: str, rate: str
+    ) -> tuple[bool, bool]:
+        """Remember a meter, and say how it compares to the one already there.
 
-        A meter is a set, so every rule naming it has to agree on the type
-        of its key and on whether its elements time out.  nftables refuses
-        the whole ruleset over the second question ("existing set '%s'
-        has/lacks timeout flag", netfilter nftables src/evaluate.c) and
-        answers the first one by silently keeping the shape the first rule
-        gave the set, which leaves the later rule counting something other
-        than what it says.
+        The answer has two halves, because the two disagreements have
+        different consequences.
+
+        The shape - the type of the key, whether the elements time out and
+        how many there are - has to match.  nftables refuses the whole
+        ruleset over the timeout ("existing set '%s' has/lacks timeout
+        flag", netfilter nftables src/evaluate.c) and answers the key by
+        silently keeping the shape the first rule gave the set, which
+        leaves the later rule counting something other than what it says.
+
+        The rate is a different matter: nftables takes the ruleset, because
+        the rate lives in the element rather than in the set.  It is the
+        element that then decides, and the element is created by whichever
+        rule sees a given key first: `nft_dynset_eval` hands back the
+        existing entry and evaluates the expression stored in *it*
+        (net/netfilter/nft_dynset.c, via the set's `update` op), so the
+        second rule's rate never applies to a source the first one has
+        already seen.  That is the same hazard the iptables side reports
+        for a shared hash table, so it is reported here too - as a warning,
+        since the ruleset does load.
         """
-        first = self.meters.setdefault(name, (keys, timeout, size))
-        return first == (keys, timeout, size)
+        shape = (keys, timeout, size)
+        first = self.meters.setdefault(name, (*shape, rate))
+        return first[:3] == shape, first[3] == rate
 
     def add_rule_filter(self) -> None:
         """Add the processor that selects the rules of this table.

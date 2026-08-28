@@ -281,7 +281,7 @@ def test_the_entry_ceiling_of_a_rate_limit_table_reaches_the_meter():
     printer.compiler.meters = {}
     printer.compiler.ipv6_policy = False
     printer.compiler.get_rule_set_name = lambda: 'Policy'
-    printer.compiler.register_meter = lambda *_args: True
+    printer.compiler.register_meter = lambda *_args: (True, True)
     rule = _Rule(hashlimit_value=10, hashlimit_max=128, hashlimit_mode_srcip=True)
     rule.position = 0
     rule.srv = []
@@ -339,6 +339,32 @@ def test_a_rule_keying_a_shared_rate_limit_table_differently_is_left_out():
 
     assert second is None
     assert any('already in use' in message for message in printer.compiler.errors)
+
+
+def test_a_rule_sharing_a_rate_limit_table_at_another_rate_is_reported():
+    """nftables takes it, and the first rule's rate is the one that counts.
+
+    The rate lives in the element rather than in the set, and the element
+    belongs to whichever rule saw the key first: `nft_dynset_eval` hands
+    back the existing entry and evaluates the expression stored in it
+    (net/netfilter/nft_dynset.c).  Loading both rules in a network
+    namespace shows nft accepting them and listing two different rates on
+    one set, which is why this is a warning and not an error - the same
+    answer the iptables side gives for a shared hash table.
+    """
+    printer = _meter_printer()
+    first = printer._print_hashlimit(_meter_rule(0, hashlimit_mode_srcip=True))
+    second = _meter_rule(1, hashlimit_mode_srcip=True)
+    second._options['hashlimit_value'] = 99
+    printed = printer._print_hashlimit(second)
+
+    assert first is not None
+    assert printed is not None
+    assert printer.compiler.errors == []
+    assert any(
+        'already in use by another rule with a different rate' in message
+        for message in printer.compiler.warnings
+    )
 
 
 def test_the_shape_is_not_claimed_while_the_compiler_is_rehearsing():
