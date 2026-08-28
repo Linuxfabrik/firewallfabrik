@@ -1,0 +1,216 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * fw-test.fw /etc/fwf.sh
+#
+# fw-test:Policy:0: warning: Empty group or address table object 'no-interfaces'
+# fw-test:Policy:0: warning: After removal of all empty groups rule element itf becomes 'any'; dropping rule 0 () because option 'Ignore rules with empty groups' is in effect
+
+FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
+        exit 1
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+nft_ruleset() {
+    cat <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        #
+        # Rule 0 (eth1)
+        #
+        # Names a real interface, so it stays
+        iifname "eth1" ct state new counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        #
+        # Rule 0 (eth1)
+        #
+        # Names a real interface, so it stays
+        iifname "eth1" ct state new counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+    }
+}
+
+NFT_RULES
+}
+
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+script_body() {
+    nft_ruleset | $NFT -f /dev/stdin
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_tools
+        prolog_commands
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        ;;
+
+    stop)
+        check_tools
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        check_tools
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        check_tools
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        RETVAL=1
+        ;;
+
+esac
+
+exit "$RETVAL"

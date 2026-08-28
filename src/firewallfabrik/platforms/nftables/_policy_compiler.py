@@ -272,6 +272,15 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(Logging1('apply global log_all'))
 
         # Interface and direction
+        # Before the expansion, not after: an interface group nothing is
+        # left in expands to an empty element, an empty element is "any"
+        # everywhere downstream, and the rule then applies to every
+        # interface the firewall has instead of being reported.  fwbuilder
+        # asks the same question in the same place
+        # (PolicyCompiler_ipt.cpp: emptyGroupsInItf ahead of
+        # expandGroupsInItf); the other three elements are already checked
+        # ahead of `ExpandGroups` further down.
+        self.add(EmptyGroupsInRE('check for empty groups in ITF', 'itf'))
         self.add(ExpandGroupsInItf('expand groups in Itf'))
         self.add(ReplaceClusterInterfaceInItfRE('replace cluster interfaces', 'itf'))
         # "Not these interfaces" is the firewall's *other* protected
@@ -299,7 +308,6 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(EmptyGroupsInRE('check for empty groups in SRC', 'src'))
         self.add(EmptyGroupsInRE('check for empty groups in DST', 'dst'))
         self.add(EmptyGroupsInRE('check for empty groups in SRV', 'srv'))
-        self.add(EmptyGroupsInRE('check for empty groups in ITF', 'itf'))
 
         # Expand groups and clean up
         self.add(ExpandGroups('expand all groups'))

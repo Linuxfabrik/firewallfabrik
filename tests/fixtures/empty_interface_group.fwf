@@ -1,0 +1,55 @@
+name: 'Test: empty group in the interface element'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: false
+          check_shading: false
+          configure_interfaces: false
+          flush_ruleset: false
+          ignore_empty_groups: true
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+          - name: 'eth1'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth1-addr'
+                inet_addr_mask:
+                  address: '192.168.1.1'
+                  netmask: '255.255.255.0'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'The group is empty, so this rule has no interface to match
+                  on and must not become a rule about every one of them'
+                action: 'Accept'
+                direction: 'Inbound'
+                itf:
+                  - 'Library:Test Objects/ObjectGroup:no-interfaces'
+              - type: 'PolicyRule'
+                comment: 'Names a real interface, so it stays'
+                action: 'Accept'
+                direction: 'Inbound'
+                itf:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth1'
+      - type: 'ObjectGroup'
+        name: 'no-interfaces'
