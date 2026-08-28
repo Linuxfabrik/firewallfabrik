@@ -52,6 +52,8 @@ from firewallfabrik.compiler.processors._generic import (
 )
 from firewallfabrik.compiler.processors._policy import (
     DropRuleWithImpossibleInterface,
+    ExpandMultipleAddressesIfNotFWInDst,
+    ExpandMultipleAddressesIfNotFWInSrc,
     ItfNegation,
     SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
@@ -373,6 +375,23 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(DecideOnChainIfSrcFW('decide chain if src is fw'))
         self.add(SplitIfDstFWNetwork('split rule if dst has a net fw has interface on'))
         self.add(SpecialCaseWithFW2('replace fw with its interfaces if src==dst==fw'))
+        # Everything from here on decides a chain, and a chain decision
+        # that reads a Host object instead of the addresses behind it
+        # answers a different question.  fwbuilder expands both elements
+        # here, before the loopback check and `finalizeChain`
+        # (PolicyCompiler_ipt.cpp:4566), and drops a rule the expansion
+        # emptied right after.
+        self.add(
+            ExpandMultipleAddressesIfNotFWInSrc(
+                'expand multiple addresses if not FW in Src'
+            )
+        )
+        self.add(
+            ExpandMultipleAddressesIfNotFWInDst(
+                'expand multiple addresses if not FW in Dst'
+            )
+        )
+        self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
         self.add(SpecialCaseWithFWInDstAndOutbound('drop impossible outbound fw dst'))

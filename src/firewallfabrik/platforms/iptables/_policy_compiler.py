@@ -55,6 +55,8 @@ from firewallfabrik.compiler.processors._policy import (
     AddressRangesInDst,
     AddressRangesInSrc,
     DropRuleWithImpossibleInterface,
+    ExpandMultipleAddressesIfNotFWInDst,
+    ExpandMultipleAddressesIfNotFWInSrc,
     ItfNegation,
     SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
@@ -465,6 +467,23 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(DecideOnChainIfSrcFW('decide chain if Src has fw'))
         self.add(SplitIfDstFWNetwork('split rule if dst has a net fw has interface on'))
         self.add(SpecialCaseWithFW2('replace fw with its interfaces if src==dst==fw'))
+        # Everything from here on decides a chain, and a chain decision
+        # that reads a Host object instead of the addresses behind it
+        # answers a different question.  fwbuilder expands both elements
+        # here, before the loopback check and `finalizeChain`
+        # (PolicyCompiler_ipt.cpp:4566), and drops a rule the expansion
+        # emptied right after.
+        self.add(
+            ExpandMultipleAddressesIfNotFWInSrc(
+                'expand multiple addresses if not FW in Src'
+            )
+        )
+        self.add(
+            ExpandMultipleAddressesIfNotFWInDst(
+                'expand multiple addresses if not FW in Dst'
+            )
+        )
+        self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
 
@@ -482,16 +501,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # interface. Mirrors fwbuilder's PolicyCompiler_ipt.cpp:4616
         # ``ExpandMultipleAddresses("expand multiple addresses")``.
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
-        self.add(
-            ExpandMultipleAddressesIfNotFWInSrc(
-                'expand multiple addresses if not FW in Src'
-            )
-        )
-        self.add(
-            ExpandMultipleAddressesIfNotFWInDst(
-                'expand multiple addresses if not FW in Dst'
-            )
-        )
         self.add(
             ExpandLoopbackInterfaceAddress(
                 'check for loopback interface in rule objects'
@@ -3230,51 +3239,6 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
             return False
         self.compiler.expand_addr(rule, 'src')
         self.compiler.expand_addr(rule, 'dst')
-        self.tmp_queue.append(rule)
-        return True
-
-
-class ExpandMultipleAddressesIfNotFWInSrc(PolicyRuleProcessor):
-    """Expand hosts/firewalls with multiple addresses if first src is not Firewall.
-
-    Unlike ``ExpandMultipleAddresses``, this skips expansion when the
-    first object in src is a Firewall object itself, which is handled
-    specially by later processors.
-
-    Corresponds to C++ ``PolicyCompiler_ipt::expandMultipleAddressesIfNotFWinSrc``.
-    """
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        src = rule.src[0] if rule.src else None
-        if not isinstance(src, Firewall):
-            self.compiler.expand_addr(rule, 'src')
-
-        self.tmp_queue.append(rule)
-        return True
-
-
-class ExpandMultipleAddressesIfNotFWInDst(PolicyRuleProcessor):
-    """Expand hosts/firewalls with multiple addresses if first dst is not Firewall.
-
-    Unlike ``ExpandMultipleAddresses``, this skips expansion when the
-    first object in dst is a Firewall object itself.
-
-    Corresponds to C++ ``PolicyCompiler_ipt::expandMultipleAddressesIfNotFWinDst``.
-    """
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        dst = rule.dst[0] if rule.dst else None
-        if not isinstance(dst, Firewall):
-            self.compiler.expand_addr(rule, 'dst')
-
         self.tmp_queue.append(rule)
         return True
 

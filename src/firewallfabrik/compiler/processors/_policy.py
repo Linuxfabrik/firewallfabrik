@@ -26,6 +26,7 @@ from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     AddressRange,
     Direction,
+    Firewall,
     Interface,
     IPv4,
     IPv6,
@@ -263,6 +264,55 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
 
         self.compiler.expand_addr(rule, 'src')
         self.compiler.expand_addr(rule, 'dst')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandMultipleAddressesIfNotFWInSrc(PolicyRuleProcessor):
+    """Expand the source into addresses unless it is the firewall itself.
+
+    The firewall object is what the chain decisions downstream reason
+    about, so it stays whole; everything else is replaced by the
+    addresses behind it, because a Host or an Interface object answers a
+    different question than the address it carries.  Whether a
+    destination is a broadcast, whether a source is on a network the
+    firewall has an interface on, whether the rule belongs in the input
+    chain - all of that is asked of a single address.
+
+    Ports ``PolicyCompiler_ipt::expandMultipleAddressesIfNotFWinSrc``
+    (PolicyCompiler_ipt.cpp:3013), which fwbuilder runs before
+    ``finalizeChain`` for exactly that reason.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        src = rule.src[0] if rule.src else None
+        if not isinstance(src, Firewall):
+            self.compiler.expand_addr(rule, 'src')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandMultipleAddressesIfNotFWInDst(PolicyRuleProcessor):
+    """Expand the destination into addresses unless it is the firewall.
+
+    See :class:`ExpandMultipleAddressesIfNotFWInSrc`; this is the
+    destination half (``PolicyCompiler_ipt.cpp:3024``).
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        dst = rule.dst[0] if rule.dst else None
+        if not isinstance(dst, Firewall):
+            self.compiler.expand_addr(rule, 'dst')
+
         self.tmp_queue.append(rule)
         return True
 
