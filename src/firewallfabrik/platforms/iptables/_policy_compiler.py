@@ -484,6 +484,17 @@ class PolicyCompiler_ipt(PolicyCompiler):
             )
         )
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
+        # A rule may still name several interfaces here, and every chain
+        # decision below reads the first one.  fwbuilder splits the rule
+        # per interface first and then asks whether that one interface has
+        # an address of the family being compiled
+        # (PolicyCompiler_ipt.cpp:4580).
+        self.add(InterfacePolicyRulesWithOptimization('process interface policy rules'))
+        self.add(
+            CheckInterfaceAgainstAddressFamily(
+                'check if interface matches address family'
+            )
+        )
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
 
@@ -507,12 +518,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
             )
         )
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
-
-        self.add(
-            CheckInterfaceAgainstAddressFamily(
-                'check if interface matches address family'
-            )
-        )
 
         if self.ipv6_policy:
             self.add(DropIPv4Rules('drop ipv4 rules'))
@@ -539,8 +544,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
                 'check for special cases with unnumbered interface'
             )
         )
-
-        self.add(InterfacePolicyRulesWithOptimization('process interface policy rules'))
 
         self.add(Optimize1('optimization 1, pass 1'))
         self.add(Optimize1('optimization 1, pass 2'))

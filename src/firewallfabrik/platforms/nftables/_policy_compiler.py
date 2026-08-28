@@ -392,6 +392,17 @@ class PolicyCompiler_nft(PolicyCompiler):
             )
         )
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
+        # A rule may still name several interfaces here, and every chain
+        # decision below reads the first one.  fwbuilder splits the rule
+        # per interface first and then asks whether that one interface has
+        # an address of the family being compiled
+        # (PolicyCompiler_ipt.cpp:4580).
+        self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
+        self.add(
+            CheckInterfaceAgainstAddressFamily(
+                'check if interface matches address family'
+            )
+        )
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
         self.add(SpecialCaseWithFWInDstAndOutbound('drop impossible outbound fw dst'))
@@ -408,12 +419,6 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SplitIfSeveralSetsInRE('split named sets in Dst', 'dst'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
-        self.add(
-            CheckInterfaceAgainstAddressFamily(
-                'check if interface matches address family'
-            )
-        )
-
         # Address family filtering
         if self.ipv6_policy:
             self.add(DropIPv4Rules('drop ipv4 rules'))
@@ -429,7 +434,6 @@ class PolicyCompiler_nft(PolicyCompiler):
             self.add(BridgingFw('bridging firewall broadcast/multicast'))
 
         # Convert to atomic
-        self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
         self.add(ConvertToAtomicForIntervals('convert to atomic by intervals'))
         self.add(GroupServicesByProtocol('split on services'))
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))

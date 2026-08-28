@@ -1535,18 +1535,20 @@ RecursiveGroupsInRE(rdst) → EmptyGroupsInRE(rdst) →
 EmptyRGtwAndRItf → SingleAddressInRGtw → RItfChildOfFw →
 VerifyAddressRanges → VerifyRouteMetrics →
 ExpandGroups → ExpandMultipleAddressesInRouting → DropRuleWithEmptyRE →
-ValidateRoutingDestination → ExpandAddressRangesInRDst →
-EliminateDuplicatesInRDst → ConvertToAtomicForRDst →
-RoutingPrintRule
+ValidateRoutingDestination → ReachableGateway →
+GatewayOnRoutingInterface → ExpandAddressRangesInRDst →
+EliminateDuplicatesInRDst → CompetingRoutingRules →
+ConvertToAtomicForRDst → ClassifyRoutingRules →
+EliminateDuplicateRoutingRules → RoutingPrintRule
 ```
 
 Not ported from the C++ pass, and what it costs:
 
 | C++ processor | Consequence |
 |---|---|
-| `reachableAddressInRGtw`, `contradictionRGtwAndRItf` | A gateway that is not on a network of the interface is not reported |
-| `FindDefaultRoute`, `createSortedDstIdsLabel`, `competingRules`, `classifyRoutingRules` | Two rules to the same destination stay two `ip route add` commands; the second fails at activation instead of becoming one ECMP route with `nexthop` |
-| `optimize3`, `eliminateDuplicateRules` | Duplicate commands are not folded |
+| `FindDefaultRoute` | Only feeds the `routing_functions` configlet, which is unrendered (see below) |
+| `createSortedDstIdsLabel` | Ported as the `_destination_key` helper the two rules below share, not as a processor |
+| `checkForObjectsWithErrors` | An object a rule names that failed to load is reported by the policy and NAT passes but not by this one |
 | `DropIPv6RulesWithWarning` | Deliberate: fwf compiles an IPv6 route as `$IP -6 route add`, which fwbuilder cannot |
 
 The `routing_functions` configlet, which holds the rollback of the previous
@@ -1793,7 +1795,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `specialCaseWithFW1` | `platforms/iptables/_policy_compiler.py:SpecialCaseWithFW1` |
 | `specialCaseWithFW2` | `platforms/iptables/_policy_compiler.py:SpecialCaseWithFW2` |
 | `specialCaseWithFWInDstAndOutbound` | `platforms/iptables/_policy_compiler.py:SpecialCaseWithFWInDstAndOutbound` |
-| `expandMultipleAddressesIfNotFWinSrc` | `platforms/iptables/_policy_compiler.py:ExpandMultipleAddressesIfNotFWInSrc` / `ExpandMultipleAddressesIfNotFWInDst` |
+| `expandMultipleAddressesIfNotFWinSrc` | `compiler/processors/_policy.py:ExpandMultipleAddressesIfNotFWInSrc` / `ExpandMultipleAddressesIfNotFWInDst` |
 | `expandLoopbackInterfaceAddress` | `platforms/iptables/_policy_compiler.py:ExpandLoopbackInterfaceAddress` |
 | `processMultiAddressObjectsInSrc` | `platforms/iptables/_policy_compiler.py:ProcessMultiAddressObjectsInSrc` / `ProcessMultiAddressObjectsInDst` |
 | `specialCaseWithUnnumberedInterface` | `platforms/iptables/_policy_compiler.py:SpecialCaseWithUnnumberedInterface` |
@@ -2155,13 +2157,14 @@ SpecialCaseAddressRangeInSrc → SpecialCaseAddressRangeInDst →
 SplitIfSrcMatchingAddressRange → SplitIfDstMatchingAddressRange →
 SplitIfSrcMatchesFw → SplitIfDstMatchesFw → SpecialCaseWithFW1 →
 DecideOnChainIfDstFW → SplitIfSrcFWNetwork → DecideOnChainIfSrcFW → SplitIfDstFWNetwork →
-SpecialCaseWithFW2 → DecideOnChainIfLoopback → FinalizeChain → SpecialCaseWithFWInDstAndOutbound → DecideOnTarget → CheckForRestoreMarkInOutput →
+SpecialCaseWithFW2 → ExpandMultipleAddressesIfNotFWInSrc → ExpandMultipleAddressesIfNotFWInDst → DropRuleWithEmptyRE →
+ConvertToAtomicForInterfaces → CheckInterfaceAgainstAddressFamily →
+DecideOnChainIfLoopback → FinalizeChain → SpecialCaseWithFWInDstAndOutbound → DecideOnTarget → CheckForRestoreMarkInOutput →
 RemoveFW → ExpandMultipleAddresses → ExpandLoopbackInterfaceAddress → DropRuleWithEmptyRE →
-CheckInterfaceAgainstAddressFamily →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
 CheckForUnnumbered → CheckForDynamicInterfacesOfOtherObjects →
 [BridgingFw (if bridging firewall)] →
-ConvertToAtomicForInterfaces → ConvertToAtomicForIntervals → GroupServicesByProtocol →
+ConvertToAtomicForIntervals → GroupServicesByProtocol →
 VerifyCustomServices →
 Verify{PortRanges,IcmpTypes,IpProtocols,AddressRanges,Addresses,MacAddresses,ScriptLiterals,TimeIntervals} →
 SpecialCasesWithCustomServices →

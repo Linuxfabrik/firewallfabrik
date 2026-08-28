@@ -272,9 +272,12 @@ table inet fwf_filter {
         # Rule 2 (eth0,eth1)
         #
         meta nfproto ipv4 iifname "eth0" tcp dport 22 counter accept
-        meta nfproto ipv4 iifname "eth1" tcp dport 22 counter accept
         #
         # Rule 1 (eth1)
+        #
+        meta nfproto ipv6 iifname "eth1" tcp dport 22 counter accept
+        #
+        # Rule 2 (eth0,eth1)
         #
         meta nfproto ipv6 iifname "eth1" tcp dport 22 counter accept
     }
