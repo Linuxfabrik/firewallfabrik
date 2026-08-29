@@ -508,7 +508,7 @@ rule elements. These are defined in the Compiler and PolicyCompiler headers:
 | `splitIfDstMatchesFw` | `splitIfRuleElementMatchesFW` | Dst | ✅ `platforms/iptables/_policy_compiler.py` |
 | `singleObjectNegationItf` | `singleObjectNegation` | Itf | ❌ (`ItfNegation` handles single-object inline) |
 | `ItfNegation` | `fullInterfaceNegationInRE` | Itf | ⚠️ `platforms/iptables/_policy_compiler.py` (see above) |
-| `replaceClusterInterfaceInItf` | `replaceClusterInterfaceInItfRE` | Itf | ❌ |
+| `replaceClusterInterfaceInItf` | `replaceClusterInterfaceInItfRE` | Itf | ✅ `compiler/processors/_generic.py` |
 
 ### Common implementation patterns
 
@@ -1575,7 +1575,9 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 
 - `createNewCompilerPass` — pass-through bookkeeping, not needed
 - `ReplaceFirewallObjectWithSelfInRE` — `"self"` DNSName substitution
-- `replaceFailoverInterfaceInRE` — cluster failover interface substitution
+- `replaceFailoverInterfaceInRE` — the `pf` variant of the cluster interface
+  substitution; `replaceClusterInterfaceInItfRE` is what the two Linux
+  pipelines use and it is ported
 - `addressRanges` (policy range-to-networks split) — fwf handles `AddressRange` natively via `SpecialCaseAddressRangeIn{Src,Dst}` / `SplitIf{Src,Dst}MatchingAddressRange`
 - `SkipActionContinueWithNoLogging` — filter for Continue-with-no-logging rules
 - separate shadowing pass: `SplitIfSrcAnyForShadowing` / `SplitIfDstAnyForShadowing` exist but are intentionally left unwired, and the `DetectShadowingForNonTerminatingRules` variant is absent (inline `DetectShadowing` is used instead)
@@ -1598,6 +1600,13 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 - `InterfacePolicyRules` — does not expand a group in the interface rule
   element.  The main pass runs `ExpandGroupsInItf` first, so only the
   shadowing pass, which does not, can meet one.
+- `expandMultipleAddressesInRE` — an interface named in a rule element is
+  replaced by every address it carries, its sub-interfaces included, the
+  way `Compiler::_expand_addr_recursive` does it.  Three kinds stay in the
+  element as objects, because they carry no address the compiler could
+  write down and because the checks that report them read the object: a
+  dynamic interface, whose addresses the generated script looks up while
+  it runs, an unnumbered one, and a bridge port.
 - `Begin` — does not skip a rule that references a deleted object.  Firewall
   Builder leaves a "dummy" reference behind and warns; fwf has no deleted
   objects of its own and no `.fwb` of the corpus carries one, so such a rule
@@ -1678,6 +1687,51 @@ for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
   alphabet.  The same processor answers the C++
   `processMultiAddressObjectsInRE` abort for a file name below `%DATADIR%`
   on a firewall that names no data directory.
+
+### Compiling a cluster
+
+A cluster is not a machine: it is what its members have in common.  Both
+drivers therefore compile a *member* and are told which cluster it belongs
+to, which is what `CompilerDriver::compile` does, and the CLI expands a
+cluster named on the command line into one run per member.  Before
+anything reads the member's rules,
+`CompilerDriver.populate_cluster_elements` gives it what it inherits
+(`CompilerDriver::populateClusterElements`):
+
+- the **state sync group**, whose interface names the link conntrackd
+  replicates over.  It is remembered on the firewall as
+  `state_sync_interface` and `state_sync_group_id` - compile-run values
+  that are in no `defaults.yaml` and are read off the options dict rather
+  than through `get_option`.
+- a **copy of every cluster interface** that has a failover group for this
+  member, carrying the address the cluster shares.  The copy is what makes
+  that address count as the firewall's, so a rule naming it goes to INPUT
+  and OUTPUT and a translation to it resolves to that one address.  It
+  shares its name with the member's own interface, which on Linux it has
+  to - the failover protocol runs on the member's NIC and the rule says
+  `-i <that name>` - so `Interface.cluster_interface` marks it and the
+  unique index on (device, interface name) makes an exception for it.
+- the cluster's **rule sets**, merged by name: the member's own wins when
+  it has rules and is said out loud, an empty one of the same name is
+  replaced (`mergeRuleSets`, fwbuilder ticket #372).
+
+Everything written there lives in `CompilerDriver.compile_session`, which
+is rolled back when the compile ends.  The C++ mutates its object database
+because `fwb_ipt` throws it away afterwards; the GUI here compiles in the
+same process as the editor.
+
+`platforms/linux/_automatic_rules.py` then builds the rules a member needs
+to see the other members - the failover protocol per interface, the state
+sync link - and both policy compilers put them in front of the top rule
+set with negative positions.  Not ported from `AutomaticRules_ipt`: the
+`vrrpd`/`heartbeat` configuration generation, which fwbuilder does not do
+for Linux either.
+
+Still missing, and tracked under
+[#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84): the editor
+half - a `ClusterDialog`, the option dialogs of the failover and state
+sync protocols, and creating a cluster group in the right place in the
+tree ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
 
 ### What counts as "the firewall"
 
@@ -2191,8 +2245,10 @@ The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` 
 
 ```
 Begin →
-ExpandGroupsInItfInb → SingleObjectNegationItfInb → ItfInbNegation →
-ExpandGroupsInItfOutb → SingleObjectNegationItfOutb → ItfOutbNegation →
+ExpandGroupsInItfInb → ReplaceClusterInterfaceInItfRE(itf_inb) →
+SingleObjectNegationItfInb → ItfInbNegation →
+ExpandGroupsInItfOutb → ReplaceClusterInterfaceInItfRE(itf_outb) →
+SingleObjectNegationItfOutb → ItfOutbNegation →
 ResolveMultiAddress →
 RecursiveGroupsInRE(osrc/odst/osrv/tsrc/tdst/tsrv) →
 EmptyGroupsInRE(osrc/odst/osrv/tsrc/tdst/tsrv) →
