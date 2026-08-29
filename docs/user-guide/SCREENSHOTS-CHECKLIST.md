@@ -117,7 +117,7 @@ Most object-editor shots can use existing objects in `vdc.fwf`. For the New Fire
 - [ ] obj-dynamic-group-*, obj-keywords-*, obj-library-*, obj-multicast-*, obj-broadcast-*
 - [ ] obj-ipset-*, obj-bridge-interface-*, obj-find-replace-* (referenced subset), obj-policy-*
 - [ ] obj-new-cluster-menu, obj-cluster-right-click-menu, obj-cluster-wizard-members, obj-cluster-wizard-populated **(cluster fixture)**
-- [ ] obj-attached-network-child-object, obj-attached-network-context-menu, obj-attached-network-editing, obj-attached-network-nat-rule **(blocked by #85)**
+- [ ] obj-attached-network-child-object, obj-attached-network-context-menu, obj-attached-network-editing, obj-attached-network-nat-rule
 - `obj-attached-network-diagram` is artwork, no capture needed
 
 List the current set with `grep -oE 'img/obj-[^)"]+' "05 - Working with Objects.md" | sort -u`.
@@ -221,7 +221,6 @@ Anything showing Cisco, PF, ipfw, ipfilter, HP ProCurve or PuTTY has no counterp
 | Issue                                                             | Blocks                                                          |
 |-------------------------------------------------------------------|-----------------------------------------------------------------|
 | [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84) Cluster support incomplete, [#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78) Failover Group | chapter 08 (8), 3 shots in chapter 10, 4 in chapter 05, 96 in the cookbook |
-| [#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85) AttachedNetworksDialog missing | 4 `obj-attached-network-*` shots in chapter 05                    |
 
 ## Fixture coverage
 
