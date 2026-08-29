@@ -24,6 +24,11 @@ import os
 import pytest
 import sqlalchemy
 
+# The GUI is an optional extra and the test runner installs the package
+# without it, so this has to say so before the first Qt import rather than
+# fail to collect.
+pytest.importorskip('PySide6', reason='the GUI extra is not installed')
+
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import firewallfabrik.core

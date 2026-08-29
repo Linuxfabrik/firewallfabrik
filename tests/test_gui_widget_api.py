@@ -128,3 +128,105 @@ def test_the_gui_only_calls_core_methods_that_exist(holder):
         f'the GUI calls {missing} on a {class_name} named {holder!r}, '
         f'but {class_name} has no such attribute'
     )
+
+
+def _reaches_pyside(module_name, _seen=None):
+    """Does ``firewallfabrik.gui.<module_name>`` import PySide6, directly or not?
+
+    Two of the GUI modules are plain Python and a test may import them
+    without the extra: ``netmask`` and ``interface_autoconfigure`` do string
+    and address work and touch no widget.  Everything else arrives at Qt
+    within a hop or two - ``object_tree_data`` imports ``platform_settings``,
+    which imports ``QSettings`` - so the question has to follow the imports
+    rather than stop at the name.
+    """
+    if _seen is None:
+        _seen = set()
+    if module_name in _seen:
+        return False
+    _seen.add(module_name)
+    path = GUI_DIR / f'{module_name}.py'
+    if not path.is_file():
+        # A package or a name we cannot resolve: assume it reaches Qt.
+        return True
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [node.module or '']
+        else:
+            continue
+        for name in names:
+            if name == 'PySide6' or name.startswith('PySide6.'):
+                return True
+            if name.startswith('firewallfabrik.gui.') and _reaches_pyside(
+                name.rsplit('.', 1)[1], _seen
+            ):
+                return True
+    return False
+
+
+def _module_level_gui_import(tree):
+    """Line of the first module-level import that reaches PySide6, or None.
+
+    An import inside a function or a fixture is not counted, because it
+    runs after collection and pytest reports it as a failure of that one
+    test rather than of the whole run.
+    """
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [node.module or '']
+        else:
+            continue
+        for name in names:
+            if name == 'PySide6' or name.startswith('PySide6.'):
+                return node.lineno
+            if name.startswith('firewallfabrik.gui.') and _reaches_pyside(
+                name.rsplit('.', 1)[1]
+            ):
+                return node.lineno
+    return None
+
+
+def _importorskip_line(tree):
+    """Line of the module-level ``pytest.importorskip`` call, or None."""
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Attribute)
+            and node.value.func.attr == 'importorskip'
+        ):
+            return node.lineno
+    return None
+
+
+@pytest.mark.parametrize(
+    'path',
+    sorted(pathlib.Path(__file__).parent.glob('test_*.py')),
+    ids=lambda path: path.name,
+)
+def test_a_gui_test_module_skips_itself_without_the_extra(path):
+    """A test module that imports the GUI has to say so before it does.
+
+    The GUI is an optional extra and the CI installs the package without
+    it, so a module-level ``from firewallfabrik.gui... import ...`` raises
+    ``ModuleNotFoundError`` during collection.  pytest counts that as an
+    error and not as a skip, and one such module stops the whole run -
+    which is how two of them turned the suite red on every Python version
+    at once.  ``pytest.importorskip('PySide6')`` ahead of the import turns
+    it into a skip.
+    """
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    gui_import = _module_level_gui_import(tree)
+    if gui_import is None:
+        pytest.skip('imports nothing from the GUI at module level')
+    guard = _importorskip_line(tree)
+    assert guard is not None and guard < gui_import, (
+        f'{path.name} imports the GUI on line {gui_import} without a '
+        f"pytest.importorskip('PySide6') in front of it, so the module "
+        f'fails to collect when the GUI extra is not installed'
+    )

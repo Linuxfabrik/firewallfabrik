@@ -26,6 +26,13 @@ then put beside the firewalls in the data file ([#78]).
 
 import uuid
 
+import pytest
+
+# The GUI is an optional extra and the test runner installs the package
+# without it, so this has to say so before the first Qt import rather than
+# fail to collect.
+pytest.importorskip('PySide6', reason='the GUI extra is not installed')
+
 import firewallfabrik.core
 from firewallfabrik.core.objects import (
     Cluster,
