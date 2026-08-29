@@ -322,6 +322,21 @@ class OSConfigurator_nft(OSConfigurator):
                 val = int(val)
             except (ValueError, TypeError):
                 val = -1
+            # A stored 0 means "leave the kernel setting alone", not
+            # "set it to zero", which is what Firewall Builder writes
+            # above the same two lines (OSConfigurator_linux24.cpp:
+            # "if conntrack_max and conntrack_hashsize are equal to 0, we
+            # do not add commands from the configlet").  Both values are
+            # load-bearing: `nf_conntrack_max` of 0 makes
+            # `ct_count > nf_conntrack_max` true for every new connection
+            # (net/netfilter/nf_conntrack_core.c), so the box logs
+            # "table full, dropping packet" and stops passing traffic the
+            # moment the script runs; and `nf_conntrack_hash_resize`
+            # answers 0 with -EINVAL, so that line fails outright.  A
+            # `.fwb` written by Firewall Builder carries 0 for both
+            # whenever the administrator left the fields alone.
+            if val == 0 and macro_name in ('conntrack_hashsize', 'conntrack_max'):
+                val = -1
             self._set_configlet_macro_int(val, conntrack, macro_name)
 
         blocks.append(conntrack.expand())

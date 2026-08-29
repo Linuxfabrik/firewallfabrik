@@ -296,11 +296,6 @@ ip_forward() {
     echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
-set_kernel_variables() {
-    echo 0 > /proc/sys/net/netfilter/nf_conntrack_max
-    echo 0 > /sys/module/nf_conntrack/parameters/hashsize
-}
-
 flush_own_tables() {
     # remove only our own tables, leaving other tools' tables untouched
     $NFT delete table inet fwf_filter 2>/dev/null
@@ -392,7 +387,6 @@ case "$cmd" in
             run_epilog_and_exit 1
         }
         stop_action
-        set_kernel_variables
         script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
