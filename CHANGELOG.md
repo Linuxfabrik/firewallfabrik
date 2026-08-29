@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Compiler (iptables, nftables): a cluster whose interface gets its address by DHCP translates to it again, instead of losing every NAT rule that names it.
 * Compiler (iptables, nftables): a cluster member leaves the address the cluster shares to the failover daemon instead of adding it itself and taking it away from the other member on every activation.
 * Compiler (iptables, nftables): a cluster member permits the failover protocol and the state sync link it needs to see the other members, so a default-drop cluster no longer has both members thinking they are master ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 * Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses and rule sets ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).

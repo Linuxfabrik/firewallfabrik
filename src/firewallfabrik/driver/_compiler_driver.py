@@ -370,6 +370,23 @@ class CompilerDriver(BaseCompiler):
                 **(member_iface.options or {}),
                 'failover_group_id': str(group.id),
             }
+            # fwbuilder #971: the *cluster's* interface inherits what
+            # describes the member - dynamic, unnumbered, unprotected, the
+            # security level - and it does so on the cluster object, not
+            # only on the copy, because a rule of the cluster names the
+            # cluster's interface.  Without it a cluster whose external
+            # interface gets its address by DHCP has an interface that is
+            # neither dynamic nor addressed, so every rule translating to
+            # it is dropped as naming nothing: the whole NAT of
+            # `heartbeat_cluster_1_d`, where the reference writes the
+            # run-time `$i_eth0`.
+            cluster_iface.data = {
+                **(cluster_iface.data or {}),
+                'dyn': member_iface.is_dynamic(),
+                'unnum': member_iface.is_unnumbered(),
+                'unprotected': member_iface.is_unprotected(),
+                'security_level': (member_iface.data or {}).get('security_level', '0'),
+            }
             self._copy_cluster_interface(session, fw, cluster_iface, member_iface)
 
         return ''
