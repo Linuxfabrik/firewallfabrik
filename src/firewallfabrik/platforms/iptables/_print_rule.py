@@ -30,6 +30,7 @@ from firewallfabrik.compiler._interval_helpers import (
     parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
+from firewallfabrik.compiler.processors._service import icmp_type_and_code
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
@@ -805,12 +806,7 @@ class PrintRule(PolicyRuleProcessor):
                 # fwbuilder asymmetry: for ip6tables it only adds
                 # ``-m icmp6`` when a concrete icmpv6-type is set.
                 # A bare ``any`` ICMP6 service stays as ``-p ipv6-icmp``.
-                codes = getattr(srv, 'codes', None) or getattr(srv, 'data', None) or {}
-                raw_type = codes.get('type', -1)
-                try:
-                    icmp_type = int(raw_type) if raw_type is not None else -1
-                except (TypeError, ValueError):
-                    icmp_type = -1
+                icmp_type, _icmp_code = icmp_type_and_code(srv)
                 if icmp_type < 0:
                     return '-p ipv6-icmp '
                 return '-p ipv6-icmp -m icmp6 '
@@ -1130,11 +1126,7 @@ class PrintRule(PolicyRuleProcessor):
         return f'{flag} {start}:{end} '
 
     def _print_icmp(self, srv) -> str:
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
+        icmp_type, icmp_code = icmp_type_and_code(srv)
 
         flag = '--icmpv6-type' if self.compiler.ipv6_policy else '--icmp-type'
         if icmp_type < 0:

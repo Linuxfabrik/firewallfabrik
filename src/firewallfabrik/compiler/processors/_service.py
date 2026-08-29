@@ -259,6 +259,30 @@ def port_range_problem(srv) -> str:
 MAX_ICMP_TYPE = 255
 
 
+def icmp_type_and_code(srv) -> tuple[int, int]:
+    """The ICMP type and code *srv* names, ``-1`` for "any".
+
+    One reader for every print rule, because the readers used to
+    disagree: ``icmp_type_problem`` waves an empty value through as
+    "any", the way ``FWObject::getInt`` answers -1 for an empty string,
+    while three print rules read the same value with a bare ``int()``
+    and ended the compile with a `ValueError` on it.
+
+    A value that is no number at all comes back as "any" here as well;
+    it is `icmp_type_problem` that reports it and leaves the rule out,
+    and it runs first.
+    """
+    codes = getattr(srv, 'codes', None) or getattr(srv, 'data', None) or {}
+    result = []
+    for what in ('type', 'code'):
+        raw = codes.get(what, -1)
+        try:
+            result.append(-1 if raw is None or str(raw).strip() == '' else int(raw))
+        except (TypeError, ValueError):
+            result.append(-1)
+    return result[0], result[1]
+
+
 def icmp_type_problem(srv) -> str:
     """Return why *srv* names an ICMP type or code neither tool takes.
 

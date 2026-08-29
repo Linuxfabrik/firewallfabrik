@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
+from firewallfabrik.compiler.processors._service import icmp_type_and_code
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
@@ -1143,11 +1144,7 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_icmp(self, srv) -> str:
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
+        icmp_type, icmp_code = icmp_type_and_code(srv)
         if icmp_type < 0:
             # A service naming no type matches ICMP as a whole.  The IPv4
             # icmp match still insists on --icmp-type (XTOPT_MAND in

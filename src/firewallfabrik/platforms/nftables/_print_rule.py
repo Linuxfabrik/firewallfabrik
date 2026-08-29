@@ -37,6 +37,7 @@ from firewallfabrik.compiler._interval_helpers import (
     parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
+from firewallfabrik.compiler.processors._service import icmp_type_and_code
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
@@ -156,15 +157,11 @@ def other_protocols_for(services: list, ipv6: bool) -> list[str]:
                 return []
             names.add(srv.get_protocol_name())
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            codes = getattr(srv, 'codes', None) or srv.data or {}
             # This runs long before `VerifyIcmpTypes` leaves the rule out
-            # over a stored type that is not a number, so it has to answer
-            # rather than raise: "cannot say what the element leaves out"
-            # is the right answer for a value nobody can read anyway.
-            try:
-                icmp_type = int(codes.get('type', -1) or -1)
-            except (TypeError, ValueError):
-                return []
+            # over a stored type that is not a number, and "cannot say
+            # what the element leaves out" is the right answer for a
+            # value nobody can read anyway.
+            icmp_type, _icmp_code = icmp_type_and_code(srv)
             if icmp_type < 0:
                 return []
             names.add('ipv6-icmp' if ipv6 else 'icmp')
@@ -425,11 +422,7 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
     that names a type and a code matches both, the way iptables'
     ``--icmp-type type/code`` does.
     """
-    codes = getattr(srv, 'codes', None) or srv.data or {}
-    raw_type = codes.get('type', -1)
-    raw_code = codes.get('code', -1)
-    icmp_type = -1 if raw_type is None else int(raw_type)
-    icmp_code = -1 if raw_code is None else int(raw_code)
+    icmp_type, icmp_code = icmp_type_and_code(srv)
 
     proto = 'icmpv6' if ipv6 else 'icmp'
     type_names = _ICMPV6_TYPE_NAMES if ipv6 else _ICMP_TYPE_NAMES

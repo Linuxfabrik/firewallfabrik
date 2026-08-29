@@ -39,6 +39,7 @@ from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.compiler.processors._service import (
     VerifyIcmpTypes,
+    icmp_type_and_code,
     icmp_type_problem,
 )
 from firewallfabrik.core.objects import (
@@ -171,3 +172,39 @@ def test_the_negated_service_split_answers_before_the_check_runs(value):
 
 def test_the_negated_service_split_still_names_a_real_type():
     assert other_protocols_for([_srv(type='8')], ipv6=False) == ['icmp']
+
+
+@pytest.mark.parametrize(
+    ('data', 'expected'),
+    [
+        ({}, (-1, -1)),
+        ({'type': '8'}, (8, -1)),
+        ({'type': '8', 'code': '0'}, (8, 0)),
+        ({'type': 8, 'code': 0}, (8, 0)),
+        ({'type': ' 8 '}, (8, -1)),
+        ({'type': '-1', 'code': '-1'}, (-1, -1)),
+        # An empty value is "any", the way `FWObject::getInt` answers -1
+        # for an empty string.  `icmp_type_problem` waves it through, so
+        # the print rules have to read it the same way or the rule it
+        # passes ends the compile.
+        ({'type': ''}, (-1, -1)),
+        ({'type': '3', 'code': ''}, (3, -1)),
+        ({'type': None}, (-1, -1)),
+        # Reported by `icmp_type_problem`, which runs first; the reader
+        # answers rather than raises so the report is what the user sees.
+        ({'type': 'echo-request'}, (-1, -1)),
+    ],
+)
+def test_the_reader_answers_every_stored_spelling(data, expected):
+    assert icmp_type_and_code(_srv(**data)) == expected
+
+
+@pytest.mark.parametrize('data', [{'type': ''}, {'type': '3', 'code': ''}])
+def test_an_empty_value_reaches_the_print_rules_as_any(data):
+    """It used to end the compile with a ValueError in three of them."""
+    from firewallfabrik.platforms.nftables._print_rule import print_icmp_service
+
+    srv = _srv(**data)
+
+    assert not icmp_type_problem(srv)
+    assert print_icmp_service(srv, ipv6=False)
