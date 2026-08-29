@@ -583,10 +583,40 @@ def _destination_key(rule: CompRule) -> str:
 
 
 def _next_hop_key(rule: CompRule) -> str:
-    """Return a key for the gateway and interface combination of a rule."""
+    """Return a key for the gateway and interface combination of a rule.
+
+    The objects are compared by id, the way ``competingRules`` builds its
+    ``combiId`` out of ``gtw->getId()`` and ``itf->getId()``.
+    """
     gtw = str(getattr(rule.rgtw[0], 'id', '')) if rule.rgtw else ''
     itf = str(getattr(rule.ritf[0], 'id', '')) if rule.ritf else ''
     return f'{gtw}_{itf}'
+
+
+def _route_command_key(rule: CompRule) -> tuple:
+    """Return what the route command of *rule* says, as a comparable key.
+
+    ``eliminateDuplicateRules`` and ``optimize3`` are the last two
+    processors that can still drop a route, and both compare
+    ``RoutingRuleToString(rule)`` - the command itself, so the destination
+    and the gateway by *address* and the interface by *name*.  Every
+    earlier check compares object ids, which is what fwbuilder does there
+    too, and ids answer a narrower question: two objects holding one
+    address, or two interface objects of one name, are one route on the
+    wire and two different ids.
+
+    A cluster member has exactly that pair.  The copy of a cluster
+    interface shares its name with the member's own interface and has an
+    id of its own, so a route of the cluster and a route of the member
+    that both say ``dev eth0`` came through as two commands.  The second
+    ``ip route add`` then answers "RTNETLINK answers: File exists" and
+    returns non-zero, which since the routing rollback puts the previous
+    routing table back and stops the activation.
+    """
+    destination = route_address(rule.rdst[0]) if rule.rdst else 'default'
+    gateway = route_address(rule.rgtw[0]) if rule.rgtw else ''
+    interface = getattr(rule.ritf[0], 'name', '') if rule.ritf else ''
+    return (_route_table(rule), destination, _metric(rule), gateway, interface)
 
 
 # `ip route add ... metric N` carries a 32-bit number: iproute2 reads it
@@ -755,6 +785,9 @@ class EliminateDuplicateRoutingRules(RoutingRuleProcessor):
     holding the same address - and there is nothing an administrator could
     do about them, so only a collision between two different rules is
     worth a word.
+
+    This is the one check that compares the command rather than the
+    objects behind it, see :func:`_route_command_key`.
     """
 
     def __init__(self, name: str = 'eliminate duplicate rules') -> None:
@@ -770,12 +803,7 @@ class EliminateDuplicateRoutingRules(RoutingRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        key = (
-            _route_table(rule),
-            str(getattr(rule.rdst[0], 'id', '')) if rule.rdst else '',
-            _metric(rule),
-            _next_hop_key(rule),
-        )
+        key = _route_command_key(rule)
         previous = self._seen.get(key)
         if previous is not None:
             if previous != rule.label:
