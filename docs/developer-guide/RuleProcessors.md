@@ -1600,6 +1600,14 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 - `InterfacePolicyRules` — does not expand a group in the interface rule
   element.  The main pass runs `ExpandGroupsInItf` first, so only the
   shadowing pass, which does not, can meet one.
+- "Assume firewall is part of any and networks" is normalised once, in the
+  prolog, the way `PolicyCompiler_ipt::prolog` does it: a `.fwb` carries
+  the value as ``''``, ``'0'``, ``'1'``, ``'False'``, ``'True'`` or
+  ``'true'``, because the option was a checkbox in Firewall Builder 3.0
+  and a tri-state afterwards.  Empty and the cleared old checkbox mean
+  "use the firewall's setting", the ticked one means on, and anything else
+  is read as a number - which is why ``'true'`` is off.  Every processor
+  afterwards asks `assumes_fw_is_part_of_any` and nothing else.
 - `expandMultipleAddressesInRE` — an interface named in a rule element is
   replaced by every address it carries, its sub-interfaces included, the
   way `Compiler::_expand_addr_recursive` does it.  Three kinds stay in the
@@ -1726,6 +1734,28 @@ sync link - and both policy compilers put them in front of the top rule
 set with negative positions.  Not ported from `AutomaticRules_ipt`: the
 `vrrpd`/`heartbeat` configuration generation, which fwbuilder does not do
 for Linux either.
+
+Five more places ask about the cluster next to the firewall, each ported
+from its C++ site: `AssignInterface`, `ReplaceFirewallObjectsODst`,
+`ReplaceFirewallObjectsTSrc`, `specialCaseWithRedirect` and
+`addVirtualAddress` in the NAT pipelines - on a member only the copies of
+the cluster interfaces count (fwbuilder ticket #1185) and the interface
+facing the destination is looked for on the cluster, which is why the two
+are compared by name; `checkForDynamicInterfacesOfOtherObjects` exempts a
+dynamic interface of the cluster; `checkInterfaceAgainstAddressFamily`
+falls back to the member's own interface (ticket #1172); and
+`decideOnChainIfDstFW` puts a rule addressed to a cluster this firewall
+belongs to in the input chain, asked from the cluster's own membership so
+it holds when the member is compiled on its own.  Every one of them is
+skipped where the cluster object is itself what is being compiled - fwf
+allows that and Firewall Builder does not.
+
+The generated script must **not** configure the address a failover group
+shares: keepalived, heartbeat and corosync put it on and take it off
+themselves, so the copy configures nothing and the member's own interface
+of that name lists it as "ignore"
+(`interfaceProperties::manageIpAddresses`, and `manage_addresses` is
+false for every Linux protocol in the resource file).
 
 Still missing, and tracked under
 [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84): the editor
