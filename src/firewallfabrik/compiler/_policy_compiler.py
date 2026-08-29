@@ -40,6 +40,7 @@ from firewallfabrik.compiler.processors._policy import (
     InterfacePolicyRules,
     ItfNegation,
     is_mangle_only_rule_set,
+    normalize_fw_part_of_any,
 )
 from firewallfabrik.core.objects import (
     Firewall,
@@ -90,6 +91,11 @@ class PolicyCompiler(Compiler):
 
         # Load rules into CompRule instances
         self.rules = load_rules(self.session, self.source_ruleset)
+
+        # "Assume firewall is part of any" is stored in five spellings and
+        # every reader asks a number, so it is normalised once, here, the
+        # way `PolicyCompiler_ipt::prolog` does it.
+        normalize_fw_part_of_any(self.rules, self.fw)
 
         # The automatic cluster rules belong in front of the policy that
         # runs in the built-in chains, and nowhere else: a rule set that

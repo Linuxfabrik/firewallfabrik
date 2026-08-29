@@ -24,6 +24,11 @@ The same processor skips a rule on a bridge port of a bridging firewall:
 that rule is written with `-m physdev --physdev-out`, which iptables does
 not allow in the OUTPUT chain (fwbuilder #2008), so the copy would be a
 command that stops the activation.
+
+Whether the rule assumes it is decided before the pipeline runs and is
+written into the rule as a 0 or a 1 (`normalize_fw_part_of_any`, ported
+from the loop in `PolicyCompiler_ipt::prolog`), so these processors read
+the rule and nothing else.
 """
 
 import uuid
@@ -84,13 +89,17 @@ class _BridgePort:
 
 
 def _run(cls, compiler, **options):
+    # The prolog leaves a 0 or a 1 behind; 1 is what "assume the firewall
+    # is part of any" means and what makes these processors split.
+    rule_options = {'firewall_is_part_of_any_and_networks': 1}
+    rule_options.update(options.pop('options', {}))
     rule = CompRule(
         id=uuid.uuid4(),
         type='PolicyRule',
         position=1,
         label='',
         comment='',
-        options=options.pop('options', {}),
+        options=rule_options,
         negations={},
         action=PolicyAction.Accept,
         direction=Direction.Both,
@@ -138,3 +147,20 @@ def test_a_bridge_port_rule_gets_no_output_copy():
 def test_a_bridge_port_rule_on_a_routing_firewall_is_split_as_usual():
     chains = _run(SplitIfSrcAny, _Compiler(), itf=[_BridgePort()])
     assert chains == ['OUTPUT', '']
+
+
+def test_a_rule_that_says_no_gets_no_copy():
+    """A rule that turns the option off is not split.
+
+    Firewall Builder stores the tri-state as the string "0", which reads
+    as true in Python because it is not empty: the rule got the very copy
+    the option exists to suppress, and the reference output for
+    `firewall94` and `firewall-ipv6-8` shows it should not.
+    """
+    for processor in (SplitIfSrcAny, SplitIfDstAny):
+        chains = _run(
+            processor,
+            _Compiler(),
+            options={'firewall_is_part_of_any_and_networks': 0},
+        )
+        assert chains == ['']

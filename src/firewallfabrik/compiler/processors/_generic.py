@@ -1262,9 +1262,11 @@ class ConvertAnyToNotFWForShadowing(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+        from firewallfabrik.compiler.processors._policy import (
+            assumes_fw_is_part_of_any,
+        )
+
+        afpa = assumes_fw_is_part_of_any(rule)
 
         if not afpa:
             fw = self.compiler.fw

@@ -65,6 +65,34 @@ def option_bool(value, default=None):
     return default
 
 
+def option_int(value, default: int = 0) -> int:
+    """The number a stored option reads as, the way ``FWObject::getInt`` does.
+
+    That accessor runs the stored string through ``atoi``, so it takes the
+    leading integer and answers 0 for anything that does not start with
+    one - ``"true"`` included, which is why an option written that way is
+    off wherever Firewall Builder reads it as a number.  A stored bool or
+    int comes back as itself.
+    """
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if value is None:
+        return default
+    text = _collapse(value)
+    sign = 1
+    if text[:1] in ('+', '-'):
+        sign = -1 if text[0] == '-' else 1
+        text = text[1:]
+    digits = ''
+    for char in text:
+        if not char.isdigit():
+            break
+        digits += char
+    return sign * int(digits) if digits else 0
+
+
 def _collapse(value) -> str:
     """Lower-case *value* with every whitespace character removed."""
     return ''.join(str(value).split()).lower()

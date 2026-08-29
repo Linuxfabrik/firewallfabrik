@@ -22,7 +22,7 @@ import ipaddress as _ipa
 import uuid
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
-from firewallfabrik.core._options import option_is_true
+from firewallfabrik.core._options import option_int, option_is_true
 from firewallfabrik.core.objects import (
     AddressRange,
     Direction,
@@ -593,6 +593,54 @@ class AddressRangesInDst(AddressRangesInRE):
 
     def __init__(self, name: str) -> None:
         super().__init__(name, 'dst')
+
+
+#: The rule option behind the "Assume firewall is part of any" checkbox.
+FW_PART_OF_ANY = 'firewall_is_part_of_any_and_networks'
+
+
+def normalize_fw_part_of_any(rules, fw) -> None:
+    """Give every rule a 0 or a 1 for "assume firewall is part of any".
+
+    Ports the loop in ``PolicyCompiler_ipt::prolog`` (PolicyCompiler_ipt.cpp:444)
+    and its comment.  A `.fwb` carries five spellings of this rule option
+    side by side - the corpus has ``''``, ``'0'``, ``'1'``, ``'False'``,
+    ``'True'`` and ``'true'`` - because in Firewall Builder 3.0 it was a
+    checkbox and became a tri-state afterwards:
+
+    * empty means "use the firewall's setting",
+    * ``True`` is the old checkbox ticked and means on,
+    * ``False`` is the old checkbox cleared and means *the firewall's
+      setting* as well, because back then a rule could not turn the option
+      off on its own,
+    * anything else is already the tri-state value and is read as a number,
+      which is why ``'true'`` - not ``'True'`` - comes out as 0.
+
+    Every reader afterwards asks whether the value is 1.  Read as a Python
+    truth value instead, ``'0'`` is a non-empty string and therefore on:
+    a rule that says "do not assume it" got the extra INPUT and OUTPUT
+    copies naming the firewall that the option exists to suppress.
+    """
+    global_afpa = 1 if fw is not None and fw.get_option(FW_PART_OF_ANY) else 0
+    for rule in rules:
+        stored = (rule.options or {}).get(FW_PART_OF_ANY, '')
+        text = str(stored).strip() if not isinstance(stored, bool) else str(stored)
+        if text == '' or text == 'False':
+            rule.set_option(FW_PART_OF_ANY, global_afpa)
+        elif text == 'True':
+            rule.set_option(FW_PART_OF_ANY, 1)
+        else:
+            rule.set_option(FW_PART_OF_ANY, option_int(stored))
+
+
+def assumes_fw_is_part_of_any(rule) -> bool:
+    """Does *rule* assume the firewall is part of "any" and of the networks?
+
+    One reader for the value :func:`normalize_fw_part_of_any` leaves
+    behind, because every C++ site asks the same question the same way
+    (``ruleopt->getInt(...) == 1``).
+    """
+    return option_int((rule.options or {}).get(FW_PART_OF_ANY, 0)) == 1
 
 
 def dst_is_a_cluster_this_firewall_is_in(dst, fw) -> bool:

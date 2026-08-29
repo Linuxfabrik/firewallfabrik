@@ -62,6 +62,7 @@ from firewallfabrik.compiler.processors._policy import (
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
     SpecialCaseWithFWInDstAndOutbound,
+    assumes_fw_is_part_of_any,
     branches_into_mangle_only,
     dst_is_a_cluster_this_firewall_is_in,
     is_mangle_only_rule_set,
@@ -2324,9 +2325,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
         if not afpa:
             self.tmp_queue.append(rule)
             return True
@@ -2392,9 +2391,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
         if not afpa:
             self.tmp_queue.append(rule)
             return True
@@ -2456,9 +2453,7 @@ class SplitIfSrcAnyForShadowing(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
@@ -2495,9 +2490,7 @@ class SplitIfDstAnyForShadowing(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
@@ -2722,9 +2715,7 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = ipt_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
         if not afpa:
             self.tmp_queue.append(rule)
             return True
@@ -2781,9 +2772,7 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = ipt_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        afpa = assumes_fw_is_part_of_any(rule)
         if not afpa:
             self.tmp_queue.append(rule)
             return True

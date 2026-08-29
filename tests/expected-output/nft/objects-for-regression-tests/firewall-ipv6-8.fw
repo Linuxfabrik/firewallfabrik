@@ -279,7 +279,6 @@ table inet fwf_filter {
         #
         # see #1523
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
         #
         # Rule Policy_v6 1 (eth0)
         #
@@ -316,7 +315,18 @@ table inet fwf_filter {
         #
         # see #1523
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         oifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
+        #
+        # Rule Policy_v6 2 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 3 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:aaaa ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 7 (eth0)
         #
@@ -339,17 +349,6 @@ table inet fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
-        #
-        # Rule Policy_v6 0 (eth0)
-        #
-        # see #1523
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
-        #
-        # Rule Policy_v6 2 (eth0)
-        #
-        # see #1523
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 4 (eth0)
         #
@@ -411,6 +410,7 @@ table inet fwf_filter {
         #
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         oifname "eth0" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
         #
         # Rule Policy_OSPF 1 (global)

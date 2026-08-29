@@ -384,10 +384,6 @@ table inet fwf_filter {
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY " level info drop
         #
-        # Rule Policy_v6 0 (eth1)
-        #
-        oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
-        #
         # Rule Policy_v6 1 (global)
         #
         meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
@@ -457,11 +453,8 @@ table inet fwf_filter {
         #
         iifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         iifname "eth1" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
-        oifname "eth1" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
-        #
-        # Rule Policy_OSPF 1 (eth1)
-        #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
+        oifname "eth1" ip6 saddr fe80::/10 ip6 daddr fe80::/10 counter accept
     }
 }
 

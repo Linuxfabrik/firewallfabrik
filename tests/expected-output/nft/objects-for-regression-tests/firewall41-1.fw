@@ -391,10 +391,6 @@ table ip fwf_filter {
         #
         ip saddr { 1.1.1.1, 2.2.2.2 } ip daddr != @atbl.1 ct state new counter accept
         #
-        # Rule 2 (global)
-        #
-        ip saddr { 1.1.1.1, 2.2.2.2 } ip daddr != @atbl.1 ct state new counter accept
-        #
         # Rule 4 (global)
         #
         ip saddr @atbl.1 ct state new counter accept
@@ -444,10 +440,6 @@ table ip fwf_filter {
         ip daddr @block_these ct state new counter accept
         #
         # Rule 5 (global)
-        #
-        ip saddr != @atbl.1 ip daddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
-        #
-        # Rule 6 (global)
         #
         ip saddr != @atbl.1 ip daddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
         #

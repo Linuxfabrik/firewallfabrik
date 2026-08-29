@@ -502,24 +502,6 @@ table ip fwf_filter {
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter accept
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
-        # Rule 16 (global)
-        #
-        # test for #2405
-        # branching in mangle; branch rule set
-        # uses CLASSIFY that is ivalid in PREROUTING
-        # "Assume fw is part of any" is off for this rule
-        counter jump classify_2
-        #
-        # Rule 17 (global)
-        #
-        # test for #2405
-        # branching in mangle; branch rule set
-        # uses CLASSIFY that is ivalid in PREROUTING
-        # "Assume fw is part of any" is off for this rule
-        # Should create branch in OUTPUT instead of
-        # enumerating all ip addresses of the fw in PREROUTING
-        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter jump classify_2
-        #
         # Rule 18 (global)
         #
         counter log prefix "RULE 18 -- DENY " level info drop
@@ -579,14 +561,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 16 (global)
-        #
-        # test for #2405
-        # branching in mangle; branch rule set
-        # uses CLASSIFY that is ivalid in PREROUTING
-        # "Assume fw is part of any" is off for this rule
-        counter jump classify_2
         #
         # Rule 17 (global)
         #

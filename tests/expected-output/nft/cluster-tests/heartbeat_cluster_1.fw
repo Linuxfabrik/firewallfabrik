@@ -312,31 +312,6 @@ table ip fwf_filter {
         # fw is part of any
         ip saddr { 172.24.0.1, 192.168.1.1 } tcp dport 22 ct state new counter accept
         #
-        # Rule 11 (global)
-        #
-        # fw is NOT part of any
-        ip saddr { 172.24.0.1, 192.168.1.1 } tcp dport 22 ct state new counter accept
-        #
-        # Rule 12 (global)
-        #
-        # fw is NOT part of any
-        ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept
-        #
-        # Rule 14 (eth0)
-        #
-        # fw is NOT part of any
-        iifname "eth0" ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept
-        #
-        # Rule 16 (global)
-        #
-        # fw is NOT part of any
-        ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
-        #
-        # Rule 17 (eth0)
-        #
-        # fw is NOT part of any
-        iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
-        #
         # Rule 19 (global)
         #
         # using interface of another cluster in the rule
@@ -436,10 +411,6 @@ table ip fwf_filter {
         ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter jump to_fw
         #
         # Rule 8 (global)
-        #
-        ip daddr { 172.24.0.1, 192.168.1.1 } counter drop
-        #
-        # Rule 9 (global)
         #
         ip daddr { 172.24.0.1, 192.168.1.1 } counter drop
         #
