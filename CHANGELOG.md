@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a NAT rule whose interface group turns out to be empty is reported instead of applying to every interface the firewall has.
 * Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a route two rules install the same way is installed once, so the activation no longer stops at the second one and puts the previous routing table back.
+* Compiler (iptables, nftables): a routing rule that leaves through an interface of a cluster the firewall does not belong to is reported instead of naming a device the firewall has not got.
 * Compiler (iptables, nftables): a routing rule marked "non-critical" is now allowed to fail, and every other one puts the previous routing table back and stops the activation instead of leaving the firewall half-routed and reporting success.
 * Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them separately, so a dual-stack rule no longer disappears from one address family because the first interface has no address in it.
 * Compiler (iptables, nftables): a rule naming a cluster interface is compiled against the interface the member firewall actually has, instead of a name that matches nothing.

@@ -228,10 +228,27 @@ class RItfChildOfFw(RoutingRuleProcessor):
             return False
         if parent.id == self.compiler.fw.id:
             return True
-        # A cluster interface is the member's own interface once the cluster
-        # is resolved, which this port does not do yet (#84).  Reporting it
-        # would turn an unfinished feature into a compile error.
-        return isinstance(parent, Cluster)
+        # An interface of a cluster counts as this firewall's, but only
+        # when this firewall is one of that cluster's members: the C++
+        # walks `cluster->getMembersList()` and reports the rule
+        # otherwise.  Any cluster would do here, and a routing rule of one
+        # cluster naming another's interface then compiled into `dev
+        # <name>` for a device this box has not got.  The membership is
+        # read off the cluster rather than off `parent_cluster_id`, so the
+        # answer holds when the member is compiled on its own.
+        if not isinstance(parent, Cluster):
+            return False
+        if isinstance(self.compiler.fw, Cluster):
+            # fwf lets a Cluster object be compiled on its own and
+            # Firewall Builder does not.  There is no member to resolve an
+            # interface against in that run, so the membership question
+            # has no answer and every cluster interface is let through -
+            # the same exemption the cluster-aware guards of the policy
+            # and NAT pipelines carry.
+            return True
+        return any(
+            member.id == self.compiler.fw.id for member in parent.get_members_list()
+        )
 
 
 class ExpandMultipleAddressesInRouting(RoutingRuleProcessor):

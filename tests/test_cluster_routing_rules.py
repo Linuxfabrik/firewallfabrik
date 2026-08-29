@@ -28,7 +28,13 @@ import pytest
 import sqlalchemy
 
 import firewallfabrik.core
-from firewallfabrik.core.objects import Cluster, Firewall, Routing
+from firewallfabrik.core.objects import (
+    Cluster,
+    Firewall,
+    Interface,
+    Routing,
+    rule_elements,
+)
 from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
 from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nft
 
@@ -116,3 +122,56 @@ def test_the_member_keeps_a_routing_rule_set_of_its_own(tree, tmp_path):
     assert any(
         'ignoring cluster rule set' in warning for warning in driver.all_warnings
     ), driver.all_warnings
+
+
+def test_an_interface_of_another_cluster_is_reported(tree, tmp_path):
+    """`dev <name>` may only name a device the member actually has.
+
+    ``rItfChildOfFw`` walks ``cluster->getMembersList()`` before it lets a
+    cluster interface stand for the firewall's own.  Any cluster would do
+    in the port, so a routing rule of one cluster naming another's
+    interface compiled into a command for a device the box has not got -
+    and since the routing rollback that stops the whole activation.
+    """
+    cluster_id, fw_id = _ids(tree, 'heartbeat_cluster_1', 'linux-1')
+    with tree.session() as session:
+        # `server-cluster-1` has members of its own and linux-1 is none of
+        # them, so its interface names nothing on this box.
+        stranger = session.scalars(
+            sqlalchemy.select(Cluster).where(Cluster.name == 'server-cluster-1'),
+        ).one()
+        assert not any(
+            member.id == uuid.UUID(fw_id) for member in stranger.get_members_list()
+        )
+        foreign = Interface(
+            id=uuid.uuid4(),
+            name='eth9',
+            device=stranger,
+            library=stranger.library,
+        )
+        session.add(foreign)
+        session.flush()
+        cluster_routing = session.scalars(
+            sqlalchemy.select(Routing).where(
+                Routing.device_id == uuid.UUID(cluster_id)
+            ),
+        ).one()
+        rule = cluster_routing.rules[0]
+        session.execute(
+            rule_elements.update()
+            .where(
+                rule_elements.c.rule_id == rule.id,
+                rule_elements.c.slot == 'ritf',
+            )
+            .values(target_id=foreign.id)
+        )
+
+    driver = CompilerDriver_ipt(tree)
+    driver.wdir = str(tmp_path)
+    driver.source_dir = str(FIXTURE.parent)
+    driver.file_name_setting = 'member.fw'
+    driver.run(cluster_id=cluster_id, fw_id=fw_id, single_rule_id='')
+
+    script = (tmp_path / 'member.fw').read_text()
+    assert 'dev eth9' not in script
+    assert 'is not an interface of this firewall' in script
