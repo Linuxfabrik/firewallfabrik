@@ -244,7 +244,10 @@ class CompilerDriver_nft(CompilerDriver):
                 # nothing (AutomaticRules_ipt, called from
                 # CompilerDriver_ipt::run before the rule ids are
                 # assigned).
-                self._automatic_rules = AutomaticRules(fw, session).build()
+                automatic_rules = AutomaticRules(fw, session)
+                self._automatic_rules = automatic_rules.build()
+                for problem in automatic_rules.problems:
+                    self.error(problem)
 
             iface_err = self.check_interface_addresses(fw)
             if iface_err:

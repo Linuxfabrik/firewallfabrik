@@ -64,6 +64,10 @@ VRRP_ADDRESS = '224.0.0.18'
 VRRP_PROTOCOL = 112
 AH_PROTOCOL = 51
 
+#: The highest port number a UDP header can carry, and the highest one
+#: `--dport` accepts (netfilter `libxt_tcpudp.c`, `XTTYPE_PORTRC`).
+MAX_PORT = 65535
+
 
 def _address(name: str, address: str) -> IPv4:
     """A host address object that exists for this compile run only.
@@ -109,10 +113,16 @@ class AutomaticRules:
         self.fw = fw
         self.session = session
         self._rules: list[CompRule] = []
+        #: What the driver has to report before it compiles anything.
+        #: The C++ throws an `FWException` at each of these points and
+        #: `CompilerDriver_ipt::run` turns it into a message; there is no
+        #: rule to hang the report on yet, so it is collected here.
+        self.problems: list[str] = []
 
     def build(self) -> list[CompRule]:
         """Return the rules, in ascending position order (-n .. -1)."""
         self._rules = []
+        self.problems = []
         self._add_conntrack_rules()
         self._add_failover_rules()
         # `insertRuleAtTop` puts each new rule above the previous one, so
@@ -182,6 +192,35 @@ class AutomaticRules:
         """
         return str((self.fw.options or {}).get(key) or '')
 
+    def _group_port(self, group, key: str, default: int) -> int | None:
+        """The port a cluster group runs its protocol on, or ``None``.
+
+        The value is free text in the data file - the option dialog of
+        every protocol writes it through a spin box, but a `.fwb` written
+        by an older release, another tool or a text editor carries
+        whatever it carries.  Firewall Builder reads it with `atoi`
+        (`AutomaticRules_ipt.cpp`), which answers 0 for a word and then
+        writes `--dport 0` into the rule: the port the protocol actually
+        uses is not permitted and nothing says so.
+
+        ``None`` means the value is unusable and has been reported, so
+        the caller leaves the rules out rather than permitting a port
+        nobody asked for.
+        """
+        raw = (group.options if group is not None else {}) or {}
+        text = str(raw.get(key, '') or '').strip()
+        if not text:
+            return default
+        if text.isdigit() and 0 < int(text) <= MAX_PORT:
+            return int(text)
+        name = group.name if group is not None else key
+        self.problems.append(
+            f'cluster group "{name}": "{text}" is not a port number; '
+            f'{key} takes 1 to {MAX_PORT}. The rules for this group are '
+            f'left out',
+        )
+        return None
+
     def _state_sync_group(self):
         group_id = self._compile_run_option('state_sync_group_id')
         if not group_id or self.session is None:
@@ -210,7 +249,9 @@ class AutomaticRules:
         address = str(options.get('conntrack_address') or '') or (
             CONNTRACK_DEFAULT_ADDRESS
         )
-        port = int(options.get('conntrack_port') or CONNTRACK_DEFAULT_PORT)
+        port = self._group_port(group, 'conntrack_port', CONNTRACK_DEFAULT_PORT)
+        if port is None:
+            return
         service = _udp_service('CONNTRACK-UDP', port)
 
         if options.get('conntrack_unicast'):
@@ -281,7 +322,9 @@ class AutomaticRules:
         address = str(options.get('heartbeat_address') or '') or (
             HEARTBEAT_DEFAULT_ADDRESS
         )
-        port = int(options.get('heartbeat_port') or HEARTBEAT_DEFAULT_PORT)
+        port = self._group_port(group, 'heartbeat_port', HEARTBEAT_DEFAULT_PORT)
+        if port is None:
+            return
         service = _udp_service('HEARTBEAT-UDP', port)
         destination = _address('HEARTBEAT-Address', address)
         unicast = bool(options.get('heartbeat_unicast'))
@@ -327,7 +370,9 @@ class AutomaticRules:
     def _add_openais_rules(self, iface, member_iface, group) -> None:
         options = group.options or {}
         address = str(options.get('openais_address') or '') or OPENAIS_DEFAULT_ADDRESS
-        port = int(options.get('openais_port') or OPENAIS_DEFAULT_PORT)
+        port = self._group_port(group, 'openais_port', OPENAIS_DEFAULT_PORT)
+        if port is None:
+            return
         service = _udp_service('OPENAIS-UDP', port)
         destination = _address('OPENAIS-Address', address)
 
