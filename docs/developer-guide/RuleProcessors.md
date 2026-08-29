@@ -1757,11 +1757,28 @@ of that name lists it as "ignore"
 (`interfaceProperties::manageIpAddresses`, and `manage_addresses` is
 false for every Linux protocol in the resource file).
 
-Still missing, and tracked under
-[#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84): the editor
-half - a `ClusterDialog`, the option dialogs of the failover and state
-sync protocols, and creating a cluster group in the right place in the
-tree ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
+The values those rules are built from come from the group's options, and
+the editor writes them: `gui/cluster_protocol_dialogs.py` behind the
+"Edit Parameters" button of the cluster group panel, one dialog per
+protocol the way Firewall Builder has one
+([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).  Two
+of them read differently here.  The port spin boxes start at 1, because
+a rule permitting port 0 permits a port nothing speaks, and
+`AutomaticRules._group_port` reports a stored value that is no port
+rather than writing `--dport 0` the way `atoi` in the C++ does.  And a
+group address is read for its family, so an IPv6 sync address produces
+an IPv6 object and reaches the IPv6 pass; the C++ checks the text
+against both families and then builds an `IPv4` out of it either way,
+and the rules disappear.
+
+A cluster group is created under the object it belongs to - a failover
+group under the cluster interface, a state sync group under the cluster
+([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)) - and
+carries a protocol from the start, VRRP or conntrack, because a group
+with no protocol names none and there are no rules to write for it.  A
+Cluster is edited with `ClusterDialog`, the firewall panel without the
+iptables release: Firewall Builder writes only `platform` and `host_OS`
+onto a cluster and each member compiles for the release it names itself.
 
 ### What counts as "the firewall"
 

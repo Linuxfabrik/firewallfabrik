@@ -110,6 +110,29 @@ A boolean is compared after every whitespace character is removed from it, the w
 String values `"True"` / `"False"` (common in XML imports) are coerced to Python bools.
 
 
+## Zero Is Not Always a Value
+
+Four host OS options are numbers whose default is `-1`, meaning "leave the
+kernel setting alone": `linux24_conntrack_max`,
+`linux24_conntrack_hashsize`, `linux24_tcp_fin_timeout` and
+`linux24_tcp_keepalive_interval`. A stored `0` means the same thing, and
+the OS configurator maps it to `-1` before it decides whether to emit the
+line at all. Firewall Builder does the same and says why above the two
+conntrack ones (`OSConfigurator_linux24.cpp`), because every `.fwb` it
+writes carries `0` for a field the administrator left alone.
+
+The mapping is load-bearing, not cosmetic. `nf_conntrack_max` of 0 makes
+`ct_count > nf_conntrack_max` true for every new connection
+(`net/netfilter/nf_conntrack_core.c`), so the box logs "table full,
+dropping packet" and stops passing traffic; `nf_conntrack_hash_resize`
+answers 0 with `-EINVAL`; `tcp_fin_timeout` of 0 ends a connection before
+it can close in order.
+
+The spin boxes in `linuxsettingsdialog_q.ui` therefore start at `-1` and
+show "kernel default" there. A field whose default the editor cannot show
+turns that default into whatever its minimum happens to be on the next
+save, which is how the zero got into the data files in the first place.
+
 ## The `placeholder` Field
 
 Some options have an empty-string default (`''`) but the GUI should show a meaningful hint. For these, the YAML entry includes a `placeholder` field:
