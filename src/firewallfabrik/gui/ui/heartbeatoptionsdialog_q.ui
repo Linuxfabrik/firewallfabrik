@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HeartbeatOptionsDialog_q</class>
+ <widget class="QDialog" name="HeartbeatOptionsDialog_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>460</width>
+    <height>240</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>heartbeat protocol settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>heartbeat Parameters</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0" colspan="3">
+        <widget class="QCheckBox" name="use_unicast">
+         <property name="toolTip">
+          <string>Tick this when heartbeat is configured with ucast rather
+than mcast.  There is then no multicast group to permit,
+so the rules name the other members' interfaces on this
+link instead of the address below - which is also why the
+other members have to be in the group before the rules can
+be written.</string>
+         </property>
+         <property name="text">
+          <string>Use unicast address for heartbeat</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="heartbeat_address_label">
+         <property name="text">
+          <string>Address:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1" colspan="2">
+        <widget class="QLineEdit" name="heartbeat_address">
+         <property name="toolTip">
+          <string>The multicast group heartbeat sends its health checks to,
+the one named by mcast in ha.cf.  It has to match, or the
+generated rules permit a group nothing sends to and every
+member declares itself master.  Leave empty for 224.0.10.100.
+An IPv6 address is accepted and produces ip6tables rules.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="heartbeat_port_label">
+         <property name="text">
+          <string>Port number (UDP):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="heartbeat_port">
+         <property name="toolTip">
+          <string>The UDP port from ha.cf.  Leave at 694, heartbeat's own
+default, unless the cluster was configured otherwise.
+Port 0 is not offered: the rule would permit a port
+nothing speaks.</string>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>65535</number>
+         </property>
+         <property name="value">
+          <number>694</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>140</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>HeartbeatOptionsDialog_q</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>230</x>
+     <y>220</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>230</x>
+     <y>120</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>HeartbeatOptionsDialog_q</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>230</x>
+     <y>220</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>230</x>
+     <y>120</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

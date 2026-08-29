@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VRRPOptionsDialog_q</class>
+ <widget class="QDialog" name="VRRPOptionsDialog_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>420</width>
+    <height>240</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>VRRP protocol settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>VRRP Parameters</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0" colspan="3">
+        <widget class="QCheckBox" name="vrrp_over_ipsec_ah">
+         <property name="toolTip">
+          <string>RFC 2338 lets VRRP authenticate its advertisements with
+IPsec AH, and a router configured that way sends them as
+IP protocol 51 instead of 112.  Tick this and the rule
+that permits the failover traffic names AH, otherwise the
+advertisements are dropped and both members become
+master.</string>
+         </property>
+         <property name="text">
+          <string>Use IPsec AH protected VRRP</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="vrrp_secret_label">
+         <property name="text">
+          <string>VRRP secret:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1" colspan="2">
+        <widget class="QLineEdit" name="vrrp_secret">
+         <property name="toolTip">
+          <string>The shared password the routers of this virtual router
+authenticate each other with.  It is written down here so
+the cluster documents it; the generated firewall script
+does not carry it, keepalived's own configuration does.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="vrrp_vrid_label">
+         <property name="text">
+          <string>Virtual router ID:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="vrrp_vrid">
+         <property name="toolTip">
+          <string>Tells one virtual router from another on the same link,
+and decides the virtual MAC address the master answers
+with.  Two clusters sharing a link must not share it.
+Like the secret, it configures the failover daemon and not
+the packet filter.</string>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>255</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>140</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>VRRPOptionsDialog_q</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>210</x>
+     <y>220</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>210</x>
+     <y>120</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>VRRPOptionsDialog_q</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>210</x>
+     <y>220</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>210</x>
+     <y>120</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

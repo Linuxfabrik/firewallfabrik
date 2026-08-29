@@ -110,14 +110,28 @@ class ClusterGroupDialog(BaseObjectDialog):
             'Click here to manage member firewalls of this cluster group.',
         )
 
-        # Edit Parameters button -- currently disabled (protocol parameter
-        # dialogs are not yet ported).
-        self.editParameters.setEnabled(False)
+        # Edit Parameters -- one dialog per protocol.  "None" has no
+        # parameters, which is what leaving the button disabled says.
+        # Imported here, not at the top: `ui_loader` registers this class
+        # while it is itself being imported, so a module-level import of
+        # anything that reaches the loader is a circular one.
+        from firewallfabrik.gui.cluster_protocol_dialogs import PROTOCOL_DIALOGS
+
+        self.editParameters.setEnabled(group_type in PROTOCOL_DIALOGS)
+        self.editParameters.setToolTip(
+            'Address, port and mode of the protocol this group speaks. The '
+            'compiler writes the rules that permit the traffic out of these '
+            'values, so they have to match what the daemon is configured '
+            'with.',
+        )
 
         # Wire buttons (only once -- idempotent via _signals_connected flag).
         with contextlib.suppress(RuntimeError):
             self.manageMembers.clicked.disconnect(self._open_cluster_member_dialog)
         self.manageMembers.clicked.connect(self._open_cluster_member_dialog)
+        with contextlib.suppress(RuntimeError):
+            self.editParameters.clicked.disconnect(self._open_protocol_dialog)
+        self.editParameters.clicked.connect(self._open_protocol_dialog)
 
     def _apply_changes(self):
         old_data = self._obj.data or {}
@@ -291,4 +305,30 @@ class ClusterGroupDialog(BaseObjectDialog):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             # Reload the member tree to reflect changes.
             self._load_member_tree()
+            self.changed.emit()
+
+    @Slot()
+    def _open_protocol_dialog(self):
+        """Edit the parameters of the protocol this group speaks.
+
+        The values belong to the group, not to the cluster: two failover
+        groups of one cluster may run on different links with different
+        addresses.  They are written straight through, because the dialog
+        is modal and the editor's own Apply only knows about the name and
+        the protocol.
+        """
+        from firewallfabrik.gui.cluster_protocol_dialogs import PROTOCOL_DIALOGS
+
+        group_type = (self._obj.data or {}).get('type', '')
+        dialog_cls = PROTOCOL_DIALOGS.get(group_type)
+        if dialog_cls is None:
+            return
+
+        dlg = dialog_cls(self._obj.options or {}, parent=self.window())
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        new_options = dlg.get_options()
+        if new_options != (self._obj.options or {}):
+            self._obj.options = new_options
             self.changed.emit()
