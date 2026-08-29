@@ -224,7 +224,14 @@ NO_COPY_TYPES = frozenset(
 )
 
 # Types that cannot be deleted.
-NO_DELETE_TYPES = frozenset({'AttachedNetworks'})
+#
+# An Attached Networks object is deliberately not in here.
+# `ObjectManipulator::getMenuState` turns Duplicate, Move, Copy, Paste and
+# New off for it and leaves Delete alone, and it has to: the "New Attached
+# Networks" entry is offered only while the interface has none, so an
+# object created by accident could never be taken away again and the entry
+# would stay greyed out for the life of the interface.
+NO_DELETE_TYPES: frozenset[str] = frozenset()
 
 # System folder names that match fwbuilder's ``deleteMenuState`` map
 # (FWBTree.cpp:344-364).  These structural groups cannot be deleted.

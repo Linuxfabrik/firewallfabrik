@@ -52,6 +52,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PhysAddress,
     RuleSet,
+    attached_network_mask,
 )
 
 if TYPE_CHECKING:
@@ -562,48 +563,24 @@ class Compiler(BaseCompiler):
             )
             return []
 
-        wanted = (IPv6, NetworkIPv6) if self.ipv6_policy else (IPv4, Network)
-        seen: set[str] = set()
         results: list[Address] = []
-        for addr in iface.addresses:
-            if not isinstance(addr, wanted):
-                continue
-            address = addr.get_address()
-            netmask = addr.get_netmask()
-            if not address or not netmask:
-                continue
-            try:
-                net = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
-            except ValueError:
-                continue
-            # The netmask is written the way the object type writes it: a
-            # length for IPv6, dotted for IPv4.  `_load_address_table` says
-            # why - `str(net.netmask)` for a /64 is a form `ip_network`
-            # cannot pair with an address again, and the print rules then
-            # drop the mask and match the single address.
+        for net in obj.subnets(ipv6=self.ipv6_policy):
+            mask = attached_network_mask(net)
             if net.version == 6:
-                mask = str(net.prefixlen)
                 cls, type_name = NetworkIPv6, 'NetworkIPv6'
             else:
-                mask = str(net.netmask)
                 cls, type_name = Network, 'Network'
-            name = f'net-{net.network_address}/{mask}'
-            if name in seen:
-                continue
-            seen.add(name)
             results.append(
                 cls(
                     id=uuid.uuid4(),
                     type=type_name,
-                    name=name,
+                    name=f'net-{net.network_address}/{mask}',
                     inet_addr_mask={
                         'address': str(net.network_address),
                         'netmask': mask,
                     },
                 )
             )
-        # Sorted, so two compiles of one firewall write the same script.
-        results.sort(key=lambda o: o.name)
         return results
 
     def _load_address_table(self, obj: AddressTable) -> list:

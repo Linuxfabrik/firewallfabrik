@@ -876,11 +876,12 @@ class TreeActionHandler:
         folder = None
 
         if obj_type == 'Interface' and obj_id:
-            if type_name == 'FailoverClusterGroup':
-                # Which interface a failover group belongs to is the whole
-                # of what it says, so the link is the object.  Without it
-                # the group is written out beside the firewalls instead of
-                # under the interface (#78).
+            if type_name in ('AttachedNetworks', 'FailoverClusterGroup'):
+                # Which interface a failover group belongs to is the
+                # whole of what it says, and an Attached Networks object
+                # reads its addresses off exactly that one, so the link is
+                # the object.  Without it the group is written out beside
+                # the firewalls instead of under the interface (#78, #85).
                 interface_id = uuid.UUID(obj_id)
             elif issubclass(model_cls, Address):
                 interface_id = uuid.UUID(obj_id)
@@ -931,10 +932,13 @@ class TreeActionHandler:
 
         # Build fwbuilder-style default name for address children of
         # interfaces: "hostname:ifacename:ip" / "hostname:ifacename:ip6".
-        if name is None and interface_id is not None and type_name in ('IPv4', 'IPv6'):
-            name = self._standard_child_name(
-                item, 'ip' if type_name == 'IPv4' else 'ip6'
-            )
+        standard_suffix = {
+            'AttachedNetworks': 'attached',
+            'IPv4': 'ip',
+            'IPv6': 'ip6',
+        }
+        if name is None and interface_id is not None and type_name in standard_suffix:
+            name = self._standard_child_name(item, standard_suffix[type_name])
         if type_name in DEFAULT_CLUSTER_GROUP_PROTOCOL:
             # The protocol the group speaks.  Firewall Builder picks one
             # when the object is created - VRRP for a failover group, the

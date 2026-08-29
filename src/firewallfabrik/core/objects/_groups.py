@@ -16,6 +16,7 @@ from __future__ import (
     annotations,  # This is needed since SQLAlchemy does not support forward references yet
 )
 
+import ipaddress
 import uuid
 from typing import TYPE_CHECKING
 
@@ -260,10 +261,64 @@ def get_address_table_source(at: AddressTable, fw=None) -> str:
     return filename.replace('%DATADIR%', data_dir) if data_dir else filename
 
 
+def attached_network_mask(net) -> str:
+    """Return the netmask of *net* the way its object type writes one.
+
+    ``NetworkIPv6`` stores a prefix length and ``Network`` a dotted mask.
+    ``str(net.netmask)`` for a /64 is ``ffff:ffff:ffff:ffff::``, a form
+    ``ip_network()`` cannot pair with an address again, and every reader
+    here then drops the mask and matches the single address.
+    """
+    return str(net.prefixlen) if net.version == 6 else str(net.netmask)
+
+
 class AttachedNetworks(MultiAddress):
-    """Networks attached to an interface."""
+    """The subnets of the interface this object hangs under.
+
+    Ports ``AttachedNetworks``.  The membership is not stored: it is
+    worked out again on every compile from the addresses the parent
+    interface carries, which is the point of the object - a rule naming it
+    follows a change of address without being edited.
+    """
 
     __mapper_args__ = {'polymorphic_identity': 'AttachedNetworks'}
+
+    def subnets(self, ipv6: bool | None = None) -> list:
+        """Return the subnets of the parent interface, without duplicates.
+
+        Ports ``AttachedNetworks::loadFromSource``, which collects the
+        *network* address of every IPv4 and IPv6 child of the interface
+        into a map keyed on the subnet, so two addresses in one subnet
+        give one network.  *ipv6* selects one address family; ``None``
+        answers for both.
+
+        The compiler and the editor panel both ask this: two answers to
+        "what does this object match" is one too many, and the panel is
+        where an administrator checks what a rule is going to do.
+        """
+        from ._addresses import IPv4, IPv6, Network, NetworkIPv6
+
+        iface = self.interface
+        if iface is None:
+            return []
+
+        found = {}
+        for addr in iface.addresses:
+            if not isinstance(addr, (IPv4, IPv6, Network, NetworkIPv6)):
+                continue
+            address = addr.get_address()
+            netmask = addr.get_netmask()
+            if not address or not netmask:
+                continue
+            try:
+                net = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
+            except ValueError:
+                continue
+            if ipv6 is not None and (net.version == 6) != ipv6:
+                continue
+            found[(net.version, net.network_address.packed, net.prefixlen)] = net
+        # Sorted, so two compiles of one firewall write the same script.
+        return [found[key] for key in sorted(found)]
 
 
 class DynamicGroup(MultiAddress):

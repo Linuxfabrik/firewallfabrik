@@ -145,11 +145,12 @@ def _get_interface_new_types(item):
     - New Interface (subinterface): only for Firewall interfaces
     - New Address (IPv4), New Address IPv6 (IPv6): always
     - New MAC Address (PhysAddress): always
+    - New Attached Networks: greyed out once the interface has one,
+      because the object stands for the subnets of that one interface and
+      a second copy would say the same thing.
     - New Failover Group: only on an interface of a Cluster, and greyed
       out once the interface has one, because a failover group describes
       the one protocol that interface fails over with.
-
-    "New Attached Networks" is still omitted, see #85.
 
     An entry may carry a third element saying whether it is enabled; a
     two-element entry is enabled.
@@ -170,6 +171,14 @@ def _get_interface_new_types(item):
     result.append(('IPv4', 'Address'))
     result.append(('IPv6', 'Address IPv6'))
     result.append(('PhysAddress', 'MAC Address'))
+
+    # One per interface, the way `ObjectManipulator::contextMenuRequested`
+    # offers it only while `getFirstByType(AttachedNetworks)` finds none.
+    has_attached = any(
+        item.child(i).data(0, Qt.ItemDataRole.UserRole + 1) == 'AttachedNetworks'
+        for i in range(item.childCount())
+    )
+    result.append(('AttachedNetworks', 'Attached Networks', not has_attached))
 
     if parent_type == 'Cluster':
         has_group = any(

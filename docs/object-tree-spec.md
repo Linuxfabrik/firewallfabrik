@@ -509,9 +509,19 @@ User double-clicks item
 | Double-click | Open in editor |
 
 **Restrictions:**
-- Cannot be duplicated, moved, copied, pasted, or deleted independently
+- Cannot be duplicated, moved, copied or pasted
 - Only one per Interface
-- Auto-managed: created via Interface context menu only
+- Created via the Interface context menu only
+
+It *can* be deleted, and has to be: the "New Attached Networks" entry is
+offered only while the interface has none, so one created by accident
+could otherwise never be taken away and the entry would stay greyed out
+for the life of the interface. `ObjectManipulator::getMenuState` turns
+the other five off for this type and leaves Delete alone.
+
+The list of subnets in the editor panel is read-only. It is what the
+compiler works out from the addresses of the parent interface; change
+those to change what a rule naming this object matches.
 
 ---
 
@@ -728,7 +738,7 @@ When multiple objects are selected:
 | Interface | Host/Firewall/Cluster or parent Interface (subinterface) | Auto-detects subinterface type; resets to "ethernet" if pasting |
 | IPv4/IPv6 | Interface | Standard name pattern: "eth0:ip", "eth0:ip6" |
 | physAddress | Interface | Only one per interface; named "iface:mac" |
-| AttachedNetworks | Interface | Only one per interface |
+| AttachedNetworks | Interface | Only one per interface; named "firewall:iface:attached" |
 | FailoverClusterGroup | Cluster Interface | Only one per interface per protocol |
 
 ### Delete

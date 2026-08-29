@@ -146,10 +146,12 @@ def _register_group_dialog():
 
 def _register_group_type_dialogs():
     from firewallfabrik.gui.address_table_dialog import AddressTableDialog
+    from firewallfabrik.gui.attached_networks_dialog import AttachedNetworksDialog
     from firewallfabrik.gui.dns_name_dialog import DNSNameDialog
     from firewallfabrik.gui.dynamic_group_dialog import DynamicGroupDialog
 
     CUSTOM_WIDGET_MAP['AddressTableDialog'] = AddressTableDialog
+    CUSTOM_WIDGET_MAP['AttachedNetworksDialog'] = AttachedNetworksDialog
     CUSTOM_WIDGET_MAP['DNSNameDialog'] = DNSNameDialog
     CUSTOM_WIDGET_MAP['DynamicGroupDialog'] = DynamicGroupDialog
 
