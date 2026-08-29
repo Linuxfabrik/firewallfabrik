@@ -39,6 +39,7 @@ from firewallfabrik.compiler.processors._policy import (
     ExpandMultipleAddresses,
     InterfacePolicyRules,
     ItfNegation,
+    is_mangle_only_rule_set,
 )
 from firewallfabrik.core.objects import (
     Firewall,
@@ -60,6 +61,11 @@ class PolicyCompiler(Compiler):
         ipv6_policy: bool,
     ) -> None:
         super().__init__(session, fw, ipv6_policy)
+        #: Rules the compiler was handed rather than read from the rule
+        #: set: the cluster rules a member needs to see the other members.
+        #: They go in front of the top rule set with negative positions,
+        #: which is where `AutomaticRules::addMgmtRule` puts them.
+        self.automatic_rules: list = []
 
     def prolog(self) -> int:
         """Initialize compiler: load rules, assign labels, return count."""
@@ -84,6 +90,18 @@ class PolicyCompiler(Compiler):
 
         # Load rules into CompRule instances
         self.rules = load_rules(self.session, self.source_ruleset)
+
+        # The automatic cluster rules belong in front of the policy that
+        # runs in the built-in chains, and nowhere else: a rule set that
+        # is only reached by a Branch rule does not carry them, and
+        # neither does a mangle-only one (`AutomaticRules::AutomaticRules`
+        # picks the top Policy and skips a mangle-only rule set).
+        if (
+            self.automatic_rules
+            and self.source_ruleset.top
+            and not is_mangle_only_rule_set(self.source_ruleset)
+        ):
+            self.rules = [rule.clone() for rule in self.automatic_rules] + self.rules
 
         label_prefix = ''
         if self.source_ruleset.name != 'Policy':

@@ -50,6 +50,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_wait_option,
     version_compare,
 )
+from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
     mgmt_address_family,
@@ -117,6 +118,7 @@ class CompilerDriver_ipt(CompilerDriver):
         # every rule set and every table is compiled by a compiler of its
         # own, which cannot see what the others named.
         self._hashlimit_tables: dict[str, tuple[int, str, str]] = {}
+        self._automatic_rules: list = []
 
         # Prolog/epilog tracking
 
@@ -171,6 +173,12 @@ class CompilerDriver_ipt(CompilerDriver):
                 if cluster_problem:
                     self.error(cluster_problem)
                     return ''
+                # A cluster member has to see the other members, or both
+                # consider themselves master and conntrackd replicates
+                # nothing (AutomaticRules_ipt, called from
+                # CompilerDriver_ipt::run before the rule ids are
+                # assigned).
+                self._automatic_rules = AutomaticRules(fw, session).build()
             generated_script = ''
 
             iface_err = self.check_interface_addresses(fw)
@@ -978,6 +986,7 @@ class CompilerDriver_ipt(CompilerDriver):
             session, fw, ipv6_policy, oscnf, minus_n_commands_mangle
         )
 
+        mangle_compiler.automatic_rules = self._automatic_rules
         mangle_compiler.hashlimit_tables = self._hashlimit_tables
         mangle_compiler.branch_chains = self._branch_chains
         mangle_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
@@ -1032,6 +1041,7 @@ class CompilerDriver_ipt(CompilerDriver):
             session, fw, ipv6_policy, oscnf, minus_n_commands_filter
         )
 
+        policy_compiler.automatic_rules = self._automatic_rules
         policy_compiler.hashlimit_tables = self._hashlimit_tables
         policy_compiler.branch_chains = self._branch_chains
         policy_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains

@@ -413,6 +413,11 @@ class CompilerDriver(BaseCompiler):
         if member_iface is not None:
             copy_iface.options['base_device'] = member_iface.name
             copy_iface.options['base_interface_id'] = str(member_iface.id)
+            if group is not None:
+                # The C++ copies the failover group itself along with the
+                # interface; here the copy points back at the one under
+                # the cluster, which is what the automatic rules read.
+                copy_iface.options['failover_group_id'] = str(group.id)
             master = group.get_master_interface_id() if group is not None else None
             copy_iface.options['failover_master'] = bool(master) and str(master) == str(
                 member_iface.id

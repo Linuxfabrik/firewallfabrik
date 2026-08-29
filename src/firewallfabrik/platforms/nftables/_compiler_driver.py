@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
+from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
     mgmt_address_family,
@@ -176,6 +177,7 @@ class CompilerDriver_nft(CompilerDriver):
         # or a different timeout - which a compiler that only sees its own
         # rule set cannot notice.
         self._meters: dict[str, tuple[str, str, str, str]] = {}
+        self._automatic_rules: list = []
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
         # Dynamic sets a per-source connection limit counts in, per table.
@@ -237,6 +239,12 @@ class CompilerDriver_nft(CompilerDriver):
                 if cluster_problem:
                     self.error(cluster_problem)
                     return ''
+                # A cluster member has to see the other members, or both
+                # consider themselves master and conntrackd replicates
+                # nothing (AutomaticRules_ipt, called from
+                # CompilerDriver_ipt::run before the rule ids are
+                # assigned).
+                self._automatic_rules = AutomaticRules(fw, session).build()
 
             iface_err = self.check_interface_addresses(fw)
             if iface_err:
@@ -659,6 +667,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         policy_compiler = PolicyCompiler_nft(session, fw, ipv6_policy, oscnf)
+        policy_compiler.automatic_rules = self._automatic_rules
         policy_compiler.meters = self._meters
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
@@ -729,6 +738,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
+        mangle_compiler.automatic_rules = self._automatic_rules
         mangle_compiler.meters = self._meters
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.branch_chains = self._branch_chains
