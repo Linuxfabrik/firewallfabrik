@@ -2866,7 +2866,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        dst = rule.dst[0] if rule.dst else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
         # A bridging firewall sees the traffic to its own addresses in
         # FORWARD as well, whenever it arrives over a bridged path, and a
         # rule that is not tied to a routing interface cannot tell the two
@@ -2940,7 +2940,7 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        src = rule.src[0] if rule.src else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
         # A bridging firewall sees the traffic to its own addresses in
         # FORWARD as well, whenever it arrives over a bridged path, and a
         # rule that is not tied to a routing interface cannot tell the two
@@ -3066,8 +3066,8 @@ class FinalizeChain(PolicyRuleProcessor):
                 # covers every path through the box.
                 ipt_comp.set_chain(rule, 'PREROUTING')
         else:
-            src = rule.src[0] if rule.src else None
-            dst = rule.dst[0] if rule.dst else None
+            src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+            dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
             direction = rule.direction
 
             # AddressRange matches the firewall only partially (some of
@@ -3329,8 +3329,8 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         # frame, so there the question is the plain one.  fwbuilder
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(ipt_comp.fw.get_option('bridging_fw'))
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
             rule.direction != Direction.Inbound
@@ -3376,8 +3376,8 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         # frame, so there the question is the plain one.  fwbuilder
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(ipt_comp.fw.get_option('bridging_fw'))
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
             rule.direction != Direction.Outbound

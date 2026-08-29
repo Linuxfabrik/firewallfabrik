@@ -1329,12 +1329,20 @@ class CheckForTCPEstablished(BasicRuleProcessor):
 
 
 class ReplaceClusterInterfaceInItfRE(BasicRuleProcessor):
-    """Replace cluster failover interfaces with member firewall interfaces.
+    """Replace a cluster interface with the member firewall's own.
 
-    If a rule references a cluster interface (failover interface), replace
-    it with the corresponding interface of the member firewall being compiled.
+    A rule that comes from a cluster names the cluster's interface, and
+    that interface exists on no machine: the two members may call theirs
+    ``eth0`` and ``eth3``.  Compiled as it stands, the rule carries
+    ``-i <cluster interface name>`` and matches nothing.
 
-    Corresponds to C++ Compiler::replaceClusterInterfaceInItfRE.
+    Ports ``Compiler::replaceClusterInterfaceInItfRE``
+    (Compiler.cpp:1102), which the C++ runs ahead of the interface
+    negation in every pipeline that reads an interface rule element.  An
+    interface the member does not have is left alone; the rule then names
+    an interface of another object, which
+    ``CheckForDynamicInterfacesOfOtherObjects`` and
+    ``CheckInterfaceAgainstAddressFamily`` report.
     """
 
     def __init__(self, name: str, slot: str) -> None:
@@ -1346,7 +1354,7 @@ class ReplaceClusterInterfaceInItfRE(BasicRuleProcessor):
         if rule is None:
             return False
 
-        from firewallfabrik.core.objects import FailoverClusterGroup, Interface
+        from firewallfabrik.core.objects import Interface
 
         elements = getattr(rule, self._slot)
         if not elements:
@@ -1355,34 +1363,16 @@ class ReplaceClusterInterfaceInItfRE(BasicRuleProcessor):
 
         new_elements = []
         for obj in elements:
-            if not isinstance(obj, Interface):
-                new_elements.append(obj)
-                continue
-
-            # Check if this is a failover interface
             member_iface = None
-            if hasattr(obj, 'subinterfaces'):
-                for sub in obj.subinterfaces or []:
-                    if isinstance(sub, FailoverClusterGroup):
-                        member_iface = self._get_member_interface(sub)
-                        break
-
-            if member_iface is not None:
-                new_elements.append(member_iface)
-            else:
-                new_elements.append(obj)
+            if isinstance(obj, Interface) and obj.is_failover_interface():
+                member_iface = obj.get_failover_group().get_interface_for_member(
+                    self.compiler.fw
+                )
+            new_elements.append(member_iface if member_iface is not None else obj)
 
         setattr(rule, self._slot, new_elements)
         self.tmp_queue.append(rule)
         return True
-
-    def _get_member_interface(self, fg) -> Interface | None:
-        """Find the interface for the member firewall in a failover group."""
-        # The FailoverClusterGroup maps cluster interfaces to member interfaces
-        fw = self.compiler.fw
-        if hasattr(fg, 'get_interface_for_member'):
-            return fg.get_interface_for_member(fw)
-        return None
 
 
 class AssignUniqueRuleId(BasicRuleProcessor):

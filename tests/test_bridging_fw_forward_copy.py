@@ -27,6 +27,7 @@ import uuid
 import pytest
 
 from firewallfabrik.compiler._comp_rule import CompRule
+from firewallfabrik.compiler._compiler import Compiler
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core.objects import Direction, Interface, PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import (
@@ -71,6 +72,11 @@ class _Compiler:
     @staticmethod
     def set_chain(rule, chain):
         rule.ipt_chain = chain
+
+    # The real one, not a stub: the chain decisions ask it about every
+    # address they read, and a stub that always answers "unchanged" would
+    # hide a cluster interface reaching them.
+    correct_for_cluster = Compiler.correct_for_cluster
 
 
 class _Address:

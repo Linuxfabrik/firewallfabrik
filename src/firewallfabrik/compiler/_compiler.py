@@ -1143,6 +1143,24 @@ class Compiler(BaseCompiler):
 
         return None
 
+    def correct_for_cluster(self, addr):
+        """Answer with the member's own interface where *addr* is a cluster's.
+
+        Ports ``Compiler::correctForCluster`` (Compiler.cpp:1800).  A
+        cluster interface carries the addresses the cluster shares, and a
+        chain decision asking "is this the firewall" about it would answer
+        for whichever member happens to hold them right now.  The question
+        belongs to the interface the member firewall actually has, which
+        is what the failover group names.  Anything that is not a failover
+        interface, and a cluster interface this firewall is not a member
+        of, comes back unchanged.
+        """
+        if isinstance(addr, Interface) and addr.is_failover_interface():
+            other = addr.get_failover_group().get_interface_for_member(self.fw)
+            if other is not None:
+                return other
+        return addr
+
 
 def _addr_sort_key(obj):
     """Sort key for address objects: sort by numeric IP address."""

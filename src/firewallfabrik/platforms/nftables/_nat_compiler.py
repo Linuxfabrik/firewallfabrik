@@ -37,6 +37,7 @@ from firewallfabrik.compiler.processors._generic import (
     NATSpecialCaseWithUnnumberedInterface,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
+    ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
     SimplePrintProgress,
     VerifyAddresses,
@@ -195,10 +196,20 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(ExpandGroupsInItfInb('expand groups in inbound Interface'))
         self.add(
+            ReplaceClusterInterfaceInItfRE(
+                'replace cluster interfaces inbound', 'itf_inb'
+            )
+        )
+        self.add(
             SingleObjectNegationItfInb('process single object negation in inbound Itf')
         )
         self.add(ItfInbNegation('process negation in inbound Itf'))
         self.add(ExpandGroupsInItfOutb('expand groups in outbound Interface'))
+        self.add(
+            ReplaceClusterInterfaceInItfRE(
+                'replace cluster interfaces outbound', 'itf_outb'
+            )
+        )
         self.add(
             SingleObjectNegationItfOutb(
                 'process single object negation in outbound Itf'

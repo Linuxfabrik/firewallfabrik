@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a routing rule marked "non-critical" is now allowed to fail, and every other one puts the previous routing table back and stops the activation instead of leaving the firewall half-routed and reporting success.
 * Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them separately, so a dual-stack rule no longer disappears from one address family because the first interface has no address in it.
+* Compiler (iptables, nftables): a rule naming a cluster interface is compiled against the interface the member firewall actually has, instead of a name that matches nothing.
 * Compiler (iptables, nftables): a rule branching into a rule set of another firewall or cluster compiles that rule set into the script instead of jumping into an empty chain ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156)).
 * Compiler (iptables, nftables): a rule left out because a group it names is empty is no longer also reported as shadowing the rule below it.
 * Compiler (iptables, nftables): a rule whose interface group turns out to be empty is reported instead of being compiled as a rule about every interface the firewall has.

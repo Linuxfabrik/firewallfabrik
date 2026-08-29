@@ -2324,11 +2324,14 @@ class SplitOnDynamicInterfaceInTSrc(NATRuleProcessor):
 
 
 class DynamicInterfaceInODst(NATRuleProcessor):
-    """Handle dynamic interface in ODst after address expansion.
+    """Name the member's own interface where the rule names the cluster's.
 
-    Corresponds to C++ NATCompiler_ipt::dynamicInterfaceInODst.
-    If ODst contains a dynamic failover interface, replace it with
-    the cluster-corrected address.
+    Ports ``NATCompiler_ipt::dynamicInterfaceInODst``
+    (NATCompiler_ipt.cpp:1269).  A dynamic cluster interface has no
+    address at compile time and none at run time either - it exists on no
+    machine - so the generated script would look up a device that is not
+    there and translate to nothing.  The interface the member firewall
+    actually has is what the failover group names.
     """
 
     def process_next(self) -> bool:
@@ -2342,10 +2345,12 @@ class DynamicInterfaceInODst(NATRuleProcessor):
             return True
 
         odst = rule.odst[0]
-        if isinstance(odst, Interface) and odst.is_dynamic():
-            # For failover interfaces, the interface stays as-is
-            # (address resolved at runtime)
-            pass
+        if (
+            isinstance(odst, Interface)
+            and odst.is_dynamic()
+            and odst.is_failover_interface()
+        ):
+            rule.odst = [self.compiler.correct_for_cluster(odst), *rule.odst[1:]]
 
         return True
 
@@ -2376,6 +2381,12 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
             and isinstance(tsrc, Interface)
             and not tsrc.is_regular()
         ):
+            # A cluster interface stands for the member's own one here
+            # too, and for the same reason: the script reads the address
+            # off the running device.
+            if tsrc.is_failover_interface():
+                tsrc = self.compiler.correct_for_cluster(tsrc)
+                rule.tsrc = [tsrc, *rule.tsrc[1:]]
             use_snat = rule.get_option('ipt_use_snat_instead_of_masq', False)
             if not use_snat:
                 rule.nat_rule_type = NATRuleType.Masq

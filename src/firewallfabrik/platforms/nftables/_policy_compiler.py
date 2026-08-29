@@ -1298,8 +1298,8 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         # frame, so there the question is the plain one.  fwbuilder
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(nft_comp.fw.get_option('bridging_fw'))
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
             rule.direction != Direction.Inbound
@@ -1338,8 +1338,8 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         # frame, so there the question is the plain one.  fwbuilder
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(nft_comp.fw.get_option('bridging_fw'))
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
             rule.direction != Direction.Outbound
@@ -1453,7 +1453,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        dst = rule.dst[0] if rule.dst else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
         # A bridging firewall sees the traffic to its own addresses in the
         # forward chain as well, whenever it arrives over a bridged path,
         # and a rule that is not tied to a routing interface cannot tell
@@ -1579,7 +1579,7 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        src = rule.src[0] if rule.src else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
         # See :class:`DecideOnChainIfDstFW` for why a bridging firewall
         # gets a forward copy as well.
         if (
@@ -1779,8 +1779,8 @@ class FinalizeChain(PolicyRuleProcessor):
         # Default to forward
         rule.ipt_chain = 'forward'
 
-        src = rule.src[0] if rule.src else None
-        dst = rule.dst[0] if rule.dst else None
+        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
+        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
         direction = rule.direction
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
         # Not on a bridging firewall: a bridge forwards a broadcast
