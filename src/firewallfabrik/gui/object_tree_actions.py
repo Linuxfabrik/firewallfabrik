@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMessageBox
 from firewallfabrik.core.objects import Address, Host, Interface, Library, RuleSet
 from firewallfabrik.gui.confirm_delete_dialog import ConfirmDeleteDialog
 from firewallfabrik.gui.object_tree_data import (
+    DEFAULT_CLUSTER_GROUP_PROTOCOL,
     LOCKABLE_TYPES,
     MODEL_MAP,
     NEW_TYPES_FOR_FOLDER,
@@ -875,7 +876,13 @@ class TreeActionHandler:
         folder = None
 
         if obj_type == 'Interface' and obj_id:
-            if issubclass(model_cls, Address):
+            if type_name == 'FailoverClusterGroup':
+                # Which interface a failover group belongs to is the whole
+                # of what it says, so the link is the object.  Without it
+                # the group is written out beside the firewalls instead of
+                # under the interface (#78).
+                interface_id = uuid.UUID(obj_id)
+            elif issubclass(model_cls, Address):
                 interface_id = uuid.UUID(obj_id)
             elif issubclass(model_cls, Interface):
                 parent_interface_id = uuid.UUID(obj_id)
@@ -885,7 +892,13 @@ class TreeActionHandler:
                     if pid:
                         device_id = uuid.UUID(pid)
         elif obj_type in ('Cluster', 'Firewall', 'Host') and obj_id:
-            if issubclass(model_cls, Interface) or issubclass(model_cls, RuleSet):
+            if (
+                issubclass(model_cls, Interface)
+                or issubclass(model_cls, RuleSet)
+                or type_name == 'StateSyncClusterGroup'
+            ):
+                # A state sync group is a child of the cluster, the way a
+                # failover group is a child of an interface.
                 device_id = uuid.UUID(obj_id)
         elif obj_type == 'Library':
             pass
@@ -919,7 +932,21 @@ class TreeActionHandler:
         # Build fwbuilder-style default name for address children of
         # interfaces: "hostname:ifacename:ip" / "hostname:ifacename:ip6".
         if name is None and interface_id is not None and type_name in ('IPv4', 'IPv6'):
-            name = self._standard_address_name(item, type_name)
+            name = self._standard_child_name(
+                item, 'ip' if type_name == 'IPv4' else 'ip6'
+            )
+        if type_name in DEFAULT_CLUSTER_GROUP_PROTOCOL:
+            # The protocol the group speaks.  Firewall Builder picks one
+            # when the object is created - VRRP for a failover group, the
+            # first state sync protocol the host OS offers for the other -
+            # because a group with no type names no protocol and the
+            # compiler then has no rules to write for it
+            # (ObjectManipulator::newFailoverClusterGroup and
+            # newStateSyncClusterGroup).
+            extra_data = dict(extra_data or {})
+            extra_data.setdefault('type', DEFAULT_CLUSTER_GROUP_PROTOCOL[type_name])
+            if name is None:
+                name = self._standard_child_name(item, 'members')
 
         prefix = self._ot._get_device_prefix(item)
         new_id = self._ops.create_new_object(
@@ -938,14 +965,17 @@ class TreeActionHandler:
             self._ot.tree_changed.emit(str(new_id), type_name)
             QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
 
-    def _standard_address_name(self, item, type_name):
-        """Build a fwbuilder-style default name for a new address.
+    def _standard_child_name(self, item, suffix):
+        """Build a fwbuilder-style default name for a new child object.
 
         Walks up the tree from *item* collecting object **names** (not
         labels) until a Host/Firewall/Cluster node is reached, producing
-        ``hostname:ifacename:ip`` (IPv4) or ``hostname:ifacename:ip6`` (IPv6).
+        ``hostname:ifacename:<suffix>``.  Ports
+        ``ObjectManipulator::getStandardName``, which the C++ uses for the
+        addresses and the MAC of an interface, for a failover group
+        (``cluster:eth0:members``) and for a state sync group
+        (``cluster:members``) alike.
         """
-        suffix = 'ip' if type_name == 'IPv4' else 'ip6'
         parts = []
         node = item
         session = self._db_manager.create_session() if self._db_manager else None

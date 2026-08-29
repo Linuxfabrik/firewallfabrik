@@ -139,16 +139,20 @@ def _find_folder_context(item):
 def _get_interface_new_types(item):
     """Build the dynamic "New" list for an Interface item.
 
-    Matches fwbuilder's logic for the parts that are wired through:
+    Matches fwbuilder's ``contextMenuRequested()`` for the parts that are
+    wired through:
+
     - New Interface (subinterface): only for Firewall interfaces
     - New Address (IPv4), New Address IPv6 (IPv6): always
     - New MAC Address (PhysAddress): always
+    - New Failover Group: only on an interface of a Cluster, and greyed
+      out once the interface has one, because a failover group describes
+      the one protocol that interface fails over with.
 
-    "New Attached Networks" and "New Failover Group" are intentionally
-    omitted: the underlying Group schema has no interface_id /
-    device_id link, so creating one would persist as a stray top-level
-    object instead of a child of the interface. Re-enable once the
-    cluster pipeline tracking issue (#84) and #85 are addressed.
+    "New Attached Networks" is still omitted, see #85.
+
+    An entry may carry a third element saying whether it is enabled; a
+    two-element entry is enabled.
     """
     from PySide6.QtCore import Qt
 
@@ -166,6 +170,14 @@ def _get_interface_new_types(item):
     result.append(('IPv4', 'Address'))
     result.append(('IPv6', 'Address IPv6'))
     result.append(('PhysAddress', 'MAC Address'))
+
+    if parent_type == 'Cluster':
+        has_group = any(
+            item.child(i).data(0, Qt.ItemDataRole.UserRole + 1)
+            == 'FailoverClusterGroup'
+            for i in range(item.childCount())
+        )
+        result.append(('FailoverClusterGroup', 'Failover Group', not has_group))
 
     return result
 
@@ -325,10 +337,12 @@ def build_object_context_menu(
                 show_subfolder = False
         if new_types or show_subfolder:
             menu.addSeparator()
-        for type_name, display_name in new_types:
+        for entry in new_types:
+            type_name, display_name = entry[0], entry[1]
+            offered = entry[2] if len(entry) > 2 else True
             icon_path = ICON_MAP.get(type_name, '')
             act = menu.addAction(QIcon(icon_path), f'New {display_name}')
-            act.setEnabled(not effective_ro)
+            act.setEnabled(offered and not effective_ro)
             handlers[act] = ('_ctx_new_object', item, type_name)
         if show_subfolder:
             act = menu.addAction(QIcon(CATEGORY_ICON), 'New Subfolder')

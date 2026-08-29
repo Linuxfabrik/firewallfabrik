@@ -272,6 +272,17 @@ SERVICE_OBJ_TYPES = frozenset(
     }
 )
 
+#: The protocol a cluster group speaks when it is created.  Firewall
+#: Builder picks one right away rather than leaving the field empty
+#: (``ObjectManipulator::newFailoverClusterGroup`` takes VRRP,
+#: ``newStateSyncClusterGroup`` the first protocol the host OS offers,
+#: which for Linux is conntrack).  A group with no protocol names none,
+#: and the compiler then writes no rules for it.
+DEFAULT_CLUSTER_GROUP_PROTOCOL = {
+    'FailoverClusterGroup': 'vrrp',
+    'StateSyncClusterGroup': 'conntrack',
+}
+
 # New object types offered for device context (sorted alphabetically).
 NEW_TYPES_FOR_PARENT = {
     'Cluster': [

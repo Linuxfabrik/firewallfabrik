@@ -935,6 +935,12 @@ class TreeOperations:
                     return None
             elif interface_id is not None and hasattr(model_cls, 'interface_id'):
                 kwargs['interface_id'] = interface_id
+                if issubclass(model_cls, Group) and hasattr(model_cls, 'library_id'):
+                    # A cluster group keeps its library, the way the `.fwb`
+                    # reader sets it; an address under an interface does
+                    # not, and both readers and the writer tell the two
+                    # apart by the link to the parent, not by the library.
+                    kwargs['library_id'] = lib_id
             elif parent_interface_id is not None and hasattr(
                 model_cls, 'parent_interface_id'
             ):
