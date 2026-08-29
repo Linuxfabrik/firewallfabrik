@@ -27,6 +27,7 @@ from PySide6.QtGui import QBrush, QColor, QIcon
 from PySide6.QtWidgets import QDialog, QTreeWidgetItem
 
 from firewallfabrik.core.objects import (
+    Cluster,
     Interface,
     group_membership,
 )
@@ -54,7 +55,7 @@ class ClusterGroupDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('clustergroupdialog_q.ui', parent)
         self._db_manager = None
-        self._cluster = None
+        self._cluster_data = {}
         self._possible_types = []
 
     def set_db_manager(self, db_manager):
@@ -72,7 +73,7 @@ class ClusterGroupDialog(BaseObjectDialog):
         self.obj_name.setText(obj.name or '')
 
         # Determine parent cluster for platform/host_OS.
-        self._cluster = self._find_parent_cluster(obj)
+        self._cluster_data = self._parent_cluster_data(obj)
 
         # Determine group type and populate the Type combo.
         group_type = data.get('type', '')
@@ -149,9 +150,9 @@ class ClusterGroupDialog(BaseObjectDialog):
         data = obj.data or {}
         master_iface_id = data.get('master_iface', '')
 
-        cluster_data = self._cluster.data if self._cluster else {}
-        cluster_host_os = (cluster_data or {}).get('host_OS', '')
-        cluster_platform = (cluster_data or {}).get('platform', '')
+        cluster_data = self._cluster_data
+        cluster_host_os = cluster_data.get('host_OS', '')
+        cluster_platform = cluster_data.get('platform', '')
 
         session = self._db_manager.create_session()
         try:
@@ -238,55 +239,33 @@ class ClusterGroupDialog(BaseObjectDialog):
     # Helper: find parent cluster
     # ------------------------------------------------------------------
 
-    def _find_parent_cluster(self, obj):
-        """Walk up the object tree to find the parent Cluster device.
+    def _parent_cluster_data(self, obj):
+        """The settings of the Cluster this group belongs to.
 
-        For a FailoverClusterGroup that lives under a cluster interface,
-        we need to go: ClusterGroup -> Interface -> Cluster.
-        For a StateSyncClusterGroup that lives directly under Cluster,
-        we go: ClusterGroup -> Cluster.
-
-        Since our ORM model doesn't have a direct parent_device link on
-        Group, we query the database.
+        A FailoverClusterGroup hangs under a cluster interface and a
+        StateSyncClusterGroup under the cluster itself, so the link the
+        object carries answers it outright.  This used to walk the
+        library and return the first Cluster it found, which named the
+        wrong one on every file with two: the member list was then
+        checked against a platform and a host OS belonging to some other
+        cluster, and rows were marked "Invalid" that are not.
         """
         if self._db_manager is None:
-            return None
+            return {}
 
         session = self._db_manager.create_session()
         try:
-            # The cluster group is stored with a library_id.
-            # We need to find the Cluster device that owns interfaces
-            # whose sub-groups include this cluster group, or the cluster
-            # that directly has this group.
-            #
-            # Strategy: query all Cluster devices in the same library and
-            # check if the cluster group's ID appears in the membership
-            # data or interface hierarchy.
-            from firewallfabrik.core.objects import Cluster
-
-            clusters = session.scalars(
-                sqlalchemy.select(Cluster)
-                .where(Cluster.library_id == obj.library_id)
-                .order_by(Cluster.name),
-            ).all()
-
-            if len(clusters) == 1:
-                return clusters[0]
-
-            # If multiple clusters exist, try to find one whose interfaces
-            # own this cluster group. This is a simplified heuristic.
-            for cluster in clusters:
-                for _iface in cluster.interfaces:
-                    # Check if any sub-group of this interface is our group.
-                    # Since groups don't have a direct interface FK, we check
-                    # by name/type matching heuristic.
-                    pass
-
-            # Fallback: return the first cluster.
-            if clusters:
-                return clusters[0]
-
-            return None
+            group = session.get(type(obj), obj.id)
+            if group is None:
+                return {}
+            owner = None
+            if group.interface_id is not None and group.interface is not None:
+                owner = group.interface.device
+            elif group.device_id is not None:
+                owner = group.device
+            if not isinstance(owner, Cluster):
+                return {}
+            return dict(owner.data or {})
         finally:
             session.close()
 
@@ -302,11 +281,9 @@ class ClusterGroupDialog(BaseObjectDialog):
         if self._db_manager is None:
             return
 
-        cluster_data = self._cluster.data if self._cluster else {}
-
         dlg = ClusterMemberDialog(
             db_manager=self._db_manager,
-            cluster_data=cluster_data,
+            cluster_data=self._cluster_data,
             cluster_group=self._obj,
             parent=self.window(),
         )
