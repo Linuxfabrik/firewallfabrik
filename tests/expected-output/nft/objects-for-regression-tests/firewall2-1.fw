@@ -20,7 +20,7 @@
 # Rule '8 (global)' shadows rule '13 (global)' below it, for destination 'r-192.168.1.0' and service 'snmp'
 # Rule '8 (global)' shadows rule '14 (global)' below it, for destination 'r-222.222.222.0' and service 'snmp'
 # Rule '8 (global)' shadows rule '20 (global)' below it, for service 'snmp'
-# Rule '8 (global)' shadows rule '21 (global)' below it, for destination 'eth2' and service 'any ICMP'
+# Rule '8 (global)' shadows rule '21 (global)' below it, for destination 'firewall2-1:eth2:ip1' and service 'any ICMP'
 # Rule '25 (global)' shadows rule '26 (global)' below it
 # Rule '8 (global)' shadows rule '28 (global)' below it, for destination 'firewall2-1:eth1:ip' and service 'ftp'
 # firewall2-1:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
@@ -389,8 +389,8 @@ table ip fwf_filter {
         #
         # Rule 21 (global)
         #
-        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 21 - ACCEPT **" level debug
-        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new counter accept
+        ip saddr 192.168.2.0/24 ip daddr { 192.168.2.1, 192.168.2.40 } meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 21 - ACCEPT **" level debug
+        ip saddr 192.168.2.0/24 ip daddr { 192.168.2.1, 192.168.2.40 } meta l4proto icmp ct state new counter accept
         #
         # Rule 24 (global)
         #

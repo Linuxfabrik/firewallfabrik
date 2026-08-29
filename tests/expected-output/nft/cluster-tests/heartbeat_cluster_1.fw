@@ -10,13 +10,16 @@
 #
 #  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
 #
-# Rule '12 (global)' shadows rule '13 (global)' below it, for service 'ssh'
-# Rule '12 (global)' shadows rule '14 (eth0)' below it, for service 'ssh'
-# Rule '12 (global)' shadows rule '15 (eth0)' below it, for service 'ssh'
+# Rule '10 (global)' shadows rule '13 (global)' below it, for service 'ssh'
+# Rule '1 (eth0)' shadows rule '14 (eth0)' below it, for service 'ssh'
+# Rule '10 (global)' shadows rule '15 (eth0)' below it, for service 'ssh'
 # Rule '16 (global)' shadows rule '17 (eth0)' below it, for service 'ssh'
 # Rule '16 (global)' shadows rule '18 (eth0)' below it, for service 'ssh'
-# Rule '8 (global)' shadows rule '19 (global)' below it, for destination 'heartbeat_cluster_1:eth0:ip' and service 'ssh'
-# Rule '10 (global)' shadows rule '20 (global)' below it, for destination 'eth0' and service 'ssh'
+# Rule '3 (global)' shadows rule '19 (global)' below it, for destination 'heartbeat_cluster_1:eth0:ip' and service 'ssh'
+# Rule '8 (global)' shadows rule '20 (global)' below it, for destination 'server-1:eth0:ip' and service 'ssh'
+# Rule '10 (global)' shadows rule '20 (global)' below it, for destination 'server-2:eth0:ip' and service 'ssh'
+# Rule '3 (global)' shadows rule '20 (global)' below it, for destination 'server-1:eth0:ip' and service 'ssh'
+# Rule '4 (global)' shadows rule '20 (global)' below it, for destination 'server-2:eth0:ip' and service 'ssh'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -327,17 +330,17 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # fw is NOT part of any
-        ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 17 (eth0)
         #
         # fw is NOT part of any
-        iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 19 (global)
         #
         # using interface of another cluster in the rule
-        ip saddr 192.168.1.100 tcp dport 22 ct state new counter accept
+        ip saddr { 192.168.1.1, 192.168.1.2, 192.168.1.100 } tcp dport 22 ct state new counter accept
         #
         # Rule 21 (global)
         #
@@ -376,18 +379,18 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # fw is NOT part of any
-        ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 17 (eth0)
         #
         # fw is NOT part of any
-        iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
-        oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
+        oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 18 (eth0)
         #
         # fw is NOT part of any
-        oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 21 (global)
         #
@@ -472,7 +475,7 @@ table ip fwf_filter {
         #
         # Rule 20 (global)
         #
-        ip daddr 192.168.1.100 tcp dport 22 ct state new counter accept
+        ip daddr { 192.168.1.1, 192.168.1.2, 192.168.1.100 } tcp dport 22 ct state new counter accept
         #
         # Rule 21 (global)
         #

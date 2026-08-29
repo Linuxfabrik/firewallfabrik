@@ -12,7 +12,7 @@
 #  ip forwarding is OFF
 #
 # Rule '0 (eth0)' shadows rule '2 (eth0)' below it, for destination 'firewall-server-1-s:eth0:ip'
-# Rule '0 (eth0)' shadows rule '3 (eth0)' below it, for destination 'eth0'
+# Rule '0 (eth0)' shadows rule '3 (eth0)' below it, for destination 'firewall-server-1-s:eth0:ip'
 # firewall-server-1-s:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 # firewall-server-1-s:Policy:1: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 

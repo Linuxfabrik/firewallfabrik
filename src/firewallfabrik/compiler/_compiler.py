@@ -674,6 +674,31 @@ class Compiler(BaseCompiler):
                         other_family = True
                 if len(new_elements) == before and not other_family:
                     contributed_nothing.append(obj.name)
+            elif isinstance(obj, Interface) and obj.is_regular():
+                # An interface named in the element stands for every
+                # address it carries, its sub-interfaces included
+                # (`Compiler::_expand_addr_recursive` hands every Interface
+                # to `_expand_interface`, which walks the children).  The
+                # port left the object in place and the print rules then
+                # wrote the *first* address alone, so a rule naming an
+                # interface with a second address, or with a VLAN below it,
+                # matched a part of what it names.
+                #
+                # Only a regular interface: a dynamic one has no address at
+                # compile time and becomes the run-time loop the printers
+                # build, an unnumbered one and a bridge port carry none at
+                # all, and the checks that report those read the object.
+                before = len(new_elements)
+                use_mac = host_matches_by_mac(obj.device)
+                stack = [obj]
+                while stack:
+                    current = stack.pop()
+                    if current.is_bridge_port():
+                        continue
+                    new_elements.extend(self._expand_interface(current, use_mac))
+                    stack.extend(current.sub_interfaces)
+                if len(new_elements) == before:
+                    new_elements.append(obj)
             else:
                 new_elements.append(obj)
 

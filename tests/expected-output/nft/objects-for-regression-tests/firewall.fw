@@ -423,7 +423,7 @@ table ip fwf_filter {
         #
         # Rule 30 (global)
         #
-        ip saddr 192.168.1.10 ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 32 (global)
         #
