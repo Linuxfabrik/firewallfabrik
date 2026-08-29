@@ -33,7 +33,9 @@ Every layer, its source files, and its role, in execution order:
               v
 ========== PREPROCESSOR ==========
   platforms/linux/_preprocessor.py
-  Normalises objects for the current address family.
+  The per-address-family hook, and nothing more: what
+  Preprocessor_ipt::convertObject does is done per object in
+  Compiler._resolve_multi_address, which ResolveMultiAddress calls.
               |
               v
 ========== RULE-PROCESSOR PIPELINE ==========
@@ -106,8 +108,12 @@ This walks through what happens when `fwf-ipt firewall1` (or the GUI
 
 2. **Per address family** (IPv4 first, then IPv6 by default):
 
-    1. **Preprocessor** (`platforms/linux/_preprocessor.py`) — normalises
-       objects for the selected address family.
+    1. **Preprocessor** (`platforms/linux/_preprocessor.py`) — the hook
+       for work that has to happen before any rule is read. It carries
+       none of its own: the compile-time MultiAddress objects a rule names
+       (address table, DNS name, attached networks) are resolved per
+       object by `Compiler._resolve_multi_address`, which the
+       `ResolveMultiAddress` processor calls and caches.
     2. **NAT compilation** — instantiate `NATCompiler_ipt`, run its
        ~50-processor pipeline (see *iptables NAT pipeline order* in
        [RuleProcessors.md](RuleProcessors.md)). Output goes into the `*nat`

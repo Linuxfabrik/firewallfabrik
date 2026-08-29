@@ -1542,6 +1542,19 @@ ConvertToAtomicForRDst → ClassifyRoutingRules →
 EliminateDuplicateRoutingRules → RoutingPrintRule
 ```
 
+Two things about that pass are worth knowing before touching it.  Every
+check in it compares rule elements **by object id**, the way fwbuilder
+does - except `EliminateDuplicateRoutingRules`, which compares what the
+command *says*: the destination and the gateway by address and the
+interface by name, the way `RoutingRuleToString` renders them.  That is
+the whole point of the processor, because two objects holding one address
+and two interface objects of one name are one route on the wire.  A
+cluster member has exactly that pair, since the copy of a cluster
+interface shares its name with the member's own.  And `RItfChildOfFw`
+lets an interface of a cluster stand for the firewall's own only when the
+firewall is one of *that* cluster's members, asked from the cluster's own
+membership so it holds when the member is compiled on its own.
+
 `RoutingPrintRule` writes the `routing_functions` configlet before the
 first route command and `RoutingCompilerLinux.epilog()` closes the block
 with `restore_script_output`, the way
@@ -1615,6 +1628,15 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   write down and because the checks that report them read the object: a
   dynamic interface, whose addresses the generated script looks up while
   it runs, an unnumbered one, and a bridge port.
+- An **Attached Networks** object stands for the subnets of every address
+  its parent interface carries and is worked out again on each compile, so
+  a rule naming it follows a change of address without being edited.
+  Firewall Builder marks it *run time* when that interface is not a
+  regular one - dynamic, unnumbered or a bridge port - and then writes
+  `$i_<iface>_network` into the rule, a shell variable nothing in its
+  generated script sets.  There is nothing to write down at compile time
+  for such an interface, so fwf reports the object and leaves the rule
+  out.
 - `Begin` — does not skip a rule that references a deleted object.  Firewall
   Builder leaves a "dummy" reference behind and warns; fwf has no deleted
   objects of its own and no `.fwb` of the corpus carries one, so such a rule
@@ -1721,7 +1743,13 @@ anything reads the member's rules,
   unique index on (device, interface name) makes an exception for it.
 - the cluster's **rule sets**, merged by name: the member's own wins when
   it has rules and is said out loud, an empty one of the same name is
-  replaced (`mergeRuleSets`, fwbuilder ticket #372).
+  replaced (`mergeRuleSets`, fwbuilder ticket #372).  All three kinds move
+  across - policy, NAT *and* routing, the way `populateClusterElements`
+  calls the merge once per type.  The routing one is the easiest to forget
+  and the most expensive to lose: no oracle can see it, because
+  `compare-reference.sh` counts `$IPTABLES` lines and a route installs
+  none, and a member compiled without it activates the new packet filter
+  with no route at all.
 
 Everything written there lives in `CompilerDriver.compile_session`, which
 is rolled back when the compile ends.  The C++ mutates its object database
@@ -1830,6 +1858,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `eliminateDuplicatesInRE` | `compiler/processors/_generic.py:EliminateDuplicatesInSRC`/`DST`/`SRV` |
 | `recursiveGroupsInRE` | `compiler/processors/_generic.py:RecursiveGroupsInRE` |
 | `emptyGroupsInRE` | `compiler/processors/_generic.py:EmptyGroupsInRE` |
+| `AttachedNetworks::loadFromSource` + `Preprocessor_ipt::convertObject` | `compiler/_compiler.py:Compiler._resolve_attached_networks`, reached through `ResolveMultiAddress` |
 | `swapMultiAddressObjectsInRE` | No literal swap-to-runtime processor, but MultiAddress handling is implemented and wired: `compiler/processors/_generic.py:ResolveMultiAddress` resolves compile-time MultiAddress (wired in both pipelines) and `platforms/iptables/_policy_compiler.py:ProcessMultiAddressObjectsInRE` handles runtime `MultiAddressRunTime` objects (wired) |
 | `expandMultipleAddressesInRE` | `compiler/_compiler.py:Compiler.expand_addr` method |
 | `ReplaceFirewallObjectWithSelfInRE` | — (not ported) |
