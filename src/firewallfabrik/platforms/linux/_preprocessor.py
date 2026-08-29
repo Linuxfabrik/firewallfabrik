@@ -12,38 +12,40 @@
 
 """Linux preprocessor.
 
-Handles AttachedNetworks objects for Linux firewall compilation.
-Corresponds to fwbuilder's iptlib/preprocessor_ipt.py.
+``Preprocessor_ipt::convertObject`` has one job: hand every compile-time
+MultiAddress object a rule names to ``loadFromSource``, with an
+``AttachedNetworks`` branch in front of it.  Both halves live in
+``Compiler._resolve_multi_address``, which the ``ResolveMultiAddress``
+processor calls once per object and caches - the same place a DNS name
+and an address table are resolved, and early enough for
+``EmptyGroupsInRE`` to see what came back.
+
+What is left here is the hook itself.  Both drivers construct it per
+address family before the rule processors run, so a step that has to
+happen before any rule is read has somewhere to go.
 """
 
 from __future__ import annotations
 
-import ipaddress
 from typing import TYPE_CHECKING
 
-import sqlalchemy
-
 from firewallfabrik.compiler._preprocessor import Preprocessor
-from firewallfabrik.core.objects import (
-    AttachedNetworks,
-    Firewall,
-    Interface,
-    IPv4,
-    IPv6,
-    Network,
-    NetworkIPv6,
-)
+from firewallfabrik.core.objects import Firewall
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
 
 class PreprocessorLinux(Preprocessor):
-    """Linux preprocessor: expands AttachedNetworks objects.
+    """The Linux preprocessor hook.
 
-    For each AttachedNetworks object used in rules, determines the
-    networks attached to the referenced interface and creates network
-    objects for them.
+    It carries no work of its own: what
+    ``Preprocessor_ipt::convertObject`` does is done per object in
+    ``Compiler._resolve_multi_address``.  An earlier version of this class
+    walked the firewall's interfaces looking for an ``AttachedNetworks``
+    among their *addresses*, where such an object never is - it is a
+    group - and printed the networks it worked out without giving them to
+    anybody.
     """
 
     def __init__(
@@ -53,52 +55,3 @@ class PreprocessorLinux(Preprocessor):
         ipv6: bool = False,
     ) -> None:
         super().__init__(session, fw, ipv6)
-
-    def run(self) -> None:
-        """Process AttachedNetworks objects on the firewall's interfaces."""
-        for iface in self.fw.interfaces:
-            for addr in iface.addresses:
-                if not isinstance(addr, AttachedNetworks):
-                    continue
-                self._process_attached_networks(iface, addr)
-
-    def _process_attached_networks(
-        self,
-        iface: Interface,
-        attached_networks: AttachedNetworks,
-    ) -> None:
-        """Generate network objects for the networks attached to an interface.
-
-        For each address on the interface, computes the network address
-        and adds it as a member of the AttachedNetworks group.
-        """
-        for addr in iface.addresses:
-            if isinstance(addr, AttachedNetworks):
-                continue
-
-            addr_str = addr.get_address()
-            mask_str = addr.get_netmask()
-            if not addr_str or not mask_str:
-                continue
-
-            try:
-                net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
-            except ValueError:
-                continue
-
-            # Create a transient network object representing this attached network
-            if isinstance(addr, (IPv4, Network)):
-                if self.ipv6:
-                    continue
-                net_addr_str = str(net.network_address)
-            elif isinstance(addr, (IPv6, NetworkIPv6)):
-                if not self.ipv6:
-                    continue
-                net_addr_str = str(net.network_address)
-            else:
-                continue
-
-            self.info(
-                f'  Attached network: {net_addr_str}/{net.prefixlen} '
-                f'on interface {iface.name}',
-            )

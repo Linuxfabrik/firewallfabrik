@@ -38,6 +38,7 @@ from firewallfabrik.core.objects import (
     Address,
     AddressRange,
     AddressTable,
+    AttachedNetworks,
     DNSName,
     DynamicGroup,
     Firewall,
@@ -460,6 +461,8 @@ class Compiler(BaseCompiler):
             resolved = self._resolve_dns_name(obj)
         elif isinstance(obj, AddressTable):
             resolved = self._load_address_table(obj)
+        elif isinstance(obj, AttachedNetworks):
+            resolved = self._resolve_attached_networks(obj)
         else:
             resolved = []
 
@@ -524,6 +527,83 @@ class Compiler(BaseCompiler):
                 inet_addr_mask={'address': ip_str, 'netmask': netmask},
             )
             results.append(addr)
+        return results
+
+    def _resolve_attached_networks(self, obj: AttachedNetworks) -> list:
+        """Return the subnets of the interface *obj* hangs under.
+
+        Ports ``AttachedNetworks::loadFromSource`` together with the
+        branch ``Preprocessor_ipt::convertObject`` puts in front of it.
+        The object stands for the subnets of every address its parent
+        interface carries, worked out again on each compile, so a rule
+        naming it follows a change of address without being edited.
+
+        Firewall Builder marks the object *run time* when the parent
+        interface is not a regular one - dynamic, unnumbered or a bridge
+        port - and its print rule then writes ``$i_<iface>_network`` into
+        the rule, a shell variable nothing in its generated script ever
+        sets: the rule installs with an empty address or does not install
+        at all.  There is nothing to write down for such an interface at
+        compile time, so it is reported here and the rule is left out.
+        """
+        iface = obj.interface
+        if iface is None:
+            self.abort(
+                f'Attached Networks "{obj.name}" hangs under no interface, so '
+                f'there is no address to work its networks out from'
+            )
+            return []
+        if not iface.is_regular():
+            self.abort(
+                f'Attached Networks "{obj.name}": interface "{iface.name}" has '
+                f'no address the compiler can know - it is dynamic, unnumbered '
+                f'or a bridge port - so the networks attached to it cannot be '
+                f'worked out'
+            )
+            return []
+
+        wanted = (IPv6, NetworkIPv6) if self.ipv6_policy else (IPv4, Network)
+        seen: set[str] = set()
+        results: list[Address] = []
+        for addr in iface.addresses:
+            if not isinstance(addr, wanted):
+                continue
+            address = addr.get_address()
+            netmask = addr.get_netmask()
+            if not address or not netmask:
+                continue
+            try:
+                net = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
+            except ValueError:
+                continue
+            # The netmask is written the way the object type writes it: a
+            # length for IPv6, dotted for IPv4.  `_load_address_table` says
+            # why - `str(net.netmask)` for a /64 is a form `ip_network`
+            # cannot pair with an address again, and the print rules then
+            # drop the mask and match the single address.
+            if net.version == 6:
+                mask = str(net.prefixlen)
+                cls, type_name = NetworkIPv6, 'NetworkIPv6'
+            else:
+                mask = str(net.netmask)
+                cls, type_name = Network, 'Network'
+            name = f'net-{net.network_address}/{mask}'
+            if name in seen:
+                continue
+            seen.add(name)
+            results.append(
+                cls(
+                    id=uuid.uuid4(),
+                    type=type_name,
+                    name=name,
+                    inet_addr_mask={
+                        'address': str(net.network_address),
+                        'netmask': mask,
+                    },
+                )
+            )
+        # Sorted, so two compiles of one firewall write the same script.
+        results.sort(key=lambda o: o.name)
         return results
 
     def _load_address_table(self, obj: AddressTable) -> list:
