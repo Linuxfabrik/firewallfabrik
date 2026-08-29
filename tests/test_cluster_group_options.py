@@ -20,26 +20,36 @@ reads the port with `atoi` (`AutomaticRules_ipt.cpp`) and therefore
 writes `--dport 0` for a word; the address it checks against both address
 families and then builds an IPv4 object out of whatever came back.
 
-A port that is not a number is reported here and the rules of that group
-are left out, rather than ending the compile with a traceback.
+Both cases are answered here: a port that is not a number is reported and
+the rules of that group are left out, and an IPv6 address gets an IPv6
+object so the rules survive into the IPv6 pass instead of disappearing
+without a word.
 """
 
 import pathlib
 import tempfile
+import uuid
 
 import pytest
 import sqlalchemy
 
 import firewallfabrik.core
-from firewallfabrik.core.objects import Cluster, Firewall, Group
+from firewallfabrik.core.objects import Cluster, Firewall, Group, IPv6, RuleSet
 from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
 from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nft
 
 FIXTURE = pathlib.Path(__file__).parent / 'fixtures' / 'cluster-tests.fwb'
 
 
-def _compile(driver_cls, cluster_name, member_name, group_options):
+def _compile(driver_cls, cluster_name, member_name, group_options, dual_stack=False):
     """Compile one member with *group_options* merged into every group.
+
+    *dual_stack* marks every rule set of the fixture IPv6 as well and
+    gives every interface of the member an IPv6 address.  Both are needed
+    before an IPv6 rule can be written at all: a rule set that claims
+    neither family is IPv4-only (``RuleSet::isV4``) and the fixture's
+    clusters were written before the flags existed, and a rule scoped to
+    an interface with no address of the family is dropped.
 
     Returns the generated script (empty when nothing was written) and the
     driver's errors.
@@ -60,6 +70,23 @@ def _compile(driver_cls, cluster_name, member_name, group_options):
             options = dict(group.options or {})
             options.update(group_options)
             group.options = options
+        if dual_stack:
+            for rule_set in session.scalars(sqlalchemy.select(RuleSet)).all():
+                rule_set.ipv4 = True
+                rule_set.ipv6 = True
+            for number, iface in enumerate(member.interfaces, start=1):
+                address = IPv6(
+                    id=uuid.uuid4(),
+                    name=f'{iface.name}:ip6',
+                    interface_id=iface.id,
+                    library_id=iface.library_id,
+                )
+                address.data = {}
+                address.inet_addr_mask = {
+                    'address': f'2001:db8::{number}',
+                    'netmask': '64',
+                }
+                session.add(address)
         session.commit()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -120,3 +147,35 @@ def test_a_port_the_group_does_not_set_falls_back_to_the_default():
     )
 
     assert '--dport 3780' in script
+
+
+def test_an_ipv6_group_address_keeps_its_rules():
+    """The address used to reach an IPv4 object and vanish there.
+
+    `_address` built an `IPv4` whatever the text said, so an IPv6 sync
+    address produced an object the IPv4 pass drops for its family and the
+    IPv6 pass never sees - the state sync traffic was blocked and no
+    message said why.
+    """
+    script, errors = _compile(
+        CompilerDriver_ipt,
+        'heartbeat_cluster_1',
+        'linux-1',
+        {'conntrack_address': 'ff02::1'},
+        dual_stack=True,
+    )
+
+    assert 'ff02::1' in script, errors
+    assert '$IP6TABLES' in script
+
+
+def test_an_ipv6_group_address_keeps_its_rules_on_nftables_too():
+    script, errors = _compile(
+        CompilerDriver_nft,
+        'heartbeat_cluster_1',
+        'linux-1',
+        {'conntrack_address': 'ff02::1'},
+        dual_stack=True,
+    )
+
+    assert 'ff02::1' in script, errors

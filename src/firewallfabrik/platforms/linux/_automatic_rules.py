@@ -36,6 +36,7 @@ and OpenAIS UDP 5405.
 
 from __future__ import annotations
 
+import ipaddress
 import uuid
 
 from firewallfabrik.compiler._comp_rule import CompRule
@@ -45,6 +46,7 @@ from firewallfabrik.core.objects import (
     Interface,
     IPService,
     IPv4,
+    IPv6,
     PolicyAction,
     UDPService,
 )
@@ -69,13 +71,35 @@ AH_PROTOCOL = 51
 MAX_PORT = 65535
 
 
-def _address(name: str, address: str) -> IPv4:
+def _address(name: str, address: str):
     """A host address object that exists for this compile run only.
 
     Not added to the session: the rules hold the object itself, nothing
     ever looks it up by id, and the object tree the editor shows must not
     grow a "VRRP-Address" every time a cluster is compiled.
+
+    The address decides the family.  Firewall Builder accepts an IPv6
+    group address - `AutomaticRules_ipt::addConntrackRule` checks the
+    text against `InetAddr(addr)` and then against `InetAddr(AF_INET6,
+    addr)` before it goes on - and then builds an `IPv4` out of it
+    anyway.  An `IPv4` holding an IPv6 address is dropped by the IPv4
+    pass for its family and never reaches the IPv6 one, so the rules
+    disappear without a word and the state sync link is blocked.
+    conntrackd, corosync and heartbeat all speak IPv6, so the family is
+    read off the address instead.
     """
+    try:
+        family = ipaddress.ip_address(address).version
+    except ValueError:
+        # Not an address at all.  The print rules report it by name, in
+        # the wording that says which object carries it, so it is passed
+        # on as it stands rather than swallowed here.
+        family = 4
+    if family == 6:
+        obj = IPv6(id=uuid.uuid4(), name=name)
+        obj.data = {}
+        obj.inet_addr_mask = {'address': address, 'netmask': '128'}
+        return obj
     obj = IPv4(id=uuid.uuid4(), name=name)
     obj.data = {}
     obj.inet_addr_mask = {'address': address, 'netmask': '255.255.255.255'}
