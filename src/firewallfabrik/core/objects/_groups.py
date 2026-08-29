@@ -28,7 +28,7 @@ from ._types import JSONEncodedSet
 if TYPE_CHECKING:
     from ._addresses import Address
     from ._database import Library
-    from ._devices import Host
+    from ._devices import Host, Interface
     from ._services import Interval, Service
 
 
@@ -56,6 +56,25 @@ class Group(Base):
             nullable=True,
             default=None,
         )
+    )
+    # A cluster group does not live in a library folder: a
+    # FailoverClusterGroup is a child of the cluster's Interface and a
+    # StateSyncClusterGroup a child of the Cluster itself.  Without these
+    # two the parent is lost on import and nothing can answer "which
+    # interface does this failover group belong to".
+    interface_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.Uuid,
+            sqlalchemy.ForeignKey('interfaces.id'),
+            nullable=True,
+            default=None,
+        )
+    )
+    device_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('devices.id'),
+        nullable=True,
+        default=None,
     )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
@@ -114,6 +133,16 @@ class Group(Base):
         back_populates='group',
         primaryjoin='Group.id == foreign(Host.group_id)',
     )
+    interface: sqlalchemy.orm.Mapped[Interface | None] = sqlalchemy.orm.relationship(
+        'Interface',
+        back_populates='child_groups',
+        primaryjoin='Interface.id == foreign(Group.interface_id)',
+    )
+    device: sqlalchemy.orm.Mapped[Host | None] = sqlalchemy.orm.relationship(
+        'Host',
+        back_populates='child_groups',
+        primaryjoin='Host.id == foreign(Group.device_id)',
+    )
 
     __mapper_args__ = {
         'polymorphic_on': 'type',
@@ -124,17 +153,19 @@ class Group(Base):
         sqlalchemy.Index('ix_groups_type', 'type'),
         sqlalchemy.Index('ix_groups_library_id', 'library_id'),
         sqlalchemy.Index('ix_groups_parent_group_id', 'parent_group_id'),
+        sqlalchemy.Index('ix_groups_interface_id', 'interface_id'),
+        sqlalchemy.Index('ix_groups_device_id', 'device_id'),
         sqlalchemy.Index('ix_groups_name', 'name'),
         sqlalchemy.UniqueConstraint(
             'parent_group_id', 'type', 'name', name='uq_groups_parent'
         ),
-        # No root-level partial unique index here: Group has no device_id FK,
-        # so cluster-internal groups (e.g. StateSyncClusterGroup "State Sync
-        # Group") end up at the library root — one per cluster — with
-        # identical (library_id, type, name) tuples.  A partial unique index
-        # on (library_id, type, name) WHERE parent_group_id IS NULL would
-        # reject this legitimate data.  The UniqueConstraint above is safe
-        # because SQLite treats NULL parent_group_id values as distinct.
+        # No root-level partial unique index here: two clusters may each
+        # own a StateSyncClusterGroup called "State Sync Group", and both
+        # sit at parent_group_id IS NULL because their parent is a device,
+        # not a group.  A partial unique index on (library_id, type, name)
+        # WHERE parent_group_id IS NULL would reject that.  The
+        # UniqueConstraint above is safe because SQLite treats NULL
+        # parent_group_id values as distinct.
     )
 
 
@@ -250,9 +281,77 @@ class DNSName(MultiAddress):
 
 
 class ClusterGroup(ObjectGroup):
-    """Base class for cluster interface groups."""
+    """Base class for cluster interface groups.
+
+    A cluster group holds references to the *interfaces* of the member
+    firewalls (fwbuilder tickets #10 and #11), not to the firewalls
+    themselves, and it carries the protocol under ``data['type']``:
+    ``vrrp``, ``heartbeat`` or ``openais`` for a failover group,
+    ``conntrack`` for a state sync group.
+    """
 
     __mapper_args__ = {'polymorphic_identity': 'ClusterGroup'}
+
+    def get_protocol(self) -> str:
+        """Return the failover / state sync protocol this group speaks."""
+        return str((self.data or {}).get('type') or '')
+
+    def get_master_interface_id(self):
+        """Return the id of the interface marked master, or ``None``."""
+        return (self.data or {}).get('master_iface') or None
+
+    def get_members(self) -> list:
+        """Return the interfaces referenced by this group.
+
+        The references live in ``group_membership``, which is a plain
+        association table and not a typed relationship, so it has to be
+        queried rather than read off an attribute.
+        """
+        session = sqlalchemy.orm.object_session(self)
+        if session is None:
+            return []
+        member_ids = (
+            session.execute(
+                sqlalchemy.select(group_membership.c.member_id)
+                .where(group_membership.c.group_id == self.id)
+                .order_by(group_membership.c.position),
+            )
+            .scalars()
+            .all()
+        )
+        if not member_ids:
+            return []
+        from ._devices import Host, Interface
+
+        found = {}
+        for cls in (Interface, Host):
+            for obj in session.scalars(
+                sqlalchemy.select(cls).where(cls.id.in_(member_ids)),
+            ).all():
+                found[obj.id] = obj
+        return [found[mid] for mid in member_ids if mid in found]
+
+    def get_interface_for_member(self, fw):
+        """Return the interface of *fw* that is in this group, or ``None``.
+
+        Ports ``ClusterGroup::getInterfaceForMemberFirewall``.  It is how a
+        cluster interface is translated into the interface the member
+        firewall actually has - the two rarely carry the same name, and a
+        rule naming the cluster interface has to be compiled against the
+        member's own.
+        """
+        from ._devices import Host, Interface
+
+        for member in self.get_members():
+            if isinstance(member, Interface):
+                owner = member.device
+            elif isinstance(member, Host):
+                owner = member
+            else:
+                continue
+            if owner is not None and fw is not None and owner.id == fw.id:
+                return member
+        return None
 
 
 class FailoverClusterGroup(ClusterGroup):

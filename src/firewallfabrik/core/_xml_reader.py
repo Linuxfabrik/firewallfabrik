@@ -574,8 +574,11 @@ class XmlReader:
             elif tag in _OPTIONS_TAGS:
                 device.options = _parse_options_children(child)
             elif tag in _GROUP_TAGS:
-                # ClusterGroup etc. inside a Cluster device
-                self._parse_group(child, _GROUP_TAGS[tag], library, None)
+                # A StateSyncClusterGroup is a child of the Cluster object.
+                # Without the link back it lands at the library root and
+                # nothing can tell whose group it is.
+                group = self._parse_group(child, _GROUP_TAGS[tag], library, None)
+                group.device = device
             else:
                 logger.warning('Unhandled device child: %s (in %s)', tag, device.name)
         return device
@@ -602,7 +605,11 @@ class XmlReader:
             elif tag in ('Interface', 'DummyInterface'):
                 self._parse_interface(child, library, device, parent_interface=iface)
             elif tag in _GROUP_TAGS:
-                self._parse_group(child, _GROUP_TAGS[tag], library, None)
+                # A FailoverClusterGroup is a child of the cluster's
+                # Interface, and which interface it belongs to is the whole
+                # of what it says.
+                group = self._parse_group(child, _GROUP_TAGS[tag], library, None)
+                group.interface = iface
             else:
                 logger.warning('Unhandled interface child: %s (in %s)', tag, iface.name)
         return iface

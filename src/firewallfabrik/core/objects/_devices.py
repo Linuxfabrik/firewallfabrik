@@ -105,6 +105,13 @@ class Host(Base):
         'RuleSet',
         back_populates='device',
     )
+    # Groups that live *inside* this object, not groups it is a member of.
+    # A Cluster owns its StateSyncClusterGroup this way.
+    child_groups: sqlalchemy.orm.Mapped[list[Group]] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='device',
+        primaryjoin='Host.id == foreign(Group.device_id)',
+    )
 
     __mapper_args__ = {
         'polymorphic_on': 'type',
@@ -232,6 +239,30 @@ class Cluster(Firewall):
 
     __mapper_args__ = {'polymorphic_identity': 'Cluster'}
 
+    def get_members_list(self) -> list[Firewall]:
+        """Return the member firewalls, in a stable order.
+
+        Ports ``Cluster::getMembersList``.  A cluster names its members
+        nowhere directly: the failover groups of its interfaces and its
+        state sync group hold references to the *interfaces* of the member
+        firewalls, and the member is the firewall those interfaces belong
+        to.  A firewall reachable through several groups is counted once.
+        """
+        from ._groups import ClusterGroup
+
+        members: dict[uuid.UUID, Firewall] = {}
+        groups = list(self.child_groups)
+        for iface in self.interfaces:
+            groups.extend(iface.child_groups)
+        for group in groups:
+            if not isinstance(group, ClusterGroup):
+                continue
+            for member in group.get_members():
+                fw = member.device if isinstance(member, Interface) else member
+                if isinstance(fw, Firewall) and fw.id != self.id:
+                    members.setdefault(fw.id, fw)
+        return sorted(members.values(), key=lambda f: f.name)
+
 
 class Interface(Base):
     """Network interface object."""
@@ -321,6 +352,12 @@ class Interface(Base):
         back_populates='interface',
         primaryjoin='Interface.id == foreign(Address.interface_id)',
     )
+    # A cluster interface owns its FailoverClusterGroup this way.
+    child_groups: sqlalchemy.orm.Mapped[list[Group]] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='interface',
+        primaryjoin='Interface.id == foreign(Group.interface_id)',
+    )
 
     __table_args__ = (
         # Sub-interfaces: unique name within the same parent interface.
@@ -357,6 +394,26 @@ class Interface(Base):
 
     def is_loopback(self) -> bool:
         return self.name == 'lo'
+
+    def get_failover_group(self):
+        """Return the FailoverClusterGroup below this interface, or ``None``."""
+        from ._groups import FailoverClusterGroup
+
+        for group in self.child_groups:
+            if isinstance(group, FailoverClusterGroup):
+                return group
+        return None
+
+    def is_failover_interface(self) -> bool:
+        """Is this a cluster interface with a failover group?
+
+        Ports ``Interface::isFailoverInterface``, which asks the same
+        question the same way: does a FailoverClusterGroup hang under it.
+        """
+        return self.get_failover_group() is not None
+
+    def is_dedicated_failover(self) -> bool:
+        return bool((self.data or {}).get('dedicated_failover', False))
 
     def is_dynamic(self) -> bool:
         return bool((self.data or {}).get('dyn', False))

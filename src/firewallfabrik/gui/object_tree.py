@@ -371,6 +371,8 @@ class ObjectTree(QWidget):
             session.scalars(
                 sqlalchemy.select(Group.id).where(
                     Group.parent_group_id.is_(None),
+                    Group.interface_id.is_(None),
+                    Group.device_id.is_(None),
                 ),
             ).all()
         )
@@ -586,7 +588,16 @@ class ObjectTree(QWidget):
             )
             if obj.group_id is None
         ]
-        children += [g for g in lib.groups if g.parent_group_id is None]
+        # A cluster group has no parent group, but it belongs to a cluster
+        # interface or to the cluster object and is shown there, the way
+        # Firewall Builder shows it.
+        children += [
+            g
+            for g in lib.groups
+            if g.parent_group_id is None
+            and g.interface_id is None
+            and g.device_id is None
+        ]
         children += [i for i in lib.interfaces if i.device_id is None]
         # Include user-created subfolders stored in lib.data.
         user_subfolders = normalize_subfolders(
@@ -703,6 +714,9 @@ class ObjectTree(QWidget):
         top_ifaces = [i for i in device.interfaces if i.parent_interface_id is None]
         for iface in sorted(top_ifaces, key=lambda o: o.name.lower()):
             self._add_interface(iface, parent_item)
+        # A Cluster owns its state sync group.
+        for group in sorted(device.child_groups, key=obj_sort_key):
+            self._add_object(group, parent_item)
 
     def _add_interface(self, iface, parent_item):
         """Add an Interface node with sub-interfaces and addresses."""
@@ -722,6 +736,9 @@ class ObjectTree(QWidget):
         # Sub-interfaces (recursive).
         for sub in sorted(iface.sub_interfaces, key=lambda o: o.name.lower()):
             self._add_interface(sub, iface_item)
+        # A cluster interface owns its failover group.
+        for group in sorted(iface.child_groups, key=obj_sort_key):
+            self._add_object(group, iface_item)
         for addr in sorted(iface.addresses, key=obj_sort_key):
             self._make_item(
                 obj_display_name(addr),

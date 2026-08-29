@@ -197,11 +197,16 @@ class YamlWriter:
                     itv.id,
                 )
 
-            # Root groups
+            # Root groups.  A cluster group has no parent group either,
+            # but it belongs to an interface or to the cluster object and
+            # is walked from there - registering it twice gives every
+            # reference to it a "#1" suffix and writes it out twice.
             for grp in session.scalars(
                 sqlalchemy.select(objects.Group).where(
                     objects.Group.library_id == lib.id,
                     objects.Group.parent_group_id.is_(None),
+                    objects.Group.interface_id.is_(None),
+                    objects.Group.device_id.is_(None),
                 ),
             ).all():
                 self._walk_group(session, seen_paths, grp, lib_path)
@@ -222,7 +227,7 @@ class YamlWriter:
                     objects.Interface.device_id.is_(None),
                 ),
             ).all():
-                self._walk_interface(seen_paths, iface, lib_path)
+                self._walk_interface(session, seen_paths, iface, lib_path)
 
     def _walk_group(self, session, seen_paths, grp, parent_path):
         """Walk a group and its children, registering ref-paths."""
@@ -288,7 +293,11 @@ class YamlWriter:
 
         top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
         for iface in sorted(top_ifaces, key=lambda i: i.name):
-            self._walk_interface(seen_paths, iface, dev_path)
+            self._walk_interface(session, seen_paths, iface, dev_path)
+
+        # A Cluster owns its state sync group.
+        for group in sorted(dev.child_groups, key=lambda g: (g.type, g.name)):
+            self._walk_group(session, seen_paths, group, dev_path)
 
         # A rule set is a reference target too: a Branch rule names the one
         # it jumps into, and that one may belong to another firewall object
@@ -302,7 +311,7 @@ class YamlWriter:
                 rule_set.id,
             )
 
-    def _walk_interface(self, seen_paths, iface, parent_path):
+    def _walk_interface(self, session, seen_paths, iface, parent_path):
         """Walk an interface and its sub-interfaces, registering ref-paths."""
         iface_path = f'{parent_path}/Interface:{escape_obj_name(iface.name)}'
         self._register_ref(seen_paths, iface_path, iface.id)
@@ -313,7 +322,10 @@ class YamlWriter:
                 addr.id,
             )
         for sub in sorted(iface.sub_interfaces, key=lambda i: i.name):
-            self._walk_interface(seen_paths, sub, iface_path)
+            self._walk_interface(session, seen_paths, sub, iface_path)
+        # A cluster interface owns its failover group.
+        for group in sorted(iface.child_groups, key=lambda g: (g.type, g.name)):
+            self._walk_group(session, seen_paths, group, iface_path)
 
     def _register_ref(self, seen_paths, path, obj_id):
         """Register a full tree-path -> UUID mapping, with #N fallback for collisions."""
@@ -395,11 +407,13 @@ class YamlWriter:
             d_itv.setdefault('type', 'Interval')
             children.append(d_itv)
 
-        # Root groups
+        # Root groups (see the note in _build_ref_index about cluster groups)
         for g in session.scalars(
             sqlalchemy.select(objects.Group).where(
                 objects.Group.library_id == lib.id,
                 objects.Group.parent_group_id.is_(None),
+                objects.Group.interface_id.is_(None),
+                objects.Group.device_id.is_(None),
             ),
         ).all():
             children.append(self._serialize_group(session, g))
@@ -420,7 +434,7 @@ class YamlWriter:
                 objects.Interface.device_id.is_(None),
             ),
         ).all():
-            d_iface = self._serialize_interface(iface)
+            d_iface = self._serialize_interface(session, iface)
             d_iface.setdefault('type', 'Interface')
             children.append(d_iface)
 
@@ -509,7 +523,7 @@ class YamlWriter:
         top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
         if top_ifaces:
             d['interfaces'] = [
-                self._serialize_interface(iface)
+                self._serialize_interface(session, iface)
                 for iface in sorted(top_ifaces, key=lambda i: i.name)
             ]
 
@@ -520,9 +534,16 @@ class YamlWriter:
                 for rs in sorted(dev.rule_sets, key=lambda rs: rs.name)
             ]
 
+        # A Cluster owns its state sync group.
+        if dev.child_groups:
+            d['children'] = [
+                self._serialize_group(session, g)
+                for g in sorted(dev.child_groups, key=lambda g: (g.type, g.name))
+            ]
+
         return d
 
-    def _serialize_interface(self, iface):
+    def _serialize_interface(self, session, iface):
         d = _serialize_obj(iface)
 
         # Interface addresses
@@ -535,8 +556,15 @@ class YamlWriter:
         # Sub-interfaces
         if iface.sub_interfaces:
             d['interfaces'] = [
-                self._serialize_interface(sub)
+                self._serialize_interface(session, sub)
                 for sub in sorted(iface.sub_interfaces, key=lambda i: i.name)
+            ]
+
+        # A cluster interface owns its failover group.
+        if iface.child_groups:
+            d['children'] = [
+                self._serialize_group(session, g)
+                for g in sorted(iface.child_groups, key=lambda g: (g.type, g.name))
             ]
 
         return d

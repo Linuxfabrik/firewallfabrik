@@ -372,6 +372,11 @@ class YamlReader:
         for rs_data in data.get('rule_sets', []):
             self._parse_ruleset(rs_data, dev, dev_path)
 
+        # A Cluster owns its state sync group.
+        for child_data in data.get('children', []):
+            group = self._parse_group(child_data, library, dev_path)
+            group.device = dev
+
         return dev
 
     def _parse_interface(
@@ -405,6 +410,14 @@ class YamlReader:
             self._parse_interface(
                 sub_data, library, device, iface_path, parent_interface=iface
             )
+
+        # A cluster interface owns its failover group.  An interface of a
+        # device is parsed with no library of its own, so the group takes
+        # the one its device is in.
+        group_library = library or (device.library if device is not None else None)
+        for child_data in data.get('children', []):
+            group = self._parse_group(child_data, group_library, iface_path)
+            group.interface = iface
 
         return iface
 
