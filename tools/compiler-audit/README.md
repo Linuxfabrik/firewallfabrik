@@ -80,6 +80,17 @@ produce and must never grow — a correct fix leaves it untouched. **extra**
 counts rules the reference never emitted, and dropping it is what progress
 looks like. A single total hides both.
 
+Every firewall of the corpus is compiled, and a **cluster** is compiled the
+way Firewall Builder compiles one: once per member, with the cluster named
+alongside, written as `<cluster>_<member>.fw`. That is how its reference
+output is named, so those 15 scripts are compared too. Without a fixture
+name `compare-reference.sh` searches every fixture directory, which is what
+finds them. Two reference files are skipped there and say why in the
+script: `linux-1.fw.orig` and `linux-2.fw.orig` are member compiles saved
+under the bare member name, and nothing in them says which cluster.
+**A baseline taken before 2026-08-29 did not include the cluster members
+and is not comparable.**
+
 Only `script_body()` is compared, because that is the function both compilers
 install the policy from. The reset helpers, the coexistence jump setup,
 `check_tools` and the block/stop actions hold `$IPTABLES` too, exist in every

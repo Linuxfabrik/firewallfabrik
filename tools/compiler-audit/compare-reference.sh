@@ -32,12 +32,16 @@
 # Usage: compare-reference.sh <output-directory> [reference-directory] [fixture-name]
 #
 # The reference directory defaults to $FWF_FWBUILDER_REFERENCE, which should
-# point at "fwbuilder5/test/ipt" in a Firewall Builder checkout.
+# point at "fwbuilder5/test/ipt" in a Firewall Builder checkout.  Without a
+# fixture name every fixture directory under <output-directory>/ipt is
+# searched, so the cluster members - whose scripts are named
+# "<cluster>_<member>.fw", the way Firewall Builder names them - are
+# compared along with the rest.
 
 set -u
 OUT=$(cd "${1:?usage: compare-reference.sh <output-directory> [reference-dir] [fixture]}" && pwd)
 REFERENCE=${2:-${FWF_FWBUILDER_REFERENCE:-}}
-FIXTURE=${3:-objects-for-regression-tests}
+FIXTURE=${3:-}
 
 if [ -z "$REFERENCE" ] || [ ! -d "$REFERENCE" ]; then
     echo "No reference directory. Pass it as the second argument or set" >&2
@@ -60,7 +64,22 @@ normalise() {
             -e 's/Cid[0-9A-Za-z]*\.[0-9]*/CHAIN/g' \
             -e 's/-m conntrack --ctstate/-m state --state/' \
             -e 's/-p 0 /-p all /' -e 's/-p 51 /-p ah /' -e 's/-p 50 /-p esp /' \
+            -e 's/-p 112 /-p vrrp /' \
             -e 's/[[:space:]]\+/ /g' -e 's/ *"$//' -e 's/^ //' -e 's/ $//' | sort
+}
+
+# Two reference files are member compiles saved under the bare member
+# name: `linux-1.fw.orig` and `linux-2.fw.orig` carry the rules and the
+# shared addresses of a cluster, but nothing in them says which one, and
+# Firewall Builder writes a member compile as `<cluster>_<member>.fw`
+# everywhere else.  The generated tree has a standalone compile of that
+# member under the same name, so matching the two compares a firewall
+# against a cluster and adds 262 to `missing` for nothing.
+skip_reference() {
+    case "$1" in
+        linux-1 | linux-2) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 compared=0
@@ -70,8 +89,15 @@ extra_total=0
 for ref in "$REFERENCE"/*.fw.orig; do
     [ -e "$ref" ] || continue
     name=$(basename "$ref" .fw.orig)
-    ours="$OUT/ipt/$FIXTURE/$name.fw"
-    [ -f "$ours" ] || continue
+    if [ -z "$FIXTURE" ] && skip_reference "$name"; then
+        continue
+    fi
+    if [ -n "$FIXTURE" ]; then
+        ours="$OUT/ipt/$FIXTURE/$name.fw"
+    else
+        ours=$(find "$OUT/ipt" -mindepth 2 -maxdepth 2 -name "$name.fw" | head -1)
+    fi
+    [ -n "$ours" ] && [ -f "$ours" ] || continue
     compared=$((compared + 1))
     n=$(normalise "$ref" | wc -l)
     missing=$(diff <(normalise "$ref") <(normalise "$ours") | grep -c '^<')
@@ -84,7 +110,7 @@ for ref in "$REFERENCE"/*.fw.orig; do
 done
 
 if [ "$compared" -eq 0 ]; then
-    echo "No firewall of fixture '$FIXTURE' matched a reference file." >&2
+    echo "No generated script matched a reference file." >&2
     exit 2
 fi
 

@@ -46,29 +46,54 @@ from pathlib import Path
 import sqlalchemy
 
 import firewallfabrik.core
-from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.objects import Cluster, Firewall
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS = REPO_ROOT / 'tests' / 'fixtures'
 
 
-def firewall_names(path: Path) -> list[str]:
-    """Return the name of every firewall in the data file *path*."""
+def compile_targets(path: Path) -> list[tuple[str, str, str]]:
+    """Return what compiling the data file *path* means, one run per entry.
+
+    ``(cluster name, firewall name, output name)``.  A cluster is not a
+    machine: it is compiled by compiling each of its members with the
+    cluster named alongside, and Firewall Builder writes the result as
+    `<cluster>_<member>.fw`, which is how its reference output is named.
+    The cluster object itself is compiled too, because fwf allows it and
+    the expected-output tests cover it.
+    """
     db = firewallfabrik.core.DatabaseManager()
     db.load(str(path))
+    targets: list[tuple[str, str, str]] = []
     with db.session() as session:
-        return [
-            fw.name for fw in session.execute(sqlalchemy.select(Firewall)).scalars()
-        ]
+        for fw in session.execute(sqlalchemy.select(Firewall)).scalars():
+            targets.append(('', fw.name, fw.name))
+            if isinstance(fw, Cluster):
+                targets.extend(
+                    (fw.name, member.name, f'{fw.name}_{member.name}')
+                    for member in fw.get_members_list()
+                )
+    return targets
 
 
-def compile_one(path: Path, fw_name: str, outdir: Path, platform: str) -> dict:
+def compile_one(
+    path: Path, target: tuple[str, str, str], outdir: Path, platform: str
+) -> dict:
     """Compile one firewall and return what the driver reported."""
+    cluster_name, fw_name, out_name = target
     db = firewallfabrik.core.DatabaseManager()
     db.load(str(path))
     with db.session() as session:
+        cluster_id = ''
+        if cluster_name:
+            cluster = session.execute(
+                sqlalchemy.select(Cluster).where(Cluster.name == cluster_name)
+            ).scalar_one()
+            cluster_id = str(cluster.id)
         fw = session.execute(
-            sqlalchemy.select(Firewall).where(Firewall.name == fw_name)
+            sqlalchemy.select(Firewall)
+            .where(Firewall.name == fw_name)
+            .where(Firewall.type != 'Cluster' if cluster_name else sqlalchemy.true())
         ).scalar_one()
         fw_id = str(fw.id)
 
@@ -88,10 +113,10 @@ def compile_one(path: Path, fw_name: str, outdir: Path, platform: str) -> dict:
     driver.wdir = str(outdir)
     # An address table names its file relative to the data file.
     driver.source_dir = str(path.parent)
-    driver.file_name_setting = f'{fw_name}.fw'
+    driver.file_name_setting = f'{out_name}.fw'
 
     try:
-        result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+        result = driver.run(cluster_id=cluster_id, fw_id=fw_id, single_rule_id='')
     except Exception as exc:
         return {'crash': f'{type(exc).__name__}: {exc}'}
 
@@ -149,13 +174,13 @@ def main() -> int:
             outdir = args.outdir / platform / src.stem
             outdir.mkdir(parents=True, exist_ok=True)
             try:
-                names = firewall_names(src)
+                targets = compile_targets(src)
             except Exception as exc:
                 report[f'{platform}/{src.stem}'] = {'load_crash': str(exc)[:500]}
                 continue
-            for fw_name in names:
-                key = f'{platform}/{src.stem}/{fw_name}'
-                report[key] = compile_one(src, fw_name, outdir, platform)
+            for target in targets:
+                key = f'{platform}/{src.stem}/{target[2]}'
+                report[key] = compile_one(src, target, outdir, platform)
                 print(key, flush=True)
 
     args.outdir.mkdir(parents=True, exist_ok=True)
