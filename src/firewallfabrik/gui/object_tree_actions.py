@@ -936,6 +936,10 @@ class TreeActionHandler:
             'AttachedNetworks': 'attached',
             'IPv4': 'ip',
             'IPv6': 'ip6',
+            # A new MAC address was called "New PhysAddress" while every
+            # rename of the interface above it wrote "host:iface:mac", so
+            # the two paths disagreed about the name of one object.
+            'PhysAddress': 'mac',
         }
         if name is None and interface_id is not None and type_name in standard_suffix:
             name = self._standard_child_name(item, standard_suffix[type_name])

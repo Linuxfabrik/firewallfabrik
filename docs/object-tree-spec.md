@@ -736,10 +736,10 @@ When multiple objects are selected:
 | Library | Database | Created via `FWBTree().createNewLibrary(db)` |
 | Policy/NAT | Firewall/Cluster | Auto-named "Policy", "Policy_1", etc.; sorted alphabetically |
 | Interface | Host/Firewall/Cluster or parent Interface (subinterface) | Auto-detects subinterface type; resets to "ethernet" if pasting |
-| IPv4/IPv6 | Interface | Standard name pattern: "eth0:ip", "eth0:ip6" |
-| physAddress | Interface | Only one per interface; named "iface:mac" |
+| IPv4/IPv6 | Interface | Standard name pattern: "firewall:eth0:ip", "firewall:eth0:ip6" |
+| physAddress | Interface | Only one per interface; named "firewall:iface:mac" |
 | AttachedNetworks | Interface | Only one per interface; named "firewall:iface:attached" |
-| FailoverClusterGroup | Cluster Interface | Only one per interface per protocol |
+| FailoverClusterGroup | Cluster Interface | Only one per interface per protocol; named "cluster:iface:members" |
 
 ### Delete
 

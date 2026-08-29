@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
+* Editor: renaming an interface or the firewall above it also renames the failover group and the "Attached Networks" object under it, so they no longer keep naming an interface that is gone.
 * Editor: a cluster group is checked against the cluster it belongs to, so a member of the second cluster in a file is no longer marked invalid.
 * Editor: a cluster has an editor of its own and no longer offers an iptables release, which nothing read - each member compiles for the release it names itself.
 * Editor: a cluster's failover group is shown below the cluster interface it belongs to and its state sync group below the cluster, instead of at the top of the library.

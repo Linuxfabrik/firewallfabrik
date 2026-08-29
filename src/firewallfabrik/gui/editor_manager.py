@@ -289,27 +289,56 @@ def _device_prefix(obj):
     return ''
 
 
-def _has_renameable_children(obj):
-    """Return True if *obj* has child addresses or sub-interfaces.
+def _renameable_children(iface):
+    """Return everything under *iface* whose name follows its own.
 
-    Matches fwbuilder's check: the dialog only appears when there
-    are actual IPv4/IPv6/MAC objects or sub-interfaces to rename,
-    not merely because interfaces exist.
+    ``ObjectManipulator::autorenameChildren`` names five kinds of child,
+    not three: the addresses and the MAC, and the two groups that hang
+    under an interface - the failover group of a cluster interface and
+    the Attached Networks object.  Both are found through
+    ``child_groups`` rather than ``addresses``, which is why they were
+    missed.
+    """
+    return [*iface.addresses, *iface.child_groups, *iface.sub_interfaces]
+
+
+def _has_renameable_children(obj):
+    """Return True if *obj* has children whose name follows its own.
+
+    Matches fwbuilder's check: the dialog only appears when there is
+    something to rename, not merely because interfaces exist.
     """
     if isinstance(obj, Host):
-        return any(iface.addresses or iface.sub_interfaces for iface in obj.interfaces)
+        return any(_renameable_children(iface) for iface in obj.interfaces)
     if isinstance(obj, Interface):
-        return bool(obj.addresses or obj.sub_interfaces)
+        return bool(_renameable_children(obj))
     return False
 
 
+# The suffix each kind of child of an interface carries, the way
+# `ObjectManipulator::autorenameChildren` calls `autorename` once per
+# type.  A group is named for what it holds - "members" for the failover
+# group, "attached" for the subnets of the interface.  A type that is not
+# in here is left alone, which is what calling `autorename` once per type
+# amounts to; the old fallback renamed anything else to ":ip".
+_CHILD_NAME_SUFFIX = {
+    'AttachedNetworks': 'attached',
+    'FailoverClusterGroup': 'members',
+    'IPv4': 'ip',
+    'IPv6': 'ip6',
+    'PhysAddress': 'mac',
+}
+
+
 def _autorename_interface(iface, host_name):
-    """Rename addresses and sub-interfaces under *iface*.
+    """Rename the children of *iface* after it, and recurse.
 
     Naming scheme (matching fwbuilder):
       - IPv4:  ``host:iface:ip``
       - IPv6:  ``host:iface:ip6``
       - MAC:   ``host:iface:mac``
+      - Failover group:   ``host:iface:members``
+      - Attached Networks: ``host:iface:attached``
       - Sub-interfaces are processed recursively.
 
     Returns a list of every object whose ``name`` actually changed, so
@@ -319,17 +348,14 @@ def _autorename_interface(iface, host_name):
     """
     renamed = []
     prefix = f'{host_name}:{iface.name}'
-    type_suffix = {
-        'IPv4': 'ip',
-        'IPv6': 'ip6',
-        'PhysAddress': 'mac',
-    }
-    for addr in iface.addresses:
-        suffix = type_suffix.get(addr.type, 'ip')
+    for child in (*iface.addresses, *iface.child_groups):
+        suffix = _CHILD_NAME_SUFFIX.get(child.type)
+        if suffix is None:
+            continue
         new_name = f'{prefix}:{suffix}'
-        if addr.name != new_name:
-            addr.name = new_name
-            renamed.append(addr)
+        if child.name != new_name:
+            child.name = new_name
+            renamed.append(child)
     for sub in iface.sub_interfaces:
         renamed.extend(_autorename_interface(sub, host_name))
     return renamed
@@ -355,19 +381,16 @@ def _offer_autorename_children(obj, old_name, parent_widget):
     label = 'interface' if isinstance(obj, Interface) else 'object'
     msg = (
         f"The name of the {label} '{old_name}' has changed.\n\n"
-        f'The program can also rename IP address objects that '
-        f'belong to this {label}, using the standard naming '
-        f"scheme 'host_name:interface_name:ip'. This makes it "
-        f'easier to distinguish what host or firewall a given '
-        f'IP address object belongs to when it is used in a '
-        f'policy or NAT rule. The program also renames MAC '
-        f'address objects using the scheme '
-        f"'host_name:interface_name:mac'.\n\n"
-        f'Do you want to rename child IP and MAC address '
-        f'objects now?\n\n'
-        f"(If you click 'No', names of all address objects "
-        f"that belong to {label} '{obj.name}' will stay "
-        f'the same.)'
+        f'The program can also rename the objects that belong to this '
+        f'{label}, using the standard naming scheme '
+        f"'host_name:interface_name:ip'. This makes it easier to "
+        f'distinguish what host or firewall a given object belongs to '
+        f'when it is used in a policy or NAT rule. MAC addresses end in '
+        f"'mac', a failover group in 'members' and an Attached Networks "
+        f"object in 'attached'.\n\n"
+        f'Do you want to rename them now?\n\n'
+        f"(If you click 'No', the names of all objects that belong to "
+        f"{label} '{obj.name}' will stay the same.)"
     )
     result = QMessageBox.warning(
         parent_widget,
