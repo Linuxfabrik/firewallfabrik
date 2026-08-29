@@ -106,3 +106,31 @@ def test_a_real_number_is_still_written(configurator_cls, option, path):
     text = _kernel_vars(configurator_cls, {option: 250000})
 
     assert re.search(rf'echo 250000 > \S*{re.escape(path)}', text), text
+
+
+def test_the_spin_boxes_can_express_the_kernel_default():
+    """The dialog used to clamp -1 to 0 and write the destructive value.
+
+    Both fields carry -1 as their default and the spin boxes started at
+    0, so populating the dialog turned "leave the kernel alone" into
+    "set it to zero" and the next save stored it.
+    """
+    import pathlib
+
+    ui = pathlib.Path(
+        'src/firewallfabrik/gui/ui/linuxsettingsdialog_q.ui',
+    ).read_text()
+
+    for name in (
+        'conntrack_hashsize',
+        'conntrack_max',
+        'linux24_tcp_fin_timeout',
+        'linux24_tcp_keepalive_interval',
+    ):
+        block = re.search(
+            rf'<widget class="QSpinBox" name="{name}">(.*?)</widget>', ui, re.S
+        )
+        assert block, name
+        body = block.group(1)
+        assert '<number>-1</number>' in body, name
+        assert 'specialValueText' in body, name

@@ -527,27 +527,41 @@
        </item>
        <item row="2" column="1" colspan="2">
         <widget class="QSpinBox" name="linux24_tcp_fin_timeout">
+         <property name="toolTip">
+          <string>How many seconds a socket the firewall itself closed waits in
+FIN-WAIT-2.  "kernel default" leaves
+/proc/sys/net/ipv4/tcp_fin_timeout alone.  Zero counts as "kernel
+default" too: a real zero closes the socket at once and breaks the
+orderly end of a connection.</string>
+         </property>
+         <property name="specialValueText">
+          <string>kernel default</string>
+         </property>
          <property name="minimum">
-          <number>0</number>
+          <number>-1</number>
          </property>
          <property name="maximum">
           <number>1000</number>
-         </property>
-         <property name="value">
-          <number>30</number>
          </property>
         </widget>
        </item>
        <item row="3" column="1" colspan="2">
         <widget class="QSpinBox" name="linux24_tcp_keepalive_interval">
+         <property name="toolTip">
+          <string>How many seconds pass between keepalive probes on an idle
+connection of the firewall itself.  "kernel default" leaves
+/proc/sys/net/ipv4/tcp_keepalive_intvl alone.  Zero counts as
+"kernel default" too, because a real zero leaves no room between
+the probes.</string>
+         </property>
+         <property name="specialValueText">
+          <string>kernel default</string>
+         </property>
          <property name="minimum">
-          <number>0</number>
+          <number>-1</number>
          </property>
          <property name="maximum">
           <number>10000</number>
-         </property>
-         <property name="value">
-          <number>1800</number>
          </property>
         </widget>
        </item>
@@ -1042,6 +1056,12 @@
           </item>
           <item row="1" column="1">
            <widget class="QSpinBox" name="conntrack_max">
+            <property name="specialValueText">
+             <string>kernel default</string>
+            </property>
+            <property name="minimum">
+             <number>-1</number>
+            </property>
             <property name="maximumSize">
              <size>
               <width>64</width>
@@ -1049,8 +1069,12 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>CONNTRACK_MAX is the maximum number of "sessions" (connection tracking entries)
-that can be handled simultaneously by netfilter in kernel memory.</string>
+             <string>The most connections netfilter tracks at once.  "kernel default"
+leaves /proc/sys/net/netfilter/nf_conntrack_max alone, which is
+what you want unless the box runs out of table entries; the kernel
+sizes it from the amount of RAM.  Zero counts as "kernel default"
+too, because a real zero makes the kernel refuse every new
+connection with "table full, dropping packet".</string>
             </property>
             <property name="maximum">
              <number>999999999</number>
@@ -1079,6 +1103,12 @@ that can be handled simultaneously by netfilter in kernel memory.</string>
           </item>
           <item row="2" column="1">
            <widget class="QSpinBox" name="conntrack_hashsize">
+            <property name="specialValueText">
+             <string>kernel default</string>
+            </property>
+            <property name="minimum">
+             <number>-1</number>
+            </property>
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -1092,7 +1122,11 @@ that can be handled simultaneously by netfilter in kernel memory.</string>
              </size>
             </property>
             <property name="toolTip">
-             <string>the size of the hash table storing the lists of conntrack entries</string>
+             <string>How many buckets the table of tracked connections is spread over.
+A quarter to an eighth of the maximum above is the usual choice;
+"kernel default" leaves it alone.  Zero counts as "kernel default"
+too, because the kernel answers a resize to zero with "Invalid
+argument" and the activation prints the error.</string>
             </property>
             <property name="maximum">
              <number>999999999</number>

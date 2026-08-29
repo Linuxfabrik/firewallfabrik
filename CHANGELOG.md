@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor: opening the action parameters of a NAT rule no longer risks clearing the rule's other settings.
 * Editor: the Branch action can be set on a rule again, and the rule set it jumps into is chosen by dragging it out of the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
 * Editor: the Branch action of a NAT rule names the NAT rule set it asks for, not the policy one.
+* Editor: the conntrack limits and the two TCP timeouts of the Linux host settings can be left at the kernel default again; the fields used to turn that into a zero.
 
 
 ## [v2.0.0] - 2026-08-24
