@@ -632,7 +632,7 @@ class FWWindow(QMainWindow):
         editor_map = {
             'AddressRange': self.w_AddressRangeDialog,
             'AddressTable': self.w_AddressTableDialog,
-            'Cluster': self.w_FirewallDialog,
+            'Cluster': self.w_ClusterDialog,
             'CustomService': self.w_CustomServiceDialog,
             'DNSName': self.w_DNSNameDialog,
             'DynamicGroup': self.w_DynamicGroupDialog,

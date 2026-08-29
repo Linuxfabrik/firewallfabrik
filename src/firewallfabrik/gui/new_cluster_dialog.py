@@ -286,9 +286,12 @@ class NewClusterDialog(QDialog):
     def get_result(self):
         """Return ``(name, extra_data)`` for object creation.
 
-        *extra_data* contains ``platform``, ``host_OS``, ``version``,
-        ``member_fw_ids``, and ``master_fw_id`` derived from the
-        selected master firewall (matching fwbuilder behaviour).
+        *extra_data* contains ``platform``, ``host_OS``,
+        ``member_fw_ids`` and ``master_fw_id``, derived from the selected
+        master firewall.  No release: Firewall Builder writes only the
+        platform and the host OS onto a cluster
+        (``newClusterDialog_create.cpp``), and neither compiler reads one
+        there - a member compiles for the release it names itself.
         """
         name = self.obj_name.text().strip()
         master_row = self._master_group.checkedId()
@@ -310,7 +313,6 @@ class NewClusterDialog(QDialog):
             'master_fw_id': master_id,
             'member_fw_ids': sorted(member_ids),
             'platform': master_data.get('platform', ''),
-            'version': master_data.get('version', ''),
         }
 
 

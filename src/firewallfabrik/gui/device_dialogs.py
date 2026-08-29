@@ -84,7 +84,10 @@ class FirewallDialog(BaseObjectDialog):
             self.hostOS.addItem(display)
 
         self._set_combo_text(self.platform, data.get('platform', ''))
-        self._set_combo_text(self.version, data.get('version', ''))
+        # A cluster has no release of its own, so its panel has no combo
+        # for one; everything else on the two panels is the same.
+        if self.version is not None:
+            self._set_combo_text(self.version, data.get('version', ''))
         host_os = data.get('host_OS', '')
         self._set_combo_text(self.hostOS, HOST_OS.get(host_os, host_os))
         self.inactive.setChecked(data.get('inactive') in (True, 'True'))
@@ -112,7 +115,8 @@ class FirewallDialog(BaseObjectDialog):
         old_data = self._obj.data or {}
         data = dict(old_data)
         data['platform'] = self.platform.currentText()
-        data['version'] = self.version.currentText()
+        if self.version is not None:
+            data['version'] = self.version.currentText()
         host_os_text = self.hostOS.currentText()
         data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
         _set_data_key(data, 'inactive', self.inactive.isChecked(), False)
@@ -148,6 +152,25 @@ class FirewallDialog(BaseObjectDialog):
         elif text:
             combo.addItem(text)
             combo.setCurrentIndex(combo.count() - 1)
+
+
+class ClusterDialog(FirewallDialog):
+    """Editor panel for a Cluster.
+
+    The firewall's panel without the iptables release.  Firewall Builder
+    does not offer one on a cluster - `clusterdialog_q.ui` has no version
+    combo and `newClusterDialog_create.cpp` writes only `platform` and
+    `host_OS` - and neither compiler reads one: a member compiles for the
+    release it names itself, so a combo here would show a setting that
+    changes nothing.
+    """
+
+    #: No release combo in this panel, which is what the guards in
+    #: `FirewallDialog` read.
+    version = None
+
+    def __init__(self, parent=None):
+        BaseObjectDialog.__init__(self, 'clusterdialog_q.ui', parent)
 
 
 class InterfaceDialog(BaseObjectDialog):

@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
 * Editor: a cluster group is checked against the cluster it belongs to, so a member of the second cluster in a file is no longer marked invalid.
+* Editor: a cluster has an editor of its own and no longer offers an iptables release, which nothing read - each member compiles for the release it names itself.
 * Editor: a cluster's failover group is shown below the cluster interface it belongs to and its state sync group below the cluster, instead of at the top of the library.
 * Editor: a failover group can be created on a cluster interface and a state sync group on a cluster, and both are stored where they belong instead of beside the firewalls ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
 * Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.

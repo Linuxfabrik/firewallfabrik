@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Which cluster the cluster group editor thinks it is looking at.
+"""What the cluster editors show, and which cluster they are looking at.
 
 The member list is checked against the platform and the host OS of the
 cluster the group belongs to, and rows that do not match are marked
@@ -116,3 +116,51 @@ def test_the_settings_alone_do_not_tell_the_clusters_apart(database):
             for cluster in session.scalars(sqlalchemy.select(Cluster)).all()
         }
     assert len(settings) == 1
+
+
+def test_a_cluster_has_a_panel_of_its_own():
+    """It used to be edited with the firewall's, release combo and all."""
+    from firewallfabrik.gui import ui_loader
+
+    cluster_panel = ui_loader.CUSTOM_WIDGET_MAP['ClusterDialog']
+    firewall_panel = ui_loader.CUSTOM_WIDGET_MAP['FirewallDialog']
+
+    assert cluster_panel is not firewall_panel
+
+
+def test_the_cluster_panel_offers_no_release(editor):
+    """A member compiles for the release it names itself.
+
+    Firewall Builder writes only `platform` and `host_OS` onto a cluster
+    and its panel has no version combo; neither compiler reads one there,
+    so a combo would show a setting that changes nothing.
+    """
+    from firewallfabrik.gui import ui_loader
+
+    panel = ui_loader.CUSTOM_WIDGET_MAP['ClusterDialog']()
+
+    assert panel.version is None
+    assert panel.platform is not None
+    assert panel.hostOS is not None
+    assert panel.inactive.text() == 'Inactive cluster'
+
+
+def test_the_firewall_panel_still_offers_one(editor):
+    from firewallfabrik.gui import ui_loader
+
+    panel = ui_loader.CUSTOM_WIDGET_MAP['FirewallDialog']()
+
+    assert panel.version is not None
+
+
+def test_a_new_cluster_is_created_without_a_release():
+    """`newClusterDialog_create.cpp` sets platform and host OS, nothing else."""
+    import inspect
+
+    from firewallfabrik.gui import new_cluster_dialog
+
+    source = inspect.getsource(new_cluster_dialog.NewClusterDialog.get_result)
+
+    assert "'platform'" in source
+    assert "'host_OS'" in source
+    assert "'version'" not in source

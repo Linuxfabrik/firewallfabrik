@@ -112,11 +112,13 @@ def _register_address_dialogs():
 
 def _register_device_dialogs():
     from firewallfabrik.gui.device_dialogs import (
+        ClusterDialog,
         FirewallDialog,
         HostDialog,
         InterfaceDialog,
     )
 
+    CUSTOM_WIDGET_MAP['ClusterDialog'] = ClusterDialog
     CUSTOM_WIDGET_MAP['HostDialog'] = HostDialog
     CUSTOM_WIDGET_MAP['FirewallDialog'] = FirewallDialog
     CUSTOM_WIDGET_MAP['InterfaceDialog'] = InterfaceDialog
