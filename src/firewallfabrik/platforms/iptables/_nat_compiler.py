@@ -65,6 +65,7 @@ from firewallfabrik.compiler.processors._service import (
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    Cluster,
     Firewall,
     ICMP6Service,
     ICMPService,
@@ -1378,10 +1379,29 @@ class AssignInterface(NATRuleProcessor):
         elif isinstance(tsrc, Address) and tsrc.interface is not None:
             iface = tsrc.interface
 
-        if iface is not None and iface.device_id == self.compiler.fw.id:
-            rule.itf_outb = [iface]
-            self.tmp_queue.append(rule)
-            return True
+        if iface is not None:
+            owner = iface.device
+            if iface.device_id == self.compiler.fw.id:
+                rule.itf_outb = [iface]
+                self.tmp_queue.append(rule)
+                return True
+            if isinstance(owner, Cluster):
+                # The rule translates to a cluster interface, so it leaves
+                # by the interface this member has in the failover group -
+                # and TSrc stays the cluster interface, because the address
+                # it translates to is the one the cluster shares
+                # (NATCompiler_ipt::AssignInterface says so in the same
+                # words).  A cluster interface with no failover group is
+                # the copy of a member interface and is used as it stands.
+                member_iface = iface
+                if iface.is_failover_interface():
+                    member_iface = iface.get_failover_group().get_interface_for_member(
+                        self.compiler.fw
+                    )
+                if member_iface is not None:
+                    rule.itf_outb = [member_iface]
+                    self.tmp_queue.append(rule)
+                    return True
 
         # TSrc is not tied to an interface of this firewall, so the rule
         # has to name every interface the translated traffic could leave

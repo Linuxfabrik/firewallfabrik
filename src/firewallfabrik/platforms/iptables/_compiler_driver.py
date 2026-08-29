@@ -24,7 +24,6 @@ from __future__ import annotations
 import io
 import os
 import socket
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -145,23 +144,33 @@ class CompilerDriver_ipt(CompilerDriver):
         )
 
         # -- Look up firewall --
-        with self.db.session() as session:
-            if fw_id:
-                fw_uuid = uuid.UUID(fw_id) if isinstance(fw_id, str) else fw_id
-                fw = session.execute(
-                    sqlalchemy.select(Firewall).where(
-                        Firewall.id == fw_uuid,
-                    ),
-                ).scalar_one_or_none()
-            else:
+        with self.compile_session() as session:
+            if not fw_id:
                 self.error('No firewall ID provided')
                 return ''
+
+            cluster, fw = self.get_firewall_and_cluster(session, cluster_id, fw_id)
 
             if fw is None:
                 self.error(f'Firewall {fw_id} not found')
                 return ''
+            if cluster_id and cluster is None:
+                self.error(f'Cluster {cluster_id} not found')
+                return ''
 
             self.fw = fw
+            self.cluster = cluster
+
+            # A member firewall inherits the cluster's interfaces and rule
+            # sets before anything else looks at it
+            # (CompilerDriver::populateClusterElements).  The session is
+            # rolled back when the compile ends, so none of it reaches the
+            # object tree the editor shows.
+            if cluster is not None:
+                cluster_problem = self.populate_cluster_elements(session, cluster, fw)
+                if cluster_problem:
+                    self.error(cluster_problem)
+                    return ''
             generated_script = ''
 
             iface_err = self.check_interface_addresses(fw)
@@ -218,6 +227,15 @@ class CompilerDriver_ipt(CompilerDriver):
                     .scalars()
                     .all()
                 )
+
+                # A cluster's rule sets are what its members have in
+                # common; a member overrides one by giving a rule set of its
+                # own the same name (CompilerDriver::mergeRuleSets).
+                if cluster is not None:
+                    all_policies = self.merge_rule_sets(
+                        cluster, fw, all_policies, Policy
+                    )
+                    all_nat = self.merge_rule_sets(cluster, fw, all_nat, NAT)
 
                 self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
 
@@ -783,7 +801,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 top_comment.set_variable('database', '')
 
                 # Output file names
-                cluster_name = ''
+                cluster_name = cluster.name if cluster is not None else ''
                 self.determine_output_file_names(fw, cluster_name)
 
                 fw_id_str = str(fw.id)

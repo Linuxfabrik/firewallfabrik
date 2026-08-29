@@ -25,6 +25,7 @@ to everything the rule permits.
 import uuid
 
 from firewallfabrik.compiler._comp_rule import CompRule
+from firewallfabrik.compiler._compiler import Compiler
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core.objects import PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import RemoveFW
@@ -63,6 +64,10 @@ class _Compiler:
 
     def is_chain_descendant_of_output(self, chain):
         return chain.startswith('Out_')
+
+    # The real one, not a stub: what counts as the firewall is the whole
+    # question this processor asks, and a cluster counts too.
+    is_firewall_or_cluster = Compiler.is_firewall_or_cluster
 
 
 class _FwObject:

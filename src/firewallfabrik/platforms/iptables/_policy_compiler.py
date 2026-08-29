@@ -3230,12 +3230,15 @@ class RemoveFW(PolicyRuleProcessor):
             return True
 
         chain = rule.ipt_chain
-        fw_id = ipt_comp.fw.id
 
         if chain == 'INPUT' or ipt_comp.is_chain_descendant_of_input(chain):
-            rule.dst = [obj for obj in rule.dst if obj.id != fw_id]
+            rule.dst = [
+                obj for obj in rule.dst if not self.compiler.is_firewall_or_cluster(obj)
+            ]
         elif chain == 'OUTPUT' or ipt_comp.is_chain_descendant_of_output(chain):
-            rule.src = [obj for obj in rule.src if obj.id != fw_id]
+            rule.src = [
+                obj for obj in rule.src if not self.compiler.is_firewall_or_cluster(obj)
+            ]
 
         self.tmp_queue.append(rule)
         return True

@@ -715,6 +715,16 @@ class Compiler(BaseCompiler):
         An address object that carries no address at all matches nothing and
         is left out; the element it came from then either still names
         something or is reported empty.
+
+        A **cluster failover interface** contributes its own address and
+        the addresses of the member interface it stands for (fwbuilder
+        #1234, the ``expand_cluster_interfaces_fully`` branch of
+        ``Compiler::_expand_interface``, which the iptables pipeline
+        always asks for).  Both belong to the same machine while that
+        member is master, so a rule naming the cluster - "everything
+        addressed to this firewall" - has to name both or it lets half of
+        it through.  When the cluster is not one this firewall is a member
+        of, every member's interface is taken instead (fwbuilder #1394).
         """
         if iface.is_dynamic():
             return [iface]
@@ -733,10 +743,40 @@ class Compiler(BaseCompiler):
                 addresses.append(addr)
 
         if phys_address is None or not use_mac:
-            return addresses
-        if not addresses:
-            return [phys_address]
-        return [CombinedAddress(addr, phys_address) for addr in addresses]
+            expanded = list(addresses)
+        elif not addresses:
+            expanded = [phys_address]
+        else:
+            expanded = [CombinedAddress(addr, phys_address) for addr in addresses]
+
+        # Only where the interface belongs to a *different* object: a
+        # cluster compiled in its own right - which Firewall Builder never
+        # does, it compiles the members - is the firewall here, and then
+        # its interfaces stand for themselves.
+        if iface.is_failover_interface() and iface.device_id != getattr(
+            self.fw, 'id', None
+        ):
+            group = iface.get_failover_group()
+            member_iface = group.get_interface_for_member(self.fw)
+            others = [member_iface] if member_iface is not None else group.get_members()
+            for other in others:
+                if not isinstance(other, Interface) or other.id == iface.id:
+                    continue
+                # The member interface is reached from the cluster and not
+                # from its own device, so its sub-interfaces have to be
+                # walked here - `expand_addr` walks a Host's interfaces
+                # flat and never gets to this one.  A bridge port carries
+                # no address of its own (`Compiler::_expand_interface`
+                # skips it in the same loop).
+                stack = [other]
+                while stack:
+                    sub = stack.pop()
+                    if sub.is_bridge_port():
+                        continue
+                    expanded.extend(self._expand_interface(sub, use_mac))
+                    stack.extend(sub.sub_interfaces)
+
+        return expanded
 
     def eliminate_duplicates_in_element(self, comp_rule: CompRule, slot: str) -> None:
         """Remove duplicate objects from a rule element slot."""
@@ -774,10 +814,22 @@ class Compiler(BaseCompiler):
         return None
 
     def is_firewall_or_cluster(self, obj) -> bool:
-        """Check if obj is (or matches) the firewall being compiled."""
+        """Is *obj* the firewall being compiled, or its cluster?
+
+        Ports ``Compiler::isFirewallOrCluster`` (Compiler.cpp:1756).  The
+        rules of a cluster name the *cluster* object where a firewall's
+        own rules name the firewall, and both mean "this machine".  The
+        cluster half was missing, so ``RemoveFW`` left the object standing
+        in an INPUT rule and it was expanded to every address of the
+        cluster and of the member - "permit SSH to the firewall" turned
+        into five rules that miss every address the firewall answers on
+        but has not got in the object tree.
+        """
         if obj is None or self.fw is None:
             return False
-        return obj.id == self.fw.id
+        return obj.id == self.fw.id or (
+            getattr(self.fw, 'parent_cluster_id', None) == obj.id
+        )
 
     def expand_address_ranges(self, rule, slot: str) -> None:
         """Replace every AddressRange in *slot* with a list of Networks.
@@ -873,6 +925,14 @@ class Compiler(BaseCompiler):
         if obj is None or fw is None:
             return False
         if obj.id == fw.id:
+            return True
+        # The cluster object stands for whichever member is being
+        # compiled: its rules are written about "the firewall", and the
+        # firewall they run on is this member (`ObjectMatcher::complexMatch`,
+        # ObjectMatcher.cpp:88).  Without it a rule of the cluster's own
+        # policy naming the cluster is read as being about a third machine
+        # and goes onto the forwarding path.
+        if getattr(fw, 'parent_cluster_id', None) == obj.id:
             return True
 
         if isinstance(obj, Interface):
@@ -1155,7 +1215,11 @@ class Compiler(BaseCompiler):
         interface, and a cluster interface this firewall is not a member
         of, comes back unchanged.
         """
-        if isinstance(addr, Interface) and addr.is_failover_interface():
+        if (
+            isinstance(addr, Interface)
+            and addr.is_failover_interface()
+            and addr.device_id != getattr(self.fw, 'id', None)
+        ):
             other = addr.get_failover_group().get_interface_for_member(self.fw)
             if other is not None:
                 return other

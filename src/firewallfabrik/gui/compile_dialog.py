@@ -570,6 +570,11 @@ class CompileDialog(QDialog):
                     '-d',
                     str(self._dest_dir),
                     '-v',
+                    # Compiling a cluster compiles each of its members, and
+                    # two clusters may well have a member of the same name.
+                    # The cluster name in front of the file keeps them apart
+                    # and is what Firewall Builder's own GUI passes.
+                    '--xc',
                 ]
             )
             if output_file:

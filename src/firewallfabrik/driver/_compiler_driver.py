@@ -18,6 +18,8 @@ and output file management.
 
 from __future__ import annotations
 
+import contextlib
+import copy
 import ipaddress
 import uuid
 from pathlib import Path
@@ -29,17 +31,33 @@ from firewallfabrik.core.objects import (
     AddressRange,
     Cluster,
     Firewall,
+    Interface,
     MultiAddressRunTime,
     NATAction,
     PhysAddress,
     PolicyAction,
     RuleSet,
+    StateSyncClusterGroup,
     netmask_prefix_length,
 )
 from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
     from firewallfabrik.core._database import DatabaseManager
+
+
+#: The failover and state sync protocols a Linux host speaks, from
+#: Firewall Builder's own host OS resource file
+#: (`res/os/linux24.xml`, `/FWBuilderResources/Target/protocols`).  A
+#: `.fwb` written for another platform carries `carp` or `pfsync` here,
+#: and neither has rules this compiler could generate.
+FAILOVER_PROTOCOLS = frozenset({'heartbeat', 'none', 'openais', 'vrrp'})
+STATE_SYNC_PROTOCOLS = frozenset({'conntrack'})
+
+
+def _as_uuid(value):
+    """Accept either a UUID or its string spelling."""
+    return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
 
 
 def _one_edit_apart(typed: str, known: str) -> bool:
@@ -169,6 +187,301 @@ class CompilerDriver(BaseCompiler):
     ) -> str:
         """Platform-specific compilation. Override in subclasses."""
         return ''
+
+    @contextlib.contextmanager
+    def compile_session(self):
+        """A session for one compile run, rolled back when it ends.
+
+        Compiling a firewall reads the object tree and writes nothing to
+        it - measured over the corpus, a run ends with nothing new, dirty
+        or deleted.  Compiling a *cluster member* is the exception:
+        Firewall Builder copies the cluster's interfaces and rule sets
+        into the member before it starts (``populateClusterElements``),
+        and it does that in the live object database.  The GUI compiles
+        in the same process as the editor, so doing that here would leave
+        the cluster's interfaces on the member firewall in the tree the
+        user is looking at.
+
+        Rolling back gives the compile the same freedom without the
+        consequence.  ``DatabaseManager.session`` commits and pushes an
+        undo state; this one does neither.
+        """
+        session = self.db.create_session()
+        try:
+            yield session
+        finally:
+            session.rollback()
+            session.close()
+
+    def get_firewall_and_cluster(self, session, cluster_id, fw_id):
+        """Look up the firewall and, when one is named, its cluster.
+
+        Ports ``CompilerDriver::getFirewallAndClusterObjects``.  Returns
+        ``(cluster, firewall)``; either may be ``None``, and the caller
+        reports what it could not find.
+        """
+        cluster = None
+        if cluster_id:
+            cluster = session.get(Cluster, _as_uuid(cluster_id))
+        firewall = session.get(Firewall, _as_uuid(fw_id)) if fw_id else None
+        return cluster, firewall
+
+    def check_cluster(self, cluster: Cluster) -> str:
+        """Say what is wrong with the cluster object, or ``''``.
+
+        Ports ``CompilerDriver::checkCluster``: a cluster needs at least
+        one interface, and no two of its interfaces may share a name or an
+        address.  Both would produce a member script whose rules contradict
+        each other, so the C++ aborts and so does the caller here.
+        """
+        if not cluster.interfaces:
+            return f'{cluster.name}: the cluster has no interfaces'
+        seen_names: set[str] = set()
+        seen_addresses: dict[str, str] = {}
+        for iface in cluster.interfaces:
+            if iface.name in seen_names:
+                return f'{cluster.name}: duplicate cluster interface {iface.name}'
+            seen_names.add(iface.name)
+            for addr in iface.addresses:
+                text = addr.get_address() if hasattr(addr, 'get_address') else ''
+                if not text:
+                    continue
+                if text in seen_addresses:
+                    return (
+                        f'{cluster.name}: cluster interfaces {seen_addresses[text]} '
+                        f'and {iface.name} both carry the address {text}'
+                    )
+                seen_addresses[text] = iface.name
+        return ''
+
+    def validate_cluster_groups(self, cluster: Cluster) -> str:
+        """Say what is wrong with the cluster's groups, or ``''``.
+
+        Ports ``CompilerDriver::validateClusterGroups``.  The protocols a
+        Linux host can speak come from the host OS resource file
+        (`res/os/linux24.xml`): `vrrp`, `heartbeat`, `openais` and `none`
+        for failover, `conntrack` for state sync.  A group naming anything
+        else - a `.fwb` written for PF carries `carp` and `pfsync` - has
+        no rules this compiler could generate, and an empty failover group
+        names no member at all.
+        """
+        for group in cluster.child_groups:
+            if not isinstance(group, StateSyncClusterGroup):
+                continue
+            protocol = group.get_protocol()
+            if protocol not in STATE_SYNC_PROTOCOLS:
+                return (
+                    f'{cluster.name}: state sync group type "{protocol}" is not '
+                    f'supported on Linux'
+                )
+        for iface in cluster.interfaces:
+            group = iface.get_failover_group()
+            if group is None:
+                continue
+            protocol = group.get_protocol()
+            if protocol not in FAILOVER_PROTOCOLS:
+                return (
+                    f'{cluster.name}: failover group type "{protocol}" is not '
+                    f'supported on Linux'
+                )
+            if not group.get_members():
+                return (
+                    f'{cluster.name}: the failover group of cluster interface '
+                    f'"{iface.name}" is empty'
+                )
+        return ''
+
+    def populate_cluster_elements(self, session, cluster: Cluster, fw: Firewall) -> str:
+        """Give the member firewall what it inherits from its cluster.
+
+        Ports ``CompilerDriver::populateClusterElements``
+        (CompilerDriver.cpp:1013).  Three things move across:
+
+        * the **state sync group**, whose interface names the link
+          conntrackd replicates over.  The member's own interface in that
+          group is remembered under ``state_sync_interface``, which is
+          what the automatic conntrack rule is written against.
+        * every **failover interface**: a copy of the cluster's interface
+          is added to the member, marked ``cluster_interface`` and
+          pointed at the member's own interface through ``base_device`` /
+          ``base_interface_id``.  The copy is what carries the shared
+          address, so a rule naming the cluster interface has an object of
+          this firewall to resolve to, and the automatic failover rules
+          have somewhere to hang.  A cluster interface with no failover
+          group is copied only when it is the loopback.
+        * the cluster's **rule sets**, see :meth:`merge_rule_sets`.
+
+        Everything written here lives in the compile session and is rolled
+        back afterwards, see :meth:`compile_session`.
+
+        Returns a message when the cluster cannot be compiled, ``''``
+        otherwise.
+        """
+        problem = self.check_cluster(cluster) or self.validate_cluster_groups(cluster)
+        if problem:
+            return problem
+
+        fw.options = {**(fw.options or {}), 'cluster_member': True}
+        # Which cluster this firewall belongs to, so that
+        # `find_imported_rule_sets` can tell a branch into the cluster's own
+        # rule sets - merged in below - from one into a third object's.  An
+        # in-memory attribute: it describes this compile run, not the data
+        # file (`fw->setInt("parent_cluster_id", ...)` in the C++, which
+        # works on a database it throws away).
+        fw.parent_cluster_id = cluster.id
+
+        for group in cluster.child_groups:
+            if not isinstance(group, StateSyncClusterGroup):
+                continue
+            for member_iface in group.get_members():
+                if (
+                    not isinstance(member_iface, Interface)
+                    or member_iface.device_id != fw.id
+                ):
+                    continue
+                master = group.get_master_interface_id()
+                member_iface.options = {
+                    **(member_iface.options or {}),
+                    'state_sync_group_member': True,
+                    'state_sync_group_id': str(group.id),
+                    'state_sync_master': bool(master)
+                    and str(master) == str(member_iface.id),
+                }
+                fw.options = {
+                    **(fw.options or {}),
+                    'state_sync_group_id': str(group.id),
+                    'state_sync_interface': member_iface.name,
+                }
+                break
+
+        for cluster_iface in list(cluster.interfaces):
+            group = cluster_iface.get_failover_group()
+            if group is None:
+                if cluster_iface.is_loopback():
+                    self._copy_cluster_interface(session, fw, cluster_iface, None)
+                continue
+            member_iface = group.get_interface_for_member(fw)
+            if member_iface is None:
+                continue
+            member_iface.options = {
+                **(member_iface.options or {}),
+                'failover_group_id': str(group.id),
+            }
+            self._copy_cluster_interface(session, fw, cluster_iface, member_iface)
+
+        return ''
+
+    def _copy_cluster_interface(self, session, fw, cluster_iface, member_iface):
+        """Add a copy of *cluster_iface* to *fw*, and return it.
+
+        Ports ``CompilerDriver::copyFailoverInterface``.  The copy is what
+        makes a cluster interface answerable on the member: it carries the
+        address the cluster shares, so a rule naming that address belongs
+        in INPUT and OUTPUT and not in FORWARD, and a rule that translates
+        to the cluster interface resolves to that one address rather than
+        to the member's own.  It gets an id of its own - with the
+        cluster's, the C++ says in the same place, the interface would not
+        be a child of the firewall and every rule element naming it would
+        be rejected.
+
+        It shares its *name* with the member's own interface, and on Linux
+        it has to: the failover protocol runs on the member's NIC and the
+        generated rule says ``-i <that name>``.  Which is why
+        ``Interface.cluster_interface`` exists and the unique index on
+        (device, interface name) makes an exception for it.
+
+        The copy inherits what describes the member rather than the
+        cluster - dynamic, unnumbered, unprotected, dedicated failover
+        (fwbuilder #971) - so the expansion and the chain decisions ask
+        the right questions about it.
+        """
+        copy_iface = Interface(
+            id=uuid.uuid4(),
+            name=cluster_iface.name,
+            comment=cluster_iface.comment,
+            device=fw,
+        )
+        copy_iface.cluster_interface = True
+        copy_iface.keywords = set(cluster_iface.keywords or set())
+        copy_iface.data = copy.deepcopy(cluster_iface.data or {})
+        copy_iface.options = copy.deepcopy(cluster_iface.options or {})
+        copy_iface.bcast_bits = cluster_iface.bcast_bits
+        copy_iface.snmp_type = cluster_iface.snmp_type
+        copy_iface.options['cluster_interface'] = True
+
+        group = cluster_iface.get_failover_group()
+        if member_iface is not None:
+            copy_iface.options['base_device'] = member_iface.name
+            copy_iface.options['base_interface_id'] = str(member_iface.id)
+            master = group.get_master_interface_id() if group is not None else None
+            copy_iface.options['failover_master'] = bool(master) and str(master) == str(
+                member_iface.id
+            )
+            copy_iface.data['dyn'] = member_iface.is_dynamic()
+            copy_iface.data['unnum'] = member_iface.is_unnumbered()
+            copy_iface.data['unprotected'] = member_iface.is_unprotected()
+            copy_iface.data['dedicated_failover'] = member_iface.is_dedicated_failover()
+        session.add(copy_iface)
+
+        for addr in cluster_iface.addresses:
+            copy_addr = type(addr)(
+                id=uuid.uuid4(),
+                name=addr.name,
+                comment=addr.comment,
+            )
+            copy_addr.keywords = set(addr.keywords or set())
+            copy_addr.data = copy.deepcopy(addr.data or {})
+            for column in (
+                'inet_addr_mask',
+                'start_address',
+                'end_address',
+                'subst_type_name',
+                'source_name',
+                'run_time',
+            ):
+                setattr(copy_addr, column, copy.deepcopy(getattr(addr, column)))
+            copy_addr.interface = copy_iface
+            session.add(copy_addr)
+
+        return copy_iface
+
+    def merge_rule_sets(
+        self, cluster: Cluster, fw: Firewall, rule_sets, rule_set_class
+    ):
+        """Return *rule_sets* with the cluster's merged in.
+
+        Ports ``CompilerDriver::mergeRuleSets`` (CompilerDriver.cpp:909),
+        fwbuilder ticket #372.  A cluster's rule set is what its members
+        have in common; a member may override one by giving a rule set of
+        its own the same name.  So: the member's rule set wins when it has
+        rules of its own, and is said out loud; an empty one of the same
+        name is replaced by the cluster's; everything else is added.
+
+        The C++ copies the cluster's rule sets into the member object.
+        Here the answer is a list, because that is what the caller
+        compiles from - the rule set keeps its owner and the database is
+        not touched.
+        """
+        merged = list(rule_sets)
+        by_name = {rs.name: rs for rs in merged}
+        candidates = sorted(
+            (rs for rs in cluster.rule_sets if isinstance(rs, rule_set_class)),
+            key=lambda rs: rs.name,
+        )
+        for rule_set in candidates:
+            own = by_name.get(rule_set.name)
+            if own is None:
+                merged.append(rule_set)
+                continue
+            if own.rules:
+                self.warning(
+                    f'{fw.name}: ignoring cluster rule set "{rule_set.name}" '
+                    f'because the member firewall has a rule set with the '
+                    f'same name'
+                )
+                continue
+            merged[merged.index(own)] = rule_set
+        return merged
 
     def warn_about_missing_top_rule_sets(self, fw, policies, nats) -> None:
         """Say when the firewall has rule sets but none of them is the top one.

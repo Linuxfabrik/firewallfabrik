@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses and rule sets ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
+
 ### Fixed
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.

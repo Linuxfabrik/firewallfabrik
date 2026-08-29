@@ -316,6 +316,16 @@ class Interface(Base):
         sqlalchemy.Integer,
         default=0,
     )
+    # Set on the copy of a cluster interface a member firewall is given
+    # while it is compiled, and on nothing else.  It is why that copy is
+    # exempt from the unique index below: a cluster interface and the
+    # member interface it stands for carry the same name, and on Linux
+    # they have to - the failover protocol runs on the member's NIC and
+    # the generated rule says `-i <that name>`.
+    cluster_interface: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
+    )
 
     parent_interface_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = (
         sqlalchemy.orm.mapped_column(
@@ -367,12 +377,16 @@ class Interface(Base):
             'parent_interface_id', 'name', name='uq_interfaces_parent'
         ),
         # Top-level interfaces: unique (device_id, name) where no parent.
+        # The copy of a cluster interface is deliberately outside it, see
+        # the column above.
         sqlalchemy.Index(
             'uq_interfaces_device',
             'device_id',
             'name',
             unique=True,
-            sqlite_where=sqlalchemy.text('parent_interface_id IS NULL'),
+            sqlite_where=sqlalchemy.text(
+                'parent_interface_id IS NULL AND cluster_interface = 0'
+            ),
         ),
         sqlalchemy.Index(
             'uq_interfaces_standalone_lib',

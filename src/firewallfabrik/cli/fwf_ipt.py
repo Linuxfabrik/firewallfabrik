@@ -230,6 +230,26 @@ def main(argv=None):
 
     # Resolve firewalls to compile
     Firewall = firewallfabrik.core.objects.Firewall
+    Cluster = firewallfabrik.core.objects.Cluster
+
+    def _expand(obj):
+        """What compiling *obj* means: itself, or every member of a cluster.
+
+        Firewall Builder compiles a cluster by compiling each of its
+        members with the cluster named alongside
+        (`CompilerDriver::compile`), because a cluster is not a machine -
+        it is what its members have in common.
+        """
+        if isinstance(obj, Cluster):
+            members = obj.get_members_list()
+            if not members:
+                print(
+                    f"Warning: cluster '{obj.name}' has no members to compile",
+                    file=sys.stderr,
+                )
+            return [(str(obj.id), str(m.id), m.name) for m in members]
+        return [('', str(obj.id), obj.name)]
+
     fw_list = []
     with db.session() as session:
         if args.COMPILE_ALL:
@@ -252,7 +272,7 @@ def main(argv=None):
                 if fw_data.get('inactive') in (True, 'True'):
                     skipped_inactive += 1
                     continue
-                fw_list.append((str(fw.id), fw.name))
+                fw_list.extend(_expand(fw))
             print(
                 f'Found {len(fw_list)} iptables firewall(s) to compile'
                 + (
@@ -296,7 +316,7 @@ def main(argv=None):
                         file=sys.stderr,
                     )
                     continue
-                fw_list.append((str(fw.id), fw.name))
+                fw_list.extend(_expand(fw))
 
     if not fw_list:
         print('Error: no firewalls found to compile', file=sys.stderr)
@@ -307,7 +327,7 @@ def main(argv=None):
 
     compiled_ok = 0
     compiled_err = 0
-    for fw_id, fw_name in fw_list:
+    for cluster_id, fw_id, fw_name in fw_list:
         if len(fw_list) > 1:
             print(f'\n--- {fw_name} ---', file=sys.stderr)
         print(f"Compiling '{fw_name}' (id: {fw_id}) ...", file=sys.stderr)
@@ -334,7 +354,9 @@ def main(argv=None):
         if args.DEBUG_ROUTING_RULE is not None:
             driver.debug_rule_routing = args.DEBUG_ROUTING_RULE
 
-        result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id=args.SINGLE_RULE)
+        result = driver.run(
+            cluster_id=cluster_id, fw_id=fw_id, single_rule_id=args.SINGLE_RULE
+        )
 
         if result:
             print(f'Compiler returned: {result}', file=sys.stderr)

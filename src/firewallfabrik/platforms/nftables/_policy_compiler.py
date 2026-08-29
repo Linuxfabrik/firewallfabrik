@@ -2292,12 +2292,15 @@ class RemoveFW(PolicyRuleProcessor):
             return True
 
         chain = rule.ipt_chain
-        fw_id = nft_comp.fw.id
 
         if chain == 'input' and not rule.dst_single_object_negation:
-            rule.dst = [obj for obj in rule.dst if obj.id != fw_id]
+            rule.dst = [
+                obj for obj in rule.dst if not self.compiler.is_firewall_or_cluster(obj)
+            ]
         elif chain == 'output' and not rule.src_single_object_negation:
-            rule.src = [obj for obj in rule.src if obj.id != fw_id]
+            rule.src = [
+                obj for obj in rule.src if not self.compiler.is_firewall_or_cluster(obj)
+            ]
 
         self.tmp_queue.append(rule)
         return True
