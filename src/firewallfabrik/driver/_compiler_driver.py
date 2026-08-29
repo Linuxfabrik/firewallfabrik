@@ -486,6 +486,12 @@ class CompilerDriver(BaseCompiler):
         rules of its own, and is said out loud; an empty one of the same
         name is replaced by the cluster's; everything else is added.
 
+        Called once per rule set kind - policy, NAT and routing - the way
+        ``populateClusterElements`` calls it (CompilerDriver.cpp:1095).
+        The routing one is easy to forget and the most expensive to lose:
+        a member compiled without the cluster's routes installs the new
+        packet filter and no route at all, and says nothing about it.
+
         The C++ copies the cluster's rule sets into the member object.
         Here the answer is a list, because that is what the caller
         compiles from - the rule set keeps its owner and the database is

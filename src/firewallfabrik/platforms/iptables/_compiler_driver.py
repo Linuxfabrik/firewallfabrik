@@ -239,14 +239,32 @@ class CompilerDriver_ipt(CompilerDriver):
                     .all()
                 )
 
+                all_routing = (
+                    session.execute(
+                        sqlalchemy.select(Routing).where(
+                            Routing.device_id == fw.id,
+                        ),
+                    )
+                    .scalars()
+                    .all()
+                )
+
                 # A cluster's rule sets are what its members have in
                 # common; a member overrides one by giving a rule set of its
-                # own the same name (CompilerDriver::mergeRuleSets).
+                # own the same name (CompilerDriver::mergeRuleSets).  All
+                # three kinds move across, the way the C++ calls the merge
+                # once per type (CompilerDriver.cpp:1095): where a cluster
+                # keeps the routes its members share, a member compiled
+                # without them installs the new packet filter and none of
+                # the routes it needs to reach anything.
                 if cluster is not None:
                     all_policies = self.merge_rule_sets(
                         cluster, fw, all_policies, Policy
                     )
                     all_nat = self.merge_rule_sets(cluster, fw, all_nat, NAT)
+                    all_routing = self.merge_rule_sets(
+                        cluster, fw, all_routing, Routing
+                    )
 
                 self.warn_about_missing_top_rule_sets(fw, all_policies, all_nat)
 
@@ -465,15 +483,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 routing_output = ''
-                routing_rs = (
-                    session.execute(
-                        sqlalchemy.select(Routing).where(
-                            Routing.device_id == fw.id,
-                        ),
-                    )
-                    .scalars()
-                    .first()
-                )
+                routing_rs = all_routing[0] if all_routing else None
 
                 if routing_rs:
                     routing_compiler = RoutingCompilerLinux(session, fw, False)
