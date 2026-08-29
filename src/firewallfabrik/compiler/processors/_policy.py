@@ -595,6 +595,29 @@ class AddressRangesInDst(AddressRangesInRE):
         super().__init__(name, 'dst')
 
 
+def dst_is_a_cluster_this_firewall_is_in(dst, fw) -> bool:
+    """Is *dst* a cluster object whose members include *fw*?
+
+    `PolicyCompiler_ipt::decideOnChainIfDstFW` asks that next to
+    `complexMatch`, and says why in a comment: the destination may be a
+    cluster object, and not necessarily the cluster being compiled.
+    Traffic addressed to a cluster this firewall belongs to is addressed
+    to this firewall, so the rule belongs in the input chain - and it is
+    answered from the cluster's own membership rather than from
+    `parent_cluster_id`, so it holds when the member is compiled on its
+    own.
+
+    Only the destination is asked.  `decideOnChainIfSrcFW` has no such
+    branch: traffic *from* a cluster is traffic from whichever member sent
+    it, which is not necessarily this one.
+    """
+    from firewallfabrik.core.objects import Cluster
+
+    if not isinstance(dst, Cluster) or fw is None:
+        return False
+    return any(member.id == fw.id for member in dst.get_members_list())
+
+
 def is_mangle_only_rule_set(rule_set) -> bool:
     """Return whether *rule_set* carries mangle rules only."""
     if rule_set is None:

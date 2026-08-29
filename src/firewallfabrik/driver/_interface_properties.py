@@ -20,6 +20,14 @@ from firewallfabrik.core.objects import (
     Interface,
 )
 
+#: The failover protocols whose shared address the generated script puts
+#: on the interface itself, rather than leaving it to the daemon.  Empty
+#: on Linux: `res/os/linux24.xml` sets `manage_addresses` False for vrrp,
+#: heartbeat and openais.  It is a set rather than a constant because the
+#: question is per protocol, and a resource file is where the answer comes
+#: from.
+FAILOVER_PROTOCOLS_MANAGING_ADDRESSES: frozenset[str] = frozenset()
+
 
 def get_interface_var_name(iface: Interface, suffix: str = '') -> str:
     """Generate a shell variable name for an interface.
@@ -87,9 +95,25 @@ class InterfaceProperties:
         self,
         iface: Interface,
     ) -> tuple[bool, list[str], list[str]]:
-        """Determine if addresses should be managed for this interface.
+        """Which addresses of *iface* the generated script configures.
 
-        Returns (should_manage, update_addresses, ignore_addresses).
+        Returns ``(should_manage, update_addresses, ignore_addresses)``,
+        the three arguments of the ``update_addresses_of_interface`` shell
+        function: whether to emit the call at all, the addresses the
+        interface is to end up with, and the addresses the function must
+        leave exactly as it finds them.
+
+        Ports ``interfaceProperties::manageIpAddresses``.  The second list
+        exists for clusters: the address a failover group shares is put on
+        and taken off the interface by keepalived, heartbeat or corosync,
+        and none of the three wants it managed from outside
+        (``manage_addresses`` is false for every one of them in Firewall
+        Builder's host OS resource file).  So the copy of a cluster
+        interface configures nothing of its own, and the member's own
+        interface of that name says "ignore the shared address" - without
+        which the script would take the address away from whichever member
+        is master, on every activation, and add it on the other one at the
+        same time.
         """
         update_addresses: list[str] = []
         ignore_addresses: list[str] = []
@@ -102,8 +126,38 @@ class InterfaceProperties:
         ):
             return False, update_addresses, ignore_addresses
 
+        if iface.cluster_interface:
+            if iface.is_loopback():
+                return False, update_addresses, ignore_addresses
+            if self._failover_manages_addresses(iface):
+                return True, self._get_list_of_addresses(iface), ignore_addresses
+            return False, update_addresses, ignore_addresses
+
         update_addresses = self._get_list_of_addresses(iface)
+        device = iface.device
+        for other in getattr(device, 'interfaces', []) or []:
+            if (
+                other.name == iface.name
+                and other.cluster_interface
+                and not self._failover_manages_addresses(other)
+            ):
+                ignore_addresses = self._get_list_of_addresses(other)
+                break
         return True, update_addresses, ignore_addresses
+
+    @staticmethod
+    def _failover_manages_addresses(cluster_iface: Interface) -> bool:
+        """Does the failover protocol want its address configured for it?
+
+        `manage_addresses` in Firewall Builder's host OS resource file,
+        which says False for vrrp, heartbeat and openais alike - on Linux
+        the daemon owns the address, and taking it away from under one is
+        what the ignore list exists to prevent.  A cluster interface with
+        no failover group (the loopback of a cluster) answers False too:
+        there is no protocol to ask.
+        """
+        protocol = (cluster_iface.options or {}).get('failover_protocol', '')
+        return protocol in FAILOVER_PROTOCOLS_MANAGING_ADDRESSES
 
     @staticmethod
     def _get_list_of_addresses(iface: Interface) -> list[str]:

@@ -1606,6 +1606,13 @@ class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
                     continue
                 if any(iface.id == obj.id for iface in fw.interfaces):
                     continue
+                # An interface of the cluster this firewall is a member of
+                # is not "another object"
+                # (`NATCompiler_ipt::checkForDynamicInterfacesOfOtherObjects`
+                # asks `isChildOf(cluster)` next to `isChildOf(fw)`).
+                cluster = self.compiler.get_cluster()
+                if cluster is not None and obj.device_id == cluster.id:
+                    continue
                 # `device` is the host or firewall the interface belongs to.
                 device = getattr(obj, 'device', None)
                 parent_name = getattr(device, 'name', '') or 'another object'
@@ -1660,8 +1667,14 @@ class AddVirtualAddress(NATRuleProcessor):
             # is still compiled; the kernel only needs the virtual address
             # when a local process actually has to bind to the mapped IP,
             # which is not the common case.
+            # An address the *cluster* carries is not a virtual address
+            # either: the failover daemon puts it on the interface, and
+            # adding it here would put it on every member at once
+            # (`NATCompiler_ipt::addVirtualAddress` asks both).
+            cluster = nat_comp.get_cluster()
             if (
                 not nat_comp.complex_match(a, nat_comp.fw)
+                and not (cluster is not None and nat_comp.complex_match(a, cluster))
                 and not isinstance(a, AddressRange)
                 and nat_comp.oscnf is not None
             ):

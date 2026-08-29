@@ -61,7 +61,7 @@ normalise() {
         sed -e 's/-w [0-9]*//' -e 's/-w //' \
             -e 's/ 2>\/dev\/null//' \
             -e 's/C[0-9a-fA-F]\{6,\}\.[0-9]*/CHAIN/g' \
-            -e 's/Cid[0-9A-Za-z]*\.[0-9]*/CHAIN/g' \
+            -e 's/Cid[0-9A-Za-z]*\(\.[0-9]\+\)\+/CHAIN/g' \
             -e 's/-m conntrack --ctstate/-m state --state/' \
             -e 's/-p 0 /-p all /' -e 's/-p 51 /-p ah /' -e 's/-p 50 /-p esp /' \
             -e 's/-p 112 /-p vrrp /' \

@@ -93,6 +93,15 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
+        '-O',
+        '--member-files',
+        default='',
+        dest='MEMBER_FILES',
+        help='comma-separated list of member_id,filename pairs '
+        'for cluster member output files',
+    )
+
+    parser.add_argument(
         '-s',
         '--single-rule',
         default='',
@@ -323,6 +332,19 @@ def main(argv=None):
 
         if args.OUTPUT:
             driver.file_name_setting = args.OUTPUT
+        if args.MEMBER_FILES:
+            # `<member id>,<file name>` pairs, the way the Firewall
+            # Builder GUI names the script of every member of a cluster
+            # (`CompilerDriver::configure`).
+            parts = args.MEMBER_FILES.split(',')
+            if len(parts) % 2:
+                print(
+                    'Error: --member-files needs an even number of '
+                    'comma-separated values (id,filename pairs)',
+                    file=sys.stderr,
+                )
+                return 1
+            driver.member_file_names = dict(zip(parts[::2], parts[1::2], strict=True))
         if args.IPV4:
             driver.ipv6_run = False
         elif args.IPV6:

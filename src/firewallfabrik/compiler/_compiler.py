@@ -1228,6 +1228,35 @@ class Compiler(BaseCompiler):
 
         return None
 
+    def get_cluster(self):
+        """The cluster this firewall is compiled as a member of, or ``None``.
+
+        The C++ keeps the id on the firewall object and looks it up where
+        it needs it (``compiler->fw->getInt("parent_cluster_id")``, in
+        `addVirtualAddress`, `ReplaceFirewallObjects*`,
+        `specialCaseWithRedirect` and the dynamic-interface check); the
+        driver sets the same attribute here, so the lookup is the same
+        one.
+        """
+        cluster_id = getattr(self.fw, 'parent_cluster_id', None)
+        if cluster_id is None or self.session is None:
+            return None
+        from firewallfabrik.core.objects import Cluster
+
+        return self.session.get(Cluster, cluster_id)
+
+    def is_cluster_interface_of(self, iface, cluster) -> bool:
+        """Is *iface* the copy of one of *cluster*'s interfaces?
+
+        A member firewall compiled as part of a cluster carries both its
+        own interfaces and a copy of every cluster interface, and where a
+        NAT rule has to name "the interfaces of the firewall" it means the
+        copies alone (fwbuilder ticket #1185): they are the ones the
+        cluster address lives on, and the member's own address is not what
+        the traffic is translated to.
+        """
+        return cluster is not None and bool(iface.cluster_interface)
+
     def correct_for_cluster(self, addr):
         """Answer with the member's own interface where *addr* is a cluster's.
 

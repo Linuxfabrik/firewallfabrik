@@ -63,6 +63,7 @@ from firewallfabrik.compiler.processors._policy import (
     SpecialCaseAddressRangeInSrc,
     SpecialCaseWithFWInDstAndOutbound,
     branches_into_mangle_only,
+    dst_is_a_cluster_this_firewall_is_in,
     is_mangle_only_rule_set,
 )
 from firewallfabrik.compiler.processors._service import (
@@ -2913,7 +2914,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
                 ipt_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
-            )
+            ) or dst_is_a_cluster_this_firewall_is_in(dst, ipt_comp.fw)
 
             if direction == Direction.Inbound:
                 if matches_fw:
@@ -3465,6 +3466,17 @@ class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
                 and obj.is_dynamic()
                 and obj.device_id != ipt_comp.fw.id
             ):
+                # A dynamic *cluster* interface is answerable after all,
+                # as long as this firewall is a member of that cluster:
+                # the address comes from the member's own interface, which
+                # the failover group names
+                # (`PolicyCompiler_ipt::checkForDynamicInterfacesOfOtherObjects`).
+                if (
+                    obj.is_failover_interface()
+                    and obj.get_failover_group().get_interface_for_member(ipt_comp.fw)
+                    is not None
+                ):
+                    continue
                 parent_name = ''
                 if obj.device:
                     parent_name = obj.device.name
@@ -3824,7 +3836,36 @@ class CheckInterfaceAgainstAddressFamily(PolicyRuleProcessor):
 
         if has_matching:
             self.tmp_queue.append(rule)
-        # else: drop rule (interface has no matching addresses)
+            return True
+
+        # A cluster interface with no address of this family is asked
+        # about the member's own interface instead (fwbuilder ticket
+        # #1172): the two stand for the same NIC, and the shared address
+        # is not the only one it carries.  A cluster interface that maps
+        # onto no interface of this firewall is said out loud - the rule
+        # cannot be tied to it at all.
+        # Not when the cluster itself is what is being compiled: its
+        # interfaces then stand for themselves.
+        if (
+            rule_iface.is_failover_interface()
+            and rule_iface.device_id != ipt_comp.fw.id
+        ):
+            other = rule_iface.get_failover_group().get_interface_for_member(
+                ipt_comp.fw
+            )
+            if other is None:
+                self.compiler.warning(
+                    rule,
+                    f'cluster interface "{rule_iface.name}" does not map onto '
+                    f'any interface of "{ipt_comp.fw.name}" but is used in the '
+                    f'Interface rule element, so the rule is left out',
+                )
+                return True
+            if any(
+                isinstance(addr, IPv6 if ipt_comp.ipv6_policy else IPv4)
+                for addr in other.addresses
+            ):
+                self.tmp_queue.append(rule)
         return True
 
 

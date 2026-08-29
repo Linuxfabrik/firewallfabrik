@@ -340,6 +340,19 @@ def main(argv=None):
 
         if args.OUTPUT:
             driver.file_name_setting = args.OUTPUT
+        if args.MEMBER_FILES:
+            # `<member id>,<file name>` pairs, the way the Firewall
+            # Builder GUI names the script of every member of a cluster
+            # (`CompilerDriver::configure`).
+            parts = args.MEMBER_FILES.split(',')
+            if len(parts) % 2:
+                print(
+                    'Error: --member-files needs an even number of '
+                    'comma-separated values (id,filename pairs)',
+                    file=sys.stderr,
+                )
+                return 1
+            driver.member_file_names = dict(zip(parts[::2], parts[1::2], strict=True))
         if args.IPV4:
             driver.ipv6_run = False
         elif args.IPV6:

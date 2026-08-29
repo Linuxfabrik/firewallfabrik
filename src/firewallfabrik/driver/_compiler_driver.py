@@ -121,6 +121,9 @@ class CompilerDriver(BaseCompiler):
         self.debug_rule_nat: int = -1
         self.debug_rule_routing: int = -1
         self.file_name_setting: str = ''
+        #: Output file per cluster member, keyed by the member's id: the
+        #: `-O` command-line option (`CompilerDriver::configure`).
+        self.member_file_names: dict[str, str] = {}
         self.prepend_cluster_name: bool = False
         self.source_dir: str = '.'
 
@@ -416,8 +419,12 @@ class CompilerDriver(BaseCompiler):
             if group is not None:
                 # The C++ copies the failover group itself along with the
                 # interface; here the copy points back at the one under
-                # the cluster, which is what the automatic rules read.
+                # the cluster, which is what the automatic rules read, and
+                # carries the protocol, which decides whether the script
+                # configures the shared address or leaves it to the daemon
+                # (`interfaceProperties::manageIpAddresses`).
                 copy_iface.options['failover_group_id'] = str(group.id)
+                copy_iface.options['failover_protocol'] = group.get_protocol()
             master = group.get_master_interface_id() if group is not None else None
             copy_iface.options['failover_master'] = bool(master) and str(master) == str(
                 member_iface.id
@@ -772,8 +779,15 @@ class CompilerDriver(BaseCompiler):
         # to be missing, so a compile from the command line or from cron
         # ignored the setting and wrote a different file than the GUI, which
         # has always passed the option through as -o.
+        # Compiling a cluster, the caller may name the file of each member
+        # (`-O <member id>,<file name>,...`, which is what the Firewall
+        # Builder GUI passes instead of `-o`); that answer takes the place
+        # of the `-o` one for this member.
         option_name = str(fw.get_option('output_file') or '').strip()
-        if self.file_name_setting:
+        member_name = self.member_file_names.get(str(fw.id), '')
+        if member_name:
+            file_name = member_name
+        elif self.file_name_setting:
             file_name = self.file_name_setting
         elif option_name:
             file_name = option_name

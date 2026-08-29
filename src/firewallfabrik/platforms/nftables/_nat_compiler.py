@@ -782,7 +782,14 @@ class SpecialCaseWithRedirect(NATRuleProcessor):
 
         if rule.nat_rule_type == NATRuleType.DNAT and rule.tdst:
             tdst = rule.tdst[0]
-            if isinstance(tdst, Firewall) and tdst.id == self.compiler.fw.id:
+            # A rule of a cluster names the cluster object where a
+            # firewall's own rule names the firewall, and both mean this
+            # box (`NATCompiler_ipt::specialCaseWithRedirect`).
+            cluster = self.compiler.get_cluster()
+            if isinstance(tdst, Firewall) and (
+                tdst.id == self.compiler.fw.id
+                or (cluster is not None and tdst.id == cluster.id)
+            ):
                 rule.nat_rule_type = NATRuleType.Redirect
 
         self.tmp_queue.append(rule)
@@ -1518,11 +1525,25 @@ class ReplaceFirewallObjectsODst(NATRuleProcessor):
             return True
 
         odst = rule.odst[0]
-        if isinstance(odst, Firewall) and odst.id == self.compiler.fw.id:
+        cluster = self.compiler.get_cluster()
+        names_this_box = isinstance(odst, Firewall) and (
+            odst.id == self.compiler.fw.id
+            or (cluster is not None and odst.id == cluster.id)
+        )
+        if names_this_box:
+            # On a cluster member only the copies of the cluster
+            # interfaces count: the traffic is addressed to the address
+            # the cluster shares, not to the member's own
+            # (`NATCompiler_ipt::ReplaceFirewallObjectsODst`, fwbuilder
+            # ticket #1185).
             interfaces = [
                 iface
                 for iface in self.compiler.fw.interfaces
                 if not iface.is_loopback()
+                and (
+                    cluster is None
+                    or self.compiler.is_cluster_interface_of(iface, cluster)
+                )
             ]
             if interfaces:
                 rule.odst = interfaces
@@ -1608,15 +1629,27 @@ class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
             return True
 
         tsrc = rule.tsrc[0]
-        if not (isinstance(tsrc, Firewall) and tsrc.id == self.compiler.fw.id):
+        cluster = self.compiler.get_cluster()
+        if not (
+            isinstance(tsrc, Firewall)
+            and (
+                tsrc.id == self.compiler.fw.id
+                or (cluster is not None and tsrc.id == cluster.id)
+            )
+        ):
             return True
 
-        # TSrc is the firewall — replace with the interface facing ODst
+        # TSrc is the firewall — replace with the interface facing ODst.
+        # On a cluster member the interface facing the destination is
+        # looked for on the *cluster*, because that is where the shared
+        # addresses are (`NATCompiler_ipt::ReplaceFirewallObjectsTSrc`);
+        # the one facing the source stays the member's own.
         odst = rule.odst[0] if rule.odst else None
         osrc = rule.osrc[0] if rule.osrc else None
 
+        odst_owner = cluster if cluster is not None else self.compiler.fw
         odst_iface = (
-            self.compiler.find_interface_for(odst, self.compiler.fw) if odst else None
+            self.compiler.find_interface_for(odst, odst_owner) if odst else None
         )
         osrc_iface = (
             self.compiler.find_interface_for(osrc, self.compiler.fw) if osrc else None
@@ -1631,17 +1664,24 @@ class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
         # Fallback: use all non-loopback, non-unnumbered, non-bridge interfaces,
         # excluding the interface facing OSrc (per C++ logic).
         # Also exclude odst_iface when single_object_negation is set.
+        # The C++ compares the two interfaces by *name* here and says
+        # why: on a cluster member `odst_iface` is a child of the cluster
+        # and `osrc_iface` a child of the firewall, so their ids never
+        # match even where they stand for the same NIC.
         interfaces = [
             iface
             for iface in self.compiler.fw.interfaces
             if not iface.is_loopback()
             and not iface.is_unnumbered()
             and not iface.is_bridge_port()
-            and not (osrc_iface and iface.id == osrc_iface.id)
+            and not (osrc_iface and iface.name == osrc_iface.name)
             and not (
                 rule.odst_single_object_negation
                 and odst_iface
-                and iface.id == odst_iface.id
+                and iface.name == odst_iface.name
+            )
+            and (
+                cluster is None or self.compiler.is_cluster_interface_of(iface, cluster)
             )
         ]
         if interfaces:

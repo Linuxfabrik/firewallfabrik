@@ -24,6 +24,7 @@ import uuid
 import pytest
 
 from firewallfabrik.compiler._comp_rule import CompRule
+from firewallfabrik.compiler._compiler import Compiler
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.compiler.processors._generic import CheckForTCPEstablished
 from firewallfabrik.core.objects import PolicyAction, TCPService
@@ -51,6 +52,11 @@ class _Compiler:
 
     def error(self, _rule, msg: str = '') -> None:
         self.messages.append(msg)
+
+    # The real one, not a stub: a dynamic interface of the cluster this
+    # firewall is a member of is not "of another object".
+    get_cluster = Compiler.get_cluster
+    session = None
 
 
 def _rule(services):
