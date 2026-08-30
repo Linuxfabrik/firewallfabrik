@@ -139,8 +139,14 @@ case "$cmd" in
         RETVAL=$?
         ;;
 
+##  "reload" is "start", not "stop" and then "start".  The start branch
+##  resets everything the stop branch resets - `reset_all` is the same
+##  function both go through - and the only thing the stop adds is setting
+##  the three built-in policies to ACCEPT.  Between the two commands that
+##  is a machine with no rules and no policy, for as long as a second
+##  process needs to start, read its address tables, load its modules and
+##  configure its interfaces.  Firewall Builder writes both calls here.
     reload)
-        $0 stop
         $0 start
         RETVAL=$?
         ;;

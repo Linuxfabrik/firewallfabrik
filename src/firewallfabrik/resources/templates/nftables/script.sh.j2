@@ -453,8 +453,15 @@ case "$cmd" in
         RETVAL=$?
         ;;
 
+{# "reload" is "start", not "stop" and then "start".  The ruleset deletes
+   and recreates each of its own tables in one transaction and
+   `remove_other_tables` takes the rest afterwards, so a start already
+   replaces everything a stop would have removed - and it keeps the running
+   firewall when `check_ruleset` refuses the new ruleset, where a stop
+   before it would have left the machine with no firewall at all.  Firewall
+   Builder writes the two calls here, on a platform that has no atomic
+   load. #}
     reload)
-        $0 stop
         $0 start
         RETVAL=$?
         ;;

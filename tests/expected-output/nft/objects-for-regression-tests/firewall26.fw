@@ -775,7 +775,6 @@ case "$cmd" in
         ;;
 
     reload)
-        $0 stop
         $0 start
         RETVAL=$?
         ;;
