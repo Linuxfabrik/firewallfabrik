@@ -105,7 +105,9 @@ class CompilerDriver_ipt(CompilerDriver):
         self._nat_branch_chains: dict[str, list[str]] = {}
         # The names of the policy rule sets a Branch rule can jump to.
         self._branch_chains: set[str] = set()
-        self._imported_rule_sets: set = set()
+        # The branch jumps that close a cycle, by (source, target) rule set
+        # name; the kernel refuses such a jump.
+        self._branch_loop_edges: set[tuple[str, str]] = set()
         self._mangle_only_branch_chains: set[str] = set()
         self._mangle_branch_chains: set[str] = set()
         self._classifying_branch_chains: set[str] = set()
@@ -302,6 +304,12 @@ class CompilerDriver_ipt(CompilerDriver):
                     for pol_rs in all_policies
                     if not self._is_top_ruleset(pol_rs)
                 }
+                # A jump into a chain that can reach itself is refused
+                # by the kernel; only the jump that closes the cycle is
+                # named, so the rest of the branch tree stays reachable.
+                self._branch_loop_edges = self.find_branch_loop_edges(
+                    session, [*all_policies, *all_nat]
+                )
                 # Of those, the ones that compile into the mangle table
                 # alone: a rule branching into one has nothing to jump to in
                 # the filter table.
@@ -1002,6 +1010,7 @@ class CompilerDriver_ipt(CompilerDriver):
         mangle_compiler.automatic_rules = self._automatic_rules
         mangle_compiler.hashlimit_tables = self._hashlimit_tables
         mangle_compiler.branch_chains = self._branch_chains
+        mangle_compiler.branch_loop_edges = self._branch_loop_edges
         mangle_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
         mangle_compiler.mangle_branch_chains = self._mangle_branch_chains
         mangle_compiler.classifying_branch_chains = self._classifying_branch_chains
@@ -1057,6 +1066,7 @@ class CompilerDriver_ipt(CompilerDriver):
         policy_compiler.automatic_rules = self._automatic_rules
         policy_compiler.hashlimit_tables = self._hashlimit_tables
         policy_compiler.branch_chains = self._branch_chains
+        policy_compiler.branch_loop_edges = self._branch_loop_edges
         policy_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
         policy_compiler.mangle_branch_chains = self._mangle_branch_chains
         policy_compiler.classifying_branch_chains = self._classifying_branch_chains
@@ -1216,24 +1226,6 @@ class CompilerDriver_ipt(CompilerDriver):
         if hasattr(ruleset, 'matching_address_family'):
             return ruleset.matching_address_family(policy_af)
         return True
-
-    def _is_top_ruleset(self, ruleset: RuleSet) -> bool:
-        """Check if a rule set is the top-level rule set.
-
-        The ``top`` column on ``RuleSet`` is populated from the
-        ``top_rule_set`` XML attribute by the XML reader.
-
-        A rule set imported from another firewall object is never the top
-        one *here*, whatever it says about itself: the top rule set is
-        compiled into the built-in chains, and then there would be no chain
-        for the branching rule to jump to.  fwbuilder clears the flag on
-        the object for the same reason
-        (``CompilerDriver::findImportedRuleSets``); answering it per compile
-        run keeps the firewall the rule set belongs to unchanged.
-        """
-        if ruleset.id in self._imported_rule_sets:
-            return False
-        return bool(ruleset.top)
 
     def info(self, msg: str) -> None:
         """Print informational message."""

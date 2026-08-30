@@ -12,6 +12,7 @@
 #  Policy includes basic rules to permit unrestricted outbound access and anti-spoofing rules. Access to the firewall is permitted only from internal network and only using SSH. The firewall uses one of the machines on internal network for DNS. Internal network is configured with address 192.168.1.0/255.255.255.0
 #
 # Rule Policy_A 1 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
+# Rule Policy_A 2 (global): Rule branches to "Policy_A", which is the rule set the rule is in. The kernel refuses a jump into a chain that can reach itself ("Too many links"), and on nftables that costs the whole ruleset; the rule is left out
 # firewall82: rule 0 of rule set "Policy" branches to rule set "Policy_A", which branches back to it, creating a loop
 
 FWBDEBUG=""
@@ -300,10 +301,6 @@ table ip fwf_filter {
         # Rule Policy_A 0 (global)
         #
         counter jump Policy_B
-        #
-        # Rule Policy_A 2 (global)
-        #
-        counter jump Policy_A
     }
 
     chain Policy_B {

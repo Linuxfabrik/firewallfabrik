@@ -24,6 +24,7 @@ from firewallfabrik.core.objects import (
     Host,
     Interface,
     PhysAddress,
+    PolicyAction,
     TagService,
     TCPUDPService,
 )
@@ -132,6 +133,54 @@ def interface_direction_problem(
     if not inbound and name in NO_OUTBOUND_DEVICE_CHAINS:
         return f'a packet in the {chain} chain has no outgoing interface yet'
     return ''
+
+
+def branch_closes_a_loop(compiler, rule) -> bool:
+    """Whether *rule* branches into a chain that can reach the one it is in.
+
+    The kernel walks every jump reachable from a base chain and answers
+    ``-EMLINK`` once it has descended ``NFT_JUMP_STACK_SIZE`` levels
+    (``nft_chain_validate``, netfilter
+    ``net/netfilter/nf_tables_api.c``); both tools report that as "Too many
+    links".  Neither ``nft --check`` nor the shell sees it, because the
+    ruleset has to reach the kernel first.
+
+    Emitting the jump costs more than the rule on either platform.  nft
+    loads atomically, so the *whole* ruleset is refused and the firewall
+    keeps the rules it had.  iptables installs one command at a time, so
+    every jump into the looping chain fails - including the ones from the
+    built-in chains - and the rest of the script activates without it.
+    Reporting the rule and leaving it out is what keeps the other rules of
+    the branch tree working.
+
+    Which jump is the one to leave out is decided by the driver, which is
+    the only place that sees every rule set of the script; see
+    ``CompilerDriver.find_branch_loop_edges``.
+    """
+    edges = getattr(compiler, 'branch_loop_edges', None)
+    if not edges or rule.action != PolicyAction.Branch:
+        # An editor leaves the branch options behind when the action is
+        # changed, so the action decides first, the way `PolicyRule::getBranch`
+        # does (fwbuilder Rule.cpp:488).
+        return False
+    branch_name = rule.get_option('branch_name', '')
+    if not branch_name:
+        return False
+    source = compiler.source_ruleset.name if compiler.source_ruleset else ''
+    if (source, branch_name) not in edges:
+        return False
+    back = (
+        'which is the rule set the rule is in'
+        if branch_name == source
+        else f'which branches back to "{source}"'
+    )
+    compiler.error(
+        rule,
+        f'Rule branches to "{branch_name}", {back}. The kernel refuses a jump '
+        'into a chain that can reach itself ("Too many links"), and on '
+        'nftables that costs the whole ruleset; the rule is left out',
+    )
+    return True
 
 
 def nat_interface_problem(

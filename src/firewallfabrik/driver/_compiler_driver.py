@@ -126,6 +126,9 @@ class CompilerDriver(BaseCompiler):
         self.member_file_names: dict[str, str] = {}
         self.prepend_cluster_name: bool = False
         self.source_dir: str = '.'
+        #: Rule sets of other firewall objects pulled into this script by a
+        #: Branch rule, filled by the platform driver before it compiles.
+        self._imported_rule_sets: set = set()
 
         # Output
         self.file_names: dict[str, str] = {}
@@ -623,6 +626,71 @@ class CompilerDriver(BaseCompiler):
                     imported.append(candidate)
 
         return imported
+
+    def _is_top_ruleset(self, ruleset) -> bool:
+        """Whether *ruleset* fills the built-in chains of this script.
+
+        A rule set imported from another firewall object is never the top
+        one *here*, whatever it says about itself: the top rule set is
+        compiled into the built-in chains, and then there would be no
+        chain for a branching rule to jump to.  fwbuilder clears the flag
+        on the object for the same reason
+        (``CompilerDriver::findImportedRuleSets``); answering it per
+        compile run keeps the firewall the rule set belongs to unchanged.
+        """
+        if ruleset.id in self._imported_rule_sets:
+            return False
+        return bool(ruleset.top)
+
+    def find_branch_loop_edges(self, session, rule_sets) -> set[tuple[str, str]]:
+        """Return the branch jumps that close a cycle, by rule set name.
+
+        A chain that can reach itself through a jump is refused by the
+        kernel, not by the tool: ``nft_chain_validate`` walks every jump
+        from a base chain and answers ``-EMLINK`` once it has descended
+        ``NFT_JUMP_STACK_SIZE`` levels (netfilter
+        ``net/netfilter/nf_tables_api.c``), which both tools report as "Too
+        many links".  ``nft --check`` never sees it, because it parses and
+        evaluates without loading.
+
+        What that costs differs by tool and is bad on both.  nftables
+        loads a ruleset atomically, so the *whole* policy is refused and
+        the firewall keeps the rules it had.  iptables installs command by
+        command, so the jump into the looping chain fails from every
+        built-in chain and everything else installs: the branch is
+        silently absent from a script that otherwise activates.
+
+        Only the jump that closes the cycle is named here, not every jump
+        on it.  A depth-first walk starting at the top rule sets marks the
+        edges pointing back at a rule set that is still on the stack, so
+        breaking them leaves the rest of the branch tree reachable.  A
+        target that is the top rule set is not followed at all: it is
+        compiled into the built-in chains, so the chain the jump names
+        stays empty and there is no cycle - the compilers report that case
+        on its own.
+        """
+        by_state: dict = {}
+        edges: set[tuple[str, str]] = set()
+
+        def visit(rule_set) -> None:
+            by_state[rule_set.id] = False  # on the stack
+            for rule in rule_set.rules:
+                target = self._branch_target(session, rule)
+                if target is None or self._is_top_ruleset(target):
+                    continue
+                state = by_state.get(target.id)
+                if state is False:
+                    edges.add((rule_set.name, target.name))
+                elif state is None:
+                    visit(target)
+            by_state[rule_set.id] = True  # done
+
+        ordered = [rs for rs in rule_sets if self._is_top_ruleset(rs)]
+        ordered += [rs for rs in rule_sets if not self._is_top_ruleset(rs)]
+        for rule_set in ordered:
+            if rule_set.id not in by_state:
+                visit(rule_set)
+        return edges
 
     @staticmethod
     def _branch_target(session, rule):

@@ -161,7 +161,9 @@ class CompilerDriver_nft(CompilerDriver):
         # and, through that, whether a rule has to name its family itself.
         self._any_rs_ipv6: bool = False
         self._branch_chains: set[str] = set()
-        self._imported_rule_sets: set = set()
+        # The branch jumps that close a cycle, by (source, target) rule set
+        # name; the kernel refuses such a jump.
+        self._branch_loop_edges: set[tuple[str, str]] = set()
         self._mangle_only_branch_chains: set[str] = set()
         self._mangle_branch_chains: set[str] = set()
         self._classifying_branch_chains: set[str] = set()
@@ -370,6 +372,14 @@ class CompilerDriver_nft(CompilerDriver):
                     for rs in all_policies
                     if not self._is_top_ruleset(rs) and rule_set_classifies(rs)
                 }
+                # A jump into a chain that can reach itself is refused
+                # by the kernel; only the jump that closes the cycle is
+                # named, so the rest of the branch tree stays reachable.
+                # The names are the rule sets' own, not the sanitised chain
+                # names, because that is what a Branch rule carries.
+                self._branch_loop_edges = self.find_branch_loop_edges(
+                    session, [*all_policies, *all_nat]
+                )
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
@@ -684,6 +694,7 @@ class CompilerDriver_nft(CompilerDriver):
         policy_compiler.meters = self._meters
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
+        policy_compiler.branch_loop_edges = self._branch_loop_edges
         policy_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
         policy_compiler.mangle_branch_chains = self._mangle_branch_chains
         policy_compiler.classifying_branch_chains = self._classifying_branch_chains
@@ -755,6 +766,7 @@ class CompilerDriver_nft(CompilerDriver):
         mangle_compiler.meters = self._meters
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.branch_chains = self._branch_chains
+        mangle_compiler.branch_loop_edges = self._branch_loop_edges
         mangle_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
         mangle_compiler.mangle_branch_chains = self._mangle_branch_chains
         mangle_compiler.classifying_branch_chains = self._classifying_branch_chains
@@ -1421,19 +1433,6 @@ class CompilerDriver_nft(CompilerDriver):
         if hasattr(ruleset, 'matching_address_family'):
             return ruleset.matching_address_family(policy_af)
         return True
-
-    def _is_top_ruleset(self, ruleset: RuleSet) -> bool:
-        """Check if a rule set is the top-level rule set.
-
-        A rule set imported from another firewall object is never the top
-        one *here*: the top rule set fills the hooked chains, and then
-        there would be no chain for the branching rule to jump to.
-        fwbuilder clears the flag on the object for the same reason
-        (``CompilerDriver::findImportedRuleSets``).
-        """
-        if ruleset.id in self._imported_rule_sets:
-            return False
-        return bool(ruleset.top)
 
     def info(self, msg: str) -> None:
         """Print informational message."""

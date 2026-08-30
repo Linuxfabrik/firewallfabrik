@@ -1711,6 +1711,21 @@ for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
   so an administrator may write either - and the two platforms have to
   give one and the same object the same answer.  The predicate is
   `custom_service_matches_state` in `platforms/linux/_netfilter.py`.
+- A Branch rule whose target chain can reach the chain the rule is in is
+  reported and left out, where Firewall Builder emits the jump and warns.
+  The kernel walks every jump reachable from a base chain and answers
+  `-EMLINK` at `NFT_JUMP_STACK_SIZE` levels (`nft_chain_validate`,
+  netfilter `net/netfilter/nf_tables_api.c`), which both tools report as
+  "Too many links" - and neither `nft --check` nor the shell sees it,
+  because the ruleset has to reach the kernel first.  nftables loads
+  atomically, so the whole ruleset is refused and the firewall keeps the
+  rules it had; iptables refuses the jump from every built-in chain and
+  installs the rest, so the branch is silently absent from a script that
+  activates cleanly.  Only the jump that *closes* the cycle is left out -
+  `CompilerDriver.find_branch_loop_edges` walks the branch graph from the
+  top rule sets and names the back edges - so the rest of the branch tree
+  stays reachable.  This is the one place where `missing` in
+  `compare-reference.sh` is one higher than Firewall Builder on purpose.
 - `VerifyScriptLiterals` (`compiler/processors/_generic.py`) asks a
   question none of those do: three objects cannot be resolved by the
   compiler, so their names travel into the generated shell script and are
@@ -2394,6 +2409,6 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 | Inline logging with verdict | Partial | ⚠️ Partial | `log ... accept` works; LOG branching with multiple actions does not |
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
 | Custom action | any statement | ✅ | The rule's text is appended to the rule the way the iptables printer appends its custom target.  It carries no platform of its own, so the firewall's platform says what it was written in: a firewall naming another one is reported, because nftables refuses the whole ruleset over a statement it cannot parse |
-| Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. A rule set belonging to another firewall or cluster object is compiled into this script as well, the way `CompilerDriver::findImportedRuleSets` does it.  One case stays reported: a branch into the firewall's *own* top rule set, whose chains are hooked and cannot be jumped to - Firewall Builder emits the same empty chain there |
+| Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. A rule set belonging to another firewall or cluster object is compiled into this script as well, the way `CompilerDriver::findImportedRuleSets` does it.  Two cases stay reported: a branch into the firewall's *own* top rule set, whose chains are hooked and cannot be jumped to - Firewall Builder emits the same empty chain there - and the jump that closes a cycle, which the kernel refuses (`nft_chain_validate` answers `-EMLINK`, "Too many links"); see the note under *Intentional deviations* |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |
 | Policy routing | `fib` + marks | ❌ Not yet | `DeprecateOptionRoute` reports the rule and leaves it out, the way the iptables pipeline refuses it ([#125](https://github.com/Linuxfabrik/firewallfabrik/issues/125)) |

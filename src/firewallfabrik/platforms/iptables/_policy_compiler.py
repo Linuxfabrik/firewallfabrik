@@ -107,6 +107,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     INVALID_STATE_LOG_PREFIX,
+    branch_closes_a_loop,
     count_bridge_interfaces,
     custom_service_matches_state,
     forwarding_is_off,
@@ -232,6 +233,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # so the one holding the branching rule has no other way to tell
         # whether the target is compiled into this script at all.
         self.branch_chains: set[str] = set()
+        # The branch jumps that close a cycle, as (source, target) rule set
+        # names; filled by the driver, which is the only place that sees
+        # every rule set of the script.
+        self.branch_loop_edges: set[tuple[str, str]] = set()
 
         # Print rule processor reference
         self.print_rule_processor = None
@@ -3144,6 +3149,9 @@ class DecideOnTarget(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        if branch_closes_a_loop(self.compiler, rule):
+            return True
 
         self.tmp_queue.append(rule)
 

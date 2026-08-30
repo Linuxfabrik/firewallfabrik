@@ -94,6 +94,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
+    branch_closes_a_loop,
     custom_service_matches_state,
     forwarding_is_off,
     get_mac_only_address,
@@ -188,6 +189,10 @@ class PolicyCompiler_nft(PolicyCompiler):
         # driver so a jump into one is recognised as a branch rather than a
         # jump into a chain nobody declares.
         self.branch_chains: set[str] = set()
+        # The branch jumps that close a cycle, as (source, target) rule set
+        # names; filled by the driver, which is the only place that sees
+        # every rule set of the script.
+        self.branch_loop_edges: set[tuple[str, str]] = set()
 
     def my_platform_name(self) -> str:
         return 'nftables'
@@ -2230,6 +2235,9 @@ class DecideOnTarget(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        if branch_closes_a_loop(self.compiler, rule):
+            return True
 
         self.tmp_queue.append(rule)
 

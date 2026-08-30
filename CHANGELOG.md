@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): the chain a logged or accounting rule gets behind a negation is named after the part of the rule it belongs to, so two parts of one rule no longer share a chain.
 * Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address on the interface again.
 * Compiler (iptables): a rate limit whose table name is longer than iptables can store is cut and reported, so two rules that share a table by accident are named.
+* Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync address is an IPv6 address keeps its rules, instead of losing them without a word.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync port is not a number is reported instead of breaking the compile.
