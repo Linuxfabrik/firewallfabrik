@@ -4646,6 +4646,20 @@ class DecideOnChainForClassify(PolicyRuleProcessor):
     classification stays in POSTROUTING.
 
     Corresponds to C++ ``PolicyCompiler_ipt::decideOnChainForClassify``.
+
+    The two halves go into different chains, so they must not ask for the
+    same chain *name*.  ``getNewChainName`` builds it out of the
+    direction, the rule set, the position and ``subrule_suffix``, and the
+    first three are the same for both - so a rule that tags, classifies
+    and logs had `Logging2` build one chain for both halves and put the
+    MARK and the CLASSIFY in it.  Whichever jump rule survives then
+    carries both targets, and ``-j CLASSIFY`` outside postrouting is
+    refused by the kernel (``xt_CLASSIFY`` registers for
+    ``NF_INET_POST_ROUTING`` and ``NF_INET_LOCAL_OUT`` alone), which stops
+    the activation script with every built-in policy already at DROP.
+    Firewall Builder sets no suffix here either; nothing there drops the
+    postrouting half, so the shared chain is reachable from both hooks and
+    the kernel refuses it just the same.
     """
 
     def process_next(self) -> bool:
@@ -4670,6 +4684,8 @@ class DecideOnChainForClassify(PolicyRuleProcessor):
 
                 # Original keeps classification, loses tagging
                 rule.set_option('tagging', False)
+                # And a chain name of its own; see the class docstring.
+                rule.subrule_suffix = 'c'
 
             ipt_comp.set_chain(rule, 'POSTROUTING')
 
