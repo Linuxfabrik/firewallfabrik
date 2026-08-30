@@ -11,8 +11,6 @@
 # DNSName "buildmaster (ct)" cannot resolve "buildmaster": DNS lookup failed
 # Rule 2 (global): Empty group or address table object 'buildmaster (ct)' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 6 (global): Empty group or address table object 'buildmaster (ct)' is used in the rule but option 'Ignore rules with empty groups' is off
-# firewall33-1:Policy:2: warning: Rule is left out because "buildmaster (ct)" resolves to no address at all
-# firewall33-1:Policy:6: warning: Rule is left out because "buildmaster (ct)" resolves to no address at all
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
