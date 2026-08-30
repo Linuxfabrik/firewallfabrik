@@ -138,6 +138,24 @@ class Host(Base):
 
     # -- Compiler helper methods --
 
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        """Return how many addresses this device contributes to a rule.
+
+        Ports ``Host::countInetAddresses``, which sums the answer of
+        every interface below it; ``Firewall`` and ``Cluster`` inherit it
+        there as they do here.  ``self.interfaces`` holds the
+        sub-interfaces as well, and counting those is deliberate: the
+        expansion that later replaces this object walks into them
+        (``Compiler::_expand_addr_recursive``), so a host whose VLAN
+        carries a second address stands for two arguments and not for
+        one.  The C++ iterates its direct children only and answers 1
+        there, which turns "not this host" into a rule matching
+        everything.
+        """
+        return sum(
+            iface.count_inet_addresses(skip_loopback) for iface in self.interfaces
+        )
+
     _GET_OPTION_SENTINEL = object()
 
     def get_option(self, key: str, platform: str | None = None) -> Any:
@@ -408,6 +426,20 @@ class Interface(Base):
 
     def is_loopback(self) -> bool:
         return self.name == 'lo'
+
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        """Return how many addresses this interface contributes to a rule.
+
+        Ports ``Interface::countInetAddresses``, which counts the IPv4
+        and IPv6 children and answers 0 for the loopback when asked to
+        skip it.  A MAC address is not one of them: it is a match of its
+        own, not a ``-s`` / ``-d`` argument.
+        """
+        from ._addresses import IPv4, IPv6
+
+        if skip_loopback and self.is_loopback():
+            return 0
+        return sum(1 for addr in self.addresses if isinstance(addr, IPv4 | IPv6))
 
     def get_failover_group(self):
         """Return the FailoverClusterGroup below this interface, or ``None``."""

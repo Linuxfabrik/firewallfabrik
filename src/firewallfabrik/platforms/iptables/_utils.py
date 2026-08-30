@@ -24,10 +24,6 @@ from firewallfabrik.core.objects import (
     Address,
     AddressTable,
     Interface,
-    IPv4,
-    IPv6,
-    Network,
-    NetworkIPv6,
     PhysAddress,
     TagService,
     UserService,
@@ -192,21 +188,21 @@ def get_iptables_version(fw) -> str:
     return fw.version or DEFAULT_IPTABLES_VERSION
 
 
-# Address types that stand for exactly one ``-s`` / ``-d`` argument, and can
-# therefore be negated with iptables' own ``!``.
-_SINGLE_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
-
-
 def single_negation_qualifies(compiler, obj) -> bool:
     """Return whether *obj* alone can be negated with one ``!``.
 
-    The C++ test is ``countInetAddresses(true) == 1``, and only IPv4,
-    IPv6, Network and NetworkIPv6 answer 1 (fwbuilder
-    libfwbuilder/fwbuilder/Address.cpp returns 0 by default).  An
-    AddressRange is deliberately not one of them: below iptables 1.2.11 -
-    and, in a NAT rule, always - it is written out as the networks
-    covering it, and one ``!`` per network negates each of them rather
-    than the range, which matches nearly everything.
+    The C++ test is ``countInetAddresses(true) == 1``
+    (``Compiler::singleObjectNegation``), which every model object
+    answers for itself: 0 by default, 1 for IPv4, IPv6, Network and
+    NetworkIPv6, and the sum of its addresses for an Interface, a Host, a
+    Firewall and a Cluster.  So a host with one address qualifies and one
+    with two does not, which is the question being asked - not the class
+    of the object.
+
+    An AddressRange answers 0 and therefore never qualifies: below
+    iptables 1.2.11 - and, in a NAT rule, always - it is written out as
+    the networks covering it, and one ``!`` per network negates each of
+    them rather than the range, which matches nearly everything.
 
     Shared by the policy and the NAT pipelines: they ask the same question
     about the same objects, and the NAT half having its own, looser answer
@@ -221,9 +217,10 @@ def single_negation_qualifies(compiler, obj) -> bool:
     if isinstance(obj, TagService | UserService):
         # `-m mark` and `-m owner` both take the `!`.
         return True
-    return isinstance(obj, _SINGLE_ADDRESS_TYPES) and not compiler.complex_match(
-        obj, compiler.fw
-    )
+    count = getattr(obj, 'count_inet_addresses', None)
+    if count is None:
+        return False
+    return count(True) == 1 and not compiler.complex_match(obj, compiler.fw)
 
 
 # The ipv4options match is not part of netfilter iptables.  It came from

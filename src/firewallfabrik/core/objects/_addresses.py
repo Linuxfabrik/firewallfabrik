@@ -238,11 +238,27 @@ class Address(Base):
         except ValueError:
             return False
 
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        """Return how many ``-s`` / ``-d`` arguments this object stands for.
+
+        Ports ``Address::countInetAddresses``, which answers **0** by
+        default and is overridden to 1 by IPv4, IPv6, Network and
+        NetworkIPv6 alone.  An address range, a DNS name, an address
+        table and a MAC address therefore answer 0 here, which is what
+        keeps them out of the single-``!`` negation: each of them is
+        written out as several arguments, and one ``!`` per argument
+        negates each of them separately rather than the object.
+        """
+        return 0
+
 
 class IPv4(Address):
     """IPv4 address object."""
 
     __mapper_args__ = {'polymorphic_identity': 'IPv4'}
+
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        return 1
 
 
 class IPv6(Address):
@@ -250,17 +266,26 @@ class IPv6(Address):
 
     __mapper_args__ = {'polymorphic_identity': 'IPv6'}
 
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        return 1
+
 
 class Network(Address):
     """IPv4 network object."""
 
     __mapper_args__ = {'polymorphic_identity': 'Network'}
 
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        return 1
+
 
 class NetworkIPv6(Address):
     """IPv6 network object."""
 
     __mapper_args__ = {'polymorphic_identity': 'NetworkIPv6'}
+
+    def count_inet_addresses(self, skip_loopback: bool = True) -> int:
+        return 1
 
 
 class PhysAddress(Address):
