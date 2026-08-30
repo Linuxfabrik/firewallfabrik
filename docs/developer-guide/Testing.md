@@ -292,8 +292,11 @@ the real tools whether the result is any good: `nft --check` on every
 nftables ruleset and then a real `nft -f` load of it, a replay of every
 iptables command in an unprivileged private network namespace,
 `iptables-restore --test` on the restore form, and `bash -n` on the script
-itself, and every `ip route` command handed to iproute2 in a namespace with
-a dummy interface per device.  The load is a separate oracle from the check
+itself, every `ip route` command handed to iproute2 in a namespace with
+a dummy interface per device, and the shell code that fills the named sets
+an address table, a run-time DNS name or a dynamic interface stands for -
+run for real, against a loaded ruleset, because a set that stays empty is a
+set no packet is in.  The load is a separate oracle from the check
 on purpose:
 `nft --check` stops after parsing and evaluating, so everything the kernel
 decides - which statements a hook allows, whether the jumps between the
@@ -301,6 +304,14 @@ chains form a cycle - is invisible to it, and a ruleset it accepts can still
 be refused whole. It also compares the iptables output against
 the Firewall Builder reference and measures which firewalls a change actually
 affects, which is what a release note needs.
+
+Compiling the corpus with a firewall option **forced on every firewall** is
+worth a run of its own, and the result has to go through *every* oracle
+rather than the one that motivated it: about a fifth of each print rule is
+never reached by the corpus as it stands, and two of the twenty-ninth
+round's four fixes came out of exactly that - one from the iptables replay
+of a corpus compiled with "Log all rules" on, the other from `nft --check`
+on one with thirteen options on.
 
 See `tools/compiler-audit/README.md`. These checks are not part of `pytest`:
 they need `unshare`, `nft` and `iptables`, run over a corpus rather than
