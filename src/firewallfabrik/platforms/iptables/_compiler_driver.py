@@ -1193,8 +1193,20 @@ class CompilerDriver_ipt(CompilerDriver):
         # "No chain/target/match by that name" and the activation stops
         # with the built-in policies already at DROP.
         noflush = '' if self.firewall_option(fw, 'flush_ruleset') else ' --noflush'
-        conf.set_variable('restore_command', f'$IPTABLES_RESTORE{noflush}')
-        conf.set_variable('restore6_command', f'$IP6TABLES_RESTORE{noflush}')
+        # Every `iptables` command of the generated script waits for the
+        # xtables lock, and the restore has to as well or a firewall that
+        # shares the machine loses the race against the tool it shares it
+        # with: `iptables-restore` says "Another app is currently holding
+        # the xtables lock" and the activation stops.  The option reached
+        # the restore programs later than the command
+        # (netfilter iptables/iptables-restore.c, v1.6.2), so it has a gate
+        # of its own; `parse_wait_time` is the same parser the command
+        # uses, which is why the value stands as its own argument.
+        wait = ''
+        if version_compare(get_iptables_version(fw), '1.6.2') >= 0:
+            wait = f' {get_wait_option(get_iptables_version(fw))}'.rstrip()
+        conf.set_variable('restore_command', f'$IPTABLES_RESTORE{wait}{noflush}')
+        conf.set_variable('restore6_command', f'$IP6TABLES_RESTORE{wait}{noflush}')
 
         conf.set_variable('filter', 1 if filter_script else 0)
         conf.set_variable('filter_or_auto', 1 if (have_auto or filter_script) else 0)

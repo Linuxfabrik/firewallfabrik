@@ -36,7 +36,7 @@ from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ip
 FIXTURE = pathlib.Path(__file__).parent / 'fixtures' / 'basic_accept_deny.fwf'
 
 
-def _compile(tmp_path, **options):
+def _compile(tmp_path, version=None, **options):
     dm = firewallfabrik.core.DatabaseManager('sqlite://')
     dm.load(str(FIXTURE))
     with dm.session() as session:
@@ -44,6 +44,10 @@ def _compile(tmp_path, **options):
         stored = dict(fw.options or {})
         stored.update(options)
         fw.options = stored
+        if version is not None:
+            data = dict(fw.data or {})
+            data['version'] = version
+            fw.data = data
         fw_id = str(fw.id)
     driver = CompilerDriver_ipt(dm)
     driver.wdir = str(tmp_path)
@@ -68,7 +72,7 @@ def restore_line():
 def test_a_coexisting_firewall_restores_with_noflush(tmp_path, restore_line):
     script = _compile(tmp_path, use_iptables_restore=True, flush_ruleset=False)
     assert restore_line(script) == (
-        ') | $IPTABLES_RESTORE --noflush; IPTABLES_RESTORE_RES=$?'
+        ') | $IPTABLES_RESTORE -w 5 --noflush; IPTABLES_RESTORE_RES=$?'
     )
     # The chains the restore stream appends to are the ones
     # `setup_fwf_jumps` creates, and only --noflush leaves them there.
@@ -77,4 +81,20 @@ def test_a_coexisting_firewall_restores_with_noflush(tmp_path, restore_line):
 
 def test_a_flushing_firewall_restores_the_whole_table(tmp_path, restore_line):
     script = _compile(tmp_path, use_iptables_restore=True, flush_ruleset=True)
-    assert restore_line(script) == ') | $IPTABLES_RESTORE; IPTABLES_RESTORE_RES=$?'
+    assert restore_line(script) == (
+        ') | $IPTABLES_RESTORE -w 5; IPTABLES_RESTORE_RES=$?'
+    )
+
+
+def test_the_restore_waits_for_the_xtables_lock(tmp_path, restore_line):
+    """Every `iptables` command of the script waits; the restore too.
+
+    The option reached the restore programs in v1.6.2, later than the
+    command, so a firewall pinned to an older release gets none of it
+    (netfilter iptables/iptables-restore.c).
+    """
+    script = _compile(tmp_path, use_iptables_restore=True, version='1.6.2')
+    assert '-w 5' in restore_line(script)
+
+    script = _compile(tmp_path, use_iptables_restore=True, version='1.6.1')
+    assert '-w' not in restore_line(script)
