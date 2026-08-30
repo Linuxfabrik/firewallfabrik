@@ -56,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a rule naming a host or the firewall no longer matches an address that sits on an interface marked as unnumbered or as a bridge port.
 * Compiler (iptables, nftables): a rule naming an interface covers every address that interface carries, and the VLANs below it, instead of the first address alone.
 * Compiler (iptables, nftables): a rule that switches "assume firewall is part of any" off is compiled as written, instead of getting the extra rules about the firewall that the setting exists to suppress.
+* Compiler (iptables, nftables): a rule with two negated elements is compiled into the rules Firewall Builder writes for it, instead of twice as many with a chain nothing needs.
 * Compiler (iptables, nftables): a rule whose interface group turns out to be empty is reported instead of being compiled as a rule about every interface the firewall has.
 * Compiler (iptables, nftables): a rule whose source or destination is a host object reaches the chains it belongs in; on a bridging firewall outbound rules to a broadcast address were left out.
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.

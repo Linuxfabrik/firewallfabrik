@@ -80,3 +80,19 @@ def test_a_time_negation_inside_a_destination_negation_returns(tree, tmp_path):
     assert time_rules, 'the negated time match is not in the rule at all'
     for line in time_rules:
         assert line.endswith('-j RETURN'), line
+
+
+def test_an_emptied_element_is_not_negated_any_more(tree, tmp_path):
+    """firewall1 rule 30 negates the destination and the time.
+
+    `DstNegation` empties the interval on the two rules it puts into its
+    chain, and `TimeNegation` runs afterwards.  An element that says
+    "any" cannot be negated - ``RuleElement::reset()`` clears the flag
+    with the children - so those two must not be expanded a second time.
+    The reference builds two chains for the rule, not four.
+    """
+    script = _compile(tree, 'firewall1', tmp_path)
+    block = script.split('# Rule 30 (global)')[1].split('# Rule 31 (global)')[0]
+
+    chains = {line.split()[-2] for line in block.splitlines() if ' -N ' in line}
+    assert len(chains) == 2, sorted(chains)

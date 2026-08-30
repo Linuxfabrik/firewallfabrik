@@ -172,7 +172,20 @@ class CompRule:
         self.options[key] = value
 
     def get_neg(self, slot: str) -> bool:
-        """Return True if the given slot is negated."""
+        """Return True if the given slot is negated.
+
+        An element that says "any" is not negated, whatever the flag
+        beside it says.  Firewall Builder gets that for free: emptying a
+        rule element is ``RuleElement::reset()``, which clears the
+        children *and* the negation (libfwbuilder RuleElement.cpp).  Here
+        the elements are plain lists and a processor empties one by
+        assigning ``[]``, so the flag would outlive what it negates - and
+        the next negation processor would build a second temporary chain
+        around an element that names nothing, or `NftNegation` would ask
+        the print rule for a ``!=`` with no operand.
+        """
+        if not getattr(self, slot, None):
+            return False
         if self.negations:
             return bool(self.negations.get(slot, False))
         return False
