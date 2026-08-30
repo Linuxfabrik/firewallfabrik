@@ -130,7 +130,7 @@ def test_a_foreign_table_is_left_alone_when_coexisting(coexisting):
 
 
 def test_a_foreign_table_goes_when_the_ruleset_is_flushed(flushing):
-    """"Flush ruleset" means everything else, the way `nft flush ruleset` did."""
+    """ "Flush ruleset" means everything else, the way `nft flush ruleset` did."""
     body = _remove_function(flushing)
     assert 'case $line in' not in body
     assert 'flush_legacy_iptables' in body
@@ -204,7 +204,9 @@ def _tables_after_activation(tmp_path: Path, *, flush_ruleset: bool) -> set[str]
         timeout=60,
     )
     assert 'FAILED' not in proc.stdout, proc.stdout + proc.stderr
-    return {line.strip() for line in proc.stdout.splitlines() if line.startswith('table')}
+    return {
+        line.strip() for line in proc.stdout.splitlines() if line.startswith('table')
+    }
 
 
 @pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
