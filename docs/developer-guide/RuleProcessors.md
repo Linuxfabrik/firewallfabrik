@@ -997,10 +997,13 @@ shared by the two NAT compilers.
 
 #### `InterfacePolicyRulesWithOptimization` (h:276 / cpp:702) — Split
 
-Like `InterfacePolicyRules` but with optimization: when a rule applies to
-multiple interfaces, creates a user-defined chain for the common rule body
-and jumps to it from each interface-specific rule. Reduces rule duplication
-in the output.
+One rule per interface named in the Itf element, and nothing else: the
+name says "with optimization" but the body writes a `subrule_suffix` of
+`i1` onto each copy and no chain.  That suffix only reaches
+`getNewChainName`, which `Logging2` and `accounting` call earlier in the
+pass than this processor runs, so it names nothing — it is dead upstream
+as well.  The chain that factors a rule body out is `splitIfTagClassifyOrRoute`,
+which is a different processor; earlier notes here conflated the two.
 
 ### Reject handling
 
@@ -1619,7 +1622,6 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   An older iptables has no date options in its time match, so the rule is
   compiled without them and says so; a date outside the 1970-2038 range both
   tools can express is reported and the rule is left out.
-- `InterfacePolicyRulesWithOptimization` — splits one rule per interface but does not factor the common rule body into a shared user-defined chain
 - `InterfacePolicyRules` — does not expand a group in the interface rule
   element.  The main pass runs `ExpandGroupsInItf` first, so only the
   shadowing pass, which does not, can meet one.
