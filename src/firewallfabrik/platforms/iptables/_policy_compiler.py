@@ -1802,6 +1802,7 @@ class SrcNegation(PolicyRuleProcessor):
 
         # Jump rule: keep everything except src
         r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
         r_jump.src = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
@@ -1816,6 +1817,7 @@ class SrcNegation(PolicyRuleProcessor):
 
         # Return rule: keep only src objects
         r_return = rule.clone()
+        r_return.subrule_suffix = '2'
         r_return.dst = []
         r_return.srv = []
         r_return.itf = []
@@ -1837,6 +1839,7 @@ class SrcNegation(PolicyRuleProcessor):
         # Action rule: clear everything
         # https://github.com/Linuxfabrik/firewallfabrik/issues/16
         r_action = rule.clone()
+        r_action.subrule_suffix = '3'
         r_action.src = []
         r_action.dst = []
         reset_srv_preserving_tcp(r_action)
@@ -1891,6 +1894,7 @@ class TimeNegation(PolicyRuleProcessor):
 
         # Jump rule: everything except the time, which is checked in the chain
         r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
         r_jump.when = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
@@ -1905,6 +1909,7 @@ class TimeNegation(PolicyRuleProcessor):
 
         # Return rule: keep only the interval, which is what is excluded
         r_return = rule.clone()
+        r_return.subrule_suffix = '2'
         r_return.src = []
         r_return.dst = []
         r_return.srv = []
@@ -1925,6 +1930,7 @@ class TimeNegation(PolicyRuleProcessor):
 
         # Action rule: everything was matched already
         r_action = rule.clone()
+        r_action.subrule_suffix = '3'
         r_action.src = []
         r_action.dst = []
         reset_srv_preserving_tcp(r_action)
@@ -1964,6 +1970,7 @@ class DstNegation(PolicyRuleProcessor):
 
         # Jump rule: keep everything except dst
         r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
         r_jump.dst = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
@@ -1978,6 +1985,7 @@ class DstNegation(PolicyRuleProcessor):
 
         # Return rule: keep only dst objects
         r_return = rule.clone()
+        r_return.subrule_suffix = '2'
         r_return.src = []
         r_return.srv = []
         r_return.itf = []
@@ -1999,6 +2007,7 @@ class DstNegation(PolicyRuleProcessor):
         # Action rule: clear everything
         # https://github.com/Linuxfabrik/firewallfabrik/issues/16
         r_action = rule.clone()
+        r_action.subrule_suffix = '3'
         r_action.src = []
         r_action.dst = []
         reset_srv_preserving_tcp(r_action)
@@ -2034,6 +2043,7 @@ class SrvNegation(PolicyRuleProcessor):
 
         # Jump rule: keep everything except srv
         r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
         r_jump.srv = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
@@ -2048,6 +2058,7 @@ class SrvNegation(PolicyRuleProcessor):
 
         # Return rule: keep only srv objects
         r_return = rule.clone()
+        r_return.subrule_suffix = '2'
         r_return.src = []
         r_return.dst = []
         r_return.itf = []
@@ -2070,6 +2081,7 @@ class SrvNegation(PolicyRuleProcessor):
         # the jump rule and the RETURN rules above.
         def make_action_rule() -> CompRule:
             r = rule.clone()
+            r.subrule_suffix = '3'
             r.src = []
             r.dst = []
             r.srv = []
