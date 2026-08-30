@@ -16,22 +16,44 @@
 ## http://refspecs.freestandards.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
 ## Script should return with exit code 0 if iptables rules are loaded and
 ## 3 otherwise.
+##
+## The question can only be answered approximately: nothing in the kernel
+## says which script installed the rules that are there.  So each branch
+## below asks for something this script installs and nothing else does.
+##
+## Both address families are asked, because a firewall may have rules for
+## only one of them, and a "status" that reads the wrong family answers
+## about a table the script never fills.
 
 status_action() {
-{{if coexistence_mode}}
+{{if coexistence_v4}}
     # Coexistence mode: check for FirewallFabrik's own prefixed chains.
     # Counting all chains would give false positives when Docker,
     # CrowdSec or fail2ban create their own chains.
-    $IPTABLES {{$opt_wait}} -L -n 2>/dev/null | grep -q "^Chain {{$table_name}}_" && {
+    $IPTABLES {{$opt_wait}} -S 2>/dev/null | grep -q -- "^-N {{$table_name}}_" && {
         echo "Firewall is active"
         return 0
     }
 {{endif}}
-{{if flush_mode}}
-    # Full-flush mode: check if iptables has user-defined chains
-    # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
-    chains=$($IPTABLES {{$opt_wait}} -L -n 2>/dev/null | grep -c "^Chain ")
-    [ "$chains" -gt 3 ] && {
+{{if coexistence_v6}}
+    $IP6TABLES {{$opt_wait}} -S 2>/dev/null | grep -q -- "^-N {{$table_name}}_" && {
+        echo "Firewall is active"
+        return 0
+    }
+{{endif}}
+{{if flush_v4}}
+    # Full-flush mode: the script owns the filter table, so any rule or
+    # chain in it is one this script put there.  Counting user-defined
+    # chains alone would call an active firewall inactive: a policy
+    # without logging, negation or a branch needs no chain of its own,
+    # which is the ordinary case rather than a rare one.
+    $IPTABLES {{$opt_wait}} -S 2>/dev/null | grep -qE '^-(A|N) ' && {
+        echo "Firewall is active"
+        return 0
+    }
+{{endif}}
+{{if flush_v6}}
+    $IP6TABLES {{$opt_wait}} -S 2>/dev/null | grep -qE '^-(A|N) ' && {
         echo "Firewall is active"
         return 0
     }

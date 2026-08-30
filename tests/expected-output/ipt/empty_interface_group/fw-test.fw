@@ -472,7 +472,7 @@ status_action() {
  # Coexistence mode: check for FirewallFabrik's own prefixed chains.
  # Counting all chains would give false positives when Docker,
  # CrowdSec or fail2ban create their own chains.
- $IPTABLES -w 5 -L -n 2>/dev/null | grep -q "^Chain fwf_" && {
+ $IPTABLES -w 5 -S 2>/dev/null | grep -q -- "^-N fwf_" && {
  echo "Firewall is active"
  return 0
  }

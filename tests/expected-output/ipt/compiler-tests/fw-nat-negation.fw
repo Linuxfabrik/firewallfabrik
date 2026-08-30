@@ -520,10 +520,12 @@ stop_action() {
 }
 
 status_action() {
- # Full-flush mode: check if iptables has user-defined chains
- # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
- chains=$($IPTABLES -w 5 -L -n 2>/dev/null | grep -c "^Chain ")
- [ "$chains" -gt 3 ] && {
+ # Full-flush mode: the script owns the filter table, so any rule or
+ # chain in it is one this script put there. Counting user-defined
+ # chains alone would call an active firewall inactive: a policy
+ # without logging, negation or a branch needs no chain of its own,
+ # which is the ordinary case rather than a rare one.
+ $IPTABLES -w 5 -S 2>/dev/null | grep -qE '^-(A|N) ' && {
  echo "Firewall is active"
  return 0
  }

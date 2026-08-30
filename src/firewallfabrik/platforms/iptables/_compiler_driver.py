@@ -808,17 +808,29 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Status action configlet — in coexistence mode checks
                 # for FWF-specific chains instead of counting all chains
-                # (Docker etc. always add their own chains).
+                # (Docker etc. always add their own chains).  Each family
+                # is asked on its own, the way `stop_action` is: a
+                # firewall may carry rules for only one of them, and the
+                # other tool then answers about a table this script never
+                # fills.
                 status_action = Configlet('linux24', 'status_action')
                 status_action.set_variable('opt_wait', opt_wait)
                 status_action.collapse_empty_strings(True)
                 status_action.set_variable(
-                    'coexistence_mode',
-                    0 if flush_ruleset else 1,
+                    'coexistence_v4',
+                    1 if (not flush_ruleset and have_ipv4) else 0,
                 )
                 status_action.set_variable(
-                    'flush_mode',
-                    1 if flush_ruleset else 0,
+                    'coexistence_v6',
+                    1 if (not flush_ruleset and have_ipv6) else 0,
+                )
+                status_action.set_variable(
+                    'flush_v4',
+                    1 if (flush_ruleset and have_ipv4) else 0,
+                )
+                status_action.set_variable(
+                    'flush_v6',
+                    1 if (flush_ruleset and have_ipv6) else 0,
                 )
                 status_action.set_variable('table_name', table_name)
                 script_skeleton.set_variable('status_action', status_action.expand())
