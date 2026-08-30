@@ -10,10 +10,7 @@
 #
 #  this object has several interfaces and shows different rules for NAT. Also testing policy rule options
 #
-# Rule 50 (NAT): Custom service 'owner_anonymous tcp' is not configured for the platform 'nftables'
-# Rule 51 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
 # Rule 51 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# Rule 52 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule '0 (eth1)' shadows rule '2 ()' below it, for service 'bootpc'
 # Rule '0 (eth1)' shadows rule '3 (eth1,eth3)' below it, for service 'bootpc'
@@ -965,6 +962,14 @@ table ip fwf_nat {
         # Rule 49 (NAT)
         #
         tcp dport 9040 counter redirect to :9040
+        #
+        # Rule 50 (NAT)
+        #
+        meta skuid anonymous meta l4proto tcp counter redirect to :9040
+        #
+        # Rule 52 (NAT)
+        #
+        meta skuid anonymous meta l4proto udp counter redirect to :53
     }
 
     chain postrouting {

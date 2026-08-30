@@ -27,6 +27,7 @@ from firewallfabrik.core.objects import (
     PolicyAction,
     TagService,
     TCPUDPService,
+    is_valid_user_id,
 )
 
 # A packet only carries the device it goes out on once the routing decision
@@ -863,21 +864,90 @@ _CT_STATE_NAMES = ('INVALID', 'NEW', 'ESTABLISHED', 'RELATED', 'UNTRACKED')
 # match.
 _CT_STATE_OUTPUT_ORDER = ('invalid', 'new', 'related', 'established', 'untracked')
 
-# `-m state [!] --state LIST` and `-m conntrack [!] --ctstate LIST`, and
-# nothing else: the list carries no spaces (`state_parse_states` says so
-# in its own error message) and the module and its option have to belong
-# together.
-_CT_STATE_MATCH = re.compile(
-    r'^-m[ \t]+(?P<module>state|conntrack)'
-    r'(?:[ \t]+(?P<neg>!))?'
-    r'[ \t]+--(?P<option>state|ctstate)[ \t]+(?P<states>\S+)$'
-)
-
 _CT_STATE_OPTION_OF = {'state': 'state', 'conntrack': 'ctstate'}
 
 
+# The TCP flags `--tcp-flags` takes and the bit each stands for
+# (`tcp_flag_names`, netfilter extensions/libxt_tcp.c).  `ALL` and `NONE`
+# are the two names that stand for a set rather than a bit.
+_TCP_FLAG_BITS = {
+    'FIN': 0x01,
+    'SYN': 0x02,
+    'RST': 0x04,
+    'PSH': 0x08,
+    'ACK': 0x10,
+    'URG': 0x20,
+    'ALL': 0x3F,
+    'NONE': 0x00,
+}
+
+# The order and spelling `print_tcp_xlate` writes a flag set in
+# (`tcp_flag_names_xlate`, same file), so a translated service reads like
+# the line `iptables-translate` produces for the same match.
+_TCP_FLAG_XLATE = (
+    ('fin', 0x01),
+    ('syn', 0x02),
+    ('rst', 0x04),
+    ('psh', 0x08),
+    ('ack', 0x10),
+    ('urg', 0x20),
+)
+
+# What `--syn` is short for: "SYN,RST,ACK,FIN SYN"
+# (`tcp_parse`, netfilter extensions/libxt_tcp.c).
+_TCP_SYN_MASK = 0x01 | 0x02 | 0x04 | 0x10
+_TCP_SYN_COMP = 0x02
+
+
+def _tcp_flag_bits(names: str) -> int | None:
+    """The bit set a `--tcp-flags` argument stands for, None if unreadable."""
+    bits = 0
+    for token in names.split(','):
+        bit = _TCP_FLAG_BITS.get(token.strip().upper())
+        if bit is None:
+            return None
+        bits |= bit
+    return bits
+
+
+def _tcp_flag_names(bits: int) -> list[str]:
+    """The nftables spelling of a flag set, in netfilter's own order."""
+    return [name for name, bit in _TCP_FLAG_XLATE if bits & bit]
+
+
+def _nft_tcp_flags(mask: int, comp: int, negated: bool) -> str | None:
+    """`tcp flags` for a MASK/COMP pair, in the spelling nft parses.
+
+    nft refuses the ``value / mask`` form when the mask names a single
+    symbolic flag, so that case - and the empty comparison, which is
+    iptables' ``NONE`` - go out as the bitwise form the same way
+    `tcp_flags_match_nft` writes them for a TCP service object.
+    """
+    if not mask:
+        return None
+    mask_names = _tcp_flag_names(mask)
+    comp_names = _tcp_flag_names(comp)
+    mask_pipe = ' | '.join(mask_names)
+    if negated:
+        return f'tcp flags & ({mask_pipe}) != {" | ".join(comp_names) or "0x0"}'
+    if not comp_names:
+        return f'tcp flags & ({mask_pipe}) == 0x0'
+    if len(mask_names) == 1:
+        return f'tcp flags & ({mask_pipe}) == {" | ".join(comp_names)}'
+    return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+
+
+# The protocol names a `-p` in a Custom Service may carry, and nothing
+# else: a name nftables does not know costs the whole ruleset, and a
+# number would have to be checked against the same list to know whether a
+# later clause already pins the protocol.
+_CUSTOM_SERVICE_PROTOCOLS = ('tcp', 'udp', 'udplite', 'sctp', 'dccp')
+
+_OWNER_OPTION_OF = {'--uid-owner': 'skuid', '--gid-owner': 'skgid'}
+
+
 def custom_service_nftables_code(iptables_code: str) -> str | None:
-    """The nftables spelling of an iptables connection-state match.
+    """The nftables spelling of an iptables Custom Service, if it has one.
 
     A Custom Service carries one code per platform and Firewall Builder
     never had an nftables one to write, so every service an administrator
@@ -886,24 +956,142 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
     match a stateful policy is built out of, and leaving its rule out
     turns the whole policy into one that drops every answer.
 
-    Only a code that is *nothing but* a state match is translated, and the
-    mapping is netfilter's own (`state_xlate` and `_conntrack3_mt_xlate`,
-    extensions/libxt_conntrack.c).  Anything else - a state match beside
-    another condition, `-m recent`, `-m string`, a module nftables has no
-    equivalent for - is left alone and reported by the caller, because a
-    Custom Service is platform text and guessing at it is how a rule ends
-    up matching something the administrator did not write.
+    The code is read as a sequence of matches and every one of them has to
+    translate, or the whole code is refused: a Custom Service is platform
+    text and guessing at it is how a rule ends up matching something the
+    administrator did not write.  What translates is what netfilter's own
+    translator translates, and the spelling is taken from there:
 
-    Returns ``None`` when the code is not one such match.
+    * ``-m state --state`` / ``-m conntrack --ctstate`` (`state_xlate` and
+      `_conntrack3_mt_xlate`, extensions/libxt_conntrack.c),
+    * ``-m tcp --tcp-flags`` and ``--syn`` (`tcp_xlate`,
+      extensions/libxt_tcp.c),
+    * ``-m owner --uid-owner`` / ``--gid-owner`` (`owner_xlate`,
+      extensions/libxt_owner.c), which is the match a User Service object
+      already compiles to on both platforms,
+    * ``-p <protocol>``, which contributes ``meta l4proto`` only where no
+      other clause already pins the protocol - the way `tcp_xlate` writes
+      it only when nothing else did.
+
+    Everything else - ``-m recent``, ``-m string``, ``-m psd``, a
+    connection-tracking helper, a module nftables has no equivalent for -
+    is left alone and reported by the caller.
+
+    Returns ``None`` when the code holds anything that does not translate.
     """
-    match = _CT_STATE_MATCH.match((iptables_code or '').strip())
-    if match is None:
-        return None
-    if _CT_STATE_OPTION_OF[match.group('module')] != match.group('option'):
+    tokens = (iptables_code or '').split()
+    if not tokens:
         return None
 
+    parts: list[str] = []
+    protocol = ''
+    pins_protocol = False
+    index = 0
+
+    def _take_negation(position: int) -> tuple[bool, int]:
+        if position < len(tokens) and tokens[position] == '!':
+            return True, position + 1
+        return False, position
+
+    while index < len(tokens):
+        word = tokens[index]
+        index += 1
+
+        if word == '-p':
+            if protocol or index >= len(tokens):
+                return None
+            protocol = tokens[index].lower()
+            index += 1
+            if protocol not in _CUSTOM_SERVICE_PROTOCOLS:
+                return None
+            continue
+
+        if word == '-m':
+            if index >= len(tokens):
+                return None
+            module = tokens[index]
+            index += 1
+            if module == 'tcp':
+                # The module carries no match of its own; its options follow.
+                continue
+            if module in ('state', 'conntrack'):
+                negated, index = _take_negation(index)
+                if index >= len(tokens):
+                    return None
+                option = tokens[index]
+                index += 1
+                if _CT_STATE_OPTION_OF.get(module) != option.lstrip('-'):
+                    return None
+                if index >= len(tokens):
+                    return None
+                states = _ct_states(tokens[index])
+                index += 1
+                if states is None:
+                    return None
+                parts.append(f'ct state {"!= " if negated else ""}{states}')
+                continue
+            if module == 'owner':
+                negated, index = _take_negation(index)
+                if index >= len(tokens):
+                    return None
+                option = tokens[index]
+                index += 1
+                keyword = _OWNER_OPTION_OF.get(option)
+                if keyword is None or index >= len(tokens):
+                    return None
+                value = tokens[index]
+                index += 1
+                if not is_valid_user_id(value):
+                    return None
+                parts.append(f'meta {keyword} {"!= " if negated else ""}{value}')
+                continue
+            return None
+
+        if word == '!':
+            if index >= len(tokens):
+                return None
+            word = tokens[index]
+            index += 1
+            negated = True
+        else:
+            negated = False
+
+        if word == '--syn':
+            flags = _nft_tcp_flags(_TCP_SYN_MASK, _TCP_SYN_COMP, negated)
+            if flags is None:
+                return None
+            parts.append(flags)
+            pins_protocol = True
+            continue
+
+        if word == '--tcp-flags':
+            if index + 1 >= len(tokens):
+                return None
+            mask = _tcp_flag_bits(tokens[index])
+            comp = _tcp_flag_bits(tokens[index + 1])
+            index += 2
+            if mask is None or comp is None or comp & ~mask:
+                return None
+            flags = _nft_tcp_flags(mask, comp, negated)
+            if flags is None:
+                return None
+            parts.append(flags)
+            pins_protocol = True
+            continue
+
+        return None
+
+    if not parts and not protocol:
+        return None
+    if protocol and not pins_protocol:
+        parts.insert(0, f'meta l4proto {protocol}')
+    return ' '.join(parts)
+
+
+def _ct_states(argument: str) -> str | None:
+    """The nftables spelling of a `--state` / `--ctstate` list."""
     wanted = set()
-    for token in match.group('states').split(','):
+    for token in argument.split(','):
         if not token:
             return None
         for name in _CT_STATE_NAMES:
@@ -914,9 +1102,7 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
             # A name netfilter takes and nftables has no word for - SNAT
             # and DNAT - or one neither of them knows.
             return None
-
-    states = ','.join(n for n in _CT_STATE_OUTPUT_ORDER if n in wanted)
-    return f'ct state {"!= " if match.group("neg") else ""}{states}'
+    return ','.join(n for n in _CT_STATE_OUTPUT_ORDER if n in wanted)
 
 
 def custom_service_code(srv, platform: str) -> str:

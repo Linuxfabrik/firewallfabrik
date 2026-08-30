@@ -12,14 +12,7 @@
 #  https://trac.torproject.org/projects/tor/wiki/TheOnionRouter/TransparentProxy
 #  See ticket 1685
 #
-# Rule 0 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
-# Rule 1 (NAT): Custom service 'owner_anonymous tcp' is not configured for the platform 'nftables'
-# Rule 2 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
 # Rule 2 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
-# Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-# Rule 1 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-# Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -267,6 +260,8 @@ nft_ruleset() {
     cat <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -282,6 +277,21 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        meta skuid anonymous ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        # matching module owner here
+        # and tcp and udp ports in the branch
+        meta skuid anonymous counter jump Policy_1
+        #
+        # Rule 2 (global)
+        #
+        # this only matches module owner
+        meta skuid anonymous counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain Policy_1 {
@@ -290,6 +300,28 @@ table ip fwf_filter {
         #
         meta oif != 0 ip saddr { 192.0.2.1, 192.168.1.1 } tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
         meta oif != 0 ip saddr { 192.0.2.1, 192.168.1.1 } udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
+    }
+}
+
+table ip fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain output {
+        type nat hook output priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
+        meta skuid anonymous meta l4proto udp counter redirect to :53
+        #
+        # Rule 1 (NAT)
+        #
+        meta skuid anonymous meta l4proto tcp counter redirect to :9040
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
     }
 }
 
@@ -329,7 +361,8 @@ flush_own_tables() {
 }
 
 # The tables this ruleset installs, in the form "nft list tables" prints.
-FWF_OWN_TABLES='table ip fwf_filter'
+FWF_OWN_TABLES='table ip fwf_filter
+table ip fwf_nat'
 
 # Everything else, removed once the new ruleset is in place.
 #
