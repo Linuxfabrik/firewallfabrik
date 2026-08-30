@@ -97,6 +97,17 @@ case "$cmd" in
         check_run_time_address_table_files
         {{if using_ipset}}
         check_module_ipset
+##      A rule naming an address table says "-m set --match-set <name>",
+##      and iptables refuses that rule outright when no set of that name
+##      is there ("Set <name> doesn't exist"): the rule is simply absent
+##      from a ruleset the script then reports as activated.  ipsets do
+##      not survive a reboot, so the first activation after one lost
+##      every such rule and the second got them back from the sets the
+##      first one left behind.  Firewall Builder fills the sets after
+##      script_body for the same reason it does most things - nobody
+##      noticed - and the restore form makes it worse, because
+##      iptables-restore refuses the whole table over the one rule.
+        load_run_time_address_table_files
         {{endif}}
         load_modules "{{$load_modules_with_nat}} {{$load_modules_with_ipv6}}"
         configure_interfaces
@@ -107,9 +118,6 @@ case "$cmd" in
         {{if prolog_after_flush}} prolog_commands {{endif}}
         script_body || run_epilog_and_exit 1
         ip_forward
-        {{if using_ipset}}
-        load_run_time_address_table_files
-        {{endif}}
         epilog_commands
         ;;
 
