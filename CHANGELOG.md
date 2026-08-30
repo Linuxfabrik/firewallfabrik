@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
 * Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
 * Compiler (iptables, nftables): a firewall whose conntrack limits are left unset no longer sets them to zero on activation, which made the kernel refuse every new connection.
+* Compiler (iptables, nftables): a firewall option a data file stores as "0" is read as off, the way Firewall Builder reads it, instead of switching the option on.
 * Compiler (iptables, nftables): a logging rule whose netlink group, NFLOG copy range or queue threshold is unusable falls back to the default instead of breaking the activation.
 * Compiler (iptables, nftables): a route two rules install the same way is installed once, so the activation no longer stops at the second one and puts the previous routing table back.
 * Compiler (iptables, nftables): a routing rule marked "non-critical" is now allowed to fail, and every other one puts the previous routing table back and stops the activation instead of leaving the firewall half-routed and reporting success.

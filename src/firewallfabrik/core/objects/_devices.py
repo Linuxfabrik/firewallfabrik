@@ -178,20 +178,40 @@ class Host(Base):
         options and all YAML schemas.  This catches typos in compiler
         code at the earliest possible moment.
 
-        String ``"True"``/``"False"`` values are coerced to Python
-        bools so that values loaded from XML work correctly, in the
-        line-wrapped spelling a data file may carry as well
-        (:func:`firewallfabrik.core._options.option_bool`).
+        An option the schema declares as a ``bool`` comes back as one,
+        read the way ``FWObject::getBool`` reads it: ``1`` and any
+        capitalisation of ``true`` are True and everything else is False,
+        in the line-wrapped spelling a data file may carry as well
+        (:func:`firewallfabrik.core._options.option_is_true`).  The
+        spelling matters because a data file stores every option as a
+        string and both spellings are in the wild - Firewall Builder
+        wrote checkboxes as ``True``/``False`` and later versions of some
+        of the same fields as ``0``/``1`` - and ``'0'`` is True in Python
+        and False in Firewall Builder.  Everything else is left as it is:
+        a tri-state kernel toggle means three things and a conntrack
+        limit of 0 is a number.
+
+        String ``"True"``/``"False"`` values are coerced to Python bools
+        even where the schema says nothing, so a value loaded from XML
+        works (:func:`firewallfabrik.core._options.option_bool`).
         """
+        from firewallfabrik.platforms._defaults import (
+            get_option_default,
+            get_option_type,
+        )
+
         _S = self._GET_OPTION_SENTINEL
         if self.options:
             val = self.options.get(key, _S)
             if val is not _S:
+                if (
+                    get_option_type(platform or self.platform, self.host_os, key)
+                    == 'bool'
+                ):
+                    return option_is_true(val)
                 coerced = option_bool(val, _S)
                 return val if coerced is _S else coerced
         # Fall back to YAML platform / OS defaults.
-        from firewallfabrik.platforms._defaults import get_option_default
-
         # get_option_default raises KeyError when the key is unknown.
         return get_option_default(platform or self.platform, self.host_os, key)
 

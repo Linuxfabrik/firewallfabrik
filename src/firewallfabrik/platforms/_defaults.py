@@ -115,6 +115,31 @@ def get_option_default(
     raise KeyError(msg)
 
 
+def get_option_type(platform: str, os_name: str, key: str) -> str:
+    """Return the declared type of an option, or ``''`` if it has none.
+
+    The schema is the only place that says what an option *is*, and a
+    stored value is a string in every data file, so a reader that wants a
+    boolean has to ask here rather than take the string as it comes.
+
+    A platform fwf has no schema for answers ``''`` rather than raising:
+    a `.fwb` file may name any of the platforms Firewall Builder
+    compiles for, and reading a value off such a firewall - which is what
+    the object tree and the editor do - must not depend on a compiler
+    being there for it.
+    """
+    for lookup, name in ((get_platform_defaults, platform), (get_os_defaults, os_name)):
+        if not name:
+            continue
+        try:
+            entry = lookup(name).get(key)
+        except (ModuleNotFoundError, FileNotFoundError, TypeError):
+            continue
+        if entry is not None:
+            return str(entry.get('type', ''))
+    return ''
+
+
 def get_known_keys(platform: str, os_name: str = '') -> set[str]:
     """Return all known option keys for a platform + OS combination."""
     keys = set(get_platform_defaults(platform))
