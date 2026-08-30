@@ -48,6 +48,16 @@ exist here, and then every command fails for a reason that has nothing to do
 with the rule - one firewall of the reference corpus hid 393 commands that
 way, two of which were real findings.
 
+`check-nft.sh` and `load-nft.sh` give the namespace a passwd file of its
+own, holding every user and group a `meta skuid` / `meta skgid` in the
+ruleset names. nft looks the name up with `getpwnam` while it parses the
+rule and refuses the **whole** ruleset when the answer is no, and the
+firewall those rules are for has that user where this machine has no
+reason to - without the passwd file the check reports the ruleset for a
+property of the host it runs on. It still reports everything else: point
+it at a ruleset with an invented user *and* a bad address and only the
+address comes back.
+
 `check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-iptables.sh`,
 `replay-routes.sh` and `check-iptables-restore.sh` need
 `unshare`, `nft` and `iptables`. They run everything in an unprivileged

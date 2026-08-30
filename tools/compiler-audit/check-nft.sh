@@ -30,6 +30,33 @@ OUT=${1:?usage: check-nft.sh <output-directory>}
 command -v nft >/dev/null 2>&1 || { echo "nft not installed" >&2; exit 2; }
 command -v unshare >/dev/null 2>&1 || { echo "unshare not installed" >&2; exit 2; }
 
+# Every user and group a `meta skuid` / `meta skgid` names has to exist
+# where nft reads the ruleset: it looks the name up with `getpwnam` while
+# it parses the rule and refuses the whole ruleset when the answer is no
+# (netfilter nftables src/meta.c, `uid_type_parse`).  The firewall those
+# rules are for has the user; this machine has no reason to, and without
+# this the check would report the ruleset for a property of the host it
+# runs on.  A passwd file of its own, bound over /etc/passwd for the
+# length of the run, asks the question the check is actually about.
+make_user_db() {
+    local rules=$1 passwd_file=$2 group_file=$3
+    local id=60000 name
+    cp /etc/passwd "$passwd_file"
+    cp /etc/group "$group_file"
+    for name in $(grep -oE 'meta skuid (!= )?[A-Za-z_][A-Za-z0-9._-]*' "$rules" |
+        awk '{print $NF}' | sort -u); do
+        grep -q "^$name:" "$passwd_file" && continue
+        echo "$name:x:$id:$id::/nonexistent:/usr/sbin/nologin" >>"$passwd_file"
+        id=$((id + 1))
+    done
+    for name in $(grep -oE 'meta skgid (!= )?[A-Za-z_][A-Za-z0-9._-]*' "$rules" |
+        awk '{print $NF}' | sort -u); do
+        grep -q "^$name:" "$group_file" && continue
+        echo "$name:x:$id:" >>"$group_file"
+        id=$((id + 1))
+    done
+}
+
 failed=0
 total=0
 while IFS= read -r script; do
@@ -43,8 +70,14 @@ while IFS= read -r script; do
     total=$((total + 1))
     # A fixture may name a host that does not resolve here; that is a
     # property of the corpus, not of the compiler.
-    err=$(unshare -rn nft --check --file "$rules" 2>&1 |
+    passwd_file=$(mktemp)
+    group_file=$(mktemp)
+    make_user_db "$rules" "$passwd_file" "$group_file"
+    err=$(unshare -rnm bash -c "mount --bind '$passwd_file' /etc/passwd
+        mount --bind '$group_file' /etc/group
+        nft --check --file '$rules'" 2>&1 |
         grep -v 'Name or service not known')
+    rm -f "$passwd_file" "$group_file"
     if [ -n "$err" ]; then
         echo "=== ${script#"$OUT"/}"
         echo "$err"
