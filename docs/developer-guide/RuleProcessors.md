@@ -1597,7 +1597,11 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 
 ### Partial
 
-- `SingleSrcNegation` / `SingleDstNegation` — no `countInetAddresses` check and no AddressTable/ipset handling; `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled)
+- `singleObjectNegation` — the AddressTable/ipset branch aside, the check is
+  the C++ one: `single_negation_qualifies` asks the object
+  `count_inet_addresses(True) == 1`, which every model class answers for
+  itself, and `complex_match` against the firewall.  Only the `shadowing_mode`
+  variant of the three chain-building negations is missing (below).
 - `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant; the separate shadowing pass works on copies instead
 - `TimeNegation` — on nftables a negated interval that names both a time of day
   and a weekday is reported and left out: its negation is a disjunction, which
