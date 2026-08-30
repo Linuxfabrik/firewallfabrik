@@ -18,6 +18,7 @@ not.
 | `check-nft.sh` | does `nft --check` accept this ruleset? | a ruleset that refuses to load, so the firewall keeps its old rules |
 | `load-nft.sh` | and does a real kernel take it? | what `--check` never evaluates: a statement in a hook that forbids it, a jump cycle - and nft loads atomically, so the whole ruleset goes |
 | `fill-nft-sets.sh` | and do the sets the script fills after the load actually fill? | a named set that stays empty, which is a set no packet is in: a Deny rule that blocks nothing, an Accept rule that lets nothing through |
+| `replay-nft-actions.sh` | do the "block" and "stop" actions of an nftables script do what they say? | a block that leaves an address family open or a hook unhooked - the code paths an administrator reaches once something has already gone wrong |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
 | `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
@@ -37,6 +38,7 @@ tools/compiler-audit/check-shell-syntax.sh /tmp/audit
 tools/compiler-audit/check-nft.sh /tmp/audit
 tools/compiler-audit/load-nft.sh /tmp/audit
 tools/compiler-audit/fill-nft-sets.sh /tmp/audit
+tools/compiler-audit/replay-nft-actions.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
 tools/compiler-audit/replay-routes.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
@@ -58,8 +60,8 @@ property of the host it runs on. It still reports everything else: point
 it at a ruleset with an invented user *and* a bad address and only the
 address comes back.
 
-`check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-iptables.sh`,
-`replay-routes.sh` and `check-iptables-restore.sh` need
+`check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
+`replay-iptables.sh`, `replay-routes.sh` and `check-iptables-restore.sh` need
 `unshare`, `nft` and `iptables`. They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
 Without the namespace `nft --check` fails with "cache initialization failed:
