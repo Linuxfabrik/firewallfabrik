@@ -1183,6 +1183,18 @@ class CompilerDriver_ipt(CompilerDriver):
 
         conf.set_variable('auto', 1 if have_auto else 0)
         conf.set_variable('iptables_restore_format', 1 if use_iptables_restore else 0)
+        # `iptables-restore` empties every chain of a table and deletes
+        # every user chain in it before it reads the first rule
+        # (netfilter iptables/iptables-restore.c, the `noflush == 0`
+        # branch).  On a firewall that shares the machine that is exactly
+        # what must not happen: it takes the other tools' rules with it,
+        # and the `fwf_*` chains `setup_fwf_jumps` has just created along
+        # with them - so the very next line, an `-A fwf_INPUT`, answers
+        # "No chain/target/match by that name" and the activation stops
+        # with the built-in policies already at DROP.
+        noflush = '' if self.firewall_option(fw, 'flush_ruleset') else ' --noflush'
+        conf.set_variable('restore_command', f'$IPTABLES_RESTORE{noflush}')
+        conf.set_variable('restore6_command', f'$IP6TABLES_RESTORE{noflush}')
 
         conf.set_variable('filter', 1 if filter_script else 0)
         conf.set_variable('filter_or_auto', 1 if (have_auto or filter_script) else 0)

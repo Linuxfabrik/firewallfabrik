@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
 * Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
 * Compiler (iptables): a firewall using ipsets fills them before it installs the rules that name them, so the first activation after a reboot no longer loses every rule about an address table while reporting success.
+* Compiler (iptables): a firewall that shares the machine with Docker, CrowdSec or fail2ban and activates through iptables-restore no longer wipes their rules and then fails to install its own ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 * Compiler (iptables): a logged rule that both tags and classifies no longer puts the traffic class in the chain the mark belongs in, which the kernel refuses and which stopped the activation with every policy already at DROP.
 * Compiler (iptables): a rate limit whose table name is longer than iptables can store is cut and reported, so two rules that share a table by accident are named.
 * Compiler (iptables): a rule matching an IP protocol by number names it where the protocol has a name, and an "any protocol" service no longer writes a match into an IPv6 command.
