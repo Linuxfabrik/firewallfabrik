@@ -21,9 +21,11 @@ Unlike iptables, nftables does not need:
 
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._interval_helpers import interval_is_a_conjunction
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
@@ -115,6 +117,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
+    from firewallfabrik.compiler._comp_rule import CompRule
     from firewallfabrik.compiler._os_configurator import OSConfigurator
 
 
@@ -186,6 +189,14 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Empty for the top rule set.
         self.rule_set_chain: str = ''
 
+        # The temporary chains this run built, and the counter their names
+        # are numbered from.  nftables says almost every negation with
+        # `!=` and needs none of these; a negation that is a disjunction
+        # is the exception, and it is expanded the way the iptables
+        # compiler expands every one of them.
+        self.temp_chains: set[str] = set()
+        self.tmp_chain_counters: dict[str, int] = {}
+
         # The chains of all branch rule sets of this firewall, set by the
         # driver so a jump into one is recognised as a branch rather than a
         # jump into a chain nobody declares.
@@ -213,6 +224,30 @@ class PolicyCompiler_nft(PolicyCompiler):
         """Give this branch rule set a regular chain of its own."""
         self.rule_set_chain = chain_name
         self.chain_rules.setdefault(chain_name, [])
+
+    def get_new_tmp_chain_name(self, rule: CompRule) -> str:
+        """Name a temporary chain for *rule* and declare it.
+
+        The name is built the way ``PolicyCompiler_ipt`` builds it, out of
+        the rule set, the position and the subrule suffix, so a second
+        compile of the same policy produces the same script.  A chain
+        nothing declares costs nftables the whole ruleset, so the name is
+        entered into ``chain_rules`` here rather than where the first rule
+        happens to be printed, and into ``temp_chains`` so the print rule
+        knows the jump is one of ours.
+        """
+        ruleset_name = self.get_rule_set_name()
+        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        chain_id = hashlib.md5(  # nosec B324
+            stable_key.encode(),
+            usedforsecurity=False,
+        ).hexdigest()[:12]
+        n = self.tmp_chain_counters.get(chain_id, 0)
+        name = f'C{chain_id}.{n}'
+        self.tmp_chain_counters[chain_id] = n + 1
+        self.temp_chains.add(name)
+        self.chain_rules.setdefault(name, [])
+        return name
 
     def prolog(self) -> int:
         """Initialize compiler."""
@@ -1061,20 +1096,118 @@ class NftNegation(PolicyRuleProcessor):
 
 
 class TimeNegation(PolicyRuleProcessor):
-    """Carry a negated time through to the print rule.
+    """Say "outside this window" for an interval nftables cannot invert.
 
-    nftables inverts a single ``meta hour`` or ``meta day`` match with
-    ``!=``, so unlike iptables no temporary chain is needed and the flag
-    stays on the rule.  ``PrintRule_nft._print_time_interval`` applies it and
-    reports the one case that needs two rules, a negated interval that names
-    both a time of day and a weekday.
+    nftables inverts a single ``meta hour``, ``meta time`` or ``meta day``
+    match with ``!=``, so unlike iptables most negated intervals need no
+    chain and the flag simply stays on the rule for
+    ``PrintRule_nft._print_time_interval`` to apply.
+
+    An interval that names both a window of the day and a set of weekdays
+    is the exception: its opposite is "outside those hours *or* on another
+    day", and one nftables rule holds no disjunction.  Such a rule is
+    expanded into the same three-rule shape
+    ``PolicyCompiler_ipt::TimeNegation`` uses for every negated interval,
+    which says the same thing by excluding the window instead of negating
+    it:
+
+    1. a jump rule carrying the original conditions into a new chain,
+    2. a return rule in that chain matching the interval, so traffic
+       *inside* the window leaves again without being acted on,
+    3. the action rule, which everything that did not return reaches.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        self.tmp_queue.append(rule)
+
+        if not rule.get_neg('when') or not rule.when:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Several intervals are an "or", so their negation is an "and" of
+        # negations - which the atomizing split downstream would turn back
+        # into an "or", one rule per interval.  Only a rule naming one
+        # interval that says one thing can be inverted where it stands.
+        if len(rule.when) == 1 and not interval_is_a_conjunction(
+            rule.when[0].data or {}
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        rule.set_neg('when', False)
+        new_chain = nft_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: everything except the time, which is checked in the chain
+        r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
+        r_jump.when = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        # `Logging_nft` has already run and put the log statement on the
+        # rule, so clearing the option alone would still log a packet once
+        # per copy.  Only the rule that carries the action logs.
+        r_jump.nft_log = False
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only the interval, which is what is excluded
+        r_return = rule.clone()
+        r_return.subrule_suffix = '2'
+        r_return.src = []
+        r_return.dst = []
+        r_return.srv = []
+        r_return.itf = []
+        r_return.ipt_chain = new_chain
+        r_return.ipt_target = 'RETURN'
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.nft_log = False
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        self.tmp_queue.append(r_return)
+
+        # Action rule: everything else was matched by the jump already
+        r_action = rule.clone()
+        r_action.subrule_suffix = '3'
+        r_action.src = []
+        r_action.dst = []
+        # A Reject rule keeps "any TCP" so `reject with tcp reset` still
+        # names a protocol, the way the iptables expansion does.
+        srv = r_action.srv[0] if r_action.srv else None
+        if isinstance(srv, TCPService):
+            import uuid
+
+            any_tcp = TCPService(id=uuid.uuid4(), name='Any TCP')
+            any_tcp.src_range_start = 0
+            any_tcp.src_range_end = 0
+            any_tcp.dst_range_start = 0
+            any_tcp.dst_range_end = 0
+            r_action.srv = [any_tcp]
+        else:
+            r_action.srv = []
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        self.tmp_queue.append(r_action)
+
         return True
 
 

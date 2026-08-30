@@ -1603,10 +1603,16 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   itself, and `complex_match` against the firewall.  Only the `shadowing_mode`
   variant of the three chain-building negations is missing (below).
 - `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant; the separate shadowing pass works on copies instead
-- `TimeNegation` — on nftables a negated interval that names both a time of day
-  and a weekday is reported and left out: its negation is a disjunction, which
-  one nftables rule cannot hold. iptables expands it into a temporary chain
-  like the address negations.
+- `TimeNegation` — nftables inverts one `meta hour`, `meta time` or `meta day`
+  with `!=` and needs no chain for it.  Two of them are a disjunction, which
+  one nftables rule cannot hold, so an interval naming both a window of the day
+  and a set of weekdays — and a rule naming several intervals, whose negation is
+  an "and" the atomizing split downstream would turn back into an "or" — is
+  expanded into the same jump / return / action chain the iptables processor
+  builds for every negated interval.  The nftables compiler has no other
+  temporary chain: `PolicyCompiler_nft.get_new_tmp_chain_name` names it,
+  declares it in `chain_rules` and records it in `temp_chains`, which is what
+  lets `PrintRule_nft._print_verdict` write the jump.
 - Calendar window of an `Interval` — the first and last date are compiled as
   `--datestart` / `--datestop` on iptables 1.4.0 and up and as `meta time` on
   nftables, and the daily window is then dropped, the way fwbuilder does it.
@@ -2334,7 +2340,7 @@ PrintRule_nft → SimplePrintProgress
 
 ~70 processors vs. ~110 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the temp-chain and multiport processors (nftables has native `!=` negation and sets).
 
-The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
+The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`, which is the only one that still builds a temporary chain and only for the negated interval that says two things at once. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
 
 ### NAT pipeline order
 
@@ -2391,7 +2397,7 @@ the feature at all, independent of our implementation.
 | Connection marking | `ct mark set mark` per rule, `meta mark set ct mark` prepended to the prerouting and output chains |
 | Pipe | `queue`, queue number 0, the same queue the iptables QUEUE target uses |
 | Accounting | `counter name "..."` plus a counter object declared in the table |
-| Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
+| Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw`; a negated time that names both a window of the day and a set of weekdays becomes a jump / return / action chain, the way iptables says every negated interval |
 | NAT interface negation | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `!=` output |
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |
 | NAT local_nat | `SplitIfOSrcAny` + `SplitIfOSrcMatchesFw` + `LocalNATRule` |

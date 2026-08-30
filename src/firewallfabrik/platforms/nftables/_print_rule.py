@@ -2594,7 +2594,10 @@ class PrintRule_nft(PolicyRuleProcessor):
             # jumped to.  nftables refuses the whole ruleset over such a
             # jump, so the rule is reported and left out.
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
-            if target not in getattr(nft_comp, 'branch_chains', set()):
+            known = getattr(nft_comp, 'branch_chains', set()) | getattr(
+                nft_comp, 'temp_chains', set()
+            )
+            if target not in known:
                 self.compiler.error(
                     rule,
                     f'Rule branches to "{target}", which is not a rule set '

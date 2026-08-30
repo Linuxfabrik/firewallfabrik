@@ -300,6 +300,34 @@ def is_any_interval(data: dict) -> bool:
     )
 
 
+def interval_is_a_conjunction(data: dict) -> bool:
+    """Does this Interval say two things at once?
+
+    nftables writes a window of the day as ``meta hour`` or ``meta time``
+    and a set of weekdays as ``meta day``, so an Interval naming both
+    reaches a rule as two conditions.  One of them can be inverted with
+    ``!=``; both cannot, because the opposite of "in those hours *and* on
+    those days" is "outside those hours *or* on another day", and one
+    nftables rule holds no disjunction.  The negation of such an interval
+    is therefore expanded into a temporary chain, the way iptables expands
+    every negated interval.
+
+    The window is asked the way ``PrintRule_nft`` asks it: a calendar
+    window replaces the daily one, and a daily window that covers the
+    whole day contributes no condition.
+    """
+    start_h, start_m, end_h, end_m, days = parse_interval_data(data)
+    if sorted(days) == list(range(7)):
+        return False
+    if parse_interval_dates(data) != (None, None):
+        return True
+    start = start_h * 3600 + start_m * 60
+    stop = end_h * 3600 + end_m * 60
+    # `_print_hour_range` writes nothing when the window wraps by less than
+    # two seconds, which is the whole day and no condition at all.
+    return start < stop or start - stop >= 2
+
+
 def _split_time(value: str) -> tuple[int, int]:
     """Split a stored ``"HH:mm"`` into hour and minute.
 
