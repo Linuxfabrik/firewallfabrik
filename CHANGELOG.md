@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
 * Compiler (nftables): a rule naming a dynamic interface of the cluster the firewall belongs to is compiled, the way the iptables compiler already compiles it, instead of being left out.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
+* Compiler (nftables): the old rules are removed after the new ones are in place, so an activation no longer leaves the machine with no firewall at all for the moment in between.
 * Editor: a cluster group is checked against the cluster it belongs to, so a member of the second cluster in a file is no longer marked invalid.
 * Editor: a cluster has an editor of its own and no longer offers an iptables release, which nothing read - each member compiles for the release it names itself.
 * Editor: a cluster's failover group is shown below the cluster interface it belongs to and its state sync group below the cluster, instead of at the top of the library.

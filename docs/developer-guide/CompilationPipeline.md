@@ -142,9 +142,15 @@ nftables follows the same shape, but simpler: no temp-chain tricks
 processors overall (~35 policy, ~30 NAT). It keeps the mangle pass,
 because a packet mark still has to be set before the routing decision;
 `MangleCompiler_nft` fills a `<name>_mangle` table whose chains hook in
-at `priority mangle`. The final script starts with `#!/usr/sbin/nft -f`
-and a `flush ruleset`, then emits
-`table inet filter { chain input { … } … }` blocks.
+at `priority mangle`. The final script is a `/bin/sh` one, the way the
+iptables side is: it carries the ruleset as a heredoc that `nft -f`
+reads, so it can check the ruleset before it installs it and fill the
+sets an address table, a DNS name or a dynamic interface stands for
+afterwards. The ruleset itself deletes and recreates each of its own
+`table <family> <name> { chain input { … } … }` blocks in one
+transaction, and whatever the machine holds beside them is removed once
+that has happened — never before, or the machine would be left with no
+table hooked at all until the load finishes.
 
 ---
 

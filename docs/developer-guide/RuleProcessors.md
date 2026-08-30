@@ -2282,7 +2282,7 @@ and an SNAT rule beforehand.
 
 `CompilerDriver_nft` (`platforms/nftables/_compiler_driver.py`) orchestrates
 the full nftables compilation. The overall driver flow and the generated
-script structure (`#!/usr/sbin/nft -f`, `flush ruleset`, `table inet
+script structure (a `/bin/sh` script around the ruleset, `table inet
 filter { … }`, `table ip nat { … }`) are documented in
 [Compilation Pipeline](CompilationPipeline.md). Both iptables and nftables
 drivers call `_warn_unsupported_options()` (base `CompilerDriver`) to emit

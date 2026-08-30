@@ -313,6 +313,33 @@ flush_own_tables() {
     return 0
 }
 
+# The tables this ruleset installs, in the form "nft list tables" prints.
+FWF_OWN_TABLES='table ip fwf_filter'
+
+# Everything else, removed once the new ruleset is in place.
+#
+# nft loads a ruleset atomically and the one above deletes and recreates
+# each of its own tables in that same transaction, so their rules are
+# never missing for an instant.  Removing the old rules first undoes
+# exactly that: a table that is gone hooks nothing and every packet goes
+# through, and the machine has no firewall at all until the load
+# finishes.  The iptables side has no such gap - its reset sets the three
+# built-in policies to DROP before it flushes anything - and this is what
+# gives nftables the same guarantee.
+#
+# The deletes go into one batch of their own, so a name that has to be
+# quoted survives the round trip through "nft list tables" untouched.
+remove_other_tables() {
+    $NFT list tables 2>/dev/null |
+        while read -r line; do
+            printf '%s\n' "$FWF_OWN_TABLES" | grep -qxF "$line" && continue
+            printf 'delete %s\n' "$line"
+        done |
+        $NFT -f - 2>/dev/null
+    flush_legacy_iptables
+    return 0
+}
+
 flush_legacy_iptables() {
     # Remove stale legacy (xtables) iptables rules left over from a
     # previous iptables-based policy. "nft flush ruleset" only clears
@@ -387,9 +414,9 @@ case "$cmd" in
             log "Ruleset rejected by nft, keeping the running firewall"
             run_epilog_and_exit 1
         }
-        stop_action
         set_kernel_variables
         script_body || run_epilog_and_exit 1
+        remove_other_tables
         ip_forward
         epilog_commands
         log "Firewall script is done"

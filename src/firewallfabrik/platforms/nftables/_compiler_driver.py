@@ -190,6 +190,8 @@ class CompilerDriver_nft(CompilerDriver):
         self.filter_address_tables: dict[str, tuple[str, bool, str]] = {}
         self.mangle_address_tables: dict[str, tuple[str, bool, str]] = {}
         self.nat_address_tables: dict[str, dict[str, tuple[str, bool, str]]] = {}
+        # The (family, name) pairs the generated ruleset installs.
+        self.installed_tables: list[tuple[str, str]] = []
 
     def run(
         self,
@@ -958,15 +960,22 @@ class CompilerDriver_nft(CompilerDriver):
         # Atomically delete our tables before recreating them.
         # "create + delete" ensures deletion works even on first run
         # (plain "delete" fails if the table does not exist yet).
+        # Remembered for the script: everything the machine holds that is
+        # not in this list is removed *after* the load, so no packet ever
+        # meets a machine with no table hooked at all.
+        self.installed_tables = []
         if have_filter:
             out.write(f'table {family} {filter_table} {{}}\n')
             out.write(f'delete table {family} {filter_table}\n')
+            self.installed_tables.append((family, filter_table))
         if have_mangle:
             out.write(f'table {family} {mangle_table} {{}}\n')
             out.write(f'delete table {family} {mangle_table}\n')
+            self.installed_tables.append((family, mangle_table))
         for fam, *_ in nat_by_family:
             out.write(f'table {fam} {nat_table} {{}}\n')
             out.write(f'delete table {fam} {nat_table}\n')
+            self.installed_tables.append((fam, nat_table))
         if have_filter or have_mangle or have_nat:
             out.write('\n')
 
@@ -1322,6 +1331,9 @@ class CompilerDriver_nft(CompilerDriver):
             'filter_family': filter_family,
             'filter_table': filter_table,
             'flush_ruleset': self.firewall_option(fw, 'flush_ruleset'),
+            'own_tables': '\n'.join(
+                f'table {fam} {name}' for fam, name in self.installed_tables
+            ),
             'ip_path': ip_path,
             'logger_path': logger_path,
             'nat_table': nat_table,
