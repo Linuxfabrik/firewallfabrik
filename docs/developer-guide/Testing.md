@@ -289,9 +289,14 @@ That still leaves the iptables side and everything around the rules.
 
 `tools/compiler-audit/` closes that gap. It compiles a corpus and then asks
 the real tools whether the result is any good: `nft --check` on every
-nftables ruleset, a replay of every iptables command in an unprivileged
-private network namespace, `iptables-restore --test` on the restore form, and
-`bash -n` on the script itself. It also compares the iptables output against
+nftables ruleset and then a real `nft -f` load of it, a replay of every
+iptables command in an unprivileged private network namespace,
+`iptables-restore --test` on the restore form, and `bash -n` on the script
+itself.  The load is a separate oracle from the check on purpose:
+`nft --check` stops after parsing and evaluating, so everything the kernel
+decides - which statements a hook allows, whether the jumps between the
+chains form a cycle - is invisible to it, and a ruleset it accepts can still
+be refused whole. It also compares the iptables output against
 the Firewall Builder reference and measures which firewalls a change actually
 affects, which is what a release note needs.
 
