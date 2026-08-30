@@ -136,14 +136,34 @@ class InterfaceProperties:
         update_addresses = self._get_list_of_addresses(iface)
         device = iface.device
         for other in getattr(device, 'interfaces', []) or []:
+            # Only a cluster interface that runs a failover protocol has an
+            # address somebody else owns.  The C++ asks
+            # `isFailoverInterface()` before it asks the protocol
+            # (`interfaceProperties::manageIpAddresses`), and without that
+            # question every cluster interface without a group - a cluster's
+            # loopback, for one - puts the member's own addresses of that
+            # name on the ignore list, and the script then never configures
+            # or corrects them.
             if (
                 other.name == iface.name
                 and other.cluster_interface
+                and self._runs_a_failover_protocol(other)
                 and not self._failover_manages_addresses(other)
             ):
                 ignore_addresses = self._get_list_of_addresses(other)
                 break
         return True, update_addresses, ignore_addresses
+
+    @staticmethod
+    def _runs_a_failover_protocol(cluster_iface: Interface) -> bool:
+        """Does a failover group hang under this cluster interface?
+
+        ``Interface::isFailoverInterface`` asks the object tree; the copy
+        the driver makes for the member points back at the group under the
+        cluster instead, so it is the id in its options that answers here
+        (the same value ``AutomaticRules`` reads).
+        """
+        return bool(cluster_iface.get_option('failover_group_id', ''))
 
     @staticmethod
     def _failover_manages_addresses(cluster_iface: Interface) -> bool:
