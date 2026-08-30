@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a rule matching an IP protocol by number names it where the protocol has a name, and an "any protocol" service no longer writes a match into an IPv6 command.
 * Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address on the interface again.
 * Compiler (iptables): a rule with two negated elements no longer lets through what the second negation exists to exclude; an "outside business hours" rule matched around the clock.
+* Compiler (iptables): a rule with two negated elements is compiled into the rules Firewall Builder writes for it, instead of twice as many, half of them doing nothing.
 * Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC, instead of dropping the "use kernel timezone" setting without a word.
 * Compiler (iptables): the chain a logged or accounting rule gets behind a negation is named after the part of the rule it belongs to, so two parts of one rule no longer share a chain.
 * Compiler (iptables, nftables): a NAT rule whose interface group turns out to be empty is reported instead of applying to every interface the firewall has.
@@ -61,7 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a rule naming a host or the firewall no longer matches an address that sits on an interface marked as unnumbered or as a bridge port.
 * Compiler (iptables, nftables): a rule naming an interface covers every address that interface carries, and the VLANs below it, instead of the first address alone.
 * Compiler (iptables, nftables): a rule that switches "assume firewall is part of any" off is compiled as written, instead of getting the extra rules about the firewall that the setting exists to suppress.
-* Compiler (iptables, nftables): a rule with two negated elements is compiled into the rules Firewall Builder writes for it, instead of twice as many with a chain nothing needs.
 * Compiler (iptables, nftables): a rule whose interface group turns out to be empty is reported instead of being compiled as a rule about every interface the firewall has.
 * Compiler (iptables, nftables): a rule whose source or destination is a host object reaches the chains it belongs in; on a bridging firewall outbound rules to a broadcast address were left out.
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.

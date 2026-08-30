@@ -33,6 +33,33 @@ DATA_DIR=${FWF_AUDIT_DATA_DIR:-$REPO_ROOT/tests/fixtures}
 
 command -v unshare >/dev/null 2>&1 || { echo "unshare not installed" >&2; exit 2; }
 
+# Every user and group a `meta skuid` / `meta skgid` names has to exist
+# where nft reads the ruleset: it looks the name up with `getpwnam` while
+# it parses the rule and refuses the whole ruleset when the answer is no
+# (netfilter nftables src/meta.c, `uid_type_parse`).  The firewall those
+# rules are for has the user; this machine has no reason to, and without
+# this the check would report the ruleset for a property of the host it
+# runs on.  A passwd file of its own, bound over /etc/passwd for the
+# length of the run, asks the question the check is actually about.
+make_user_db() {
+    local rules=$1 passwd_file=$2 group_file=$3
+    local id=60000 name
+    cp /etc/passwd "$passwd_file"
+    cp /etc/group "$group_file"
+    for name in $(grep -oE 'meta skuid (!= )?[A-Za-z_][A-Za-z0-9._-]*' "$rules" |
+        awk '{print $NF}' | sort -u); do
+        grep -q "^$name:" "$passwd_file" && continue
+        echo "$name:x:$id:$id::/nonexistent:/usr/sbin/nologin" >>"$passwd_file"
+        id=$((id + 1))
+    done
+    for name in $(grep -oE 'meta skgid (!= )?[A-Za-z_][A-Za-z0-9._-]*' "$rules" |
+        awk '{print $NF}' | sort -u); do
+        grep -q "^$name:" "$group_file" && continue
+        echo "$name:x:$id:" >>"$group_file"
+        id=$((id + 1))
+    done
+}
+
 failed=0
 total=0
 while IFS= read -r script; do
@@ -76,7 +103,16 @@ type setup_fwf_jumps_v4 >/dev/null 2>&1 && setup_fwf_jumps_v4 fwf >/dev/null 2>&
 type setup_fwf_jumps_v6 >/dev/null 2>&1 && setup_fwf_jumps_v6 fwf >/dev/null 2>&1
 script_body
 EOF
-    err=$(unshare -rn bash "$driver" 2>&1 >/dev/null | grep -vE '^[[:space:]]*$')
+    # An nftables script reaches this loop too - the rules of both
+    # platforms are in `script_body` - and its ruleset may name a user
+    # this machine has not got.
+    passwd_file=$(mktemp)
+    group_file=$(mktemp)
+    make_user_db "$script" "$passwd_file" "$group_file"
+    err=$(unshare -rnm bash -c "mount --bind '$passwd_file' /etc/passwd
+        mount --bind '$group_file' /etc/group
+        bash '$driver'" 2>&1 >/dev/null | grep -vE '^[[:space:]]*$')
+    rm -f "$passwd_file" "$group_file"
     if [ -n "$err" ]; then
         echo "=== ${script#"$OUT"/}"
         echo "$err"
