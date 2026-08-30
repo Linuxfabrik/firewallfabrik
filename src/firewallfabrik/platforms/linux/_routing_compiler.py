@@ -335,6 +335,31 @@ class ValidateRoutingDestination(RoutingRuleProcessor):
         return True
 
 
+def _networks_of_interface(iface, want_v6: bool) -> list:
+    """Return the networks *iface* is on, of the family asked about.
+
+    The addresses are read off the interface object itself, the way
+    ``contradictionRGtwAndRItf`` reads ``oRItf->getByType(IPv4)``.  A
+    routing rule may name an interface of the cluster the firewall
+    belongs to, which is not the member's own object and carries the
+    address the cluster shares; asking the object is what makes that
+    interface answer at all.
+    """
+    networks = []
+    for addr in iface.addresses:
+        address = addr.get_address()
+        netmask = addr.get_netmask()
+        if not address or not netmask:
+            continue
+        try:
+            network = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
+        except ValueError:
+            continue
+        if (network.version == 6) == want_v6:
+            networks.append(network)
+    return networks
+
+
 def _interface_networks(fw, want_v6: bool) -> list:
     """Return the networks the firewall is directly attached to.
 
@@ -346,17 +371,9 @@ def _interface_networks(fw, want_v6: bool) -> list:
     """
     networks = []
     for iface in fw.interfaces:
-        for addr in iface.addresses:
-            address = addr.get_address()
-            netmask = addr.get_netmask()
-            if not address or not netmask:
-                continue
-            try:
-                network = ipaddress.ip_network(f'{address}/{netmask}', strict=False)
-            except ValueError:
-                continue
-            if (network.version == 6) == want_v6:
-                networks.append((iface, network))
+        networks.extend(
+            (iface, network) for network in _networks_of_interface(iface, want_v6)
+        )
     return networks
 
 
@@ -462,13 +479,7 @@ class GatewayOnRoutingInterface(RoutingRuleProcessor):
             gateway = _gateway_address(obj)
             if gateway is None:
                 continue
-            networks = [
-                network
-                for other, network in _interface_networks(
-                    self.compiler.fw, gateway.version == 6
-                )
-                if other.id == iface.id
-            ]
+            networks = _networks_of_interface(iface, gateway.version == 6)
             if not networks or any(gateway in network for network in networks):
                 # An interface with no address of this family gets its
                 # address while the firewall runs, so nothing can be said

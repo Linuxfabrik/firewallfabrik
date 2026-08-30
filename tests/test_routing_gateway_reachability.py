@@ -180,3 +180,22 @@ def test_an_interface_with_no_address_of_that_family_is_left_alone(fw):
     _compiler, out = _run(GatewayOnRoutingInterface(), fw, [rule])
 
     assert len(out) == 1
+
+
+def test_an_interface_the_firewall_does_not_own_is_checked_too(fw):
+    """A routing rule of a cluster names the cluster's own interface.
+
+    That object is not in the member's interface list and carries the
+    address the cluster shares, so a check that looks the interface up
+    on the firewall finds nothing and says nothing.  The C++ reads the
+    addresses off the object in the rule element
+    (``oRItf->getByType(IPv4)``), which is what makes it answer.
+    """
+    gw = _address(IPv4, '192.0.2.1', '255.255.255.255')
+    cluster_eth1 = _interface('eth1', [_address(IPv4, '198.51.100.1', '255.255.255.0')])
+    rule = _rule(gw, ritf=cluster_eth1)
+    compiler, out = _run(GatewayOnRoutingInterface(), fw, [rule])
+
+    assert out == []
+    assert len(compiler.errors) == 1
+    assert 'eth1' in compiler.errors[0]
