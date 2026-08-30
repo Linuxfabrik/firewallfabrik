@@ -280,8 +280,12 @@ class AutomaticRules:
 
         if options.get('conntrack_unicast'):
             # No multicast group to name, so the rule names the other
-            # members' interfaces directly.
-            for other in _other_member_interfaces(group, self.fw):
+            # members' interfaces directly - a dynamic one included, where
+            # the failover rules put "any" instead.  The C++ makes that
+            # distinction the same way and for the same reason: this rule
+            # names nothing but a UDP port, so "any source" would permit
+            # the state sync port from everywhere.
+            for other in _other_member_interfaces(group, self.fw, dynamic_is_any=False):
                 self._add_mgmt_rule(
                     other, self.fw, service, iface, Direction.Inbound, 'CONNTRACK'
                 )
@@ -440,13 +444,21 @@ def _base_interface(fw, copy_iface):
     )
 
 
-def _other_member_interfaces(group, fw, own_iface=None) -> list:
+def _other_member_interfaces(group, fw, own_iface=None, dynamic_is_any=True) -> list:
     """The interfaces of the *other* members in *group*.
 
-    A dynamic one is left out of the rule entirely rather than written
-    into it: it belongs to another machine, so its address is not
-    something this script can look up, and "no source" is what the C++
-    passes in that case.
+    A dynamic one belongs to another machine, so its address is not
+    something this script can look up.  What follows from that differs by
+    protocol, and ``AutomaticRules_ipt`` decides it per rule rather than
+    once: the failover rules pass ``nullptr``, which is "any", because the
+    rule still names the protocol and the multicast address the failover
+    daemon speaks to; the conntrack rules pass the interface, because
+    theirs names nothing but a UDP port, and "any source" there permits
+    the state sync port from everywhere.  The rule is then reported and
+    left out by ``checkForDynamicInterfacesOfOtherObjects``, which is the
+    honest answer for a peer whose address nobody knows at compile time.
+
+    *dynamic_is_any* is what the caller says about that.
     """
     if group is None:
         return []
@@ -458,5 +470,8 @@ def _other_member_interfaces(group, fw, own_iface=None) -> list:
             continue
         if member.device_id == fw.id:
             continue
-        others.append(None if member.is_dynamic() else member)
+        if dynamic_is_any and member.is_dynamic():
+            others.append(None)
+        else:
+            others.append(member)
     return others

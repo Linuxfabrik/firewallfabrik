@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): "Log all rules" also logs the rules that tag or classify, the way the iptables compiler does.
 * Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
+* Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync address is an IPv6 address keeps its rules, instead of losing them without a word.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync port is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a firewall whose conntrack limits are left unset no longer sets them to zero on activation, which made the kernel refuse every new connection.
