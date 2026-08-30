@@ -15,10 +15,10 @@
 The counterpart of ``test_ipt_target_fallback.py``.  An empty string is a
 verdict of its own here: ``.CONTINUE``, a LOG rule and a connection-marking
 rule all end without one on purpose.  A branch whose chain does not exist
-and a Custom action must therefore answer ``None``, or the caller keeps the
-rule and writes it out with all of its matches and a bare ``counter`` - a
-rule that counts the packets and hands the decision to whatever comes next,
-while the activation reports success.
+and a Custom action with no statement must therefore answer ``None``, or the
+caller keeps the rule and writes it out with all of its matches and a bare
+``counter`` - a rule that counts the packets and hands the decision to
+whatever comes next, while the activation reports success.
 """
 
 import uuid
@@ -63,7 +63,7 @@ def _verdict(action, ipt_target=''):
 @pytest.mark.parametrize(
     ('action', 'ipt_target', 'what'),
     [
-        (PolicyAction.Custom, '.CUSTOM', 'a custom action with no nftables meaning'),
+        (PolicyAction.Custom, '.CUSTOM', 'a custom action with no statement'),
         (PolicyAction.Branch, 'Policy', 'a branch into a hooked chain'),
         (PolicyAction.Branch, '', 'a branch naming no rule set'),
         (PolicyAction.Modify, '', 'an action nftables has no verdict for'),

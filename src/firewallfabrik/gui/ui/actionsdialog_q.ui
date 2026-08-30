@@ -246,7 +246,10 @@ allowed.</string>
           <item>
            <widget class="QLineEdit" name="custom_str">
             <property name="toolTip">
-             <string>Custom iptables command string appended to the generated rule.</string>
+             <string>Command appended verbatim to the generated rule.  It is written in
+the syntax of the platform this firewall compiles for: an iptables
+target such as &quot;-j TCPMSS --set-mss 1400&quot;, or an nftables statement
+such as &quot;tcp option maxseg size set 1400&quot;.</string>
             </property>
            </widget>
           </item>

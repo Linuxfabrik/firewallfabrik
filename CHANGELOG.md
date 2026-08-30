@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a cluster member installs the routes its cluster keeps for all of its members, instead of activating the new packet filter with no route at all ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 * Compiler (iptables, nftables): a cluster member permits the failover protocol and the state sync link it needs to see the other members, so a default-drop cluster no longer has both members thinking they are master ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 * Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses and rule sets ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
+* Compiler (nftables): a rule with a Custom action writes its statement into the ruleset, the way the iptables compiler writes its custom target.
 * Editor: an "Attached Networks" object can be created on an interface and has an editor of its own, showing the subnets a rule naming it will match ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
 * Editor: the address, port and mode of a cluster group's failover or state sync protocol can be edited, so a cluster that replicates on its own address or port is no longer blocked by its own policy ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 

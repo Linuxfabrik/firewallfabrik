@@ -2117,7 +2117,7 @@ Maps rule action to iptables-style target string (used internally; `PrintRule_nf
 | Reject | `REJECT` | |
 | Return | `RETURN` | |
 | Continue | `.CONTINUE` | Pseudo-target — no verdict in output |
-| Custom | `.CUSTOM` | |
+| Custom | `.CUSTOM` | The rule's own text, written out verbatim; reported and left out when the firewall names another platform |
 | Accounting | `.CONTINUE` | Counts into a named counter, no verdict |
 | Branch | — | Error: not yet supported by compiler |
 | Modify | — | Error: not yet supported by compiler |
@@ -2389,6 +2389,7 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 |---------|------------------|-----------|-------|
 | Inline logging with verdict | Partial | ⚠️ Partial | `log ... accept` works; LOG branching with multiple actions does not |
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
+| Custom action | any statement | ✅ | The rule's text is appended to the rule the way the iptables printer appends its custom target.  It carries no platform of its own, so the firewall's platform says what it was written in: a firewall naming another one is reported, because nftables refuses the whole ruleset over a statement it cannot parse |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. A rule set belonging to another firewall or cluster object is compiled into this script as well, the way `CompilerDriver::findImportedRuleSets` does it.  One case stays reported: a branch into the firewall's *own* top rule set, whose chains are hooked and cannot be jumped to - Firewall Builder emits the same empty chain there |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |
 | Policy routing | `fib` + marks | ❌ Not yet | `DeprecateOptionRoute` reports the rule and leaves it out, the way the iptables pipeline refuses it ([#125](https://github.com/Linuxfabrik/firewallfabrik/issues/125)) |

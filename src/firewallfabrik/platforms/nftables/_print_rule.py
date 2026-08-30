@@ -2513,11 +2513,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         An empty string is a verdict of its own: ``.CONTINUE``, a LOG rule
         and a connection-marking rule all deliberately end without one, and
         the packet goes on to the next rule.  A branch whose chain does not
-        exist, a Custom action and an action nftables has no verdict for
-        therefore have to answer ``None``, or the rule goes out with every
-        one of its matches, a ``counter`` and nothing else - which counts
-        the packets and leaves the decision to whatever rule comes next,
-        while the activation reports success.  The iptables
+        exist, a Custom action with no text and an action nftables has no
+        verdict for therefore have to answer ``None``, or the rule goes out
+        with every one of its matches, a ``counter`` and nothing else -
+        which counts the packets and leaves the decision to whatever rule
+        comes next, while the activation reports success.  The iptables
         ``_print_target`` answers the same question the same way.
         """
         target = rule.ipt_target
@@ -2543,11 +2543,27 @@ class PrintRule_nft(PolicyRuleProcessor):
         if target:
             if target == '.CONTINUE':
                 return ''
+            if target == '.CUSTOM':
+                # The rule carries its statement verbatim, the way the
+                # iptables printer writes the custom target out.  The text
+                # is written for the platform the firewall compiles for -
+                # a rule set belongs to one firewall and a firewall has one
+                # platform - so it is opaque here, exactly like the code of
+                # a Custom Service.  A statement nft does not know costs
+                # the ruleset, which `check_ruleset` catches before the
+                # running one is flushed.
+                custom_str = rule.get_option('custom_str', '')
+                if not custom_str:
+                    self.compiler.error(
+                        rule,
+                        'rule with a custom action has no statement to run; '
+                        'the rule is left out',
+                    )
+                    return None
+                return custom_str
             if target.startswith('.'):
-                # `.CUSTOM` is the only other pseudo target, and DecideOnTarget
-                # has already reported that its free-form iptables text has no
-                # meaning here.  The rule keeps nothing that would carry out
-                # its action.
+                # No other pseudo target carries an action, so the rule
+                # keeps nothing that would carry one out.
                 return None
             verdict = verdict_map.get(target)
             if verdict:

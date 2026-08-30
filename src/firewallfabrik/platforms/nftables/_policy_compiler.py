@@ -2222,6 +2222,10 @@ class DecideOnChainForClassify(PolicyRuleProcessor):
 class DecideOnTarget(PolicyRuleProcessor):
     """Set the nftables verdict based on rule action."""
 
+    def _custom_text_is_for_nftables(self) -> bool:
+        """Was the custom statement of a rule written for this platform?"""
+        return self.compiler.fw.platform == 'nftables'
+
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
@@ -2260,13 +2264,23 @@ class DecideOnTarget(PolicyRuleProcessor):
             return True
 
         target = target_map.get(action) if isinstance(action, PolicyAction) else None
-        if target == '.CUSTOM':
-            # The custom target of such a rule is free-form iptables text
-            # (`-j TCPMSS --clamp-mss-to-pmtu`), which has no meaning here.
+        if target == '.CUSTOM' and not self._custom_text_is_for_nftables():
+            # A rule carries its custom statement as one string, with no
+            # platform beside it, so the firewall's own platform says what
+            # the administrator wrote it in - the way a Custom Service says
+            # it per platform.  A firewall that names another one carries
+            # text nftables cannot parse, and nft refuses the whole ruleset
+            # over it rather than the rule.
             self.compiler.error(
-                rule, 'Custom action not yet supported by nftables compiler'
+                rule,
+                'Custom action holds a command written for '
+                f'"{self.compiler.fw.platform or "another platform"}"; set the '
+                "firewall's platform to nftables and write the statement in "
+                'nftables syntax. The rule is left out',
             )
-            rule.ipt_target = target
+            # Leaving `ipt_target` unset is what leaves the rule out: the
+            # print rule finds no verdict for the Custom action and answers
+            # None, the way it does for Modify, Scrub and Skip.
         elif target is not None:
             rule.ipt_target = target
         else:

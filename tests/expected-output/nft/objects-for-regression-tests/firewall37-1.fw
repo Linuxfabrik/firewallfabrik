@@ -12,7 +12,7 @@
 
 #  same as firewall37 except rules are made to be terminating
 #
-# Rule 23 (global): Custom action not yet supported by nftables compiler
+# Rule 23 (global): Custom action holds a command written for "iptables"; set the firewall's platform to nftables and write the statement in nftables syntax. The rule is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
