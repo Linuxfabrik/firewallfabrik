@@ -25,6 +25,14 @@
 # `2>/dev/null` on a chain creation, the generated chain names, the conntrack
 # spelling of the state match, the trailing space inside an iptables-restore
 # `echo`, and a few protocol numbers the two compilers write differently.
+#
+# A temporary chain is `C<id>.<n>` in both compilers, but the id is the rule's
+# XML id in Firewall Builder (`Cid3CDE1CB.0`, `Cpol-firewall2-2.0`) and a hash
+# of the rule's position here.  The rule that folds a name beginning with a
+# letter therefore has to run *before* the hexadecimal one, or the latter
+# matches the hex tail inside `Cid43867C1B02FF.0` and leaves `Cid43867CHAIN`
+# behind - about 75 reference lines that could then never match, counted in
+# `missing` and again in `extra`.
 # Rules wrapped in a run-time loop (address tables, dynamic interfaces) are no
 # longer plain command lines and count as missing, so the number is
 # pessimistic by design.
@@ -60,8 +68,8 @@ normalise() {
         grep -E '\$(IPTABLES|IP6TABLES)([^_A-Za-z]|$)|echo "-[AI] ' |
         sed -e 's/-w [0-9]*//' -e 's/-w //' \
             -e 's/ 2>\/dev\/null//' \
+            -e 's/C[A-Za-z][0-9A-Za-z_-]*\(\.[0-9]\+\)\+/CHAIN/g' \
             -e 's/C[0-9a-fA-F]\{6,\}\.[0-9]*/CHAIN/g' \
-            -e 's/Cid[0-9A-Za-z]*\(\.[0-9]\+\)\+/CHAIN/g' \
             -e 's/-m conntrack --ctstate/-m state --state/' \
             -e 's/-p 0 /-p all /' -e 's/-p 51 /-p ah /' -e 's/-p 50 /-p esp /' \
             -e 's/-p 112 /-p vrrp /' \
