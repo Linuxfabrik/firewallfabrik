@@ -448,11 +448,13 @@ case "$cmd" in
         ;;
 
     interfaces)
+        check_tools
         configure_interfaces
         RETVAL=$?
         ;;
 
     test_interfaces)
+        check_tools
         FWBDEBUG="echo"
         configure_interfaces
         RETVAL=$?

@@ -467,12 +467,18 @@ case "$cmd" in
         ;;
 {% if configure_interfaces_code %}
 
+{# `configure_interfaces` runs `$IP`, so it needs the same `check_tools` in
+   front of it that every other branch has - the iptables skeleton has it
+   here too.  Without it a missing or mis-configured tool path fails once
+   per command with a message about the address instead of about the tool. #}
     interfaces)
+        check_tools
         configure_interfaces
         RETVAL=$?
         ;;
 
     test_interfaces)
+        check_tools
         FWBDEBUG="echo"
         configure_interfaces
         RETVAL=$?

@@ -48,6 +48,7 @@ from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._netfilter import (
+    forwarding_is_off,
     is_valid_mgmt_address,
     mgmt_address_family,
     mgmt_address_is_ipv6,
@@ -1042,21 +1043,22 @@ class CompilerDriver_nft(CompilerDriver):
             # MSS the path cannot carry.  iptables has no such ordering
             # question - it clamps in the mangle table, which the filter
             # hooks run after.
+            #
+            # Whether the firewall forwards is one question with one
+            # reader, `forwarding_is_off`: only an explicit "off" means
+            # off, an empty value is "no change" and leaves the kernel
+            # setting alone.  A second truth table here would answer
+            # differently for every spelling neither list happens to
+            # name, and this one already did - it called `False` off
+            # where the shared reader calls it on.  The two families are
+            # asked separately and either one is enough, because the
+            # filter table is one `inet` table on a dual-stack firewall
+            # and its forward chain carries both.
             if self.firewall_option(fw, 'clamp_mss_to_mtu'):
-                ipv4_fwd_raw = self.firewall_option(fw, 'linux24_ip_forward')
-                ipv6_fwd_raw = self.firewall_option(fw, 'linux24_ipv6_forward')
-                _fwd_on = lambda s: (  # noqa: E731
-                    str(s or '').strip()
-                    in (
-                        '',
-                        '1',
-                        'On',
-                        'on',
-                        'True',
-                        'true',
-                    )
+                forwards = not forwarding_is_off(fw, False) or (
+                    have_ipv6 and not forwarding_is_off(fw, True)
                 )
-                if _fwd_on(ipv4_fwd_raw) or (have_ipv6 and _fwd_on(ipv6_fwd_raw)):
+                if forwards:
                     out.write(
                         '        tcp flags syn / syn,rst '
                         'counter tcp option maxseg size set rt mtu\n'
