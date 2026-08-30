@@ -18,6 +18,7 @@ not.
 | `check-nft.sh` | does `nft --check` accept this ruleset? | a ruleset that refuses to load, so the firewall keeps its old rules |
 | `load-nft.sh` | and does a real kernel take it? | what `--check` never evaluates: a statement in a hook that forbids it, a jump cycle - and nft loads atomically, so the whole ruleset goes |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
+| `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
 | `parity.py` | do our nftables rules check what `iptables-translate` says they should? | a condition one platform checks and the other does not |
@@ -35,6 +36,7 @@ tools/compiler-audit/check-shell-syntax.sh /tmp/audit
 tools/compiler-audit/check-nft.sh /tmp/audit
 tools/compiler-audit/load-nft.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
+tools/compiler-audit/replay-routes.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 ```
 
@@ -44,7 +46,7 @@ exist here, and then every command fails for a reason that has nothing to do
 with the rule - one firewall of the reference corpus hid 393 commands that
 way, two of which were real findings.
 
-`check-nft.sh`, `load-nft.sh`, `replay-iptables.sh` and
+`check-nft.sh`, `load-nft.sh`, `replay-iptables.sh`, `replay-routes.sh` and
 `check-iptables-restore.sh` need
 `unshare`, `nft` and `iptables`. They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
@@ -93,6 +95,10 @@ script: `linux-1.fw.orig` and `linux-2.fw.orig` are member compiles saved
 under the bare member name, and nothing in them says which cluster.
 **A baseline taken before 2026-08-29 did not include the cluster members
 and is not comparable.**
+
+`compare-reference.sh` counts `$IPTABLES` lines and a route installs none,
+so the routing block is invisible to it; `replay-routes.sh` is what reads
+that half.
 
 Only `script_body()` is compared, because that is the function both compilers
 install the policy from. The reset helpers, the coexistence jump setup,
