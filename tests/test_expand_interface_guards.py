@@ -30,7 +30,7 @@ import uuid
 import pytest
 
 from firewallfabrik.compiler._compiler import Compiler
-from firewallfabrik.core.objects import IPv4, Interface
+from firewallfabrik.core.objects import Interface, IPv4
 
 
 def _interface(*, options=None, **flags):
