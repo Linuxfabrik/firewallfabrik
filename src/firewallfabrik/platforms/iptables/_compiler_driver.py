@@ -650,21 +650,27 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Reset commands
                 use_ipt_restore = self.firewall_option(fw, 'use_iptables_restore')
 
-                # When flush_ruleset is off, iptables-restore can't be used
-                # because it replaces entire tables atomically.
+                # Who empties the firewall's own chains before the policy
+                # goes in.  `iptables-restore` does it itself, by emptying
+                # every chain of the table before it reads the first rule -
+                # but in coexistence mode it is called with `--noflush`,
+                # because the other tools' rules are in those chains too.
+                # Then nothing empties them and `reset_all` has to, the way
+                # it does for the shell form; without it every activation
+                # appends the whole policy again.
+                run_reset_all = not use_ipt_restore or not flush_ruleset
                 if not flush_ruleset and use_ipt_restore:
-                    use_ipt_restore = False
                     self.warning(
                         '"Flush entire ruleset" is disabled \u2014 only '
                         "FirewallFabrik's own chains will be flushed so "
                         'that rules created by other tools (e.g. Docker, '
                         'CrowdSec, fail2ban) are preserved. '
-                        '"Use iptables-restore" has been ignored because '
-                        'iptables-restore replaces entire tables atomically.'
+                        '"Use iptables-restore" therefore runs with '
+                        '--noflush.'
                     )
 
                 script_skeleton.set_variable(
-                    'not_using_iptables_restore', 0 if use_ipt_restore else 1
+                    'not_using_iptables_restore', 1 if run_reset_all else 0
                 )
 
                 reset_buf = ''

@@ -113,6 +113,10 @@ case "$cmd" in
         configure_interfaces
         verify_interfaces
         {{if prolog_after_interfaces}} prolog_commands {{endif}}
+##      `iptables-restore` empties the table itself, so `reset_all`
+##      only runs where nothing else does: for the shell form, and
+##      for the restore form in coexistence mode, where the restore
+##      is called with --noflush.
         {{if not_using_iptables_restore}} reset_all {{endif}}
         {{$setup_fwf_jumps_commands}}
         {{if prolog_after_flush}} prolog_commands {{endif}}

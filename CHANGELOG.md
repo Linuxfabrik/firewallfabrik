@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a rate limit in a branch rule set counts into a table of its own, instead of silently taking over the key and the rate of a rule at the same position in the main policy.
 * Compiler (iptables): a generated script answers "status" with "Firewall is active" once it has installed its rules, instead of reporting itself off whenever the policy needed no chain of its own - which an init system and a monitoring check read as a dead firewall.
 * Compiler (iptables, nftables): "reload" no longer stops the firewall first, which left the machine with no rules and no policy for as long as the second command needed to start - and on nftables with nothing at all when the new ruleset turned out to be unloadable.
+* Compiler (iptables): a firewall that keeps other tools' rules and activates through iptables-restore no longer reports that the setting was ignored; it is honoured, with --noflush.
 * Compiler (iptables): a rule matching an IP protocol by number names it where the protocol has a name, and an "any protocol" service no longer writes a match into an IPv6 command.
 * Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address on the interface again.
 * Compiler (iptables): a rule with two negated elements no longer lets through what the second negation exists to exclude; an "outside business hours" rule matched around the clock.
