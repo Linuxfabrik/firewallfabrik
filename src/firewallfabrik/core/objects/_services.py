@@ -147,20 +147,51 @@ class Service(Base):
         'ICMP6Service': ('ipv6-icmp', 58),
     }
 
+    # The four protocol numbers an IP Service answers by name, and the
+    # names it answers with: ``IPService::named_protocols``, filled in
+    # ``IPService::init`` (libfwbuilder IPService.cpp).  Everything else
+    # comes back as the number, which is what both tools take as well.
+    #
+    # The name is not decoration.  `splitServicesIfRejectWithTCPReset`
+    # asks whether a service is TCP by protocol *name*, "because a
+    # CustomService allows the user to set the protocol name" - so an IP
+    # Service naming protocol 6 is a TCP service there, and reading it as
+    # "6" drops the TCP reset from a Reject rule and warns instead.
+    NAMED_PROTOCOLS = {0: 'ip', 1: 'icmp', 6: 'tcp', 17: 'udp'}
+
     def get_protocol_name(self) -> str:
         """Return the protocol name string for this service type.
 
         A CustomService carries its protocol in the same attribute as an
-        IPService, so both are resolved the same way.
+        IPService, but only the latter stores a number there, so only the
+        latter is looked up in :attr:`NAMED_PROTOCOLS`
+        (``IPService::getProtocolName`` against
+        ``CustomService::getProtocolName``).
         """
-        if isinstance(self, (CustomService, IPService)):
-            proto = self._ipservice_protocol_str()
+        if isinstance(self, CustomService):
+            proto = self.get_stored_protocol()
             if proto:
                 return proto
+        elif isinstance(self, IPService):
+            proto = self.get_stored_protocol()
+            if proto:
+                try:
+                    return self.NAMED_PROTOCOLS.get(int(proto), proto)
+                except ValueError:
+                    return proto
         entry = self.PROTOCOL_MAP.get(self.type)
         if entry:
             return entry[0]
         return ''
+
+    def get_stored_protocol(self) -> str:
+        """Return the protocol string as the data file carries it.
+
+        The checks that ask whether the stored value is a protocol number
+        at all have to read it unmapped, or a service the editor wrote
+        correctly reads as "icmp is not a protocol number".
+        """
+        return self._ipservice_protocol_str()
 
     def _ipservice_protocol_str(self) -> str:
         """Return the protocol string for an IPService.

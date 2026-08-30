@@ -334,7 +334,7 @@ def ip_protocol_problem(srv) -> str:
     """
     if not isinstance(srv, IPService):
         return ''
-    raw = str(srv.get_protocol_name() or '').strip()
+    raw = str(srv.get_stored_protocol() or '').strip()
     if not raw:
         return ''
     try:

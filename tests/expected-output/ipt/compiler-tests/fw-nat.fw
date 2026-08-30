@@ -641,7 +641,7 @@ script_body() {
  #
  # Original service matches fragmented packets
  $IP6TABLES -w 5 -t nat -N NAT_ipv6_PREROUTING
- $IP6TABLES -w 5 -t nat -A NAT_ipv6_PREROUTING -p 0 -d 2001:db8:1::1 -m frag --fragmore -j DNAT --to-destination 2001:db8:3::53
+ $IP6TABLES -w 5 -t nat -A NAT_ipv6_PREROUTING -d 2001:db8:1::1 -m frag --fragmore -j DNAT --to-destination 2001:db8:3::53
 }
 
 ip_forward() {

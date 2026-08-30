@@ -531,7 +531,7 @@ script_body() {
  echo "Rule 9 (global)"
  #
  # Service carries a ToS byte and a DiffServ code point at once
- $IPTABLES -w 5 -A INPUT -p 0 -s 192.168.1.0/24 -m tos --tos 0x10 -m conntrack --ctstate NEW -j DROP
+ $IPTABLES -w 5 -A INPUT -p all -s 192.168.1.0/24 -m tos --tos 0x10 -m conntrack --ctstate NEW -j DROP
 }
 
 ip_forward() {

@@ -813,9 +813,23 @@ class PrintRule(PolicyRuleProcessor):
                 return '-p ipv6-icmp -m icmp6 '
             return '-p icmp  -m icmp '
         elif isinstance(srv, IPService):
-            proto = srv.get_protocol_number()
-            if proto >= 0:
-                return f'-p {proto} '
+            # `IPService::getProtocolName` answers with a name for the four
+            # protocols Firewall Builder knows one for, and `_printProtocol`
+            # turns "ip" into "all" and appends the tcp/udp match the way it
+            # does for a TCP or UDP service object.  "all" is left out of an
+            # ip6tables command, where it matches everything and used to be
+            # answered with "Warning: never matched protocol: all".
+            proto = srv.get_protocol_name()
+            if not proto:
+                return ''
+            if proto == 'ip':
+                proto = 'all'
+            if proto == 'all' and self.compiler.ipv6_policy:
+                return ''
+            res = f'-p {proto} '
+            if proto in ('tcp', 'udp'):
+                res += f'-m {proto} '
+            return res
         return ''
 
     def _print_multiport(self, rule: CompRule) -> str:
