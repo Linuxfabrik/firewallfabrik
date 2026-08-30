@@ -2138,7 +2138,7 @@ Maps rule action to iptables-style target string (used internally; `PrintRule_nf
 | Continue | `.CONTINUE` | Pseudo-target — no verdict in output |
 | Custom | `.CUSTOM` | The rule's own text, written out verbatim; reported and left out when the firewall names another platform |
 | Accounting | `.CONTINUE` | Counts into a named counter, no verdict |
-| Branch | — | Error: not yet supported by compiler |
+| Branch | target rule set name | A jump into the chain the branch rule set compiles into; a target no chain carries is reported and the rule left out |
 | Modify | — | Error: not yet supported by compiler |
 | Pipe | `QUEUE` | Rendered as the `queue` verdict |
 | Scrub | — | Error: not supported in nftables |
@@ -2236,7 +2236,7 @@ Key methods and their error reporting:
 | `_print_addr_basic(obj, rule)` | Cannot resolve address for object type |
 | `_print_src_addr()` / `_print_dst_addr()` | Could not resolve any source/destination addresses |
 | `_print_service()` | Service type not yet supported by compiler |
-| `_print_verdict()` | Custom chain jump not yet supported by compiler (warning) |
+| `_print_verdict()` | Rule branches to a rule set nftables cannot jump to; rule with a Custom action and no statement; an action with no verdict |
 | `_print_reject()` | Unknown reject type, falling back to generic reject (warning) |
 
 Supports:
@@ -2406,8 +2406,7 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 
 | Feature | nftables backend | fwf status | Notes |
 |---------|------------------|-----------|-------|
-| Inline logging with verdict | Partial | ⚠️ Partial | `log ... accept` works; LOG branching with multiple actions does not |
-| Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
+| Inline logging with verdict | Yes | ✅ | One rule carries the log and the verdict (`log prefix "…" accept`), and the mark or the traffic class beside them where iptables needs a temporary chain for the second target. A log with a rate limit of its own becomes two rules, the way iptables' temporary chain does, so the limit gates the logging and not the traffic |
 | Custom action | any statement | ✅ | The rule's text is appended to the rule the way the iptables printer appends its custom target.  It carries no platform of its own, so the firewall's platform says what it was written in: a firewall naming another one is reported, because nftables refuses the whole ruleset over a statement it cannot parse |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. A rule set belonging to another firewall or cluster object is compiled into this script as well, the way `CompilerDriver::findImportedRuleSets` does it.  Two cases stay reported: a branch into the firewall's *own* top rule set, whose chains are hooked and cannot be jumped to - Firewall Builder emits the same empty chain there - and the jump that closes a cycle, which the kernel refuses (`nft_chain_validate` answers `-EMLINK`, "Too many links"); see the note under *Intentional deviations* |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |

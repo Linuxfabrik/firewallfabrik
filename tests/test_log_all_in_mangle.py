@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-""""Log all rules" reaches the mangle table on both platforms.
+""" "Log all rules" reaches the mangle table on both platforms.
 
 ``clearLogInMangle`` turns a rule's own logging off in the mangle pass, so
 a rule compiled into both tables is logged once.  The global "log all
@@ -68,9 +68,7 @@ def _compile_with_log_all(tmp_path, platform):
 def _mangle_block(script, platform):
     """Return the part of *script* that installs the mangle rules."""
     if platform == 'ipt':
-        return '\n'.join(
-            line for line in script.splitlines() if '-t mangle' in line
-        )
+        return '\n'.join(line for line in script.splitlines() if '-t mangle' in line)
     start = script.find('table ip fwf_mangle {\n    chain')
     assert start != -1, 'the nftables script has no mangle table'
     return script[start : script.find('\n}\n', start)]
