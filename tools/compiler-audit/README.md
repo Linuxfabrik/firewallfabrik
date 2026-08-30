@@ -21,6 +21,7 @@ not.
 | `replay-nft-actions.sh` | do the "block" and "stop" actions of an nftables script do what they say? | a block that leaves an address family open or a hook unhooked - the code paths an administrator reaches once something has already gone wrong |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
 | `replay-status.sh` | after a real activation, does the script agree that it is up? | a firewall that answers "status" with "not configured" while its rules are loaded, which an init system and a monitoring check read as dead |
+| `replay-twice.sh` | does the second activation leave the same ruleset as the first? | a rule the reset does not recognise as ours, appended again on every activation - one more copy per boot, per change, per reload |
 | `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
@@ -42,6 +43,7 @@ tools/compiler-audit/fill-nft-sets.sh /tmp/audit
 tools/compiler-audit/replay-nft-actions.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
 tools/compiler-audit/replay-status.sh /tmp/audit
+tools/compiler-audit/replay-twice.sh /tmp/audit
 tools/compiler-audit/replay-routes.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 ```
@@ -63,8 +65,8 @@ it at a ruleset with an invented user *and* a bad address and only the
 address comes back.
 
 `check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
-`replay-iptables.sh`, `replay-routes.sh`, `replay-status.sh` and
-`check-iptables-restore.sh` need
+`replay-iptables.sh`, `replay-routes.sh`, `replay-status.sh`,
+`replay-twice.sh` and `check-iptables-restore.sh` need
 `unshare`, `nft` and `iptables`. They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
 Without the namespace `nft --check` fails with "cache initialization failed:
