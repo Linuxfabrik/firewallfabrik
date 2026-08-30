@@ -2158,8 +2158,24 @@ class PrintRule_nft(PolicyRuleProcessor):
                     f'refuses: {problem}. The rule is left out',
                 )
                 return None
-            bounds.append(date.iso(' ') if kerneltz else str(date.epoch()))
+            bounds.append(
+                self._quoted_date(date.iso(' ')) if kerneltz else str(date.epoch())
+            )
         return f'meta time {bounds[0]}-{bounds[1]}'
+
+    @staticmethod
+    def _quoted_date(text: str) -> str:
+        """A date literal in the spelling nft's grammar takes.
+
+        The quotes are what tells `meta time` apart from the number of
+        seconds beside it: `date_type_parse` tries `parse_iso_date` first
+        and `strtoul` after (netfilter nftables src/meta.c), and the
+        scanner never reaches either for a bare date, because the blank
+        and the dash in it end the token.  nft answers that with a syntax
+        error and refuses the whole ruleset.  Both writers of the literal
+        go through here so they cannot drift apart again.
+        """
+        return f'"{text}"'
 
     @staticmethod
     def _time_literal(epoch: int, kerneltz: bool) -> str:
@@ -2167,7 +2183,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not kerneltz:
             return str(epoch)
         moment = datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC)
-        return f'"{moment.strftime("%Y-%m-%d %H:%M:%S")}"'
+        return PrintRule_nft._quoted_date(moment.strftime('%Y-%m-%d %H:%M:%S'))
 
     def _print_time_interval(self, rule: CompRule) -> str | None:
         """Print nftables time/weekday matching.
