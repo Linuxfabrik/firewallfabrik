@@ -155,6 +155,9 @@ def test_every_message_names_its_rule():
         options={},
         negations={'tsrc': True},
     )
+    # The element has to name something: an element that says "any" is not
+    # negated, whatever the flag beside it says (`CompRule.get_neg`).
+    rule.tsrc = [_network('255.255.255.0')]
     rule.nat_rule_type = NATRuleType.SNAT
     seen = []
 
