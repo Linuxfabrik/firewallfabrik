@@ -268,6 +268,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(
             ClearTagClassifyInFilter('clear Tag and Classify options in filter table')
         )
+        # Ahead of `Logging1`, the way `PolicyCompiler_ipt::compile` orders
+        # the two (clearLogInMangle:4406, Logging1:4412) and the iptables
+        # pipeline here does.  Behind it the global "log everything" setting
+        # is cleared again in the mangle pass, and a firewall that tags or
+        # classifies logs on one platform and not on the other.
+        self.add(ClearLogInMangle('clear logging in rules in mangle table'))
         self.add(
             ClearActionInTagClassifyIfMangle(
                 'clear action in rules with Tag and Classify in mangle'
@@ -351,7 +357,6 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(AddOtherProtocolsForNegatedService('negated service: other protocols'))
 
         # Logging — inline in nftables, no temp chain needed
-        self.add(ClearLogInMangle('clear logging in rules in mangle table'))
         self.add(Logging_nft('process logging'))
         self.add(SplitIfTagAndConnmark('Tag+CONNMARK combo'))
         self.add(Accounting('handle accounting rules'))
