@@ -264,7 +264,7 @@ configure_interfaces() {
     getaddr6 ppp-dsl  i_ppp_dsl_v6
     getnet ppp-dsl  i_ppp_dsl_network
     getnet6 ppp-dsl  i_ppp_dsl_v6_network
-    update_addresses_of_interface "eth0 192.0.2.1/24 fe80::20c:29ff:fe28:c078/64" ""
+    update_addresses_of_interface "eth0 fe80::20c:29ff:fe28:c078/64 192.0.2.1/24" ""
 }
 
 # An address table keeps its addresses in a file on this machine, so the set

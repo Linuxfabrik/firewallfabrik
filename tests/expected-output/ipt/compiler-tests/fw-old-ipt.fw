@@ -460,8 +460,8 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 198.51.100.9/24 2001:db8:1::1/64" ""
- update_addresses_of_interface "eth1 192.168.9.1/24 2001:db8:2::1/64" ""
+ update_addresses_of_interface "eth0 2001:db8:1::1/64 198.51.100.9/24" ""
+ update_addresses_of_interface "eth1 2001:db8:2::1/64 192.168.9.1/24" ""
  update_addresses_of_interface "lo 127.0.0.1/8" ""
  update_addresses_of_interface "this-name-is-too-long 10.9.9.1/24" ""
 }

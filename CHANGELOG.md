@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a route two rules install the same way is installed once, so the activation no longer stops at the second one and puts the previous routing table back.
 * Compiler (iptables, nftables): a routing rule of a cluster whose gateway is not on the network of the interface it names is reported, instead of taking the whole route down at activation.
 * Compiler (iptables, nftables): a routing rule that leaves through an interface of a cluster the firewall does not belong to is reported instead of naming a device the firewall has not got.
+* Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
 * Compiler (iptables, nftables): a cluster member configures the addresses of an interface whose cluster counterpart runs no failover protocol, instead of leaving them to nobody.
 * Compiler (iptables, nftables): a routing rule marked "non-critical" is now allowed to fail, and every other one puts the previous routing table back and stops the activation instead of leaving the firewall half-routed and reporting success.
 * Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them separately, so a dual-stack rule no longer disappears from one address family because the first interface has no address in it.

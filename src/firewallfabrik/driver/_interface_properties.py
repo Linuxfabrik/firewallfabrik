@@ -181,20 +181,31 @@ class InterfaceProperties:
 
     @staticmethod
     def _get_list_of_addresses(iface: Interface) -> list[str]:
-        """Get list of addresses as 'addr/prefix' strings."""
+        """The addresses of *iface* as ``addr/prefix``, IPv6 ones first.
+
+        ``interfaceProperties::getListOfAddresses`` collects the IPv4 and
+        the IPv6 children separately and splices the IPv6 list onto the
+        *front*, so that is the order the list is written in.  The shell
+        function sorts what it is given before it compares, so nothing
+        turns on it - but the two compilers writing the same interface out
+        differently is noise in every diff against the reference.
+        """
         import ipaddress
 
-        addr_list: list[str] = []
+        v4: list[str] = []
+        v6: list[str] = []
         for addr_obj in iface.addresses:
             addr_str = addr_obj.get_address()
             mask_str = addr_obj.get_netmask()
-            if addr_str and mask_str:
-                try:
-                    net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
-                    addr_list.append(f'{addr_str}/{net.prefixlen}')
-                except ValueError:
-                    addr_list.append(f'{addr_str}/{mask_str}')
-        return addr_list
+            if not addr_str or not mask_str:
+                continue
+            try:
+                net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
+            except ValueError:
+                v4.append(f'{addr_str}/{mask_str}')
+                continue
+            (v6 if net.version == 6 else v4).append(f'{addr_str}/{net.prefixlen}')
+        return v6 + v4
 
 
 class LinuxInterfaceProperties(InterfaceProperties):

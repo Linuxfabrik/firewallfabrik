@@ -284,7 +284,7 @@ configure_interfaces() {
     # available starting from Linux 2.6.16
     test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
         echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
-    update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
+    update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
 }
 
 # An address table keeps its addresses in a file on this machine, so the set
