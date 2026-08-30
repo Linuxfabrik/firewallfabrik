@@ -1830,6 +1830,11 @@ class SrcNegation(PolicyRuleProcessor):
         r_return.when = []
         r_return.ipt_chain = new_chain
         r_return.action = PolicyAction.Return
+        # A rule already carrying a target is the jump rule of an outer
+        # negation, and a copy of it would jump on instead of returning
+        # (PolicyCompiler_ipt::SrcNegation and its three siblings all clear
+        # it).  `DecideOnTarget` fills RETURN in afterwards.
+        r_return.ipt_target = ''
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
         r_return.set_option('tagging', False)
@@ -1922,6 +1927,11 @@ class TimeNegation(PolicyRuleProcessor):
         r_return.itf = []
         r_return.ipt_chain = new_chain
         r_return.action = PolicyAction.Return
+        # A rule already carrying a target is the jump rule of an outer
+        # negation, and a copy of it would jump on instead of returning
+        # (PolicyCompiler_ipt::SrcNegation and its three siblings all clear
+        # it).  `DecideOnTarget` fills RETURN in afterwards.
+        r_return.ipt_target = ''
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
         r_return.set_option('tagging', False)
@@ -1998,6 +2008,11 @@ class DstNegation(PolicyRuleProcessor):
         r_return.when = []
         r_return.ipt_chain = new_chain
         r_return.action = PolicyAction.Return
+        # A rule already carrying a target is the jump rule of an outer
+        # negation, and a copy of it would jump on instead of returning
+        # (PolicyCompiler_ipt::SrcNegation and its three siblings all clear
+        # it).  `DecideOnTarget` fills RETURN in afterwards.
+        r_return.ipt_target = ''
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
         r_return.set_option('tagging', False)
@@ -2071,6 +2086,11 @@ class SrvNegation(PolicyRuleProcessor):
         r_return.when = []
         r_return.ipt_chain = new_chain
         r_return.action = PolicyAction.Return
+        # A rule already carrying a target is the jump rule of an outer
+        # negation, and a copy of it would jump on instead of returning
+        # (PolicyCompiler_ipt::SrcNegation and its three siblings all clear
+        # it).  `DecideOnTarget` fills RETURN in afterwards.
+        r_return.ipt_target = ''
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
         r_return.set_option('tagging', False)
