@@ -2528,6 +2528,18 @@ class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
                     continue
                 if any(iface.id == obj.id for iface in fw.interfaces):
                     continue
+                # A dynamic *cluster* interface is answerable after all, as
+                # long as this firewall is a member of that cluster: the
+                # address comes from the member's own interface, which the
+                # failover group names.  The iptables half has had this
+                # since the cluster work landed
+                # (`PolicyCompiler_ipt::checkForDynamicInterfacesOfOtherObjects`).
+                if (
+                    obj.is_failover_interface()
+                    and obj.get_failover_group().get_interface_for_member(fw)
+                    is not None
+                ):
+                    continue
                 # `device` is the host or firewall the interface belongs to;
                 # the iptables half names it the same way.  Asking for a
                 # `parent` or a `parent_name` answered "unknown" for every

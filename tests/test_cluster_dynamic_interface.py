@@ -103,3 +103,32 @@ def test_the_object_tree_keeps_its_own_answer(tree, tmp_path):
         ).one()
         eth0 = next(i for i in cluster.interfaces if i.name == 'eth0')
         assert not eth0.is_dynamic()
+
+
+def test_both_platforms_keep_a_rule_naming_it(tree, tmp_path):
+    """The dynamic-interface check exempts the cluster on both platforms.
+
+    `checkForDynamicInterfacesOfOtherObjects` asks the failover group
+    whether it names an interface of *this* member; if it does, the
+    address is answerable after all.  The nftables policy pipeline had no
+    such exemption, so twelve rules of the reference clusters were left
+    out on one platform and compiled on the other.
+    """
+    from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nft
+
+    cluster_id, fw_id = _ids(tree, 'heartbeat_cluster_1_d', 'linux-1-d')
+
+    reported = {}
+    for name, cls in (('ipt', CompilerDriver_ipt), ('nft', CompilerDriver_nft)):
+        driver = cls(tree)
+        driver.wdir = str(tmp_path)
+        driver.source_dir = str(FIXTURE.parent)
+        driver.file_name_setting = f'{name}.fw'
+        driver.run(cluster_id=cluster_id, fw_id=fw_id, single_rule_id='')
+        reported[name] = {
+            error
+            for error in driver.all_errors
+            if 'dynamic interface' in error and 'heartbeat_cluster_1_d' in error
+        }
+
+    assert reported['nft'] == reported['ipt'] == set()
