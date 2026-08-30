@@ -1708,10 +1708,39 @@ class PrintRule(PolicyRuleProcessor):
         # The name is what the module files its hash table under, and it is
         # mandatory (XTOPT_MAND, netfilter extensions/libxt_hashlimit.c), so
         # a rule that names none gets one derived from its position, the way
-        # fwbuilder does it.
+        # fwbuilder does it (PolicyCompiler_PrintRule.cpp:361).
+        #
+        # That spelling only says which rule it belongs to as long as there
+        # is one rule set: every rule set numbers its rules from zero, so a
+        # branch rule set with a rate-limited rule at the same position as
+        # one in the top rule set asks the kernel for the same table -- and
+        # gets handed the *first* one's key and rate without a word.
+        # `hashlimit_mt_check_common` calls `htable_find_get(net, name,
+        # family)` and only creates a table when none of that name exists
+        # (net/netfilter/xt_hashlimit.c), so both rules are accepted and
+        # `iptables -S` prints back what each of them asked for while one of
+        # the two limits something else entirely.  A branch rule set
+        # therefore carries its name here, the way an nftables meter always
+        # does; the top one keeps the short spelling, because the name has
+        # to survive `_truncate_hashlimit_name` and the 15 bytes revisions 0
+        # and 1 give it, and a truncated name says even less than an
+        # ambiguous one.  Neither adds the address family: iptables looks a
+        # hash table up per family already, where an nftables meter is a
+        # typed set and has to.
+        #
+        # A name the compiler derives is the compiler's to keep usable, so a
+        # rule set spelled with something outside the alphabet below - a
+        # colon, as in "Policy:ipv4" - is folded rather than reported.  The
+        # report underneath is for the name an administrator typed.
         name = str(rule.get_option('hashlimit_name', '') or '').strip()
         if not name:
-            name = f'htable_rule_{rule.position}'
+            if self.compiler.rule_set_chain:
+                rule_set = re.sub(
+                    r'[^0-9A-Za-z._-]', '_', self.compiler.get_rule_set_name()
+                )
+                name = f'htable_{rule_set}_{rule.position}'
+            else:
+                name = f'htable_rule_{rule.position}'
         if not _HASHLIMIT_NAME_RE.fullmatch(name):
             # The name becomes a file under /proc/net/ipt_hashlimit
             # (net/netfilter/xt_hashlimit.c calls proc_create_seq_data with

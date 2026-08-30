@@ -1,0 +1,273 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * fw-rate-limit.fw /etc/fw/fw-rate-limit.fw
+#
+
+FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
+        exit 1
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+nft_ruleset() {
+    cat <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        tcp dport 80 meter htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        tcp dport 80 meter htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+    }
+
+    chain Policy_second {
+        #
+        # Rule Policy_second 0 (global)
+        #
+        meta iif != 0 tcp dport 443 meter htable_Policy_second_0 { ip daddr timeout 1s limit rate 10/second } counter accept
+    }
+}
+
+NFT_RULES
+}
+
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+script_body() {
+    nft_ruleset | $NFT -f /dev/stdin
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
+}
+
+# The tables this ruleset installs, in the form "nft list tables" prints.
+FWF_OWN_TABLES='table ip fwf_filter'
+
+# Everything else, removed once the new ruleset is in place.
+#
+# nft loads a ruleset atomically and the one above deletes and recreates
+# each of its own tables in that same transaction, so their rules are
+# never missing for an instant.  Removing the old rules first undoes
+# exactly that: a table that is gone hooks nothing and every packet goes
+# through, and the machine has no firewall at all until the load
+# finishes.  The iptables side has no such gap - its reset sets the three
+# built-in policies to DROP before it flushes anything - and this is what
+# gives nftables the same guarantee.
+#
+# The deletes go into one batch of their own, so a name that has to be
+# quoted survives the round trip through "nft list tables" untouched.
+remove_other_tables() {
+    $NFT list tables 2>/dev/null |
+        while read -r line; do
+            printf '%s\n' "$FWF_OWN_TABLES" | grep -qxF "$line" && continue
+            printf 'delete %s\n' "$line"
+        done |
+        $NFT -f - 2>/dev/null
+    flush_legacy_iptables
+    return 0
+}
+
+flush_legacy_iptables() {
+    # Remove stale legacy (xtables) iptables rules left over from a
+    # previous iptables-based policy. "nft flush ruleset" only clears
+    # the nft backend, so on systems still using the legacy backend the
+    # old iptables rules would otherwise survive and shadow the nft
+    # rules. All filtering is delegated to nftables, so the built-in
+    # policies are reset to ACCEPT and every chain is flushed/deleted.
+    for ipt in iptables ip6tables; do
+        command -v "$ipt" >/dev/null 2>&1 || continue
+        "$ipt" -P INPUT ACCEPT 2>/dev/null
+        "$ipt" -P FORWARD ACCEPT 2>/dev/null
+        "$ipt" -P OUTPUT ACCEPT 2>/dev/null
+        for table in filter nat mangle raw; do
+            "$ipt" -t "$table" -F 2>/dev/null
+            "$ipt" -t "$table" -X 2>/dev/null
+        done
+    done
+    # Same as in flush_own_tables: a table the kernel does not offer makes
+    # the last command fail, which must not become the caller's exit code.
+    return 0
+}
+
+block_action() {
+    $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_tools
+        prolog_commands
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
+        script_body || run_epilog_and_exit 1
+        remove_other_tables
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        ;;
+
+    stop)
+        check_tools
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        check_tools
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        check_tools
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        RETVAL=1
+        ;;
+
+esac
+
+exit "$RETVAL"

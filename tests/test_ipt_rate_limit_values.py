@@ -49,6 +49,10 @@ class _Compiler:
         self.ipv6_policy = ipv6
         self.muted_now = False
         self.hashlimit_tables = {}
+        # Empty is what PolicyCompiler_ipt carries for the top rule set;
+        # a branch rule set names its chain here and the derived hash
+        # table name then carries the rule set too.
+        self.rule_set_chain = ''
         self.errors = []
         self.warnings = []
 
