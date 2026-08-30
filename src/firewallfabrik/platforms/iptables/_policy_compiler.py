@@ -925,8 +925,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
         if not forwards:
             return ''
 
+        # In coexistence mode this rule belongs in the firewall's own
+        # chain like every other one.  Written into the real FORWARD it
+        # cannot be told apart from another tool's afterwards, so
+        # `reset_fwf_chains` leaves it there and the next activation
+        # appends a second copy - measured against real iptables, one more
+        # every time the script runs.
+        chain = f'{self.chain_prefix}_FORWARD' if self.chain_prefix else 'FORWARD'
         return (
-            'FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
+            f'{chain} -p tcp -m tcp --tcp-flags SYN,RST SYN '
             '-j TCPMSS --clamp-mss-to-pmtu'
         )
 

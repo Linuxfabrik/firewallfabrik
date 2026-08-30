@@ -108,11 +108,22 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
             version_compare(version, TARGET_FIRST_RELEASE['CONNMARK'][bool(ipv6)]) >= 0
         )
 
+        # The chain is prefixed in coexistence mode for the same reason the
+        # filter table's automatic rules are: a rule in the real PREROUTING
+        # or OUTPUT is one `reset_fwf_chains` cannot recognise as ours, so
+        # it stays and the next activation adds another.
+        def chain(name: str) -> str:
+            return f'{self.chain_prefix}_{name}' if self.chain_prefix else name
+
         if have_connmark and connmark_ok:
-            result += self._automatic_rule_line('PREROUTING -j CONNMARK --restore-mark')
+            result += self._automatic_rule_line(
+                f'{chain("PREROUTING")} -j CONNMARK --restore-mark'
+            )
 
         if have_connmark_in_output and connmark_ok:
-            result += self._automatic_rule_line('OUTPUT -j CONNMARK --restore-mark')
+            result += self._automatic_rule_line(
+                f'{chain("OUTPUT")} -j CONNMARK --restore-mark'
+            )
 
         # TCPMSS clamping.  From 1.3.0 on the rule belongs to the mangle
         # table; the filter-table form the older releases want is emitted

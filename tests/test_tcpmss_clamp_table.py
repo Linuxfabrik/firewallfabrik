@@ -53,10 +53,13 @@ class _Compiler:
 
     clamp_tcp_to_mss_rule = PolicyCompiler_ipt.clamp_tcp_to_mss_rule
 
-    def __init__(self, fw, ipv6=False, version='1.4.0') -> None:
+    def __init__(self, fw, ipv6=False, version='1.4.0', chain_prefix='') -> None:
         self.fw = fw
         self.ipv6_policy = ipv6
         self.version = version
+        # Empty outside coexistence mode; the firewall's own chain prefix
+        # in it, which the rule has to carry like every other one.
+        self.chain_prefix = chain_prefix
         self.warnings: list[str] = []
 
     def warning(self, msg, *_args) -> None:
@@ -110,3 +113,12 @@ def test_a_firewall_that_does_not_forward_ipv6_is_not_told_about_the_release():
     compiler = _Compiler(fw, ipv6=True, version='1.2.9')
     assert compiler.clamp_tcp_to_mss_rule() == ''
     assert compiler.warnings == []
+
+
+def test_coexistence_mode_puts_the_clamp_in_the_firewalls_own_chain():
+    """A rule in the real FORWARD is one `reset_fwf_chains` cannot remove.
+
+    It stays, and the next activation appends a second copy.
+    """
+    rule = _Compiler(_Firewall(), chain_prefix='fwf').clamp_tcp_to_mss_rule()
+    assert rule.startswith('fwf_FORWARD ')
