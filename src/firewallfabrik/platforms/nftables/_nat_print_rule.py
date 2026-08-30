@@ -55,6 +55,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
+    custom_service_code,
     get_mac_only_address,
 )
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
@@ -623,7 +624,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             return None
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)
-            code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
+            code = custom_service_code(srv, nft_comp.my_platform_name())
             if not code:
                 # VerifyCustomServices already reported the missing code.
                 return None

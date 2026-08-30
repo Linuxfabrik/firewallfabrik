@@ -70,6 +70,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     bridge_port_match_needs_the_bridge,
     check_interface_name,
+    custom_service_code,
     has_ip_options,
 )
 
@@ -909,7 +910,7 @@ class NATPrintRule(NATRuleProcessor):
     def _print_protocol(self, srv) -> str:
         if isinstance(srv, CustomService):
             ipt_comp = cast('NATCompiler_ipt', self.compiler)
-            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            code = custom_service_code(srv, ipt_comp.my_platform_name())
             if '-p ' in code:
                 return ''
             proto = srv.get_protocol_name()
@@ -997,7 +998,7 @@ class NATPrintRule(NATRuleProcessor):
 
         if isinstance(srv, CustomService):
             ipt_comp = cast('NATCompiler_ipt', self.compiler)
-            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            code = custom_service_code(srv, ipt_comp.my_platform_name())
             if not code:
                 # VerifyCustomServices already reported the missing code.
                 return None

@@ -109,6 +109,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     INVALID_STATE_LOG_PREFIX,
     branch_closes_a_loop,
     count_bridge_interfaces,
+    custom_service_code,
     custom_service_matches_state,
     forwarding_is_off,
     get_log_copy_range,
@@ -1225,7 +1226,7 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         to_separate = []
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.codes or {}).get(platform, '')
+                code = custom_service_code(srv, platform)
                 if custom_service_matches_state(code):
                     to_separate.append(srv)
 

@@ -847,6 +847,93 @@ def custom_service_matches_state(code: str) -> bool:
     return any(word in lowered for word in _CONNECTION_STATE_WORDS)
 
 
+# The state names `-m state --state` and `-m conntrack --ctstate` take, in
+# the order netfilter's own parsers try them.  The comparison is
+# `strncasecmp(token, name, strlen(token))`, so a token is read as the
+# first name it is a prefix of and `--state EST` is ESTABLISHED
+# (`state_parse_state` and `parse_state`, netfilter iptables
+# extensions/libxt_conntrack.c).  SNAT and DNAT are deliberately absent:
+# `--state` does not take them at all, and netfilter's own translator
+# turns them into `ct status`, dropping the second of the two and every
+# state named beside them.
+_CT_STATE_NAMES = ('INVALID', 'NEW', 'ESTABLISHED', 'RELATED', 'UNTRACKED')
+
+# The order `state_xlate_print` writes the names out in, so a translated
+# service reads like the line `iptables-translate` produces for the same
+# match.
+_CT_STATE_OUTPUT_ORDER = ('invalid', 'new', 'related', 'established', 'untracked')
+
+# `-m state [!] --state LIST` and `-m conntrack [!] --ctstate LIST`, and
+# nothing else: the list carries no spaces (`state_parse_states` says so
+# in its own error message) and the module and its option have to belong
+# together.
+_CT_STATE_MATCH = re.compile(
+    r'^-m[ \t]+(?P<module>state|conntrack)'
+    r'(?:[ \t]+(?P<neg>!))?'
+    r'[ \t]+--(?P<option>state|ctstate)[ \t]+(?P<states>\S+)$'
+)
+
+_CT_STATE_OPTION_OF = {'state': 'state', 'conntrack': 'ctstate'}
+
+
+def custom_service_nftables_code(iptables_code: str) -> str | None:
+    """The nftables spelling of an iptables connection-state match.
+
+    A Custom Service carries one code per platform and Firewall Builder
+    never had an nftables one to write, so every service an administrator
+    or the standard library brought along says iptables and nothing else.
+    The most common of them by far is the "accept established and related"
+    match a stateful policy is built out of, and leaving its rule out
+    turns the whole policy into one that drops every answer.
+
+    Only a code that is *nothing but* a state match is translated, and the
+    mapping is netfilter's own (`state_xlate` and `_conntrack3_mt_xlate`,
+    extensions/libxt_conntrack.c).  Anything else - a state match beside
+    another condition, `-m recent`, `-m string`, a module nftables has no
+    equivalent for - is left alone and reported by the caller, because a
+    Custom Service is platform text and guessing at it is how a rule ends
+    up matching something the administrator did not write.
+
+    Returns ``None`` when the code is not one such match.
+    """
+    match = _CT_STATE_MATCH.match((iptables_code or '').strip())
+    if match is None:
+        return None
+    if _CT_STATE_OPTION_OF[match.group('module')] != match.group('option'):
+        return None
+
+    wanted = set()
+    for token in match.group('states').split(','):
+        if not token:
+            return None
+        for name in _CT_STATE_NAMES:
+            if len(token) <= len(name) and name.startswith(token.upper()):
+                wanted.add(name.lower())
+                break
+        else:
+            # A name netfilter takes and nftables has no word for - SNAT
+            # and DNAT - or one neither of them knows.
+            return None
+
+    states = ','.join(n for n in _CT_STATE_OUTPUT_ORDER if n in wanted)
+    return f'ct state {"!= " if match.group("neg") else ""}{states}'
+
+
+def custom_service_code(srv, platform: str) -> str:
+    """The code *srv* carries for *platform*, ``''`` when it carries none.
+
+    One reader for the field, because the compilers ask about it in five
+    places - the two checks, the statelessness question and the two print
+    rules - and a place that skipped the fallback below would report a
+    service the print rule then writes out, or the other way round.
+    """
+    codes = srv.codes or {}
+    code = codes.get(platform, '')
+    if code or platform != 'nftables':
+        return code
+    return custom_service_nftables_code(codes.get('iptables', '')) or ''
+
+
 # Interfaces whose names differ only in a trailing number are one group,
 # named after the pattern that matches them all: eth0, eth1 and eth2
 # become `eth+`.  fwbuilder builds that map once per compiler

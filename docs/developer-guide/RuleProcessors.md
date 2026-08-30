@@ -2397,6 +2397,7 @@ the feature at all, independent of our implementation.
 | NAT local_nat | `SplitIfOSrcAny` + `SplitIfOSrcMatchesFw` + `LocalNATRule` |
 | NAT ReplaceFirewallObjectsTSrc | Replaces firewall in TSrc with the interface facing ODst |
 | Address table (run-time) | A named set per address family, declared with `flags interval` and `auto-merge` in the table its rules are in and filled from the file by `load_address_tables` after the ruleset is loaded |
+| Custom service whose code is a connection-state match | A Custom Service carries one code per platform and no data file written before fwf has an nftables one, so a code that is *nothing but* `-m state --state …` or `-m conntrack --ctstate …` is read and written out as `ct state …`.  The mapping is netfilter's own (`state_xlate_print` and `_conntrack3_mt_xlate`, iptables `extensions/libxt_conntrack.c`), SNAT and DNAT excepted; every other code is left alone and reported |
 
 #### Partial or not yet implemented
 

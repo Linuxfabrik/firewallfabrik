@@ -95,6 +95,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     branch_closes_a_loop,
+    custom_service_code,
     custom_service_matches_state,
     forwarding_is_off,
     get_mac_only_address,
@@ -3203,7 +3204,7 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         to_separate: list = []
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.codes or {}).get(platform, '')
+                code = custom_service_code(srv, platform)
                 if custom_service_matches_state(code):
                     to_separate.append(srv)
 
@@ -3231,7 +3232,7 @@ class VerifyCustomServices(PolicyRuleProcessor):
         platform = self.compiler.my_platform_name()
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.codes or {}).get(platform, '')
+                code = custom_service_code(srv, platform)
                 if not code:
                     self.compiler.abort(
                         rule,

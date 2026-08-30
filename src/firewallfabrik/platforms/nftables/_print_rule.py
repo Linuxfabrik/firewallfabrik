@@ -72,6 +72,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
+    custom_service_code,
     get_log_copy_range,
     get_log_netlink_group,
     get_log_queue_threshold,
@@ -1318,7 +1319,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ' '.join(parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
-            code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
+            code = custom_service_code(srv, nft_comp.my_platform_name())
             if not code:
                 # VerifyCustomServices already reported the missing code.
                 return None

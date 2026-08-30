@@ -29,6 +29,7 @@ from firewallfabrik.core.objects import (
     UDPService,
     UserService,
 )
+from firewallfabrik.platforms.linux._netfilter import custom_service_code
 
 
 class SeparateServiceObject(BasicRuleProcessor):
@@ -186,7 +187,7 @@ class VerifyCustomServices(BasicRuleProcessor):
 
         for srv in services:
             if isinstance(srv, CustomService):
-                code = (srv.codes or {}).get(platform, '')
+                code = custom_service_code(srv, platform)
                 if not code:
                     self.compiler.abort(
                         rule,
