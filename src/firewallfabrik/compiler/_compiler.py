@@ -811,6 +811,19 @@ class Compiler(BaseCompiler):
         if iface.is_dynamic():
             return [iface]
 
+        # An unnumbered interface and a bridge port carry no address a rule
+        # can be written about, and both may still hold one in the data
+        # file: the editors write the flag without removing what is there.
+        # `Compiler::_expand_interface` guards against exactly that, once
+        # per kind (`if (subint->isBridgePort()) continue` and
+        # `if (!iface->isUnnumbered() && ...)`), and the guard belongs here
+        # rather than in the callers because the *host* branch of the
+        # expansion walks a flat list of every interface the host has.
+        # Naming a host would otherwise match an address the administrator
+        # said the interface does not answer on.
+        if iface.is_unnumbered() or iface.is_bridge_port():
+            return []
+
         addresses = []
         phys_address = None
         for addr in iface.addresses:
