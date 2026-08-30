@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor: an "Attached Networks" object can be created on an interface and has an editor of its own, showing the subnets a rule naming it will match ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
 * Editor: the address, port and mode of a cluster group's failover or state sync protocol can be edited, so a cluster that replicates on its own address or port is no longer blocked by its own policy ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 * Standard library: the "ESTABLISHED" custom services carry nftables code, so a rule naming one compiles on that platform instead of being left out.
+
 ### Fixed
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
