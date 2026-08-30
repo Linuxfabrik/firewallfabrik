@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
 * Compiler (iptables): the chain a logged or accounting rule gets behind a negation is named after the part of the rule it belongs to, so two parts of one rule no longer share a chain.
 * Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address on the interface again.
+* Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC, instead of dropping the "use kernel timezone" setting without a word.
 * Compiler (iptables): a rate limit whose table name is longer than iptables can store is cut and reported, so two rules that share a table by accident are named.
 * Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
@@ -64,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
 * Editor: renaming an interface or the firewall above it also renames the failover group and the "Attached Networks" object under it, so they no longer keep naming an interface that is gone.
 * Editor: a cluster group is checked against the cluster it belongs to, so a member of the second cluster in a file is no longer marked invalid.
+* Editor: the iptables settings offer "use kernel timezone" and the ipset match only on a firewall pinned to a release that has them, the way Firewall Builder does.
 * Editor: a cluster has an editor of its own and no longer offers an iptables release, which nothing read - each member compiles for the release it names itself.
 * Editor: a cluster's failover group is shown below the cluster interface it belongs to and its state sync group below the cluster, instead of at the top of the library.
 * Editor: a failover group can be created on a cluster interface and a state sync group on a cluster, and both are stored where they belong instead of beside the firewalls ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import QDialog, QLineEdit
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 from firewallfabrik.platforms._defaults import get_platform_defaults
+from firewallfabrik.platforms.iptables._utils import version_compare
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui'
 
@@ -41,6 +42,20 @@ for _key, _entry in _SCHEMA.items():
         _LINE_EDIT_MAP[_widget] = _key
     if not _entry.get('supported', True):
         _UNSUPPORTED_WIDGETS.append(_widget)
+
+# Options the iptables release decides on, and the release each one needs.
+# Firewall Builder greys the same two out and clears them
+# (``iptAdvancedDialog::loadFWObject``); without that the compiler is handed a
+# setting the pinned tool has no option for.  The releases are the netfilter
+# ones: ``--kerneltz`` first ships in iptables 1.4.11
+# (``extensions/libxt_time.c``) and the ``set`` match in 1.4.9
+# (``extensions/libxt_set.c``), which is later than the 1.4.1.1 Firewall
+# Builder asks for - the earlier ``libipt_set.c`` spelled its option
+# ``--set``.
+_VERSION_GATED_WIDGETS = {
+    'useKernelTz': '1.4.11',
+    'useModuleSet': '1.4.9',
+}
 
 
 class IptablesSettingsDialog(QDialog):
@@ -72,6 +87,7 @@ class IptablesSettingsDialog(QDialog):
         self._apply_placeholders()
         self._populate()
         self._disable_unsupported()
+        self._disable_by_version()
         self.accepted.connect(self._save_settings)
 
     def _apply_placeholders(self):
@@ -115,6 +131,31 @@ class IptablesSettingsDialog(QDialog):
             desc = desc_by_widget.get(name)
             if desc:
                 widget.setToolTip(desc)
+
+    def _disable_by_version(self):
+        """Grey out what the pinned iptables release has no option for.
+
+        Firewall Builder does the same and also clears the box
+        (``iptAdvancedDialog::loadFWObject``), so the compiler never sees a
+        setting the tool cannot carry out.  It has to run after
+        ``_populate``, which is what puts the stored value into the box.
+
+        The compilers report the same two cases anyway, because a data file
+        written by another tool or by hand carries whatever it carries.
+        """
+        version = self._fw.version or ''
+        if not version:
+            # No release pinned means the compiler default, which is current.
+            return
+        for widget_name, needed in _VERSION_GATED_WIDGETS.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None or version_compare(version, needed) >= 0:
+                continue
+            widget.setChecked(False)
+            widget.setEnabled(False)
+            widget.setToolTip(
+                f'Needs iptables {needed} or later; this firewall is set to {version}.'
+            )
 
     def _populate(self):
         opts = self._fw.options or {}

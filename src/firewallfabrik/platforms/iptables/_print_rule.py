@@ -1404,10 +1404,24 @@ class PrintRule(PolicyRuleProcessor):
             )
             parts.append(f'{weekdays_opt} {day_names}')
 
-        if version_compare(self.version, '1.4.11') >= 0 and self.compiler.fw.get_option(
-            'use_kerneltz'
-        ):
-            parts.append('--kerneltz')
+        if self.compiler.fw.get_option('use_kerneltz'):
+            if version_compare(self.version, '1.4.11') >= 0:
+                parts.append('--kerneltz')
+            else:
+                # Without the option the match compares against UTC
+                # (net/netfilter/xt_time.c only subtracts the kernel's
+                # offset for XT_TIME_LOCAL_TZ), so the rule fires at
+                # different hours than the editor shows and nothing says
+                # so.  Firewall Builder never meets the case because its
+                # editor greys the checkbox out below 1.4.11
+                # (iptAdvancedDialog.cpp); a data file written elsewhere
+                # carries whatever it carries.
+                self.compiler.warning(
+                    rule,
+                    'iptables before 1.4.11 has no "--kerneltz", so the rule '
+                    'matches the time of day in UTC and not in the timezone '
+                    'the firewall is set to',
+                )
 
         return ' '.join(parts) + ' '
 
