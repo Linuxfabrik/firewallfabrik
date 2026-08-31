@@ -457,6 +457,26 @@ class NATPrintRule_nft(NATRuleProcessor):
             addr = self._select_af_address(getattr(obj, 'addresses', []))
             if addr is not None:
                 return addr.get_address()
+            if obj.is_dynamic():
+                # Not "has no addresses": the interface gets one from DHCP
+                # or PPP, and the compiler cannot know it.  A *match* points
+                # at a named set the script fills once the ruleset is
+                # loaded; a translation target is part of the ruleset text
+                # and no set reference is allowed there, so the address
+                # would have to be spliced into the text before `nft -f`
+                # reads it.  Until that is built, say which of the two this
+                # is - the iptables script writes the same rule inside a
+                # `test -n "$i_<iface>"` loop, so the two platforms differ
+                # here and the message is what names the difference.
+                self.compiler.error(
+                    rule,
+                    f'Interface "{obj.name}" gets its address while the '
+                    f'firewall runs, and the nftables compiler can only '
+                    f'translate to an address it knows when it writes the '
+                    f'ruleset; use masquerade or an address object. The '
+                    f'rule is left out',
+                )
+                return ''
             self.compiler.error(rule, f'Interface "{obj.name}" has no addresses')
             return ''
 
@@ -503,6 +523,18 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         addr_str = obj.get_address()
         if not addr_str:
+            if not for_match:
+                # The one empty answer this method gives without a reason of
+                # its own.  A match may be assembled out of several objects
+                # and `_print_addr_match` words the message for the element
+                # as a whole; a translation target is one object, and the
+                # caller used to add a sentence of its own on top of every
+                # reason given above.
+                self.compiler.error(
+                    rule,
+                    f'Object "{getattr(obj, "name", obj)}" carries no address '
+                    f'to translate to; the rule is left out',
+                )
             return ''
 
         if for_match and obj.is_any():
@@ -823,14 +855,12 @@ class NATPrintRule_nft(NATRuleProcessor):
                     tsrc, rule, for_match=False, fold_range=not ports
                 )
                 if not addr:
-                    # Masquerading instead would translate the traffic to the
-                    # address of whatever interface it leaves by, which is not
-                    # what the rule says.  DynamicInterfaceInTSrc has already
-                    # turned the one case where that is the right answer into
-                    # a masquerade rule.
-                    self.compiler.error(
-                        rule, 'SNAT rule has no translated source address'
-                    )
+                    # `_print_addr` has named the reason.  Masquerading
+                    # instead would translate the traffic to the address of
+                    # whatever interface it leaves by, which is not what the
+                    # rule says; DynamicInterfaceInTSrc has already turned
+                    # the one case where that is the right answer into a
+                    # masquerade rule.
                     return ''
                 if ports:
                     addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
@@ -853,13 +883,10 @@ class NATPrintRule_nft(NATRuleProcessor):
                     tdst, rule, for_match=False, fold_range=not ports
                 )
                 if not addr:
-                    # The reason was reported.  Falling through to the
-                    # port-only form below would translate the port and
+                    # `_print_addr` has named the reason.  Falling through to
+                    # the port-only form below would translate the port and
                     # leave the address alone, which is not what the rule
                     # says.
-                    self.compiler.error(
-                        rule, 'DNAT rule has no translated destination address'
-                    )
                     return ''
                 if ports:
                     addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
@@ -908,6 +935,9 @@ class NATPrintRule_nft(NATRuleProcessor):
         verb = 'snat' if rt is NATRuleType.SNetnat else 'dnat'
         addr = self._print_addr(target, rule, for_match=False) if target else ''
         if not addr:
+            if target:
+                # `_print_addr` has named the reason.
+                return ''
             side = 'source' if verb == 'snat' else 'destination'
             self.compiler.error(
                 rule, f'Network translation rule has no translated {side} network'

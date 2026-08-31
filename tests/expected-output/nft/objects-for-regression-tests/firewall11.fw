@@ -15,8 +15,7 @@
 
 #  Interfaces eth0 and eth1 are parts of the bridge; Interface eth2 is external interface (doing NAT and routing on this interface) Interface eth3 is connected to protected network and is used to manage firewall. This is rather realistic configuration for the bridging firewall
 #
-# Rule 3 (NAT): Interface "br0" has no addresses
-# Rule 3 (NAT): DNAT rule has no translated destination address
+# Rule 3 (NAT): Interface "br0" gets its address while the firewall runs, and the nftables compiler can only translate to an address it knows when it writes the ruleset; use masquerade or an address object. The rule is left out
 # firewall11:NAT:2: warning: "Use SNAT instead of MASQUERADE" needs the address of "br0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
 
 FWBDEBUG=""

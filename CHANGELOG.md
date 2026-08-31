@@ -88,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): an address table, a DNS name or a dynamic interface whose name holds shell syntax is reported instead of running as a command on the firewall.
 * Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
 * Compiler (nftables): "Log all rules" also logs the rules that tag or classify, the way the iptables compiler does.
+* Compiler (nftables): a NAT rule that translates to an interface whose address comes from DHCP or PPP says so, instead of reporting the interface as having no address at all and repeating itself.
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
 * Compiler (nftables): a rule naming a dynamic interface of the cluster the firewall belongs to is compiled, the way the iptables compiler already compiles it, instead of being left out.
