@@ -154,6 +154,31 @@ not here.
 **Clean as of 2026-08-31**, in both directions: 227 scripts against the
 nftables output and 132 against the Firewall Builder reference.
 
+## Compiling with one iptables release pinned
+
+About fifteen matches are gated on the release a firewall names, and the
+corpus reaches only a few of the gates: its four data files carry eight
+distinct releases between them and 148 firewalls that name none at all.
+
+```bash
+python tools/compiler-audit/compile-corpus.py /tmp/v18 --iptables-version 1.8.11
+tools/compiler-audit/replay-iptables.sh /tmp/v18
+```
+
+Forced to a release current iptables still speaks, this is also what takes
+the old-spelling noise out of the replay: `-dport`, `-d !` and the rest are
+right for the release they were written for and refused by the tool that
+runs here, and they drown everything else.
+
+**Swept 2026-08-31 with 1.8.11 forced**: `bash -n` 456/0, the rule order
+unchanged, `iptables-restore --test` 6 rejections down to 2, and every
+remaining replay class already known (`-m owner --uid-owner` and `-m set`
+are the namespace's own limits, `-m dstlimit` and `-m ipv4options` are
+modules netfilter does not carry).  The only errors the compiler gained are
+the six optitest rules whose Time object stores the year 2935093, which the
+nftables compiler already refused - the two platforms agree once they are
+given the same release.
+
 ## Compiling one address family at a time
 
 `--address-family 4` and `--address-family 6` compile the corpus the way

@@ -145,6 +145,34 @@ def force_address_family(family: str) -> None:
     )
 
 
+def force_iptables_version(version: str) -> None:
+    """Compile every firewall as if it pinned this iptables release.
+
+    About fifteen matches are gated on the release a firewall names, and
+    no corpus firewall exercises more than a few of the gates: the four
+    data files together carry eight distinct releases and 148 firewalls
+    that name none at all.  Forcing one reaches the branches the corpus
+    does not - and, forced to a release current iptables still speaks,
+    takes the old-spelling noise out of the replay so what is left means
+    something.
+
+    The override goes on `DatabaseManager.load`, which every compile in
+    this file starts from, rather than on the firewall objects: a `.fwb`
+    is re-read per firewall and assigns fresh ids each time.
+    """
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_pin(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for fw in session.execute(sqlalchemy.select(Firewall)).scalars():
+            fw.data = {**(fw.data or {}), 'version': version}
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_pin
+
+
 def corpus_files(corpus: Path) -> list[Path]:
     """Return the data files of *corpus*, which may be a file or a directory.
 
@@ -185,10 +213,18 @@ def main() -> int:
         'switch of the compiler does; see README.md for what comparing the '
         'two halves against a dual-stack run proves',
     )
+    parser.add_argument(
+        '--iptables-version',
+        help='compile every firewall as if it pinned this iptables release, '
+        'so the version-gated branches the corpus does not reach are compiled '
+        'too (for example 1.8.11)',
+    )
     args = parser.parse_args()
 
     if args.address_family:
         force_address_family(args.address_family)
+    if args.iptables_version:
+        force_iptables_version(args.iptables_version)
 
     platforms = args.platform or ['ipt', 'nft']
     files = [p for p in corpus_files(args.corpus) if p.exists()]
