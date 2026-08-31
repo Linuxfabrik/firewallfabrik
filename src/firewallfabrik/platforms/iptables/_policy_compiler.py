@@ -20,7 +20,6 @@ firewall policy rules into iptables commands.
 from __future__ import annotations
 
 import hashlib
-import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
@@ -117,7 +116,9 @@ from firewallfabrik.platforms.linux._netfilter import (
     get_log_queue_threshold,
     interface_direction_problem,
     is_valid_mgmt_address,
+    make_any_tcp_service,
     mgmt_address_family,
+    reset_srv_preserving_tcp,
     strip_mac_objects,
 )
 
@@ -152,32 +153,6 @@ STANDARD_CHAINS = [
     'CLASSIFY',
     'ROUTE',
 ]
-
-
-def make_any_tcp_service() -> TCPService:
-    """Build a service object that matches any TCP packet.
-
-    Corresponds to fwbuilder's predefined ``ANY_TCP_OBJ_ID`` object.
-    """
-    srv = TCPService(id=uuid.uuid4(), name='Any TCP')
-    srv.src_range_start = 0
-    srv.src_range_end = 0
-    srv.dst_range_start = 0
-    srv.dst_range_end = 0
-    return srv
-
-
-def reset_srv_preserving_tcp(rule: CompRule) -> None:
-    """Reset the service element of *rule*, keeping "any TCP" for TCP rules.
-
-    Processors that move the action of a rule into a temporary chain clear
-    the service element there, because the service was already matched by
-    the jump rule.  That also drops the ``-p tcp`` the REJECT target needs
-    for ``--reject-with tcp-reset``, and iptables refuses such a rule.
-    fwbuilder substitutes its "any TCP" object instead; do the same.
-    """
-    srv = rule.srv[0] if rule.srv else None
-    rule.srv = [make_any_tcp_service()] if isinstance(srv, TCPService) else []
 
 
 class PolicyCompiler_ipt(PolicyCompiler):

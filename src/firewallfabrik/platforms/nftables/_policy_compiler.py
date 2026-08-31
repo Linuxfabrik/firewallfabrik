@@ -102,6 +102,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
+    reset_srv_preserving_tcp,
     strip_mac_objects,
 )
 from firewallfabrik.platforms.nftables._identifiers import (
@@ -1186,19 +1187,10 @@ class TimeNegation(PolicyRuleProcessor):
         r_action.src = []
         r_action.dst = []
         # A Reject rule keeps "any TCP" so `reject with tcp reset` still
-        # names a protocol, the way the iptables expansion does.
-        srv = r_action.srv[0] if r_action.srv else None
-        if isinstance(srv, TCPService):
-            import uuid
-
-            any_tcp = TCPService(id=uuid.uuid4(), name='Any TCP')
-            any_tcp.src_range_start = 0
-            any_tcp.src_range_end = 0
-            any_tcp.dst_range_start = 0
-            any_tcp.dst_range_end = 0
-            r_action.srv = [any_tcp]
-        else:
-            r_action.srv = []
+        # names a protocol, the way the iptables expansion does - one
+        # reader for both platforms, and it asks by protocol name, so a
+        # Custom Service that is TCP is one too.
+        reset_srv_preserving_tcp(r_action)
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain

@@ -19,6 +19,7 @@ import re
 import uuid
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Host,
@@ -26,6 +27,7 @@ from firewallfabrik.core.objects import (
     PhysAddress,
     PolicyAction,
     TagService,
+    TCPService,
     TCPUDPService,
     is_valid_user_id,
 )
@@ -600,6 +602,44 @@ def bridge_port_match_needs_the_bridge(obj, bridge_count: int) -> bool:
         return False
     parent = getattr(obj, 'parent_interface', None)
     return bool(parent is not None and parent.name)
+
+
+def make_any_tcp_service() -> TCPService:
+    """Build a service object that matches any TCP packet.
+
+    Corresponds to fwbuilder's predefined ``ANY_TCP_OBJ_ID`` object.
+    """
+    srv = TCPService(id=uuid.uuid4(), name='Any TCP')
+    srv.src_range_start = 0
+    srv.src_range_end = 0
+    srv.dst_range_start = 0
+    srv.dst_range_end = 0
+    return srv
+
+
+def reset_srv_preserving_tcp(rule: CompRule) -> None:
+    """Reset the service element of *rule*, keeping "any TCP" for TCP rules.
+
+    Processors that move the action of a rule into a temporary chain clear
+    the service element there, because the service was already matched by
+    the jump rule.  That also drops the ``-p tcp`` the REJECT target needs
+    for ``--reject-with tcp-reset``, and iptables refuses such a rule
+    ("TCP_RESET invalid for non-tcp", ``reject_tg_check`` in netfilter
+    ``net/ipv4/netfilter/ipt_REJECT.c``), which stops the activation
+    script with the built-in policies already at DROP.  fwbuilder
+    substitutes its "any TCP" object instead; do the same.
+
+    Which service counts as TCP is asked the way
+    `SplitServicesIfRejectWithTCPReset` asks it, by protocol name and not
+    by class: a Custom Service carries a protocol of its own - fwbuilder's
+    own comment above that processor says so - and an IP Service naming
+    protocol 6 is TCP as well.  ``TCPService::isA`` is what the C++ asks
+    here, which is why a logged Reject-with-TCP-reset rule whose service
+    is a Custom Service loses its ``-p tcp`` there too.
+    """
+    srv = rule.srv[0] if rule.srv else None
+    is_tcp = srv is not None and srv.get_protocol_name() == 'tcp'
+    rule.srv = [make_any_tcp_service()] if is_tcp else []
 
 
 def strip_mac_objects(objects) -> tuple[list, str]:
