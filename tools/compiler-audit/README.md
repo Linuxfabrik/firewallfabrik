@@ -25,6 +25,7 @@ not.
 | `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
+| `compare-order.py` | do the two platforms put one base chain's rules in one order? | a Deny that lands after the Accept it was written above, which no other check can see - first match wins and every other oracle compares sets |
 | `parity.py` | do our nftables rules check what `iptables-translate` says they should? | a condition one platform checks and the other does not |
 | `parity.py --values` | and do they check it against the same value? | a wrong port, a wrong mask, an inverted operator |
 | `compare-output.py` | which firewalls does this change actually affect? | the blast radius of a fix, before a release |
@@ -129,6 +130,29 @@ before 2026-08-21 was measured the old way and is not comparable.**
 The number is pessimistic on purpose: a rule wrapped in a run-time loop (an
 address table, a dynamic interface address) is no longer a plain command line
 and counts as missing even though it is right.
+
+## Comparing the order the rules are installed in
+
+Both metrics above compare *sets* of rules, and so do `parity.py` and every
+tool oracle. First match wins in both packet filters, so a Deny that lands
+after the Accept it was written above is a different firewall and none of
+them can see it.
+
+```bash
+python tools/compiler-audit/compare-order.py /tmp/audit
+python tools/compiler-audit/compare-order.py /tmp/audit \
+    --reference ~/git/other/fwbuilder/fwbuilder5/test/ipt
+```
+
+The comparison is per **base chain**, which is where the order decides
+something: a user chain is reached by a jump whose position in the base
+chain is what was compared, and its name differs between the compilers
+anyway. Only the labels both sides carry are compared, so a rule one
+platform reports and leaves out belongs in the `report.json` ranking and
+not here.
+
+**Clean as of 2026-08-31**, in both directions: 227 scripts against the
+nftables output and 132 against the Firewall Builder reference.
 
 ## Compiling one address family at a time
 
