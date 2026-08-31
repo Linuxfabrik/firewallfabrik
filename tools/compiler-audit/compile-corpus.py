@@ -127,6 +127,24 @@ def compile_one(
     }
 
 
+def force_address_family(family: str) -> None:
+    """Compile one address family alone, the way `fwf-ipt -4` does.
+
+    A property beats the instance attribute the driver sets for itself,
+    which is what this has to do: the driver clears `ipv6_run` on its own
+    whenever no rule set of the firewall names IPv6, so an attribute
+    written before the run is gone by the time the run reads it.
+    """
+    from firewallfabrik.driver._compiler_driver import CompilerDriver
+
+    CompilerDriver.ipv4_run = property(
+        lambda self: family == '4', lambda self, value: None
+    )
+    CompilerDriver.ipv6_run = property(
+        lambda self: family == '6', lambda self, value: None
+    )
+
+
 def corpus_files(corpus: Path) -> list[Path]:
     """Return the data files of *corpus*, which may be a file or a directory.
 
@@ -160,7 +178,17 @@ def main() -> int:
         action='append',
         help='compile for this platform only (repeatable)',
     )
+    parser.add_argument(
+        '--address-family',
+        choices=('4', '6'),
+        help='compile this address family alone, the way the `-4` / `-6` '
+        'switch of the compiler does; see README.md for what comparing the '
+        'two halves against a dual-stack run proves',
+    )
     args = parser.parse_args()
+
+    if args.address_family:
+        force_address_family(args.address_family)
 
     platforms = args.platform or ['ipt', 'nft']
     files = [p for p in corpus_files(args.corpus) if p.exists()]

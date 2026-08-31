@@ -130,6 +130,33 @@ The number is pessimistic on purpose: a rule wrapped in a run-time loop (an
 address table, a dynamic interface address) is no longer a plain command line
 and counts as missing even though it is right.
 
+## Compiling one address family at a time
+
+`--address-family 4` and `--address-family 6` compile the corpus the way
+the compiler's own `-4` / `-6` switch does.  Put together, the two halves
+have to hold every rule the dual-stack run holds: a pass that reads
+something the other pass left behind, or that drops a rule because the
+other family took it, shows up as a rule that is in the dual run and in
+neither half.
+
+```bash
+python tools/compiler-audit/compile-corpus.py /tmp/both
+python tools/compiler-audit/compile-corpus.py /tmp/v4 --address-family 4
+python tools/compiler-audit/compile-corpus.py /tmp/v6 --address-family 6
+```
+
+Compare the *multiset* of rule-installing lines per firewall, and read the
+two directions separately.  Nothing may be missing from the two halves.
+The other direction is expected and not a finding: an automatic rule that
+names no address family - "accept established and related", the invalid-state
+drop, the TCP-MSS clamp - is written once per pass, so each half carries its
+own copy where the dual-stack run needs only one, and on nftables both
+families share one `inet` table.
+
+**Clean on both platforms as of 2026-08-31** (nothing missing from either
+half over 456 scripts), so do not rebuild it; re-run it after anything
+that touches the address-family loop or the automatic rules.
+
 ## Measuring the blast radius of a change
 
 Before a release, compile the same corpus with the old and the new compiler
