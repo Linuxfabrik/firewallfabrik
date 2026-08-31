@@ -1054,6 +1054,17 @@ class PrintRule(PolicyRuleProcessor):
         if not addr_str:
             return ''
 
+        if obj.is_any():
+            # Address and netmask are both zero, which is the one case
+            # `PolicyCompiler_ipt::PrintRule::_printAddr` answers before it
+            # looks at the class of the object: it writes `0/0`.  The object
+            # says "any", and writing the bare address instead would narrow
+            # the rule to the single address 0.0.0.0 - a Deny written
+            # against the whole internet then stops one packet in four
+            # billion.  `CheckForZeroAddr` reports the object with those
+            # very words, so the two have to agree.
+            return '0/0 '
+
         if isinstance(obj, (Network, NetworkIPv6)):
             mask_str = obj.get_netmask()
             if mask_str:

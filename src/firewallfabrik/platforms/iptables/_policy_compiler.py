@@ -95,6 +95,7 @@ from firewallfabrik.core.objects import (
     UserService,
     get_address_table_source,
     is_run_time_address_table,
+    netmask_prefix_length,
 )
 from firewallfabrik.platforms.iptables._utils import (
     MATCH_FIRST_RELEASE,
@@ -3643,7 +3644,20 @@ class CheckForZeroAddr(PolicyRuleProcessor):
 
     @staticmethod
     def _find_zero_address(elements: list) -> Address | None:
-        """Find an address with 0.0.0.0 or netmask /0."""
+        """Find an address with 0.0.0.0 or netmask /0.
+
+        The C++ guards both tests with ``!addr->isAny()``, and
+        ``Address::isAny()`` (libfwbuilder Address.cpp) asks for the *id* of
+        the predefined "Any" object, not for the value: the check is written
+        to report exactly the object whose address and netmask are both
+        zero.  fwf has no such predefined object - an element that says
+        "any" is empty and never reaches here - so there is nothing to skip,
+        and skipping by value made the first of the two branches dead code.
+
+        The netmask goes through :func:`netmask_prefix_length` because
+        Firewall Builder writes an IPv6 one as a bit length, which reading
+        it as an address answers with a raise.
+        """
         import ipaddress as _ipaddress
 
         for obj in elements:
@@ -3660,13 +3674,10 @@ class CheckForZeroAddr(PolicyRuleProcessor):
             if isinstance(obj, AddressRange):
                 continue
 
-            if obj.is_any():
-                continue
-
             addr_str = obj.get_address()
             mask_str = obj.get_netmask()
 
-            if not addr_str:
+            if not addr_str or not mask_str:
                 continue
 
             try:
@@ -3674,23 +3685,16 @@ class CheckForZeroAddr(PolicyRuleProcessor):
             except ValueError:
                 continue
 
-            # Address 0.0.0.0 with netmask 0.0.0.0 -- equivalent to 'any'
-            if int(ip) == 0 and mask_str:
-                try:
-                    nm = _ipaddress.ip_address(mask_str)
-                    if int(nm) == 0:
-                        return obj
-                except ValueError:
-                    pass
+            if netmask_prefix_length(addr_str, mask_str) != 0:
+                continue
+
+            # Address 0.0.0.0 with a zero netmask -- equivalent to 'any'
+            if int(ip) == 0:
+                return obj
 
             # Network with non-zero address but /0 netmask -- likely typo
-            if isinstance(obj, (Network, NetworkIPv6)) and int(ip) != 0 and mask_str:
-                try:
-                    nm = _ipaddress.ip_address(mask_str)
-                    if int(nm) == 0:
-                        return obj
-                except ValueError:
-                    pass
+            if isinstance(obj, (Network, NetworkIPv6)):
+                return obj
 
         return None
 

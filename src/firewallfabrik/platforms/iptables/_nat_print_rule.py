@@ -1301,6 +1301,13 @@ class NATPrintRule(NATRuleProcessor):
         if not addr_str:
             return ''
 
+        if print_mask and obj.is_any():
+            # `NATCompiler_ipt::PrintRule::_printAddr` writes `0/0` here,
+            # the way the policy printer does.  Only on the match side:
+            # `--to-source 0/0` is not an address iptables takes, and the
+            # translation target is the one caller that clears *print_mask*.
+            return '0/0 '
+
         if print_mask and isinstance(obj, (Network, NetworkIPv6)):
             mask_str = obj.get_netmask()
             if mask_str:

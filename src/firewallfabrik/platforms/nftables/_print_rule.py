@@ -1181,6 +1181,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not addr_str:
             return ''
 
+        if obj.is_any():
+            # The object says "any"; writing the bare address would narrow
+            # the rule to the single address 0.0.0.0.  `_printAddr` in the
+            # iptables printer answers `0/0` here, and the prefix form is
+            # what nftables takes.
+            return f'{addr_str}/0'
+
         if isinstance(obj, (Network, NetworkIPv6)):
             mask_str = obj.get_netmask()
             if mask_str:

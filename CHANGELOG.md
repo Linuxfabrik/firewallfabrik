@@ -82,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): an ICMP service whose type or code is stored empty is read as "any" instead of breaking the compile.
 * Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
 * Compiler (iptables, nftables): an IP service naming a protocol number that does not exist is reported instead of matching every protocol.
+* Compiler (iptables, nftables): an address object whose address and netmask are both zero matches every address, the way it says, instead of the single address 0.0.0.0 - and a routing rule naming one installs the default route rather than a host route. Such an object is reported as well, which it was not.
 * Compiler (iptables, nftables): an address table whose file name needs the firewall's data directory is reported when the firewall names none.
 * Compiler (iptables, nftables): an address table, a DNS name or a dynamic interface whose name holds shell syntax is reported instead of running as a command on the firewall.
 * Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.

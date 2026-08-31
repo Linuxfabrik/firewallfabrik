@@ -203,21 +203,27 @@ class Address(Base):
         return False
 
     def is_any(self) -> bool:
-        """True if this represents the 'any' address (0.0.0.0/0 or ::/0)."""
+        """True if this represents the 'any' address (0.0.0.0/0 or ::/0).
+
+        The netmask goes through :func:`netmask_prefix_length`, not through
+        ``ipaddress.ip_address``: Firewall Builder writes an IPv6 netmask as
+        a bit length (``NetworkIPv6::toXML``), and reading ``"0"`` as an
+        address raises, which answered "not any" for every ``::/0`` there
+        is.
+        """
         addr = self.get_address()
         mask = self.get_netmask()
         if not addr:
             return True
         try:
             ip = ipaddress.ip_address(addr)
-            if int(ip) != 0:
-                return False
-            if mask:
-                nm = ipaddress.ip_address(mask)
-                return int(nm) == 0
-            return True
         except ValueError:
             return False
+        if int(ip) != 0:
+            return False
+        if not mask:
+            return True
+        return netmask_prefix_length(addr, mask) == 0
 
     def is_broadcast(self) -> bool:
         """True if this is a broadcast address (255.255.255.255)."""

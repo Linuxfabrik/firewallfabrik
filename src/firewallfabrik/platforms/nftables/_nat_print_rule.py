@@ -505,6 +505,12 @@ class NATPrintRule_nft(NATRuleProcessor):
         if not addr_str:
             return ''
 
+        if for_match and obj.is_any():
+            # The object says "any".  Only on the match side: `snat to
+            # 0.0.0.0/0` is not a translation, and the target is the one
+            # caller that clears *for_match*.
+            return f'{addr_str}/0'
+
         if isinstance(obj, (Network, NetworkIPv6)):
             mask_str = obj.get_netmask()
             if mask_str:

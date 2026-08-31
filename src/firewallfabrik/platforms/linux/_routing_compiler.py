@@ -573,6 +573,14 @@ def route_address(obj) -> str:
     if not addr_str:
         return ''
 
+    if obj.is_any():
+        # `_printAddr` answers this before it looks at the class of the
+        # object, so an ``IPv4`` holding 0.0.0.0/0 is the default route as
+        # much as a ``Network`` is.  Writing the bare address instead
+        # installs a host route to 0.0.0.0 and leaves the default route the
+        # rule says nowhere.
+        return 'default'
+
     if mask_str and isinstance(obj, (Network, NetworkIPv6)):
         try:
             net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
