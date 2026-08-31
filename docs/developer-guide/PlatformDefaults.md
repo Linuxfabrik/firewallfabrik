@@ -133,6 +133,42 @@ show "kernel default" there. A field whose default the editor cannot show
 turns that default into whatever its minimum happens to be on the next
 save, which is how the zero got into the data files in the first place.
 
+## The Release a Firewall Is Compiled For
+
+The `version` field on the firewall object is not an option and lives
+beside `platform` and `host_OS` in the object's `data`, not in `options`.
+It says which release of the packet filter the generated script has to
+work on, and both compilers gate parts of their output on it.
+
+**A release belongs to the platform the firewall names.**  Firewall
+Builder says so by taking the platform as the argument of
+`getVersionsForPlatform` (libgui/platforms.cpp:418), and both
+`get_iptables_version` and `get_nftables_version` ask it before they read
+the field: `lt_1.2.6` is an iptables release and `0.9.3` an nftables one,
+and each is below every gate of the *other* platform, so reading it there
+would silently take away every version-gated match.  Either compiler can
+be handed either firewall - the CLI takes the platform from the command
+it was called as, and the audit corpus compiles every firewall for both.
+
+**An empty value means the newest.**  Without a pinned release the target
+is whatever the machine runs, which for every currently supported
+distribution is iptables 1.8.x and nftables 1.x.  Firewall Builder reads
+the empty value as the *oldest* instead (`version_compare("", ...)` is
+negative and its pipeline switches on it), which is why its reference
+output writes an address range out as covering networks where fwf uses
+`-m iprange`.  That difference is deliberate and accounts for a large
+part of the `missing` column in `compare-reference.sh`.
+
+The list the editor offers is `PLATFORM_VERSIONS` in
+`gui/platform_settings.py`: Firewall Builder's own list for iptables,
+value for value, and for nftables the releases at which this compiler's
+output changes - 0.9.3 for `meta hour` / `meta day` / `meta time` and
+0.9.5 for `snat prefix to` / `dnat prefix to`.  Everything else the
+nftables compiler emits is 0.8.2 or older.  Add a row to that list
+whenever a new construct needs a release newer than one a supported
+distribution ships, and a matching constant in
+`platforms/nftables/_utils.py`.
+
 ## The `placeholder` Field
 
 Some options have an empty-string default (`''`) but the GUI should show a meaningful hint. For these, the YAML entry includes a `placeholder` field:
