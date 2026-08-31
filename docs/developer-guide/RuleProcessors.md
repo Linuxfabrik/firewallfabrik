@@ -1734,6 +1734,20 @@ for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
   top rule sets and names the back edges - so the rest of the branch tree
   stays reachable.  This is the one place where `missing` in
   `compare-reference.sh` is one higher than Firewall Builder on purpose.
+- A rule set that is not the firewall's own top one names its chains
+  after itself even when it is called "Policy".  `getNewChainName` asks
+  whether the name is "Policy" and writes `RULE_<n>` when it is, which is
+  right for the firewall's own policy and wrong for a rule set of
+  *another* firewall that a Branch rule points at - almost every firewall
+  object owns one of that name, and `findImportedRuleSets` compiles it
+  into this script beside our own.  Both then build `RULE_<n>`, so the
+  two rule sets share a chain and whichever rule is appended first
+  decides for both; with logging on, the chains form a cycle the kernel
+  refuses (`-EMLINK`, "Too many links").  `Compiler.rule_set_key` says
+  the same thing for the hashed temporary chain names of the negation
+  and SDNAT expansions on both platforms.  This is the second place where
+  `missing` in `compare-reference.sh` is higher than Firewall Builder on
+  purpose (8 lines, `firewall33-1` and `firewall81`).
 - `VerifyScriptLiterals` (`compiler/processors/_generic.py`) asks a
   question none of those do: three objects cannot be resolved by the
   compiler, so their names travel into the generated shell script and are

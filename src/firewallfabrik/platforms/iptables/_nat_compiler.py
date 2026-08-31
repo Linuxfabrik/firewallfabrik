@@ -190,8 +190,7 @@ class NATCompiler_ipt(NATCompiler):
         key here is not unique that way, so the counter belongs to the
         compile run.
         """
-        ruleset_name = self.get_rule_set_name()
-        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
             stable_key.encode(),
             usedforsecurity=False,

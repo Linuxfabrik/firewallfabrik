@@ -749,10 +749,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         load, so deriving the hash from `rule.id` would give a different
         iptables script on every run -- breaking byte-level idempotency.
         Instead we hash the stable rule metadata (ruleset name, rule
-        position, subrule suffix).
+        position, subrule suffix).  The name alone does not tell two rule
+        sets apart, which is what `rule_set_key` is for.
         """
-        ruleset_name = self.get_rule_set_name()
-        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
             stable_key.encode(),
             usedforsecurity=False,
@@ -782,7 +782,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
             parts.append('Out_')
 
         ruleset_name = self.get_rule_set_name()
-        if ruleset_name != 'Policy':
+        if self.rule_set_chain:
+            # Firewall Builder asks whether the name is "Policy" and
+            # writes "RULE_" when it is (`getNewChainName`), which is the
+            # right answer for the firewall's own top rule set and the
+            # wrong one for an imported rule set that happens to carry
+            # that name too: both then build a chain called RULE_<n> and
+            # the rules of the two land in one.  See `rule_set_key`.
+            parts.append(f'{self.rule_set_chain}_')
+        elif ruleset_name != 'Policy':
             parts.append(f'{ruleset_name}_')
         else:
             parts.append('RULE_')

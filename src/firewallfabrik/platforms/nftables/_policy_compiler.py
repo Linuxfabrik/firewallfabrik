@@ -236,8 +236,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         happens to be printed, and into ``temp_chains`` so the print rule
         knows the jump is one of ours.
         """
-        ruleset_name = self.get_rule_set_name()
-        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
             stable_key.encode(),
             usedforsecurity=False,

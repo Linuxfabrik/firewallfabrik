@@ -313,6 +313,29 @@ class Compiler(BaseCompiler):
             return self.source_ruleset.name
         return ''
 
+    def rule_set_key(self) -> str:
+        """Return a name for this rule set that no other rule set answers.
+
+        Two rule sets of one script can carry one name.  Almost every
+        firewall object owns a rule set called "Policy", and a Branch rule
+        may point at another firewall's, which is compiled into this
+        script beside our own (``CompilerDriver::findImportedRuleSets``).
+        Every chain name a compiler derives is built out of the rule set
+        name, the position and the subrule suffix - all three of which the
+        two rule sets then share - so the chains a Deny rule of the one
+        builds are the chains an Accept rule of the other builds, and
+        whichever is appended first decides for both.  Firewall Builder
+        has the same hole.
+
+        A rule set that is not the firewall's own top one runs inside a
+        chain of its own and knows it, so saying that here is enough to
+        tell the two apart.
+        """
+        name = self.get_rule_set_name()
+        if getattr(self, 'rule_set_chain', ''):
+            return f'branch:{name}'
+        return name
+
     def get_compiled_script_length(self) -> int:
         return self.output.tell()
 
