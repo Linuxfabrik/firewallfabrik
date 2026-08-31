@@ -671,11 +671,18 @@ class CompilerDriver(BaseCompiler):
         """
         by_state: dict = {}
         edges: set[tuple[str, str]] = set()
+        # A branch rule may name its target by name alone, and a name means
+        # a rule set of the same kind belonging to this firewall - which is
+        # the set handed in here.
+        by_name = {
+            (type(rule_set).__name__, rule_set.name): rule_set
+            for rule_set in reversed(rule_sets)
+        }
 
         def visit(rule_set) -> None:
             by_state[rule_set.id] = False  # on the stack
             for rule in rule_set.rules:
-                target = self._branch_target(session, rule)
+                target = self._branch_target(session, rule, by_name)
                 if target is None or self._is_top_ruleset(target):
                     continue
                 state = by_state.get(target.id)
@@ -693,7 +700,7 @@ class CompilerDriver(BaseCompiler):
         return edges
 
     @staticmethod
-    def _branch_target(session, rule):
+    def _branch_target(session, rule, by_name=None):
         """Return the rule set a Branch rule points at, or ``None``.
 
         The action decides first: ``PolicyRule::getBranch`` and
@@ -704,24 +711,33 @@ class CompilerDriver(BaseCompiler):
         ordinary Accept - following it would compile a rule set the
         firewall does not use.
 
-        The reference is then the id both readers resolve.  The name is
-        only a fallback *within the firewall's own rule sets* in the C++
-        too, which is where the compilers already look it up, so a rule
-        that carries nothing else is left to them.
+        The id is the reference where there is one, and the name is the
+        fallback, exactly the order both ``getBranch`` overloads read them
+        in.  The name is looked up among the firewall's own rule sets of
+        the same kind (``fw->findObjectByName(Policy::TYPENAME, ...)`` /
+        ``NAT::TYPENAME``), which *by_name* holds.  Only the `.fwb` reader
+        resolves an id, so without the fallback every branch rule of a
+        `.fwf` - fwf's own format, and what the editor writes - answers
+        "no target" and the walk above sees no jump at all.
         """
         if not (
             rule.policy_action == PolicyAction.Branch
             or rule.nat_action == NATAction.Branch
         ):
             return None
-        ref = (getattr(rule, 'options', None) or {}).get('branch_id')
-        if not ref:
+        options = getattr(rule, 'options', None) or {}
+        ref = options.get('branch_id')
+        if ref:
+            try:
+                target_id = uuid.UUID(str(ref))
+            except (TypeError, ValueError):
+                return None
+            return session.get(RuleSet, target_id)
+        name = options.get('branch_name')
+        if not name or by_name is None:
             return None
-        try:
-            target_id = uuid.UUID(str(ref))
-        except (TypeError, ValueError):
-            return None
-        return session.get(RuleSet, target_id)
+        kind = 'NAT' if rule.nat_action == NATAction.Branch else 'Policy'
+        return by_name.get((kind, str(name)))
 
     def check_interface_addresses(self, fw: Firewall) -> str:
         """Validate IP addresses of a firewall's regular interfaces.

@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a branch into another firewall's rule set of the same name gets chains of its own, instead of sharing them with this firewall's policy - two rules then landed in one chain and the first of them decided for both.
 * Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
+* Compiler (iptables, nftables): a branch rule loop is found on a firewall stored in FirewallFabrik's own format as well, where until now only an imported Firewall Builder file was checked - the loop went out unreported and cost the whole nftables ruleset.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync address is an IPv6 address keeps its rules, instead of losing them without a word.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync port is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a cluster member configures the addresses of an interface whose cluster counterpart runs no failover protocol, instead of leaving them to nobody.
