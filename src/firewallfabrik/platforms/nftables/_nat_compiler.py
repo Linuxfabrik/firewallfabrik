@@ -70,6 +70,7 @@ from firewallfabrik.core.objects import (
     UserService,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    branch_closes_a_loop,
     build_interface_groups,
     destination_port_half,
     interface_group_object,
@@ -147,6 +148,10 @@ class NATCompiler_nft(NATCompiler):
         # chain the branch really filled, and each rule set is compiled by a
         # compiler of its own, so the answer has to be handed over.
         self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
+
+        # The branch jumps that close a cycle, by rule set name, set by the
+        # driver: only it sees every rule set of the script.
+        self.branch_loop_edges: set[tuple[str, str]] = set()
 
     def my_platform_name(self) -> str:
         return 'nftables'
@@ -1084,6 +1089,9 @@ class SplitNATBranchRule(NATRuleProcessor):
 
         if rule.nat_rule_type != NATRuleType.NATBranch:
             self.tmp_queue.append(rule)
+            return True
+
+        if branch_closes_a_loop(self.compiler, rule):
             return True
 
         nat_comp = cast('NATCompiler_nft', self.compiler)

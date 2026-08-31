@@ -25,6 +25,7 @@ from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Host,
     Interface,
+    NATAction,
     PhysAddress,
     PolicyAction,
     TagService,
@@ -160,12 +161,23 @@ def branch_closes_a_loop(compiler, rule) -> bool:
     Which jump is the one to leave out is decided by the driver, which is
     the only place that sees every rule set of the script; see
     ``CompilerDriver.find_branch_loop_edges``.
+
+    A NAT branch is asked the same question: it becomes a jump into a
+    regular chain the same way, and a NAT chain that can reach itself is
+    the same ``-EMLINK``.  Without this the NAT compilers say what they say
+    when the chain map holds no entry - "the rule set installs no rule, so
+    there is nothing to jump to" - which is true only because the cycle
+    kept that rule set from installing one.
     """
+    # The two action enums are `IntEnum`s that both start at zero, so
+    # `PolicyAction.Accept == NATAction.Branch` is true and the kind of rule
+    # has to pick the enum before the value is compared at all.
+    branch = NATAction.Branch if rule.type == 'NATRule' else PolicyAction.Branch
     edges = getattr(compiler, 'branch_loop_edges', None)
-    if not edges or rule.action != PolicyAction.Branch:
+    if not edges or rule.action is not branch:
         # An editor leaves the branch options behind when the action is
         # changed, so the action decides first, the way `PolicyRule::getBranch`
-        # does (fwbuilder Rule.cpp:488).
+        # and `NATRule::getBranch` do (fwbuilder Rule.cpp:488 and :920).
         return False
     branch_name = rule.get_option('branch_name', '')
     if not branch_name:

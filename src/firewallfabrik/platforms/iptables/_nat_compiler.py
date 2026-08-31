@@ -86,6 +86,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    branch_closes_a_loop,
     build_interface_groups,
     count_bridge_interfaces,
     destination_port_half,
@@ -144,6 +145,10 @@ class NATCompiler_ipt(NATCompiler):
 
         # Branch ruleset chain mapping (set by the driver)
         self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
+
+        # The branch jumps that close a cycle, by rule set name, set by the
+        # driver: only it sees every rule set of the script.
+        self.branch_loop_edges: set[tuple[str, str]] = set()
 
         # The chain a branch rule set writes into, set by the driver through
         # `register_rule_set_chain()`. Empty for the top rule set.
@@ -2040,6 +2045,9 @@ class SplitNATBranchRule(NATRuleProcessor):
 
         if rule.nat_rule_type != NATRuleType.NATBranch:
             self.tmp_queue.append(rule)
+            return True
+
+        if branch_closes_a_loop(self.compiler, rule):
             return True
 
         nat_comp = cast('NATCompiler_ipt', self.compiler)

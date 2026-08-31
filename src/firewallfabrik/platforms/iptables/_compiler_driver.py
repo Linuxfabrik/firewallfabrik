@@ -948,6 +948,7 @@ class CompilerDriver_ipt(CompilerDriver):
         # it.  A branch rule set is compiled before the top one, so a
         # branch of the top rule set finds its entry.
         nat_compiler.branch_ruleset_to_chain_mapping = self._nat_branch_chains
+        nat_compiler.branch_loop_edges = self._branch_loop_edges
         if not self._flush_ruleset:
             nat_compiler.chain_prefix = self._table_name
 

@@ -638,6 +638,7 @@ class CompilerDriver_nft(CompilerDriver):
         # branch rule set is compiled before the top one, so a branch of the
         # top rule set finds its entry.
         nat_compiler.branch_ruleset_to_chain_mapping = self._nat_branch_chains
+        nat_compiler.branch_loop_edges = self._branch_loop_edges
         if not self._is_top_ruleset(nat_rs):
             nat_compiler.register_rule_set_chain(nft_object_name(nat_rs.name))
         nat_compiler.set_source_ruleset(nat_rs)
