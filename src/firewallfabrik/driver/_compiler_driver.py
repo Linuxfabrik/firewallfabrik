@@ -699,6 +699,59 @@ class CompilerDriver(BaseCompiler):
                 visit(rule_set)
         return edges
 
+    def order_branch_rule_sets(self, session, rule_sets, loop_edges=()):
+        """Return *rule_sets* with every branch target before its branch.
+
+        A NAT branch rule set becomes chains of its own, one per direction,
+        because prerouting and postrouting are separate hooks - and the
+        rule that jumps into it can only name the chains that rule set
+        really filled.  The driver knows that once it has compiled the rule
+        set, and hands it on as ``branch_ruleset_to_chain_mapping``, so a
+        rule set compiled *before* the one it branches into reads an entry
+        that is not there yet.
+
+        What that costs differs by platform and is a hole on both.
+        iptables does what Firewall Builder does with no answer at all
+        (``NATCompiler_ipt::splitNATBranchRule``): it puts a copy in
+        PREROUTING and one in POSTROUTING and says so, and the copy in the
+        wrong chain carries a translation that chain cannot perform.
+        nftables has no such fallback and leaves the rule out, so the
+        translation is silently missing - and its rule set then installs
+        nothing, which takes the rule branching into *it* with it.
+        Compiling the targets first is what makes the map complete before
+        it is read, and the answer exact on both.
+
+        A jump that closes a cycle is left out by the compilers, so it is
+        left out of the order as well - *loop_edges* is what
+        `find_branch_loop_edges` answered.  A cycle it did not name is
+        stopped by the visited set: the order is then arbitrary for that
+        one edge, which is the state the pass was in for every edge.
+        """
+        members = {rule_set.id for rule_set in rule_sets}
+        by_name = {
+            (type(rule_set).__name__, rule_set.name): rule_set
+            for rule_set in reversed(rule_sets)
+        }
+        ordered: list = []
+        seen: set = set()
+
+        def visit(rule_set) -> None:
+            if rule_set.id in seen:
+                return
+            seen.add(rule_set.id)
+            for rule in rule_set.rules:
+                target = self._branch_target(session, rule, by_name)
+                if target is None or target.id not in members:
+                    continue
+                if (rule_set.name, target.name) in loop_edges:
+                    continue
+                visit(target)
+            ordered.append(rule_set)
+
+        for rule_set in rule_sets:
+            visit(rule_set)
+        return ordered
+
     @staticmethod
     def _branch_target(session, rule, by_name=None):
         """Return the rule set a Branch rule points at, or ``None``.

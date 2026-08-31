@@ -397,12 +397,23 @@ class CompilerDriver_ipt(CompilerDriver):
                     empty_output = True
 
                     # --- NAT compilation ---
+                    # A branch rule set is compiled before the one branching
+                    # into it, so the chains it filled are known when that
+                    # rule is written; the top rule set is last, because
+                    # every branch is reached from it.
                     top_nat = None
                     for nat_rs in all_nat:
-                        if not self._matching_address_family(nat_rs, policy_af):
-                            continue
-                        if self._is_top_ruleset(nat_rs):
+                        if self._matching_address_family(
+                            nat_rs, policy_af
+                        ) and self._is_top_ruleset(nat_rs):
                             top_nat = nat_rs
+                    branch_nat = self.order_branch_rule_sets(
+                        session,
+                        [rs for rs in all_nat if not self._is_top_ruleset(rs)],
+                        self._branch_loop_edges,
+                    )
+                    for nat_rs in branch_nat:
+                        if not self._matching_address_family(nat_rs, policy_af):
                             continue
                         result = self._process_nat_rule_set(
                             session,
