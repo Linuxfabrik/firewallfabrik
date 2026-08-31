@@ -1150,6 +1150,10 @@ class SplitLogWithStatefulLimit(PolicyRuleProcessor):
         r_log.set_option('limit_value', -1)
         r_log.set_option('connlimit_value', -1)
         r_log.set_option('hashlimit_value', -1)
+        # The named counter of an accounting rule counts every packet the
+        # jump matched, so it stays there and neither of these two lines
+        # counts the same packet again.
+        r_log.set_option('nft_counter_name', '')
         r_log.set_option('stateless', True)
         r_log.force_state_check = False
         self.tmp_queue.append(r_log)
@@ -1170,6 +1174,7 @@ class SplitLogWithStatefulLimit(PolicyRuleProcessor):
         r_action.set_option('limit_value', -1)
         r_action.set_option('connlimit_value', -1)
         r_action.set_option('hashlimit_value', -1)
+        r_action.set_option('nft_counter_name', '')
         r_action.set_option('stateless', True)
         r_action.force_state_check = False
         r_action.final = True

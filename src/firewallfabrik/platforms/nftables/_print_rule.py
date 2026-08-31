@@ -575,6 +575,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         if self._splits_for_log(rule):
             log_rule = rule.clone()
             log_rule.ipt_target = 'LOG'
+            # A named counter is what an accounting rule exists for, and a
+            # packet crosses both lines: counted on each it is counted
+            # twice, and the log line is rate-limited on top of that, so the
+            # total is "every packet" plus "up to the log rate".  It stays
+            # on the line that carries the verdict, which every packet the
+            # rule matches reaches.
+            log_rule.set_option('nft_counter_name', '')
             action_rule = rule.clone()
             action_rule.nft_log = False
             return self._build_rule_line(
