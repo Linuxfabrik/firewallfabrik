@@ -1462,6 +1462,18 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # A chain that is already decided is not one to override: the
+        # rule that carries the traffic class of a classifying rule is
+        # pinned to postrouting, where the qdisc reads it, and a copy of
+        # it in another chain is a `-j CLASSIFY` the kernel refuses
+        # (`xt_CLASSIFY` registers for LOCAL_OUT and POST_ROUTING alone).
+        # `decideOnChainIf{Src,Dst}FW` and `finalizeChain` ask this first;
+        # the two address-range splitters are the only chain decisions in
+        # either compiler that did not, in Firewall Builder as well.
+        if rule.ipt_chain:
+            self.tmp_queue.append(rule)
+            return True
+
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
         # Not on a bridging firewall: a bridge forwards a broadcast
         # frame, so there the question is the plain one.  fwbuilder
@@ -1501,6 +1513,18 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        # A chain that is already decided is not one to override: the
+        # rule that carries the traffic class of a classifying rule is
+        # pinned to postrouting, where the qdisc reads it, and a copy of
+        # it in another chain is a `-j CLASSIFY` the kernel refuses
+        # (`xt_CLASSIFY` registers for LOCAL_OUT and POST_ROUTING alone).
+        # `decideOnChainIf{Src,Dst}FW` and `finalizeChain` ask this first;
+        # the two address-range splitters are the only chain decisions in
+        # either compiler that did not, in Firewall Builder as well.
+        if rule.ipt_chain:
+            self.tmp_queue.append(rule)
+            return True
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
         # Not on a bridging firewall: a bridge forwards a broadcast

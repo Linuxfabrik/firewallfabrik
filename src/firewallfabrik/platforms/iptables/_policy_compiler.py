@@ -752,7 +752,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         position, subrule suffix).  The name alone does not tell two rule
         sets apart, which is what `rule_set_key` is for.
         """
-        stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
+        stable_key = (
+            f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
+            f'{":c" if rule.classify_half else ""}'
+        )
         chain_id = hashlib.md5(  # nosec B324
             stable_key.encode(),
             usedforsecurity=False,
@@ -804,6 +807,8 @@ class PolicyCompiler_ipt(PolicyCompiler):
         suffix = rule.subrule_suffix
         if suffix:
             parts.append(f'_{suffix}')
+        if rule.classify_half:
+            parts.append('_c')
 
         return ''.join(parts)
 
@@ -3392,6 +3397,18 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # A chain that is already decided is not one to override: the
+        # rule that carries the traffic class of a classifying rule is
+        # pinned to postrouting, where the qdisc reads it, and a copy of
+        # it in another chain is a `-j CLASSIFY` the kernel refuses
+        # (`xt_CLASSIFY` registers for LOCAL_OUT and POST_ROUTING alone).
+        # `decideOnChainIf{Src,Dst}FW` and `finalizeChain` ask this first;
+        # the two address-range splitters are the only chain decisions in
+        # either compiler that did not, in Firewall Builder as well.
+        if rule.ipt_chain:
+            self.tmp_queue.append(rule)
+            return True
+
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         # Not on a bridging firewall: a bridge forwards a broadcast
         # frame, so there the question is the plain one.  fwbuilder
@@ -3438,6 +3455,18 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        # A chain that is already decided is not one to override: the
+        # rule that carries the traffic class of a classifying rule is
+        # pinned to postrouting, where the qdisc reads it, and a copy of
+        # it in another chain is a `-j CLASSIFY` the kernel refuses
+        # (`xt_CLASSIFY` registers for LOCAL_OUT and POST_ROUTING alone).
+        # `decideOnChainIf{Src,Dst}FW` and `finalizeChain` ask this first;
+        # the two address-range splitters are the only chain decisions in
+        # either compiler that did not, in Firewall Builder as well.
+        if rule.ipt_chain:
+            self.tmp_queue.append(rule)
+            return True
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         # Not on a bridging firewall: a bridge forwards a broadcast
@@ -4730,6 +4759,11 @@ class DecideOnChainForClassify(PolicyRuleProcessor):
     Firewall Builder sets no suffix here either; nothing there drops the
     postrouting half, so the shared chain is reachable from both hooks and
     the kernel refuses it just the same.
+
+    The mark is `classify_half` and not `subrule_suffix`, because the four
+    negation expansions run between here and `Logging2` and write their
+    own 1/2/3 into that field: a rule that is negated *and* classified had
+    both halves back in one chain.
     """
 
     def process_next(self) -> bool:
@@ -4755,7 +4789,7 @@ class DecideOnChainForClassify(PolicyRuleProcessor):
                 # Original keeps classification, loses tagging
                 rule.set_option('tagging', False)
                 # And a chain name of its own; see the class docstring.
-                rule.subrule_suffix = 'c'
+                rule.classify_half = True
 
             ipt_comp.set_chain(rule, 'POSTROUTING')
 

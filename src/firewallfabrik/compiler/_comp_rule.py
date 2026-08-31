@@ -116,6 +116,14 @@ class CompRule:
     force_state_check: bool = False
     final: bool = False  # marks terminal logging rule
     subrule_suffix: str = ''  # label suffix for subrules
+    # The half of a rule that both tags and classifies which carries the
+    # traffic class.  The two halves end in different chains - the mark
+    # belongs in prerouting and the class in postrouting - so they must not
+    # ask for the same chain *name*, and `subrule_suffix` cannot say it:
+    # the negation expansions overwrite that with their own 1/2/3 further
+    # down the pipeline.  Every chain name derived afterwards carries this
+    # as well.
+    classify_half: bool = False
 
     # Negation flags
     src_single_object_negation: bool = False
