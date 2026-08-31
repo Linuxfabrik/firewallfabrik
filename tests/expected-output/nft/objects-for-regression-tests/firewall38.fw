@@ -357,13 +357,13 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
-        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
+        meta mark 16 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
+        meta mark != 16 ct state new counter accept
         #
         # Rule 14 (global)
         #
@@ -399,13 +399,13 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
-        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
+        meta mark 16 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
+        meta mark != 16 ct state new counter accept
         #
         # Rule 13 (global)
         #
@@ -448,13 +448,13 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
-        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
+        meta mark 16 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
+        meta mark != 16 ct state new counter accept
         #
         # Rule 13 (global)
         #

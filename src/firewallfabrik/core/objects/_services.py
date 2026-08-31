@@ -147,6 +147,21 @@ class Service(Base):
         'ICMP6Service': ('ipv6-icmp', 58),
     }
 
+    # Three service types carry no IP protocol at all, and Firewall
+    # Builder still gives each of them a number of its own, above every
+    # real one: `CustomService::getProtocolNumber` answers 65000,
+    # `TagService` 65001 and `UserService` 65002 (libfwbuilder).  The
+    # number has one reader, `groupServices`, which puts the services of
+    # one rule into a group per number - so three distinct numbers keep a
+    # Custom Service, a Tag Service and a User Service in three rules,
+    # where one shared "unknown" would leave them in one and let the
+    # printer render whichever came first.
+    PSEUDO_PROTOCOL_MAP = {
+        'CustomService': 65000,
+        'TagService': 65001,
+        'UserService': 65002,
+    }
+
     # The four protocol numbers an IP Service answers by name, and the
     # names it answers with: ``IPService::named_protocols``, filled in
     # ``IPService::init`` (libfwbuilder IPService.cpp).  Everything else
@@ -221,7 +236,7 @@ class Service(Base):
         entry = self.PROTOCOL_MAP.get(self.type)
         if entry:
             return entry[1]
-        return -1
+        return self.PSEUDO_PROTOCOL_MAP.get(self.type, -1)
 
     def is_any(self) -> bool:
         """True if this service matches any protocol/port."""

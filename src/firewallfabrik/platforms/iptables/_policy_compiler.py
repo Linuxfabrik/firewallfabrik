@@ -89,7 +89,6 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
     PolicyAction,
-    TagService,
     TCPService,
     UDPService,
     UserService,
@@ -4365,9 +4364,6 @@ class PrepareForMultiport(PolicyRuleProcessor):
             return False
 
         from firewallfabrik.core.objects import (
-            CustomService,
-            ICMPService,
-            IPService,
             TCPService,
             UDPService,
         )
@@ -4378,17 +4374,19 @@ class PrepareForMultiport(PolicyRuleProcessor):
 
         first_srv = rule.srv[0]
 
-        # Non-multiport service types: split into one rule per service
-        if isinstance(first_srv, (ICMPService, IPService, CustomService, TagService)):
+        # Only TCP and UDP ports go into one multiport match.  An ICMP
+        # type, an IP protocol number, a custom service, a packet mark and
+        # a connection owner each need their own match, and the print rule
+        # renders one service per rule, so a list of them has to be split
+        # or everything but the first entry is lost.  Asking what the type
+        # is *not* is what keeps this and the NAT compiler's copy of it in
+        # step: the list of types that need their own rule grows, the two
+        # that fit in a multiport match do not.
+        if not isinstance(first_srv, (TCPService, UDPService)):
             for srv in rule.srv:
                 r = rule.clone()
                 r.srv = [srv]
                 self.tmp_queue.append(r)
-            return True
-
-        # Only TCP/UDP can use multiport
-        if not isinstance(first_srv, (TCPService, UDPService)):
-            self.tmp_queue.append(rule)
             return True
 
         # Verify all services share the same protocol

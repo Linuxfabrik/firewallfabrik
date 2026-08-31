@@ -324,14 +324,14 @@ table ip fwf_filter {
         #
         # Rule 13 (global)
         #
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
     }
 
     chain forward {
@@ -367,14 +367,14 @@ table ip fwf_filter {
         #
         # Rule 13 (global)
         #
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
     }
 
     chain output {
@@ -450,14 +450,14 @@ table ip fwf_filter {
         #
         # Rule 13 (global)
         #
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp flags syn,ack / syn,ack ct state new counter reject with tcp reset
     }
 }
 

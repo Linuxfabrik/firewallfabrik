@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a NAT rule set that branches into another NAT rule set is translated instead of being left out on nftables and split into both directions on iptables; the branch targets are now compiled first, so each jump names the chain it belongs in.
 * Compiler (iptables, nftables): a NAT branch rule that leads back to where it started says so, instead of reporting that the rule set it points at installs no rule.
 * Compiler (iptables, nftables): the release a firewall names is read as a release of the platform it names, so an nftables firewall no longer loses every version-gated iptables match and the other way round.
+* Compiler (iptables, nftables): a rule that names a packet mark, a connection owner or a custom service beside an ordinary service installs the two in the order Firewall Builder installs them - the special one after the ordinary one, where it used to come first and decide the match for traffic both cover.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync address is an IPv6 address keeps its rules, instead of losing them without a word.
 * Compiler (iptables, nftables): a cluster group whose failover or state sync port is not a number is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a cluster member configures the addresses of an interface whose cluster counterpart runs no failover protocol, instead of leaving them to nobody.

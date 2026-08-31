@@ -846,23 +846,17 @@ table ip fwf_filter {
         #
         # Rule 46 (global)
         #
-        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
-        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type echo-reply icmp code 0 ct state new counter accept
-        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 ct state new counter accept
-        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 ct state new counter accept
         #
         # Rule 47 (global)
         #
-        # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 48 (global)
         #
-        # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 50 (global)
