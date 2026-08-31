@@ -634,7 +634,14 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Script body
                 body_buf = io.StringIO()
 
-                body_buf.write(oscnf.process_firewall_options(have_ipv6))
+                # The two IPv6 hardening knobs are host settings, not rules,
+                # so what decides them is whether the firewall speaks IPv6 at
+                # all - not whether the IPv6 pass happened to produce a
+                # command.  `have_ipv6` is the second question and is right
+                # for the module list, the restore programs and the reset
+                # code below; the nftables driver asks the first one here,
+                # and one option has to mean one thing on either platform.
+                body_buf.write(oscnf.process_firewall_options(any_rs_ipv6))
                 body_buf.write(generated_script)
                 body_buf.write(routing_output)
                 body_buf.write('\n')

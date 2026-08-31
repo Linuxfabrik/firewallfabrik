@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
 * Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
+* Compiler (iptables): a firewall that handles IPv6 hardens its IPv6 stack against redirects and source routing even when its IPv6 rules were all dropped, the way the nftables compiler already does.
 * Compiler (iptables): a firewall using ipsets fills them before it installs the rules that name them, so the first activation after a reboot no longer loses every rule about an address table while reporting success.
 * Compiler (iptables): a firewall that activates through iptables-restore waits for the lock the way every other command in its script does, instead of failing when another tool holds it.
 * Compiler (iptables): a firewall that shares the machine with Docker, CrowdSec or fail2ban and activates through iptables-restore no longer wipes their rules and then fails to install its own ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
