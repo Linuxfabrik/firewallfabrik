@@ -94,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a packet mark written in octal keeps the mask it was given.
 * Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
 * Compiler (nftables): a rule naming a dynamic interface of the cluster the firewall belongs to is compiled, the way the iptables compiler already compiles it, instead of being left out.
+* Compiler (nftables): a rule whose addresses cannot be resolved is reported once, with the reason, instead of once with the reason and once without it.
 * Compiler (nftables): a time-based rule on a firewall that uses the kernel timezone writes its start and end date in a form nftables accepts, instead of one that makes it refuse the whole ruleset.
 * Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
 * Compiler (nftables): the old rules are removed after the new ones are in place, so an activation no longer leaves the machine with no firewall at all for the moment in between.

@@ -10,9 +10,7 @@
 #
 # Rule 4 (NAT): Can not build rule using dynamic interface 'eth0' of the object 'linux-1-d' because its address is unknown. The rule is left out
 # Rule 5 (global): Interface "eth0" has no addresses
-# Rule 5 (global): Could not resolve any source addresses
 # Rule 6 (global): Interface "eth0" has no addresses
-# Rule 6 (global): Could not resolve any source addresses
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of the object 'linux-1-d' because its address is unknown. The rule is left out
 # heartbeat_cluster_1_d:NAT:0: warning: Rule is left out because the addresses it names carry nothing this rule can match on
 # heartbeat_cluster_1_d:NAT:1: warning: Rule is left out because the addresses it names carry nothing this rule can match on

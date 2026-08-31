@@ -976,9 +976,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         macs = []
         addrs = []
         pairs = []
+        # Why each object that rendered to nothing did, in its own words.
+        reasons: list[str] = []
         for obj in objects:
             if isinstance(obj, CombinedAddress) and obj.has_phys_address():
-                addr = self._print_addr(obj.address, rule)
+                addr = self._print_addr(obj.address, rule, reasons)
                 if addr:
                     pairs.append((normalize_mac_address(obj.get_phys_address()), addr))
                     continue
@@ -986,7 +988,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             if mac:
                 macs.append(mac)
                 continue
-            addr = self._print_addr(obj, rule)
+            addr = self._print_addr(obj, rule, reasons)
             if addr:
                 addrs.append(addr)
         parts = []
@@ -994,15 +996,25 @@ class PrintRule_nft(PolicyRuleProcessor):
             parts.append(self._pair_clause(keyword, direction, pairs, neg))
         if macs:
             parts.append(self._match_clause(f'ether {direction}', macs, neg))
-        parts.extend(self._address_clauses(rule, keyword, addrs, neg))
+        parts.extend(self._address_clauses(rule, keyword, addrs, neg, reasons))
         if not parts:
-            what = 'source' if direction == 'saddr' else 'destination'
-            self.compiler.error(rule, f'Could not resolve any {what} addresses')
+            if not reasons:
+                # Nothing rendered and no object said why, which leaves the
+                # element itself to say it: an object that carries no
+                # address at all is the one silent answer `_print_addr`
+                # gives.
+                what = 'source' if direction == 'saddr' else 'destination'
+                self.compiler.error(rule, f'Could not resolve any {what} addresses')
             return None
         return ' '.join(parts)
 
     def _address_clauses(
-        self, rule: CompRule, keyword: str, addrs: list[str], neg: str
+        self,
+        rule: CompRule,
+        keyword: str,
+        addrs: list[str],
+        neg: str,
+        reasons: list[str] | None = None,
     ) -> list[str]:
         """Split the rendered addresses into the clauses one rule can carry.
 
@@ -1032,11 +1044,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             # which renders as a set reference just the same.  Emitting the
             # clauses side by side asks for a packet whose address is in
             # two sets at once, which no packet is.
-            self.compiler.error(
+            self._no_address(
                 rule,
                 'An address table, a DNS name or a dynamic interface cannot '
                 'be combined with another address on the same side of one '
                 'nftables rule; the rule is left out',
+                reasons,
             )
             return []
         clauses = [f'{keyword} {neg}{ref}' for ref in set_refs]
@@ -1056,8 +1069,30 @@ class PrintRule_nft(PolicyRuleProcessor):
     ) -> str:
         return print_pair_clause(keyword, f'ether {direction}', pairs, neg)
 
-    def _print_addr(self, obj, rule: CompRule) -> str:
-        """Print an address object in nftables format."""
+    def _no_address(
+        self, rule: CompRule, message: str, reasons: list[str] | None
+    ) -> None:
+        """Report why one object of an address element rendered to nothing.
+
+        The sentence is recorded for the caller as well, so an element that
+        rendered to nothing altogether can tell "every object said why"
+        from "an object answered nothing and said nothing" and add its own
+        sentence only in the second case.  Two errors about one rule, the
+        first of them the specific one, bury the report the administrator
+        reads.
+        """
+        self.compiler.error(rule, message)
+        if reasons is not None:
+            reasons.append(message)
+
+    def _print_addr(self, obj, rule: CompRule, reasons: list[str] | None = None) -> str:
+        """Print an address object in nftables format.
+
+        *reasons* collects the sentence behind every empty answer, so the
+        caller knows whether this method has already said why.  An element
+        made of several objects is reported by the object that could not be
+        rendered and not a second time by the element around it.
+        """
         if is_run_time_address_table(obj):
             # The addresses live in a file on the firewall, so the rule
             # points at a named set and the script fills that set in at
@@ -1115,8 +1150,8 @@ class PrintRule_nft(PolicyRuleProcessor):
                 return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))
             if addr is not None:
-                return self._print_addr_basic(addr, rule)
-            self.compiler.error(rule, f'Interface "{obj.name}" has no addresses')
+                return self._print_addr_basic(addr, rule, reasons)
+            self._no_address(rule, f'Interface "{obj.name}" has no addresses', reasons)
             return ''
 
         if isinstance(obj, Host):
@@ -1130,10 +1165,10 @@ class PrintRule_nft(PolicyRuleProcessor):
             addr = self._select_af_address(host_addrs)
             if addr is not None:
                 return addr.get_address()
-            self.compiler.error(rule, f'Host "{obj.name}" has no addresses')
+            self._no_address(rule, f'Host "{obj.name}" has no addresses', reasons)
             return ''
 
-        return self._print_addr_basic(obj, rule)
+        return self._print_addr_basic(obj, rule, reasons)
 
     def _select_af_address(self, addresses):
         """Pick the address matching the active family from a list.
@@ -1158,7 +1193,9 @@ class PrintRule_nft(PolicyRuleProcessor):
                 return addr
         return addresses[0]
 
-    def _print_addr_basic(self, obj, rule: CompRule) -> str:
+    def _print_addr_basic(
+        self, obj, rule: CompRule, reasons: list[str] | None = None
+    ) -> str:
         """Print basic address in CIDR notation."""
         if isinstance(obj, DNSName):
             # Runtime DNSName — use the DNS record directly as address, so nft
@@ -1171,14 +1208,20 @@ class PrintRule_nft(PolicyRuleProcessor):
             return dnsrec
 
         if not isinstance(obj, Address):
-            self.compiler.error(
+            self._no_address(
                 rule,
                 f'Cannot resolve address for object type {type(obj).__name__}',
+                reasons,
             )
             return ''
 
         addr_str = obj.get_address()
         if not addr_str:
+            # The one empty answer this method gives without a reason of its
+            # own.  A match is assembled out of the objects of a whole rule
+            # element and `_print_addr_match` words the message for the
+            # element, the way the NAT printer does it; saying it per object
+            # here would report a rule that still has an address to match on.
             return ''
 
         if obj.is_any():
