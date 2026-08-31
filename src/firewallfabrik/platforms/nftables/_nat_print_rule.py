@@ -69,6 +69,10 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_pair_clause,
     tcp_flags_match_nft,
 )
+from firewallfabrik.platforms.nftables._utils import (
+    NFT_NETMAP_FIRST_RELEASE,
+    nft_feature_available,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -933,6 +937,18 @@ class NATPrintRule_nft(NATRuleProcessor):
         NF_NAT_RANGE_NETMAP only for ``prefix to``).
         """
         verb = 'snat' if rt is NATRuleType.SNetnat else 'dnat'
+        if not nft_feature_available(self.compiler, NFT_NETMAP_FIRST_RELEASE):
+            # A plain `snat to <prefix>` is a different rule - it lets the
+            # kernel pick any address out of the range instead of keeping
+            # the host part - so there is nothing to fall back on, and an
+            # older nftables refuses the whole ruleset over the keyword.
+            self.compiler.error(
+                rule,
+                f'nftables before {NFT_NETMAP_FIRST_RELEASE} cannot translate '
+                f'a whole network one address to one ("{verb} prefix to"); '
+                f'the rule is left out',
+            )
+            return ''
         addr = self._print_addr(target, rule, for_match=False) if target else ''
         if not addr:
             if target:

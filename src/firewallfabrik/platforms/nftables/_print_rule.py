@@ -90,6 +90,10 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_quote,
     nft_set_reference_name,
 )
+from firewallfabrik.platforms.nftables._utils import (
+    NFT_TIME_FIRST_RELEASE,
+    nft_feature_available,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -2225,6 +2229,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         if not rule.when:
             return ''
+
+        if not nft_feature_available(self.compiler, NFT_TIME_FIRST_RELEASE):
+            # `meta hour`, `meta day` and `meta time` are the only words
+            # this compiler has for a time restriction, and an older
+            # nftables answers the whole ruleset with a syntax error
+            # rather than the one rule.
+            self.compiler.error(
+                rule,
+                f'nftables before {NFT_TIME_FIRST_RELEASE} cannot match on '
+                f'the time of day or the weekday; the rule is left out',
+            )
+            return None
 
         interval = rule.when[0]
         data = interval.data or {}

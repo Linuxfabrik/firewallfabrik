@@ -184,7 +184,20 @@ MARK_MASK_FIRST_RELEASE = ('1.4.1', '1.4.1')
 
 
 def get_iptables_version(fw) -> str:
-    """Return the iptables version a firewall is compiled for."""
+    """Return the iptables version a firewall is compiled for.
+
+    The release belongs to the platform the firewall names, which is what
+    `getVersionsForPlatform` says by taking the platform as its argument
+    (fwbuilder libgui/platforms.cpp:418): `0.9.3` on a firewall set to
+    nftables is an nftables release and says nothing about iptables - and
+    read as one it is below every gate there is, so every version-gated
+    match would silently disappear.  This compiler is asked to compile
+    such a firewall all the same: the CLI takes the platform from the
+    command it was called as, and every firewall of the audit corpus is
+    compiled for both.
+    """
+    if getattr(fw, 'platform', '') == 'nftables':
+        return DEFAULT_IPTABLES_VERSION
     return fw.version or DEFAULT_IPTABLES_VERSION
 
 
