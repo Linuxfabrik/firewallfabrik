@@ -1140,9 +1140,14 @@ class SplitLogWithStatefulLimit(PolicyRuleProcessor):
         r_log.itf = []
         r_log.when = []
         r_log.ipt_chain = new_chain
+        r_log.iface_label = 'nil'
         r_log.ipt_target = 'LOG'
         r_log.action = PolicyAction.Continue
         r_log.nft_log = False
+        # A packet crosses the log line and the action line below it, so a
+        # limit left on both is a second bucket the same packet has to pay.
+        # The jump rule keeps all three, the way `Logging2` does it.
+        r_log.set_option('limit_value', -1)
         r_log.set_option('connlimit_value', -1)
         r_log.set_option('hashlimit_value', -1)
         r_log.set_option('stateless', True)
@@ -1159,8 +1164,10 @@ class SplitLogWithStatefulLimit(PolicyRuleProcessor):
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
+        r_action.iface_label = 'nil'
         r_action.set_option('log', False)
         r_action.nft_log = False
+        r_action.set_option('limit_value', -1)
         r_action.set_option('connlimit_value', -1)
         r_action.set_option('hashlimit_value', -1)
         r_action.set_option('stateless', True)

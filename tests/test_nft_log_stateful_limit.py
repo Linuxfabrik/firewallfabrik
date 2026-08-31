@@ -114,3 +114,49 @@ def test_the_chain_holds_the_log_rate_and_the_verdict(compiled):
 
 def test_the_rule_is_not_reported(compiled):
     assert 'keeps its own rate limit' not in compiled
+
+
+def test_a_plain_rate_limit_is_not_paid_twice(tmp_path):
+    """The jump keeps every limit, the two lines below it keep none.
+
+    A rule may carry a plain rate limit beside the connection limit, and a
+    packet crosses the log line and then the action line: a limit left on
+    both is a second bucket the same packet has to pay, so only half the
+    packets a "20 per second" rule admits reach its action.  `Logging2`
+    clears all three on both of its chain rules for that reason.
+    """
+    tree = firewallfabrik.core.DatabaseManager('sqlite://')
+    tree.load(str(FIXTURE))
+    with tree.session() as session:
+        fw_id = str(
+            session.scalars(
+                sqlalchemy.select(Firewall).where(Firewall.name == FIREWALL),
+            )
+            .one()
+            .id
+        )
+        rule = session.scalars(
+            sqlalchemy.select(PolicyRule).where(PolicyRule.position == RULE),
+        ).first()
+        rule.options = {
+            **(rule.options or {}),
+            'log': True,
+            'limit_value': 20,
+            'limit_suffix': '/second',
+        }
+    driver = CompilerDriver_nft(tree)
+    driver.wdir = str(tmp_path)
+    driver.source_dir = str(FIXTURE.parent)
+    driver.file_name_setting = 'fw.fw'
+    driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+    script = (tmp_path / 'fw.fw').read_text()
+
+    name = next(
+        line.split(' jump ')[1].strip()
+        for line in script.splitlines()
+        if 'ct count over 2' in line and ' jump ' in line
+    )
+    jumps = [line for line in script.splitlines() if f'jump {name}' in line]
+    assert jumps and all('limit rate 20/second' in line for line in jumps), jumps
+    body = _chain_body(script, name)
+    assert not any('limit rate 20/second' in line for line in body), body
