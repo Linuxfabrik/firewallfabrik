@@ -630,8 +630,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
             )
 
             if row == 0:
-                action_str = str(rule.action.value) if rule.action else ''
-                dir_str = str(rule.direction.value) if rule.direction else ''
+                # The names, the way `getActionAsString` and
+                # `getDirectionAsString` write them
+                # (PolicyCompiler.cpp:1119).  The numbers behind them are
+                # not the C++ ones and never were - `Direction.Both` is 3
+                # here and 0 there - so a trace written with them cannot be
+                # diffed against the C++ one, which is the whole reason the
+                # two carry the same format.
+                action_str = rule.action.name if rule.action else ''
+                dir_str = rule.direction.name if rule.direction else ''
                 logging_str = ' LOG' if rule.options.get('logging') else ''
                 line += f'{action_str:>9s}{dir_str:>9s}{logging_str}'
 
@@ -652,7 +659,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         if rule.options.get('routing'):
             meta += ' (route)'
 
-        if rule.action and str(rule.action.value) == 'Reject':
+        if rule.action is PolicyAction.Reject:
             aor = rule.options.get('action_on_reject', '')
             if aor:
                 meta += f' {aor}'

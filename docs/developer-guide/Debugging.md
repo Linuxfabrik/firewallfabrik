@@ -78,7 +78,7 @@ Both compilers produce the same format — a separator line with the processor n
 
 ```
 --- processor name -----------------------------------------------------------
-10 (eth0)         001-p-billing01               Any        smtp    eth0        1        2
+10 (eth0)         001-p-billing01               Any        smtp    eth0   Accept Outbound
                                                       smtps 587
                                                           imaps
  pos=10 c=OUTPUT t=ACCEPT .iface=eth0
@@ -90,9 +90,11 @@ The columns show:
 - **Dst**: destination objects (or `Any`)
 - **Srv**: service objects with ports
 - **Itf**: interface objects
-- **Direction**: `1` = Inbound, `2` = Outbound, `0` = Both
-- **Action**: `1` = Accept, `2` = Deny, etc.
-- **Metadata line**: `pos=` position, `c=` chain, `t=` target, `.iface=` assigned interface, plus any extra flags
+- **Action**: `Accept`, `Deny`, `Reject`, … — the name, the way
+  `getActionAsString()` writes it, so the two traces can be diffed. The
+  numbers behind the names are not the C++ ones.
+- **Direction**: `Inbound`, `Outbound`, `Both`, from `getDirectionAsString()`
+- **Metadata line**: `pos=` position, `c=` chain, `t=` target, `.iface=` assigned interface, plus any extra flags — including the reject type of a Reject rule
 
 ## Cross-Compiler Comparison
 
