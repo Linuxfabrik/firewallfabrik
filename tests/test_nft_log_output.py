@@ -47,6 +47,13 @@ class _FakeNftCompiler:
     def my_platform_name(self):
         return 'nftables'
 
+    def log_rate_limit(self):
+        """What `PolicyCompiler_nft.log_rate_limit` answers, read the same way."""
+        try:
+            return int(self.fw.get_option('limit_value'))
+        except (TypeError, ValueError):
+            return 0
+
     def error(self, rule, msg):
         raise AssertionError(msg)
 

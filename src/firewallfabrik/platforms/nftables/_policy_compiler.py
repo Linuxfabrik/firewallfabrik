@@ -103,6 +103,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     get_mac_only_address,
     interface_direction_problem,
     reset_srv_preserving_tcp,
+    rule_keeps_a_stateful_rate,
     strip_mac_objects,
 )
 from firewallfabrik.platforms.nftables._identifiers import (
@@ -248,6 +249,19 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.temp_chains.add(name)
         self.chain_rules.setdefault(name, [])
         return name
+
+    def log_rate_limit(self) -> int:
+        """Return the rate the firewall settings cap log messages at.
+
+        Zero means "no cap".  One reader for the value, because the print
+        rule decides with it whether a logged rule becomes two lines and
+        `SplitLogWithStatefulLimit` decides with it whether that pair needs
+        a chain of its own; the two have to answer the same.
+        """
+        try:
+            return int(self.fw.get_option('limit_value'))
+        except (TypeError, ValueError):
+            return 0
 
     def prolog(self) -> int:
         """Initialize compiler."""
@@ -402,6 +416,10 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
         self.add(NftNegation('process negation'))
         self.add(TimeNegation('process time negation'))
+        # After the time expansion, so the action rule it puts in its own
+        # chain - the only one of its three that still logs - is the rule
+        # this sees.
+        self.add(SplitLogWithStatefulLimit('log rule with a stateful limit'))
 
         # Chain assignment.  The action check runs before the rule is split
         # on "any", so an unusable action is reported once and not once per
@@ -1059,6 +1077,97 @@ class Logging_nft(PolicyRuleProcessor):
         # We mark the rule so PrintRule emits both log and verdict
         rule.nft_log = True
         self.tmp_queue.append(rule)
+        return True
+
+
+class SplitLogWithStatefulLimit(PolicyRuleProcessor):
+    """Give a logged rule with a stateful limit the chain iptables gives it.
+
+    A firewall may cap how often a rule logs, and that cap belongs to the
+    log message and not to the traffic: `PrintRule_nft` therefore writes a
+    logged rule as two lines, one rate-limited log line and one line
+    carrying the verdict.  Both lines hold the whole match, which is right
+    until the match holds state.  A connection limit and a rate limit kept
+    per key are consumed by every evaluation, so a packet crossing the log
+    line and then the verdict line is counted twice and half the traffic
+    the rule is meant to stop passes it.
+
+    iptables does not have the problem because `Logging2` builds three
+    rules: the match and the stateful limit sit on a jump into a temporary
+    chain and are evaluated once, and the chain holds the log rule and the
+    action rule.  nftables can say the same thing since the compiler
+    learned to name a temporary chain, so it says it here rather than
+    dropping the firewall's log rate and warning about it.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        if (
+            not rule.nft_log
+            or nft_comp.log_rate_limit() <= 0
+            or not rule_keeps_a_stateful_rate(rule)
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        new_chain = nft_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: the whole match, the stateful limit among it, and no
+        # log - the chain below carries that.
+        r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('log', False)
+        r_jump.nft_log = False
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        self.tmp_queue.append(r_jump)
+
+        # Log rule: nothing left to match, so it logs whatever arrives, at
+        # the rate the firewall settings name - which `_print_limit` reads
+        # for a rule whose target is LOG.
+        r_log = rule.clone()
+        r_log.subrule_suffix = '2'
+        r_log.src = []
+        r_log.dst = []
+        r_log.srv = []
+        r_log.itf = []
+        r_log.when = []
+        r_log.ipt_chain = new_chain
+        r_log.ipt_target = 'LOG'
+        r_log.action = PolicyAction.Continue
+        r_log.nft_log = False
+        r_log.set_option('connlimit_value', -1)
+        r_log.set_option('hashlimit_value', -1)
+        r_log.set_option('stateless', True)
+        r_log.force_state_check = False
+        self.tmp_queue.append(r_log)
+
+        # Action rule: everything was matched by the jump, except the
+        # protocol a TCP reset needs to name.
+        r_action = rule.clone()
+        r_action.subrule_suffix = '3'
+        r_action.src = []
+        r_action.dst = []
+        reset_srv_preserving_tcp(r_action)
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.set_option('log', False)
+        r_action.nft_log = False
+        r_action.set_option('connlimit_value', -1)
+        r_action.set_option('hashlimit_value', -1)
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        self.tmp_queue.append(r_action)
+
         return True
 
 

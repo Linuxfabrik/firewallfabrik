@@ -643,6 +643,25 @@ def reset_srv_preserving_tcp(rule: CompRule) -> None:
     rule.srv = [make_any_tcp_service()] if is_tcp else []
 
 
+def rule_keeps_a_stateful_rate(rule: CompRule) -> bool:
+    """Return whether *rule* carries a rate limit that holds state.
+
+    A connection limit and a rate limit kept per key both consume state on
+    every evaluation, unlike the plain ``limit rate``, whose buckets a
+    second evaluation simply refills.  A processor that turns one rule into
+    two lines side by side therefore has to know: both lines would carry
+    the match, a packet crossing the first and then the second is counted
+    twice, and half the traffic the rule is meant to stop passes it.
+    """
+    for key in ('connlimit_value', 'hashlimit_value'):
+        try:
+            if int(rule.get_option(key, 0) or 0) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 def strip_mac_objects(objects) -> tuple[list, str]:
     """Take the ethernet half out of *objects*, keeping every address half.
 

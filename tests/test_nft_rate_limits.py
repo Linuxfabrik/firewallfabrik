@@ -185,27 +185,31 @@ class _LoggedRule(_Rule):
 
 
 @pytest.mark.parametrize(
-    ('options', 'splits'),
+    'options',
     [
-        # No rate limit of its own: the pair the iptables compiler emits.
-        ({}, True),
-        # A meter and a connection limit are stateful, so a packet crossing
-        # both lines is counted twice and half the traffic passes.  iptables
-        # does not have the problem: the match sits on the rule that jumps
-        # into the pair's chain and is evaluated once.
-        ({'hashlimit_value': 20}, False),
-        ({'connlimit_value': 5}, False),
-        # A plain rate limit is two different limits on the two lines - the
-        # firewall's on the log line, the rule's on the verdict line - so it
-        # is no reason to keep the rule whole.
-        ({'limit_value': 20}, True),
+        {},
+        # A meter and a connection limit are stateful, and a rule carrying
+        # one no longer reaches the printer with a log on it:
+        # `SplitLogWithStatefulLimit` has put it in a chain of its own by
+        # then, so the pair this decides about is always one both lines may
+        # hold.
+        {'hashlimit_value': 20},
+        {'connlimit_value': 5},
+        {'limit_value': 20},
     ],
 )
-def test_a_logged_rule_that_keeps_a_rate_stays_on_one_line(options, splits):
+def test_a_logged_rule_splits_where_the_firewall_caps_its_log_rate(options):
     printer = _printer()
     printer.compiler.fw = _FirewallWithLogLimit()
-    assert printer._splits_for_log(_LoggedRule(**options)) is splits
-    assert bool(printer.compiler.warnings) is not splits
+    printer.compiler.log_rate_limit = lambda: 5
+    assert printer._splits_for_log(_LoggedRule(**options)) is True
+
+
+def test_a_logged_rule_stays_whole_where_nothing_caps_the_log_rate():
+    printer = _printer()
+    printer.compiler.fw = _FirewallWithLogLimit()
+    printer.compiler.log_rate_limit = lambda: 0
+    assert printer._splits_for_log(_LoggedRule()) is False
 
 
 @pytest.mark.parametrize(
