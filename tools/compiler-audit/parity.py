@@ -101,6 +101,7 @@ import collections
 import functools
 import ipaddress
 import re
+import shlex
 import shutil
 import socket
 import subprocess  # nosec B404
@@ -301,11 +302,23 @@ def read_nft(path: Path) -> dict[tuple[str, str], list[str]]:
 
 @functools.cache
 def translate(args: str, ipv6: bool) -> str | None:
-    """Return what iptables-translate makes of one command, or None."""
+    """Return what iptables-translate makes of one command, or None.
+
+    The command is read out of a shell script, so its arguments follow
+    shell quoting: a log prefix is one argument with blanks in it.
+    Splitting on whitespace hands `--log-prefix "RULE 13 -- DENY "` to the
+    translator as six arguments, which it refuses - and every label
+    carrying a log rule was then skipped instead of compared.
+    """
     binary = 'ip6tables-translate' if ipv6 else 'iptables-translate'
     try:
+        argv = shlex.split(args)
+    except ValueError:
+        # Unbalanced quoting: not a command line we can hand on.
+        return None
+    try:
         proc = subprocess.run(  # nosec B603
-            [binary, *args.split()],
+            [binary, *argv],
             capture_output=True,
             text=True,
             timeout=20,
