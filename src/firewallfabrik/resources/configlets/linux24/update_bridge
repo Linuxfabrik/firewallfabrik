@@ -81,6 +81,13 @@ update_bridge() {
 ## ports because a pre-existing unconfigured bridge might hold ports
 ## that need to move to a different bridge.
 ##
+## Only a bridge named br<digit> is deleted, which is the filter Firewall
+## Builder applies ($1 ~ /^br[0-9]/).  Every other bridge on the machine
+## belongs to somebody else and stays: docker0 and the br-<id> of each
+## Docker network, libvirt's virbr0, podman0, lxcbr0.  Taking those down
+## on activation would cut every container and virtual machine off the
+## network, which is not what "configure bridge interfaces" asks for.
+##
 ## sync_bridge_interfaces br0 br1
 
 sync_bridge_interfaces() {
@@ -90,7 +97,7 @@ sync_bridge_interfaces() {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
-         (!($1 in ignored_dict)) {print $1;}' | \
+         ($1 ~ /^br[0-9]/ && !($1 in ignored_dict)) {print $1;}' | \
          while read -r brintf; do
             echo "# Deleting bridge interface $brintf"
              $FWBDEBUG "$IP" link set "$brintf" down

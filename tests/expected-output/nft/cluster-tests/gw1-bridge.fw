@@ -321,7 +321,7 @@ configure_interfaces() {
                split(IGNORED,ignored_arr);
                for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
              }
-             (!($1 in ignored_dict)) {print $1;}' | \
+             ($1 ~ /^br[0-9]/ && !($1 in ignored_dict)) {print $1;}' | \
              while read -r brintf; do
                 echo "# Deleting bridge interface $brintf"
                  $FWBDEBUG "$IP" link set "$brintf" down
