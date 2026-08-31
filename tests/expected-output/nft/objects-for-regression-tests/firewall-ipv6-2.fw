@@ -16,7 +16,6 @@
 # DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
 # Rule 24 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule '3 (global)' shadows rule '4 (global)' below it, for destination 'firewall-ipv6-2:eth0:ip' and service 'ssh'
 # Rule '3 (global)' shadows rule '5 (global)' below it, for destination 'firewall-ipv6-2:eth0:ip' and service 'ssh'
 # Rule '3 (global)' shadows rule '6 (global)' below it, for destination 'firewall-ipv6-2:eth0:ip' and service 'ssh'
@@ -572,6 +571,14 @@ table inet fwf_filter {
         # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
+        # Rule 31 (global)
+        #
+        # test for bug 2463048
+        # "custom services should have IPv4/v6 setting"
+        # rule should compile for ipv6 b/c custom service
+        # object "ipv6 source route" is configured as "ipv6"
+        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
+        #
         # Rule 34 (global)
         #
         meta nfproto ipv6 counter log prefix "RULE 34 -- DENY " level info drop
@@ -688,6 +695,14 @@ table inet fwf_filter {
         #
         # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        #
+        # Rule 31 (global)
+        #
+        # test for bug 2463048
+        # "custom services should have IPv4/v6 setting"
+        # rule should compile for ipv6 b/c custom service
+        # object "ipv6 source route" is configured as "ipv6"
+        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #
@@ -826,6 +841,14 @@ table inet fwf_filter {
         # Rule 30 (global)
         #
         ip6 saddr fe80::21d:9ff:fe8b:8e94 ct state new counter accept
+        #
+        # Rule 31 (global)
+        #
+        # test for bug 2463048
+        # "custom services should have IPv4/v6 setting"
+        # rule should compile for ipv6 b/c custom service
+        # object "ipv6 source route" is configured as "ipv6"
+        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses and rule sets ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
 * Compiler (nftables): a Custom Service whose iptables code is nothing but a connection-state match compiles, so the "accept established and related" rule an imported policy is built out of no longer disappears from the ruleset.
 * Compiler (nftables): a Custom Service matching TCP flags or the user a packet belongs to compiles instead of being left out, so a rule an imported policy carries reaches the ruleset.
+* Compiler (nftables): a Custom Service matching the IPv6 routing header compiles instead of being left out, so a rule written to stop source-routed packets reaches the ruleset.
 * Compiler (nftables): a rule whose time restriction is negated and names both hours and weekdays is compiled instead of being left out, the way the iptables compiler has always compiled it.
 * Compiler (nftables): a rule with a Custom action writes its statement into the ruleset, the way the iptables compiler writes its custom target.
 * Editor: an "Attached Networks" object can be created on an interface and has an editor of its own, showing the subnets a rule naming it will match ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).

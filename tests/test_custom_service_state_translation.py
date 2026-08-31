@@ -22,11 +22,13 @@ The code is read as a sequence of matches and every one of them has to
 translate, or the whole code is refused.  The mapping is netfilter's own
 (`state_xlate_print` and `_conntrack3_mt_xlate` in
 extensions/libxt_conntrack.c, `tcp_xlate` in libxt_tcp.c, `owner_xlate`
-in libxt_owner.c) and it is checked here against `iptables-translate`
-where that tool is installed.
+in libxt_owner.c, `rt_xlate` in libip6t_rt.c) and it is checked here
+against `iptables-translate` / `ip6tables-translate` where those tools
+are installed.
 """
 
 import shutil
+import socket
 import subprocess  # nosec B404
 
 import pytest
@@ -92,6 +94,40 @@ TRANSLATED_OUR_WAY = {
     '-p tcp ! --syn': 'tcp flags & (fin | syn | rst | ack) != syn',
 }
 
+# The routing-header match, which exists as `libip6t_rt.c` alone.  Every
+# line here is one of the eight in extensions/libip6t_rt.txlate.
+TRANSLATED_V6 = {
+    '-m rt --rt-type 0': 'rt type 0',
+    '-m rt ! --rt-len 22': 'rt hdrlength != 22',
+    '-m rt --rt-segsleft 26': 'rt seg-left 26',
+    '-m rt --rt-type 0 --rt-len 22': 'rt type 0 rt hdrlength 22',
+    '-m rt --rt-type 0 --rt-len 22 ! --rt-segsleft 26': (
+        'rt type 0 rt seg-left != 26 rt hdrlength 22'
+    ),
+    '-m rt --rt-segsleft 13:42': 'rt seg-left 13-42',
+    # The whole 32-bit range is no condition, which is `skip_segsleft_match`.
+    '-m rt --rt-segsleft 0:4294967295': 'exthdr rt exists',
+    '-m rt ! --rt-segsleft 0:4294967295': 'rt seg-left != 0-4294967295',
+    # The module on its own says the same thing.
+    '-m rt': 'exthdr rt exists',
+}
+
+NOT_TRANSLATED_V6 = (
+    # `rt_xlate` answers 0 for the three RT0 options, so netfilter's own
+    # translator declines them too.
+    '-m rt --rt-0-res',
+    '-m rt --rt-0-not-strict',
+    '-m rt --rt-type 0 --rt-0-addrs ::1',
+    # An option of a match that was never named.
+    '--rt-type 0',
+    # A range where the option takes a single number, and a value that is
+    # no number or does not fit in the 32 bits the match stores.
+    '-m rt --rt-len 1:2',
+    '-m rt --rt-type zero',
+    '-m rt --rt-type 4294967296',
+    '-m rt --rt-type 0 --rt-type 2',
+)
+
 NOT_TRANSLATED = (
     # nftables has no equivalent for any of these.
     '-m recent --update --seconds 300 --hitcount 3',
@@ -139,6 +175,33 @@ def test_the_spelling_is_the_one_fwf_writes_elsewhere(code, expected):
 @pytest.mark.parametrize('code', NOT_TRANSLATED)
 def test_everything_else_is_left_to_the_caller_to_report(code):
     assert custom_service_nftables_code(code) is None
+
+
+@pytest.mark.parametrize(('code', 'expected'), sorted(TRANSLATED_V6.items()))
+def test_the_routing_header_match_reaches_nftables(code, expected):
+    assert custom_service_nftables_code(code, ipv6_only=True) == expected
+
+
+@pytest.mark.parametrize('code', NOT_TRANSLATED_V6)
+def test_a_routing_header_match_it_cannot_read_is_reported(code):
+    assert custom_service_nftables_code(code, ipv6_only=True) is None
+
+
+@pytest.mark.parametrize('code', sorted(TRANSLATED_V6))
+def test_the_routing_header_match_needs_a_service_that_says_ipv6(code):
+    """`rt type` in an `ip` table is "cannot use exthdr with ip".
+
+    nft refuses the whole ruleset over it, not the one rule, so a service
+    that does not declare itself IPv6-only is reported instead - which is
+    what happens to it on the iptables side too, where `libip6t_rt.c` is
+    not a module `iptables` can load.
+    """
+    assert custom_service_nftables_code(code, ipv6_only=False) is None
+    assert custom_service_code(_service(iptables=code), 'nftables') == ''
+    assert (
+        custom_service_code(_service(iptables=code, ipv6=True), 'nftables')
+        == TRANSLATED_V6[code]
+    )
 
 
 def test_the_firewalls_own_nftables_code_wins():
@@ -194,10 +257,27 @@ def test_against_iptables_translate(code, expected):
 
 
 class _Service:
-    def __init__(self, codes):
+    def __init__(self, codes, ipv6=False):
         self.codes = codes
         self.name = 'test'
+        self.custom_address_family = socket.AF_INET6 if ipv6 else None
 
 
-def _service(**codes):
-    return _Service(codes)
+def _service(ipv6=False, **codes):
+    return _Service(codes, ipv6=ipv6)
+
+
+@pytest.mark.parametrize(('code', 'expected'), sorted(TRANSLATED_V6.items()))
+def test_against_ip6tables_translate(code, expected):
+    """The tool itself, where it is installed - `-m rt` is IPv6-only."""
+    if shutil.which('ip6tables-translate') is None:
+        pytest.skip('ip6tables-translate not installed')
+    argv = ['ip6tables-translate', '-A', 'FORWARD', *code.split(), '-j', 'ACCEPT']
+    result = subprocess.run(  # nosec B603 B607
+        argv, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        pytest.skip(
+            f'ip6tables-translate refuses this release: {result.stderr.strip()}'
+        )
+    assert expected in result.stdout

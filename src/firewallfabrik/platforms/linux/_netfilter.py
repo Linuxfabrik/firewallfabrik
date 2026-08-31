@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import socket
 import uuid
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
@@ -985,8 +986,53 @@ _CUSTOM_SERVICE_PROTOCOLS = ('tcp', 'udp', 'udplite', 'sctp', 'dccp')
 
 _OWNER_OPTION_OF = {'--uid-owner': 'skuid', '--gid-owner': 'skgid'}
 
+# What `-m rt` says about the IPv6 routing header, in the words `rt_xlate`
+# (netfilter iptables extensions/libip6t_rt.c) writes and in the order it
+# writes them.  `--rt-0-res`, `--rt-0-addrs` and `--rt-0-not-strict` are
+# missing on purpose: `rt_xlate` answers 0 for them, so netfilter's own
+# translator declines those and so does this one.
+_RT_KEYWORD_OF = {
+    '--rt-type': 'rt type',
+    '--rt-segsleft': 'rt seg-left',
+    '--rt-len': 'rt hdrlength',
+}
+_RT_OUTPUT_ORDER = ('--rt-type', '--rt-segsleft', '--rt-len')
 
-def custom_service_nftables_code(iptables_code: str) -> str | None:
+# The whole range of a 32-bit "segments left", which `skip_segsleft_match`
+# reads as "no condition at all": `-m rt --rt-segsleft 0:4294967295` says
+# nothing but that a routing header is there.
+_RT_SEGSLEFT_ANY = (0, 4294967295)
+
+
+def _rt_clause(option: str, argument: str, negated: bool) -> str | None:
+    """One `-m rt` option in the nftables spelling, or ``None``.
+
+    The argument of ``--rt-segsleft`` is ``XTTYPE_UINT32RC``, a number or a
+    ``from:to`` range; nftables writes a range with a dash.
+    """
+    keyword = _RT_KEYWORD_OF.get(option)
+    if keyword is None:
+        return None
+    bounds = argument.split(':')
+    if len(bounds) > 2 or (len(bounds) == 2 and option != '--rt-segsleft'):
+        return None
+    numbers = []
+    for bound in bounds:
+        if not (bound.isascii() and bound.isdigit()):
+            return None
+        value = int(bound)
+        if value > 4294967295:
+            return None
+        numbers.append(value)
+    operator = '!= ' if negated else ''
+    if len(numbers) == 2 and numbers[0] != numbers[1]:
+        return f'{keyword} {operator}{numbers[0]}-{numbers[1]}'
+    return f'{keyword} {operator}{numbers[0]}'
+
+
+def custom_service_nftables_code(
+    iptables_code: str, ipv6_only: bool = False
+) -> str | None:
     """The nftables spelling of an iptables Custom Service, if it has one.
 
     A Custom Service carries one code per platform and Firewall Builder
@@ -1011,7 +1057,13 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
       already compiles to on both platforms,
     * ``-p <protocol>``, which contributes ``meta l4proto`` only where no
       other clause already pins the protocol - the way `tcp_xlate` writes
-      it only when nothing else did.
+      it only when nothing else did,
+    * ``-m rt`` (`rt_xlate`, extensions/libip6t_rt.c), but only when the
+      service says it is IPv6-only: the match exists as ``libip6t_rt.c``
+      alone, and ``rt type`` in an ``ip`` table is "cannot use exthdr with
+      ip", which costs the whole ruleset rather than the one rule.  Every
+      Custom Service carrying it that fwbuilder's standard library ships
+      declares ``address_family="ipv6"``.
 
     Everything else - ``-m recent``, ``-m string``, ``-m psd``, a
     connection-tracking helper, a module nftables has no equivalent for -
@@ -1024,6 +1076,8 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
         return None
 
     parts: list[str] = []
+    rt_clauses: dict[str, str] = {}
+    rt_seen = False
     protocol = ''
     pins_protocol = False
     index = 0
@@ -1085,6 +1139,13 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
                     return None
                 parts.append(f'meta {keyword} {"!= " if negated else ""}{value}')
                 continue
+            if module == 'rt':
+                if not ipv6_only:
+                    return None
+                rt_seen = True
+                # The module may stand on its own: `-m rt` with no option
+                # of its own says only that a routing header is there.
+                continue
             return None
 
         if word == '!':
@@ -1095,6 +1156,19 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
             negated = True
         else:
             negated = False
+
+        if word.startswith('--rt-'):
+            # An option of the routing-header match, which has to have been
+            # named first: `--rt-type` without `-m rt` is not a command
+            # iptables takes either.
+            if not rt_seen or word in rt_clauses or index >= len(tokens):
+                return None
+            clause = _rt_clause(word, tokens[index], negated)
+            index += 1
+            if clause is None:
+                return None
+            rt_clauses[word] = clause
+            continue
 
         if word == '--syn':
             flags = _nft_tcp_flags(_TCP_SYN_MASK, _TCP_SYN_COMP, negated)
@@ -1120,6 +1194,25 @@ def custom_service_nftables_code(iptables_code: str) -> str | None:
             continue
 
         return None
+
+    if rt_seen:
+        # `rt_xlate` writes the three in one order whatever order they were
+        # typed in, and answers "exthdr rt exists" for a match that says
+        # nothing more than that a routing header is there - which is
+        # `-m rt` on its own and `-m rt --rt-segsleft 0:4294967295`.
+        segsleft = rt_clauses.pop('--rt-segsleft', None)
+        if segsleft == f'rt seg-left {_RT_SEGSLEFT_ANY[0]}-{_RT_SEGSLEFT_ANY[1]}':
+            segsleft = None
+        if segsleft is not None:
+            rt_clauses['--rt-segsleft'] = segsleft
+        if not rt_clauses:
+            parts.append('exthdr rt exists')
+        else:
+            parts.extend(
+                rt_clauses[option]
+                for option in _RT_OUTPUT_ORDER
+                if option in rt_clauses
+            )
 
     if not parts and not protocol:
         return None
@@ -1157,7 +1250,13 @@ def custom_service_code(srv, platform: str) -> str:
     code = codes.get(platform, '')
     if code or platform != 'nftables':
         return code
-    return custom_service_nftables_code(codes.get('iptables', '')) or ''
+    # `Service::isV6Only()` reads the `address_family` attribute, which is
+    # what tells an IPv6-only match apart from one written for either.
+    ipv6_only = getattr(srv, 'custom_address_family', None) == socket.AF_INET6
+    return (
+        custom_service_nftables_code(codes.get('iptables', ''), ipv6_only=ipv6_only)
+        or ''
+    )
 
 
 # Interfaces whose names differ only in a trailing number are one group,
