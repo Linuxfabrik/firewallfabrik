@@ -821,21 +821,40 @@ class PolicyCompiler_ipt(PolicyCompiler):
     def set_chain(self, rule: CompRule, chain: str) -> None:
         rule.ipt_chain = chain
 
-    def is_chain_descendant_of_input(self, chain: str) -> bool:
-        if chain == 'INPUT':
+    def is_chain_descendant_of(
+        self, chain: str, ancestor: str, seen: set[str] | None = None
+    ) -> bool:
+        """Is *chain* reachable from *ancestor* by following the jumps?
+
+        What the kernel allows in a rule is decided by the hook, not by the
+        name of the chain the rule is in: a match that registers for
+        PREROUTING, INPUT and FORWARD is refused just as much in a chain
+        the POSTROUTING chain jumps to.  Every processor that moves a rule
+        into a temporary chain records the jump
+        (`insert_upstream_chain`), so the question can be asked of the
+        chain the rule ended up in.
+
+        A chain can be reached from more than one place, so every parent is
+        followed rather than the first one found, and `seen` keeps a jump
+        graph that leads back on itself from looping here.
+        """
+        if chain == ancestor:
             return True
-        for parent, children in self.upstream_chains.items():
-            if chain in children:
-                return self.is_chain_descendant_of_input(parent)
-        return False
+        if seen is None:
+            seen = set()
+        if chain in seen:
+            return False
+        seen.add(chain)
+        return any(
+            chain in children and self.is_chain_descendant_of(parent, ancestor, seen)
+            for parent, children in self.upstream_chains.items()
+        )
+
+    def is_chain_descendant_of_input(self, chain: str) -> bool:
+        return self.is_chain_descendant_of(chain, 'INPUT')
 
     def is_chain_descendant_of_output(self, chain: str) -> bool:
-        if chain == 'OUTPUT':
-            return True
-        for parent, children in self.upstream_chains.items():
-            if chain in children:
-                return self.is_chain_descendant_of_output(parent)
-        return False
+        return self.is_chain_descendant_of(chain, 'OUTPUT')
 
     def get_used_chains(self) -> list[str]:
         return [c for c, count in self.chain_usage_counter.items() if count > 0]
@@ -3774,7 +3793,21 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if rule.ipt_chain not in self.FORBIDDEN_CHAINS:
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        # The hook decides, not the name of the chain: three passes of
+        # `Optimize1` run in front of this check and each of them may have
+        # moved the rule into a temporary chain the built-in one jumps to.
+        # The kernel refuses the match there just the same, and the
+        # activation stops at that command with every policy at DROP.
+        hook = next(
+            (
+                name
+                for name in self.FORBIDDEN_CHAINS
+                if ipt_comp.is_chain_descendant_of(rule.ipt_chain, name)
+            ),
+            '',
+        )
+        if not hook:
             self.tmp_queue.append(rule)
             return True
 
@@ -3786,7 +3819,7 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
         if not kept:
             self.compiler.abort(
                 rule,
-                f'Can not match a MAC address in the {rule.ipt_chain} chain, '
+                f'Can not match a MAC address in the {hook} chain, '
                 f'where the packet no longer carries one',
             )
             return True
@@ -3795,7 +3828,7 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
         self.compiler.warning(
             rule,
             f'Can not match the MAC address of "{mac_name}" in the '
-            f'{rule.ipt_chain} chain, where the packet no longer carries one; '
+            f'{hook} chain, where the packet no longer carries one; '
             f'the rule matches on the address alone',
         )
         self.tmp_queue.append(rule)
@@ -3821,10 +3854,12 @@ class CheckUserServiceInWrongChains(PolicyRuleProcessor):
         srv = rule.srv[0] if rule.srv else None
         chain = rule.ipt_chain
 
-        if (
-            isinstance(srv, UserService)
-            and chain not in ('OUTPUT', 'POSTROUTING')
-            and not ipt_comp.is_chain_descendant_of_output(chain)
+        # `Optimize1` may have moved the rule into a temporary chain, and a
+        # chain the OUTPUT or the POSTROUTING chain jumps to is as good a
+        # place for `-m owner` as the built-in one itself.
+        if isinstance(srv, UserService) and not any(
+            ipt_comp.is_chain_descendant_of(chain, name)
+            for name in ('OUTPUT', 'POSTROUTING')
         ):
             self.compiler.warning(
                 rule,
