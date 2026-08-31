@@ -339,12 +339,17 @@ load_interface_address() {
     $NFT add element "$family" "$table" "$setname" "{ $addrs }"
 }
 
+# A set that stays empty is a set no packet is in, so a Deny rule built on
+# it blocks nothing and an Accept rule lets nothing through.  Every loader
+# says so, and the function answers for all of them together rather than
+# handing its caller the status of whichever ran last.
 load_address_tables() {
-    :
-    load_interface_address "ip" "fwf_filter" "i_eth0" "eth0" "-4"
-    load_interface_address "ip" "fwf_filter" "i_eth1" "eth1" "-4"
-    load_interface_address "ip" "fwf_nat" "i_eth0" "eth0" "-4"
-    load_interface_address "ip" "fwf_nat" "i_eth1" "eth1" "-4"
+    fwf_set_failures=0
+    load_interface_address "ip" "fwf_filter" "i_eth0" "eth0" "-4" || fwf_set_failures=1
+    load_interface_address "ip" "fwf_filter" "i_eth1" "eth1" "-4" || fwf_set_failures=1
+    load_interface_address "ip" "fwf_nat" "i_eth0" "eth0" "-4" || fwf_set_failures=1
+    load_interface_address "ip" "fwf_nat" "i_eth1" "eth1" "-4" || fwf_set_failures=1
+    test "$fwf_set_failures" -eq 0
 }
 
 nft_ruleset() {
@@ -485,7 +490,10 @@ check_ruleset() {
 }
 
 script_body() {
-    nft_ruleset | $NFT -f /dev/stdin
+    # Without the "|| return 1" the function answers with the status of
+    # the last set it filled, and a set that is empty on purpose answers
+    # 0 - so a ruleset the kernel refused would be reported as installed.
+    nft_ruleset | $NFT -f /dev/stdin || return 1
     load_address_tables
 }
 

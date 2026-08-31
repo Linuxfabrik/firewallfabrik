@@ -450,8 +450,44 @@ configure_interfaces() {
  update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
+# The shell form of the policy is hundreds of separate commands, and the
+# status of the function that runs them is the status of the last one - so
+# a rule iptables refused in the middle left the ruleset incomplete while
+# the script reported a clean activation. script_body therefore points
+# $IPTABLES and $IP6TABLES at these two for as long as it runs, which
+# leaves every generated command line exactly as it was, and counts what
+# was refused. "set -e" is not an alternative: the first thing script_body
+# does is write kernel variables, which fail in a container and on a
+# read-only /proc, and a rule guarded by 'test -n "$i_eth0" &&' is false
+# whenever the interface has no address.
+fwf_run_tool() {
+ fwf_tool=$1
+ shift
+ "$fwf_tool" "$@" && return 0
+ fwf_status=$?
+ case " $* " in
+ *" -N "*) return "$fwf_status" ;;
+ esac
+ fwf_failed_commands=$((fwf_failed_commands + 1))
+ echo "Error: \"$fwf_tool $*\" failed" >&2
+ return "$fwf_status"
+}
+
+fwf_run_iptables() {
+ fwf_run_tool "$fwf_tool_v4" "$@"
+}
+
+fwf_run_ip6tables() {
+ fwf_run_tool "$fwf_tool_v6" "$@"
+}
+
 script_body() {
  :
+ fwf_failed_commands=0
+ fwf_tool_v4="$IPTABLES"
+ fwf_tool_v6="$IP6TABLES"
+ IPTABLES=fwf_run_iptables
+ IP6TABLES=fwf_run_ip6tables
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -467,6 +503,9 @@ script_body() {
  echo "Rule 1 (global)"
  #
  $IPTABLES -w 5 -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+ IPTABLES="$fwf_tool_v4"
+ IP6TABLES="$fwf_tool_v6"
+ test "$fwf_failed_commands" -eq 0
 }
 
 ip_forward() {

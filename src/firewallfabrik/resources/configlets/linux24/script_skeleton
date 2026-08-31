@@ -56,13 +56,62 @@ configure_interfaces() {
     {{$configure_interfaces}}
 }
 
+# The shell form of the policy is hundreds of separate commands, and the
+# status of the function that runs them is the status of the last one - so
+# a rule iptables refused in the middle left the ruleset incomplete while
+# the script reported a clean activation.  script_body therefore points
+# $IPTABLES and $IP6TABLES at these two for as long as it runs, which
+# leaves every generated command line exactly as it was, and counts what
+# was refused.  "set -e" is not an alternative: the first thing script_body
+# does is write kernel variables, which fail in a container and on a
+# read-only /proc, and a rule guarded by 'test -n "$i_eth0" &&' is false
+# whenever the interface has no address.
+fwf_run_tool() {
+    fwf_tool=$1
+    shift
+    "$fwf_tool" "$@" && return 0
+    fwf_status=$?
+##  A chain that is already there is not a failure: the script asks for
+##  every chain on every activation and redirects the answer away for that
+##  reason ("-N ... 2>/dev/null").
+    case " $* " in
+        *" -N "*) return "$fwf_status" ;;
+    esac
+    fwf_failed_commands=$((fwf_failed_commands + 1))
+    echo "Error: \"$fwf_tool $*\" failed" >&2
+    return "$fwf_status"
+}
+
+fwf_run_iptables() {
+    fwf_run_tool "$fwf_tool_v4" "$@"
+}
+
+fwf_run_ip6tables() {
+    fwf_run_tool "$fwf_tool_v6" "$@"
+}
+
 ## The colon keeps the function valid when a firewall compiles to no rules
 ## at all, the same guard the functions above use.  A shell function needs
 ## at least one command, so an empty body makes the whole script
 ## unparsable and nothing in it runs.
+##
+## $IPTABLES and $IP6TABLES name a shell function for as long as the body
+## runs, so that a command the tool refuses is counted instead of being
+## lost in the status of whichever command happened to run last.  Every
+## generated line is unchanged by it, and the two variables hold the tool
+## path again afterwards, which is what `check_tools`, `reset_all` and the
+## block, stop and status actions read.  See `fwf_run_tool`.
 script_body() {
     :
+    fwf_failed_commands=0
+    fwf_tool_v4="$IPTABLES"
+    fwf_tool_v6="$IP6TABLES"
+    IPTABLES=fwf_run_iptables
+    IP6TABLES=fwf_run_ip6tables
     {{$script_body}}
+    IPTABLES="$fwf_tool_v4"
+    IP6TABLES="$fwf_tool_v6"
+    test "$fwf_failed_commands" -eq 0
 }
 
 ip_forward() {

@@ -62,10 +62,13 @@ fi
 # `check_tools` and the block/stop actions exist in every script, differ by
 # design, and hold `$IPTABLES` without installing a rule of the policy.
 # Counting them added about 2000 to `missing` and 6800 to `extra`, both
-# constant, both hiding the number that means something.
+# constant, both hiding the number that means something.  The two lines
+# `script_body` uses to remember the tool paths hold `$IPTABLES` and
+# install nothing either, which is two `extra` per firewall.
 normalise() {
     awk '/^[a-zA-Z_][a-zA-Z0-9_]*\(\) *\{/{inb = ($1 == "script_body()")} inb' "$1" |
         grep -E '\$(IPTABLES|IP6TABLES)([^_A-Za-z]|$)|echo "-[AI] ' |
+        grep -vE '^[[:space:]]*fwf_tool_v[46]="\$(IPTABLES|IP6TABLES)"$' |
         sed -e 's/-w [0-9]*//' -e 's/-w //' \
             -e 's/ 2>\/dev\/null//' \
             -e 's/C[A-Za-z][0-9A-Za-z_-]*\(\.[0-9]\+\)\+/CHAIN/g' \

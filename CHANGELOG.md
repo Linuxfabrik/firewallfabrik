@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC, instead of dropping the "use kernel timezone" setting without a word.
 * Compiler (iptables): the chain a logged or accounting rule gets behind a negation is named after the part of the rule it belongs to, so two parts of one rule no longer share a chain.
 * Compiler (iptables, nftables): a NAT rule whose interface group turns out to be empty is reported instead of applying to every interface the firewall has.
+* Compiler (iptables, nftables): a generated script reports the activation as failed when any command of it was refused, instead of answering with the status of whichever command happened to run last - a rule the tool rejected in the middle left the ruleset incomplete under a clean "Firewall script is done".
 * Compiler (iptables, nftables): a branch into another firewall's rule set of the same name gets chains of its own, instead of sharing them with this firewall's policy - two rules then landed in one chain and the first of them decided for both.
 * Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
 * Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.

@@ -1360,6 +1360,10 @@ class CompilerDriver_nft(CompilerDriver):
 
         The set lives in the table its rules are in, so a table used by both
         the filter and the NAT rules is loaded once per table.
+
+        Each command records its own failure rather than being left to the
+        shell, because the function that holds them would otherwise answer
+        with the status of whichever ran last.
         """
         lines: list[str] = []
         for table, tables in (
@@ -1371,14 +1375,15 @@ class CompilerDriver_nft(CompilerDriver):
                 loader = _SET_LOADERS[kind]
                 lines.append(
                     f'    {loader} "{filter_family}" "{table}" '
-                    f'"{name}" "{source}" "{af}"'
+                    f'"{name}" "{source}" "{af}" || fwf_set_failures=1'
                 )
         for fam, tables in sorted(self.nat_address_tables.items()):
             for name, (source, ipv6, kind) in sorted(tables.items()):
                 af = '-6' if ipv6 else '-4'
                 loader = _SET_LOADERS[kind]
                 lines.append(
-                    f'    {loader} "{fam}" "{nat_table}" "{name}" "{source}" "{af}"'
+                    f'    {loader} "{fam}" "{nat_table}" "{name}" '
+                    f'"{source}" "{af}" || fwf_set_failures=1'
                 )
         return '\n'.join(lines)
 
