@@ -26,6 +26,7 @@ from firewallfabrik.gui.platform_settings import (
     PLATFORMS,
     get_enabled_os,
     get_enabled_platforms,
+    get_versions_for_platform,
 )
 
 
@@ -42,6 +43,10 @@ def _set_data_key(data: dict, key: str, value, default=None) -> None:
 
 # Reverse mapping: display name → internal key for host OS.
 _HOST_OS_INTERNAL = {v: k for k, v in HOST_OS.items()}
+
+# The same for the platform, so the release list can be looked up from
+# what the platform combo shows.
+_PLATFORM_INTERNAL = {v: k for k, v in PLATFORMS.items()}
 
 # Platform display name → settings dialog class.
 _PLATFORM_SETTINGS_DIALOG = {
@@ -87,7 +92,7 @@ class FirewallDialog(BaseObjectDialog):
         # A cluster has no release of its own, so its panel has no combo
         # for one; everything else on the two panels is the same.
         if self.version is not None:
-            self._set_combo_text(self.version, data.get('version', ''))
+            self._fill_versions(data.get('version', ''))
         host_os = data.get('host_OS', '')
         self._set_combo_text(self.hostOS, HOST_OS.get(host_os, host_os))
         self.inactive.setChecked(data.get('inactive') in (True, 'True'))
@@ -105,6 +110,10 @@ class FirewallDialog(BaseObjectDialog):
             getattr(self, attr).setText(text)
 
         self.platform.currentTextChanged.connect(self._update_settings_buttons)
+        if self.version is not None:
+            # The two platforms gate different things on the release, so
+            # the list belongs to the platform that is chosen.
+            self.platform.currentTextChanged.connect(self._platform_changed)
         self.hostOS.currentTextChanged.connect(self._update_settings_buttons)
         self._update_settings_buttons()
 
@@ -116,7 +125,8 @@ class FirewallDialog(BaseObjectDialog):
         data = dict(old_data)
         data['platform'] = self.platform.currentText()
         if self.version is not None:
-            data['version'] = self.version.currentText()
+            # The item carries the stored value; the text is the label.
+            data['version'] = self.version.currentData() or ''
         host_os_text = self.hostOS.currentText()
         data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
         _set_data_key(data, 'inactive', self.inactive.isChecked(), False)
@@ -143,6 +153,37 @@ class FirewallDialog(BaseObjectDialog):
         )
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.changed.emit()
+
+    def _platform_changed(self, _display=''):
+        """Re-offer the releases of the platform that is now chosen.
+
+        A release of the platform that was chosen before means nothing to
+        the new one, so it is not carried over - `FirewallDialog::
+        platformChanged` refills the list the same way and falls back to
+        its first entry.
+        """
+        self._fill_versions(self.version.currentData() or '', keep_unlisted=False)
+
+    def _fill_versions(self, stored, keep_unlisted=True):
+        """Fill the release combo and select *stored*.
+
+        Every item carries its stored value beside the label, because the
+        two differ: Firewall Builder stores "1.2.5 or earlier" as
+        ``lt_1.2.6``.  A value the list does not offer - a data file
+        written by another tool or by hand may name any release - is added
+        as an item of its own, where Firewall Builder overwrites it with
+        the first entry (`FirewallDialog::fillVersion`); showing the
+        object the way it is beats editing it for looking at it.
+        """
+        platform = _PLATFORM_INTERNAL.get(self.platform.currentText(), '')
+        self.version.clear()
+        for value, label in get_versions_for_platform(platform):
+            self.version.addItem(label, value)
+        index = self.version.findData(stored)
+        if index < 0 and stored and keep_unlisted:
+            self.version.addItem(stored, stored)
+            index = self.version.count() - 1
+        self.version.setCurrentIndex(max(index, 0))
 
     @staticmethod
     def _set_combo_text(combo, text):
