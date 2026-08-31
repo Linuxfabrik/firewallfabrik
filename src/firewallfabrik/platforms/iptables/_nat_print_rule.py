@@ -566,7 +566,14 @@ class NATPrintRule(NATRuleProcessor):
         tdst = ipt_comp.get_first_tdst(rule)
         tsrv = ipt_comp.get_first_tsrv(rule)
 
-        if rt == NATRuleType.Masq:
+        # Every branch asks for its own target, because a rule of this type
+        # does not always end in it: the negation expansions split a rule
+        # into a jump into a temporary chain and the rule that carries the
+        # translation, and both keep the rule type.  A `--to-ports`,
+        # `--random` or `--persistent` behind `-j <chain>` is an option the
+        # jump target does not have, which iptables refuses outright
+        # ("unknown option") and which stops the activation script.
+        if rt == NATRuleType.Masq and target == 'MASQUERADE':
             parts = []
             # Masquerading picks the address of the outgoing interface but
             # still takes a source port range, which is how a translation to
