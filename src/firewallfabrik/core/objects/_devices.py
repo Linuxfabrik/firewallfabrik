@@ -490,12 +490,18 @@ class Interface(Base):
     def is_unprotected(self) -> bool:
         """Is this interface marked "unprotected"?
 
-        Mirrors C++ ``Interface::isUnprotected()``.  The administrator
-        says with it that no rules are to be generated for this
-        interface, so anything that answers "every interface of the
-        firewall" has to leave it out.
+        Mirrors C++ ``Interface::isUnprotected()``, which answers for
+        *two* flags: the "unprotected interface" checkbox and the
+        "dedicated failover interface" one.  The administrator says with
+        either of them that no rules are to be generated for this
+        interface -- a dedicated failover link carries nothing but the
+        cluster's own heartbeat -- so anything that answers "every
+        interface of the firewall" has to leave it out.
         """
-        return bool((self.data or {}).get('unprotected', False))
+        data = self.data or {}
+        return bool(data.get('unprotected', False)) or bool(
+            data.get('dedicated_failover', False)
+        )
 
     def is_regular(self) -> bool:
         return (

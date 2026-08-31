@@ -78,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a rule whose source or destination is a host object reaches the chains it belongs in; on a bridging firewall outbound rules to a broadcast address were left out.
 * Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
 * Compiler (iptables, nftables): a rule written for "any interface except these" is no longer reported as shadowing an unrelated rule.
+* Compiler (iptables, nftables): a rule written for "any interface except these" leaves out an interface marked as a dedicated failover link, which carries nothing but the cluster's heartbeat.
 * Compiler (iptables, nftables): an ICMP service whose type or code is stored empty is read as "any" instead of breaking the compile.
 * Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
 * Compiler (iptables, nftables): an IP service naming a protocol number that does not exist is reported instead of matching every protocol.

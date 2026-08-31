@@ -103,6 +103,22 @@ def test_the_negation_leaves_an_unprotected_interface_out():
     assert [iface.name for iface in rule.itf] == ['eth0', 'eth2']
 
 
+def test_the_negation_leaves_a_dedicated_failover_interface_out():
+    """`Interface::isUnprotected()` answers for that checkbox as well.
+
+    A dedicated failover link carries the cluster's heartbeat and nothing
+    else, so Firewall Builder treats it exactly like an unprotected
+    interface and writes no rule for it.
+    """
+    failover = _interface('eth4', data={'dedicated_failover': True})
+    fw = _Firewall([ETH0, ETH1, ETH2, ETH3, LO, failover])
+    rule = _Rule([ETH1, ETH3])
+
+    assert expand_interface_negation(_Compiler(fw), rule, 'itf')
+
+    assert [iface.name for iface in rule.itf] == ['eth0', 'eth2']
+
+
 def test_the_negation_leaves_a_bridge_port_out_unless_the_firewall_bridges():
     """A routing firewall sees the packet on the bridge, not on the port."""
     bridge = _interface('br0', options={'type': 'bridge'})
