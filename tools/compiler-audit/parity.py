@@ -425,13 +425,21 @@ def norm_flags(value: str) -> str | None:
     return None
 
 
-def value_items(value: str):
-    """Yield one comparable item per value, a set as its elements."""
+def value_items(value: str, keyword: str = ''):
+    """Yield one comparable item per value, a set as its elements.
+
+    *keyword* is what the value belongs to, because the flag folding is
+    only right for one of them: `5/second` is a rate and `norm_flags`
+    happily reads it as the TCP flags `fin,rst` over the mask `second`,
+    which turned every rate limit standing beside a flag match into a
+    difference on both sides.
+    """
     value = re.sub(r'\s+', ' ', value.strip())
-    flags = norm_flags(value)
-    if flags is not None:
-        yield flags
-        return
+    if keyword == 'tcp flags':
+        flags = norm_flags(value)
+        if flags is not None:
+            yield flags
+            return
     negation = ''
     match = re.fullmatch(r'(!=)\s*(.*)', value)
     if match:
@@ -454,7 +462,7 @@ def value_pairs(text: str) -> collections.Counter:
     for index, hit in enumerate(hits):
         end = hits[index + 1].start() if index + 1 < len(hits) else len(part)
         keyword = SYNONYMS.get(hit.group(0), hit.group(0))
-        for item in value_items(part[hit.end() : end]):
+        for item in value_items(part[hit.end() : end], keyword):
             found[(keyword, item)] += 1
     return found
 
@@ -462,11 +470,18 @@ def value_pairs(text: str) -> collections.Counter:
 def fold_spellings(want: set, have: set) -> tuple[set, set]:
     """Drop the pairs whose two sides say the same thing in different words."""
     # iptables spells a negation as a temporary chain that RETURNs on the
-    # positive match; nftables writes `!=`.
+    # positive match; nftables writes `!=`.  A `tcp flags` value carries its
+    # operator inside the folded spelling `norm_flags` produces, so the
+    # positive side of that pair reads `== <flags> / <mask>` rather than the
+    # bare value every other keyword has.
     for keyword, value in list(have):
-        if value.startswith('!= ') and (keyword, value[3:]) in want:
-            have.discard((keyword, value))
-            want.discard((keyword, value[3:]))
+        if not value.startswith('!= '):
+            continue
+        for positive in (value[3:], f'== {value[3:]}'):
+            if (keyword, positive) in want:
+                have.discard((keyword, value))
+                want.discard((keyword, positive))
+                break
     # The iptables NAT pipeline writes an address range out as the CIDR
     # blocks covering it; nftables matches the range natively.
     for keyword, value in list(have):
