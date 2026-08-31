@@ -1685,6 +1685,14 @@ failure branches cannot use it.  This holds for `_print_target`,
 for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
 `_print_hashlimit` on nftables.
 
+A rule element is rendered out of several objects, and the object that
+cannot be rendered is what says why: `_print_addr` names it and its
+reason, and the element around it adds a sentence of its own only when
+no object gave one - which is the case of an object that carries no
+address at all.  Both nftables print rules pass a `reasons` list down
+for that.  Two errors about one rule, the second of them the vaguer, is
+how a report stops being read.
+
 ### Intentional deviations
 
 - `DecideOnChainIfLoopback` — for direction Both, splits into INPUT+OUTPUT rules; C++ sets only one chain. This is deliberate, not a gap.
