@@ -526,14 +526,16 @@ def compare_values(
 def fold_implied_protocol(found: collections.Counter) -> set[str]:
     """Return the keywords of one side with the implied ones taken out.
 
-    A port or ICMP-type clause carries its own protocol dependency in
-    nftables, so an explicit `meta l4proto` next to it says nothing new.
-    `iptables-translate` writes one because the iptables command needed a
-    `-p` for its match module, we leave it out - the two rules match the
-    same packets either way.
+    A port, ICMP-type or TCP-flags clause carries its own protocol
+    dependency in nftables, so an explicit `meta l4proto` next to it says
+    nothing new: `tcp flags syn,ack / syn,ack` alone compiles to `meta load
+    l4proto; cmp eq 6` and then the flag test, which `nft --debug=netlink`
+    prints back.  `iptables-translate` writes the protocol out because the
+    iptables command needed a `-p` for its match module, we leave it out -
+    the two rules match the same packets either way.
     """
     names = set(found)
-    if names & {'tcp dport', 'tcp sport', 'icmp type', 'icmp code'}:
+    if names & {'tcp dport', 'tcp sport', 'tcp flags', 'icmp type', 'icmp code'}:
         names.discard('ip protocol')
     return names
 
