@@ -81,6 +81,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
     check_interface_name,
+    custom_action_is_iptables_syntax,
     custom_service_code,
     get_log_copy_range,
     get_log_netlink_group,
@@ -2065,6 +2066,19 @@ class PrintRule(PolicyRuleProcessor):
                         rule,
                         'rule with a custom action has no target to run; '
                         'the rule is left out',
+                    )
+                    return None
+                if not custom_action_is_iptables_syntax(custom_str):
+                    # An nftables statement here is a firewall that was
+                    # switched to nftables and back, or one written for the
+                    # other platform.  iptables answers it with "unknown
+                    # option" and the activation stops with every policy
+                    # already at DROP.
+                    self.compiler.error(
+                        rule,
+                        f'the custom action "{custom_str}" is not an iptables '
+                        'target; an iptables target starts with "-", as in '
+                        '"-j TCPMSS --set-mss 1400". The rule is left out',
                     )
                     return None
                 return f' {custom_str}'

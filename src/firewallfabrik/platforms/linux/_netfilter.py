@@ -1322,6 +1322,32 @@ def custom_service_code(srv, platform: str) -> str:
     )
 
 
+def custom_action_is_iptables_syntax(custom_str: str) -> bool:
+    """Whether a Custom action's text is written as an iptables target.
+
+    A rule carries its Custom action as one string with no platform beside
+    it - unlike a Custom Service, which carries one code per platform - so
+    the firewall's own platform is all that says which syntax it is in.
+    Nothing kept the two in step: switching a firewall from iptables to
+    nftables in the editor leaves the text as it was, and both printers
+    append it to the rule verbatim.  The result costs more than the rule.
+    iptables answers an nftables statement with "unknown option" and stops
+    the activation script with every policy already at DROP; nftables
+    answers an iptables target with a syntax error and refuses the
+    **whole** ruleset, so the firewall keeps the rules it had.
+
+    The two syntaxes are told apart by their first character, which is the
+    distinction the field's own tooltip makes: an iptables target is a
+    command-line option sequence and begins with a ``-`` (``-j TCPMSS
+    --set-mss 1400``), while an nftables statement begins with a keyword
+    (``tcp option maxseg size set 1400``).  nftables has no statement
+    starting with ``-`` at all: its scanner reads an identifier as a
+    letter, ``_`` or ``.`` followed by more of the same
+    (netfilter nftables src/scanner.l).
+    """
+    return custom_str.lstrip().startswith('-')
+
+
 # Interfaces whose names differ only in a trailing number are one group,
 # named after the pattern that matches them all: eth0, eth1 and eth2
 # become `eth+`.  fwbuilder builds that map once per compiler

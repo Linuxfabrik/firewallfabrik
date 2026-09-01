@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a rule whose Custom action holds a command written for the other packet filter is reported and left out, instead of stopping the activation with every policy already at DROP on iptables and costing the whole ruleset on nftables - the text is one field with no platform beside it, so nothing rewrote it when the firewall was switched over.
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
 * Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
 * Compiler (iptables): a firewall that handles IPv6 hardens its IPv6 stack against redirects and source routing even when its IPv6 rules were all dropped, the way the nftables compiler already does.

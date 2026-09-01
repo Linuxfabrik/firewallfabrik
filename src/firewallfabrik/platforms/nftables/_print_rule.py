@@ -72,6 +72,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
+    custom_action_is_iptables_syntax,
     custom_service_code,
     get_log_copy_range,
     get_log_netlink_group,
@@ -2638,6 +2639,20 @@ class PrintRule_nft(PolicyRuleProcessor):
                         rule,
                         'rule with a custom action has no statement to run; '
                         'the rule is left out',
+                    )
+                    return None
+                if custom_action_is_iptables_syntax(custom_str):
+                    # `DecideOnTarget` has already refused a firewall whose
+                    # platform is not nftables; this is one that says
+                    # nftables and carries text nobody rewrote when it was
+                    # switched over.  nft answers the `-` with a syntax
+                    # error and refuses the whole ruleset over it.
+                    self.compiler.error(
+                        rule,
+                        f'the custom action "{custom_str}" is an iptables '
+                        'target, not an nftables statement; an nftables '
+                        'statement starts with a keyword, as in "tcp option '
+                        'maxseg size set 1400". The rule is left out',
                     )
                     return None
                 return custom_str
