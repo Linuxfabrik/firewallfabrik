@@ -46,7 +46,26 @@ update_bridge() {
         # The port list arrives as one argument, so the splitting is meant.
         # shellcheck disable=SC2048,SC2086
         for subint in $*; do
-          echo "${subint}@$bridge_interface"
+          case $subint in
+            *'*'|*'+')
+                ## A port named with a wildcard stands for every interface
+                ## whose name starts with what is in front of it - "vnet+"
+                ## for the tap devices of the virtual machines, which come
+                ## and go under names the configuration cannot know.  Taken
+                ## literally it is a device that is never there, so nothing
+                ## is added and, worse, every port of the bridge counts as
+                ## one the configuration does not name and is removed: the
+                ## bridge ends up empty, on every activation.
+                for port in $("$IP" -brief link show 2>/dev/null | awk '{print $1}'); do
+                    port=${port%%@*}
+                    test "$port" = "$bridge_interface" && continue
+                    case $port in
+                      "${subint%[*+]}"*) echo "${port}@$bridge_interface" ;;
+                    esac
+                done
+                ;;
+            *) echo "${subint}@$bridge_interface" ;;
+          esac
         done | sort
     )
 

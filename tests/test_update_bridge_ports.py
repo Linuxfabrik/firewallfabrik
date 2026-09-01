@@ -35,12 +35,14 @@ from firewallfabrik.driver._configlet import Configlet
 _STUB_IP = """#!/bin/sh
 # `ip link show <bridge> type bridge` - the bridge is already there.
 # `ip link show master <bridge>`      - and carries no port yet.
+# `ip -brief link show`               - what the machine has.
 # Everything else is recorded.
+if [ "$1" = '-brief' ]; then
+    printf '%s\\n' 'lo' 'br1' 'vnet0@if7' 'vnet1' 'eth2' 'eth3' 'eth4'
+    exit 0
+fi
 case "$1 $2" in
-    'link show') case "$3" in
-                     master) exit 0 ;;
-                     *)      exit 0 ;;
-                 esac ;;
+    'link show') exit 0 ;;
 esac
 echo "$@" >> "$IP_LOG"
 """
@@ -86,4 +88,28 @@ def test_every_port_is_enslaved_to_the_bridge(tmp_path, ports, expected):
         for line in commands
         if line.startswith('link set ') and line.endswith(' master br1')
     ]
+    assert enslaved == expected
+
+
+@pytest.mark.parametrize(
+    ('ports', 'expected'),
+    [
+        # "vnet+" is the tap devices of the virtual machines, whose names
+        # the configuration cannot know one by one.
+        ('vnet+', ['vnet0', 'vnet1']),
+        # The same wildcard in the spelling the object stores.
+        ('vnet*', ['vnet0', 'vnet1']),
+        # A wildcard beside an ordinary port.
+        ('eth2 vnet+', ['eth2', 'vnet0', 'vnet1']),
+    ],
+)
+def test_a_wildcard_port_stands_for_the_interfaces_it_matches(
+    tmp_path, ports, expected
+):
+    commands = _run_update_bridge(tmp_path, ports)
+    enslaved = sorted(
+        line.split()[2]
+        for line in commands
+        if line.startswith('link set ') and line.endswith(' master br1')
+    )
     assert enslaved == expected
