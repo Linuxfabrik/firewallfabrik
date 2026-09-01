@@ -20,6 +20,7 @@ not.
 | `fill-nft-sets.sh` | and do the sets the script fills after the load actually fill? | a named set that stays empty, which is a set no packet is in: a Deny rule that blocks nothing, an Accept rule that lets nothing through |
 | `replay-nft-actions.sh` | do the "block" and "stop" actions of an nftables script do what they say? | a block that leaves an address family open or a hook unhooked - the code paths an administrator reaches once something has already gone wrong |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
+| `replay-address-tables.sh` | are the ipsets an address table needs there by the time the rules that name them are installed? | a `-m set` rule the tool refuses, and a set list left empty - which is a set no packet is in |
 | `replay-status.sh` | after a real activation, does the script agree that it is up? | a firewall that answers "status" with "not configured" while its rules are loaded, which an init system and a monitoring check read as dead |
 | `replay-twice.sh` | does the second activation leave the same ruleset as the first? | a rule the reset does not recognise as ours, appended again on every activation - one more copy per boot, per change, per reload |
 | `replay-interfaces.sh` | does `configure_interfaces` run, run twice, and leave the bridges it named? | an interface block that stops the activation before a rule is installed, or a bridge with ports missing from it |
@@ -44,12 +45,20 @@ tools/compiler-audit/load-nft.sh /tmp/audit
 tools/compiler-audit/fill-nft-sets.sh /tmp/audit
 tools/compiler-audit/replay-nft-actions.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
+tools/compiler-audit/replay-address-tables.sh /tmp/audit
 tools/compiler-audit/replay-status.sh /tmp/audit
 tools/compiler-audit/replay-twice.sh /tmp/audit
 tools/compiler-audit/replay-routes.sh /tmp/audit
 tools/compiler-audit/replay-interfaces.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 ```
+
+`replay-iptables.sh` calls `script_body` and nothing above it, so the
+block that creates the ipsets of a run-time address table never runs and
+every `-m set` rule of such a firewall is refused with
+`Set <name> doesn't exist`.  That is the oracle's own blind spot and not
+a finding; `replay-address-tables.sh` is the one that runs the loading
+first and then asks whether the sets are there.
 
 `replay-iptables.sh` overwrites the tool paths the script sets for itself.
 A firewall may configure its own `/usr/local/sbin/iptables`, which does not
@@ -68,9 +77,10 @@ it at a ruleset with an invented user *and* a bad address and only the
 address comes back.
 
 `check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
-`replay-iptables.sh`, `replay-interfaces.sh`, `replay-routes.sh`,
-`replay-status.sh`, `replay-twice.sh` and `check-iptables-restore.sh` need
-`unshare`, `nft` and `iptables`. They run everything in an unprivileged
+`replay-iptables.sh`, `replay-address-tables.sh`, `replay-interfaces.sh`,
+`replay-routes.sh`, `replay-status.sh`, `replay-twice.sh` and
+`check-iptables-restore.sh` need `unshare`, `nft` and `iptables`
+(`replay-address-tables.sh` also needs `ipset`). They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
 Without the namespace `nft --check` fails with "cache initialization failed:
 Operation not permitted", because it cannot open a netlink socket.
