@@ -32,7 +32,7 @@ pytest.importorskip('PySide6', reason='the GUI extra is not installed')
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from firewallfabrik.gui.platform_settings import (  # noqa: E402
+from firewallfabrik.gui.platform_settings import (
     PLATFORM_VERSIONS,
     get_versions_for_platform,
 )
