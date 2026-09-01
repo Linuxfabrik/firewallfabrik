@@ -116,9 +116,20 @@ EOF
         problems="$problems"$'\n'"not idempotent, the second run still says:"$'\n'"$second"
     while IFS= read -r line; do
         [ -z "$line" ] && continue
-        want=$(grep -oE "^ *update_bridge +${line%%:*} +\"[^\"]*\"" "$script" |
-               sed -e 's/^[^"]*"//' -e 's/"$//' | tr ' ' '\n' | sort | tr '\n' ' ')
-        have=$(printf '%s' "${line#*: }" | tr ' ' '\n' | sort | tr '\n' ' ')
+        # A port named with a wildcard stands for whatever the machine
+        # happens to carry and the harness creates none of those, so it
+        # neither demands nor forbids a member: only the literal ports are
+        # compared, and whatever a wildcard covers is set aside.
+        want_all=$(grep -oE "^ *update_bridge +${line%%:*} +\"[^\"]*\"" "$script" |
+                   sed -e 's/^[^"]*"//' -e 's/"$//' | tr ' ' '\n' | grep -v '^$')
+        wild=$(printf '%s\n' "$want_all" | sed -n 's/[*+]$//p')
+        want=$(printf '%s\n' "$want_all" | grep -vE '[*+]$' | sort | tr '\n' ' ')
+        have=$(printf '%s' "${line#*: }" | tr ' ' '\n' | grep -v '^$' |
+               awk -v W="$wild" 'BEGIN { n = split(W, w, "\n") }
+                                 { for (i = 1; i <= n; i++)
+                                     if (w[i] != "" && substr($0, 1, length(w[i])) == w[i]) next
+                                   print }' |
+               sort | tr '\n' ' ')
         [ "$want" != "$have" ] &&
             problems="$problems"$'\n'"bridge ${line%%:*}: asked for [${want% }], has [${have% }]"
     done <<<"$bridges"
