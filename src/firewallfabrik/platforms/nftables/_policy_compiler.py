@@ -2119,8 +2119,12 @@ class FinalizeChain(PolicyRuleProcessor):
                 # Prerouting is the first mangle hook a packet crosses, so
                 # an accept there covers every path through the box.
                 rule.ipt_chain = 'prerouting'
-            self.tmp_queue.append(rule)
-            return True
+            # No return here: the forwarding check at the end of this
+            # method is written below both branches in fwbuilder
+            # (PolicyCompiler_ipt::finalizeChain), and a mangle rule whose
+            # direction is "both" keeps the forward chain it was given
+            # above.
+            return self._done(rule)
 
         # Exclude AddressRange from chain hijacking - same reasoning
         # as in DecideOnChainIfSrcFW / DecideOnChainIfDstFW
@@ -2164,12 +2168,19 @@ class FinalizeChain(PolicyRuleProcessor):
             elif src_matches:
                 rule.ipt_chain = 'output'
 
-        # A rule that ended up in the forward chain only because nothing
-        # claimed it for input or output has no traffic to see on a firewall
-        # that does not forward.  Same reading as the iptables compiler
-        # (fwbuilder PolicyCompiler_ipt::finalizeChain, bug #1040599): only
-        # an explicit "off" counts, "no change" leaves the kernel setting
-        # alone and is read as forwarding.
+        return self._done(rule)
+
+    def _done(self, rule: CompRule) -> bool:
+        """Queue the rule unless it landed in a chain that sees no traffic.
+
+        A rule that ended up in the forward chain only because nothing
+        claimed it for input or output has nothing to see on a firewall
+        that does not forward.  Same reading as the iptables compiler
+        (fwbuilder PolicyCompiler_ipt::finalizeChain, bug #1040599): only
+        an explicit "off" counts, "no change" leaves the kernel setting
+        alone and is read as forwarding.
+        """
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
         if rule.ipt_chain == 'forward' and forwarding_is_off(
             nft_comp.fw, bool(nft_comp.ipv6_policy)
         ):
