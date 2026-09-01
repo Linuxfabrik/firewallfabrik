@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" recognises an interface the firewall names with a wildcard, instead of taking its own dial-up link down.
 * Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" no longer takes the loopback down on a firewall whose object does not list it, which cut off every service on the machine itself.
 * Compiler (iptables, nftables): an interface whose name is longer than an interface name can be is left out of the interface configuration and reported, instead of stopping every activation before the first rule is installed.
+* Compiler (iptables, nftables): a NAT rule whose destination is a host known only by its MAC address is reported for what it is, instead of being told that no interface is on that network.
 * Compiler (iptables, nftables): a NAT rule that translates to an address range says that the firewall is not given those addresses, instead of leaving the translated traffic to fail silently.
 * Compiler (iptables, nftables): a firewall whose NAT rule translates to an address none of its interfaces is on says so, where the message was raised and thrown away - the rule then quietly did not work, because the firewall never answered ARP for that address.
 * Compiler (iptables, nftables): a firewall that configures its own bridges attaches every port to them, where until now only the last port of each bridge was attached and the rest stayed outside it.

@@ -153,6 +153,21 @@ class OSConfigurator(BaseCompiler):
         if not addr_str:
             return []
 
+        try:
+            ipaddress.ip_address(addr_str.split('/', 1)[0])
+        except ValueError:
+            # A MAC address reaches here: `addVirtualAddress` takes the
+            # first object of the rule element, and a host known by its MAC
+            # alone puts a PhysAddress there.  Firewall Builder hands it on
+            # as well and reports it, but the sentence below this one would
+            # say that no interface is on that network, which of a MAC is
+            # not a statement at all.
+            self.warning(
+                f'Can not add a virtual address for object "{addr.name}": '
+                f'"{addr_str}" is not an IP address'
+            )
+            return []
+
         is_network = expand_network and isinstance(addr, (Network, NetworkIPv6))
         host_prefix = 128 if isinstance(addr, NetworkIPv6) else 32
         try:

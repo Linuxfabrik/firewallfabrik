@@ -65,7 +65,7 @@ devs=\$( { grep -oE 'update_addresses_of_interface "[^ "]+' "$script" | sed 's/.
 bridges=\$(grep -oE '^ *sync_bridge_interfaces +.*' "$script" |
               sed 's/^ *sync_bridge_interfaces  *//' | tr ' ' '\n' | sort -u)
 for d in \$devs; do
-    case \$d in lo|*'*'|*'+'|'') continue ;; esac
+    case \$d in lo|*'*'|*'+'|*'\$'*|*'\"'*|'') continue ;; esac
     printf '%s\n' "\$bridges" | grep -qx "\$d" && continue
     ip link add "\$d" type dummy 2>/dev/null && ip link set "\$d" up
 done
