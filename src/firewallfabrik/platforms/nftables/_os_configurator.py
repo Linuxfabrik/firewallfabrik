@@ -393,6 +393,8 @@ class OSConfigurator_nft(OSConfigurator):
         interfaces = []
         for iface in self.fw.interfaces:
             name = iface.name
+            if not self.interface_exists_on_the_machine(iface):
+                continue
             if name and '*' not in name and name not in interfaces:
                 interfaces.append(name)
 
@@ -413,6 +415,8 @@ class OSConfigurator_nft(OSConfigurator):
         gencmd: list[str] = []
 
         for iface in self.fw.interfaces:
+            if not self.interface_exists_on_the_machine(iface):
+                continue
             should_manage, update_addresses, ignore_addresses = (
                 int_prop.manage_ip_addresses(iface)
             )
@@ -454,6 +458,8 @@ class OSConfigurator_nft(OSConfigurator):
         result = ''
         for iface in self.fw.interfaces:
             if not iface.is_dynamic():
+                continue
+            if not self.interface_exists_on_the_machine(iface):
                 continue
             name = iface.name
             if '*' in name:

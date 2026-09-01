@@ -237,6 +237,16 @@ def nat_interface_problem(
 MAX_INTERFACE_NAME_LENGTH = 15
 
 
+def interface_name_fits(name: str) -> bool:
+    """Whether the kernel can carry an interface of this name.
+
+    A wildcard suffix is not part of the name: iptables reads ``eth+`` and
+    nftables ``eth*`` as a pattern, and only what stands in front of it
+    has to fit.
+    """
+    return not name or len(name.rstrip('*+')) <= MAX_INTERFACE_NAME_LENGTH
+
+
 def check_interface_name(compiler, name: str, already_reported: set[str]) -> bool:
     """Whether a rule can match on *name*, reporting the reason once.
 
@@ -246,7 +256,7 @@ def check_interface_name(compiler, name: str, already_reported: set[str]) -> boo
     the whole ruleset, so the rule is left out rather than emitted without
     its interface match, which would widen it to every interface.
     """
-    if not name or len(name.rstrip('*+')) <= MAX_INTERFACE_NAME_LENGTH:
+    if interface_name_fits(name):
         return True
     if getattr(compiler, 'muted_now', False):
         # Marking the name as reported now would swallow the message: the

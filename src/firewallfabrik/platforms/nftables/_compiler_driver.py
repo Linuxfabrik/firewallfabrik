@@ -1179,13 +1179,6 @@ class CompilerDriver_nft(CompilerDriver):
         comment_text = (fw.comment or '').rstrip('\n')
         comment = _prepend('#  ', comment_text) if comment_text else ''
 
-        # Build errors/warnings block
-        self.collect_os_configurator_messages(oscnf)
-        all_messages = self.all_errors + self.all_warnings
-        errors_and_warnings = ''
-        if all_messages:
-            errors_and_warnings = '\n'.join(f'# {err}' for err in all_messages)
-
         # Management access for block action. The GUI / .fwb store this
         # as the "mgmt_ssh" boolean plus "mgmt_addr" (same keys as the
         # iptables compiler and fwbuilder); the backup SSH rule is only
@@ -1315,6 +1308,16 @@ class CompilerDriver_nft(CompilerDriver):
             if verify_interfaces_opt:
                 raw = textwrap.dedent(oscnf.print_verify_interfaces_commands()).strip()
                 verify_interfaces_code = textwrap.indent(raw, '    ')
+
+        # Build errors/warnings block.  After the interface block, not
+        # before it: the OS configurator reports while it writes that
+        # block, and a message raised after it was collected never
+        # reaches the script.
+        self.collect_os_configurator_messages(oscnf)
+        all_messages = self.all_errors + self.all_warnings
+        errors_and_warnings = ''
+        if all_messages:
+            errors_and_warnings = '\n'.join(f'# {err}' for err in all_messages)
 
         # Build manifest line for installer
         fw_id_str = str(fw.id)

@@ -58,6 +58,41 @@ class OSConfigurator(BaseCompiler):
         self.virtual_addresses: list = []
         self.virtual_addresses_for_nat: dict[str, str] = {}
         self.known_interfaces: list[str] = []
+        self._reported_long_interfaces: set[str] = set()
+
+    def interface_exists_on_the_machine(self, iface: Interface) -> bool:
+        """Whether the script can talk about this interface at all.
+
+        A name longer than IFNAMSIZ-1 cannot be on the machine - the
+        kernel enforces the limit - so nothing the script says about it
+        can work.  `update_addresses_of_interface` answers a name it does
+        not find with "Interface <name> does not exist" and `exit 1`, and
+        that stops the activation before a single rule is installed, on
+        every run, for good.  The rules matching on such an interface are
+        already left out with the same reason (`check_interface_name` in
+        `platforms/linux/_netfilter.py`); the interface block has to ask
+        the same question.
+
+        Reported once per name, because every caller walks the same list
+        of interfaces.
+        """
+        from firewallfabrik.platforms.linux._netfilter import (
+            MAX_INTERFACE_NAME_LENGTH,
+            interface_name_fits,
+        )
+
+        name = iface.name or ''
+        if interface_name_fits(name):
+            return True
+        if name not in self._reported_long_interfaces:
+            self._reported_long_interfaces.add(name)
+            self.warning(
+                f'Interface name "{name}" is longer than the '
+                f'{MAX_INTERFACE_NAME_LENGTH} characters an interface name '
+                'can be, so the firewall cannot have it and the script does '
+                'not configure it. Rename the interface.'
+            )
+        return False
 
     def prolog(self) -> str:
         return ''
