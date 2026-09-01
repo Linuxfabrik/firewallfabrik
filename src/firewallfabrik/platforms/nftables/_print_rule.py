@@ -91,6 +91,7 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_set_reference_name,
 )
 from firewallfabrik.platforms.nftables._utils import (
+    NFT_IP_OPTION_FIRST_RELEASE,
     NFT_TIME_FIRST_RELEASE,
     nft_feature_available,
 )
@@ -203,26 +204,36 @@ _IP_OPTION_KEYWORDS = {
 }
 
 
-def print_ip_option_matches(data: dict) -> tuple[list[str], list[str]]:
+def print_ip_option_matches(
+    data: dict, option_match_available: bool = True
+) -> tuple[list[str], list[str], list[str]]:
     """Return the nftables IPv4-option matches of an IPService.
 
     Mirrors the ``-m ipv4options`` match the iptables print rules emit.
-    Returns the list of match expressions and the list of requested options
-    nftables cannot express, so the caller can report them.
+    Returns the list of match expressions, the list of requested options
+    nftables cannot express at all, and the list of options the release the
+    firewall is compiled for is too old for, so the caller can report each
+    with the reason that belongs to it.
 
     ``any_opt`` ("match any IP option") becomes ``ip hdrlength > 5``: an IPv4
     header carries options exactly when it is longer than the 5 words of the
-    fixed header.
+    fixed header.  That is an ordinary header field, so it is written
+    whatever the release; only the named options need
+    `NFT_IP_OPTION_FIRST_RELEASE`.
     """
     if _is_true(data.get('any_opt')):
-        return (['ip hdrlength > 5'], [])
+        return (['ip hdrlength > 5'], [], [])
 
     matches = []
+    too_new = []
     for flag, keyword in sorted(_IP_OPTION_KEYWORDS.items()):
         if _is_true(data.get(flag)):
-            matches.append(f'ip option {keyword} exists')
+            if option_match_available:
+                matches.append(f'ip option {keyword} exists')
+            else:
+                too_new.append(keyword)
     unsupported = ['timestamp'] if _is_true(data.get('ts')) else []
-    return (matches, unsupported)
+    return (matches, unsupported, too_new)
 
 
 def print_mark_set(tag_code: str) -> str:
@@ -1321,7 +1332,10 @@ class PrintRule_nft(PolicyRuleProcessor):
             if not self.compiler.ipv6_policy:
                 # IP options are an IPv4 header feature; the iptables compiler
                 # also emits `-m ipv4options` for IPv4 policies only.
-                opt_matches, opt_unsupported = print_ip_option_matches(data)
+                opt_matches, opt_unsupported, opt_too_new = print_ip_option_matches(
+                    data,
+                    nft_feature_available(self.compiler, NFT_IP_OPTION_FIRST_RELEASE),
+                )
                 parts.extend(opt_matches)
                 for name in opt_unsupported:
                     self.compiler.error(
@@ -1329,6 +1343,14 @@ class PrintRule_nft(PolicyRuleProcessor):
                         f'IP service matching the "{name}" IP option is not '
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
+                    )
+                    unrenderable = True
+                for name in opt_too_new:
+                    self.compiler.error(
+                        rule,
+                        f'nftables before {NFT_IP_OPTION_FIRST_RELEASE} cannot '
+                        f'match the "{name}" IPv4 header option; the rule is '
+                        'left out',
                     )
                     unrenderable = True
             elif has_ip_options(data):

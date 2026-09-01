@@ -70,6 +70,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     tcp_flags_match_nft,
 )
 from firewallfabrik.platforms.nftables._utils import (
+    NFT_IP_OPTION_FIRST_RELEASE,
     NFT_NETMAP_FIRST_RELEASE,
     nft_feature_available,
 )
@@ -635,7 +636,10 @@ class NATPrintRule_nft(NATRuleProcessor):
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
             if not self.compiler.ipv6_policy:
-                opt_matches, opt_unsupported = print_ip_option_matches(data)
+                opt_matches, opt_unsupported, opt_too_new = print_ip_option_matches(
+                    data,
+                    nft_feature_available(self.compiler, NFT_IP_OPTION_FIRST_RELEASE),
+                )
                 ip_parts.extend(opt_matches)
                 for name in opt_unsupported:
                     self.compiler.error(
@@ -643,6 +647,14 @@ class NATPrintRule_nft(NATRuleProcessor):
                         f'IP service matching the "{name}" IP option is not '
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
+                    )
+                    return None
+                for name in opt_too_new:
+                    self.compiler.error(
+                        rule,
+                        f'nftables before {NFT_IP_OPTION_FIRST_RELEASE} cannot '
+                        f'match the "{name}" IPv4 header option; the rule is '
+                        'left out',
                     )
                     return None
             if not neg:

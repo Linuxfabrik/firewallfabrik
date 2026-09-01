@@ -26,6 +26,7 @@ from firewallfabrik.platforms.iptables._utils import version_compare
 
 __all__ = [
     'DEFAULT_NFTABLES_VERSION',
+    'NFT_IP_OPTION_FIRST_RELEASE',
     'NFT_NETMAP_FIRST_RELEASE',
     'NFT_TIME_FIRST_RELEASE',
     'get_nftables_version',
@@ -38,6 +39,15 @@ __all__ = [
 # nftables the machine runs, and assuming the oldest known release would
 # take away constructs every current distribution can parse.
 DEFAULT_NFTABLES_VERSION = '1.1'
+
+# `ip option <name> exists`, which an IP Service matching a source-route,
+# record-route or router-alert option compiles to.  Matching an IPv4 header
+# option needs the exthdr expression to know the IPv4 operation
+# (`NFT_EXTHDR_OP_IPV4`), which the kernel gained in Linux 5.3 and nftables
+# in v0.9.2 (src/ipopt.c, "exthdr: add support for matching IPv4 options",
+# 2019-07-03).  `ip hdrlength > 5`, which "match any IP option" compiles to,
+# is an ordinary header field and needs none of it.
+NFT_IP_OPTION_FIRST_RELEASE = '0.9.2'
 
 # `meta hour`, `meta day` and `meta time`, which a rule carrying a Time
 # object compiles to.  The kernel gained the three in Linux 5.4 and

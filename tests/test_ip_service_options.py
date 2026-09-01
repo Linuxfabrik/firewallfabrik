@@ -30,12 +30,20 @@ from firewallfabrik.platforms.iptables._utils import DEFAULT_IPTABLES_VERSION
 from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
 
 
+class _Firewall:
+    """Enough of a firewall for the nftables release gates."""
+
+    platform = 'nftables'
+    version = ''
+
+
 class _Compiler:
     """The bit of a policy compiler the IP-service branch reaches for."""
 
     def __init__(self, ipv6: bool = False) -> None:
         self.ipv6_policy = ipv6
         self.shared_inet_table = False
+        self.fw = _Firewall()
         self.messages: list[str] = []
 
     def error(self, _rule, msg: str = '') -> None:

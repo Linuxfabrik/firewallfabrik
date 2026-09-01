@@ -58,7 +58,8 @@ PLATFORM_VERSIONS = {
     ],
     'nftables': [
         ('', '- any -'),
-        ('0.9.0', '0.9.2 or earlier'),
+        ('0.9.0', '0.9.1 or earlier'),
+        ('0.9.2', '0.9.2 or later'),
         ('0.9.3', '0.9.3 or later'),
         ('0.9.5', '0.9.5 or later'),
     ],
