@@ -313,6 +313,12 @@ round's four fixes came out of exactly that - one from the iptables replay
 of a corpus compiled with "Log all rules" on, the other from `nft --check`
 on one with thirteen options on.
 
+It also runs the block every activation runs first and no other
+oracle touches - `configure_interfaces` - against real iproute2 in a
+namespace, and asks the three questions that block can fail: does
+iproute2 accept every command, is a second activation silent, and do the
+bridges end up with the ports the script named.
+
 See `tools/compiler-audit/README.md`. These checks are not part of `pytest`:
 they need `unshare`, `nft` and `iptables`, run over a corpus rather than
 over the fixtures, and a full run takes minutes.
