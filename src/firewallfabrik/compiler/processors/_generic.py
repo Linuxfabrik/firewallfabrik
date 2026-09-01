@@ -1663,23 +1663,32 @@ class AddVirtualAddress(NATRuleProcessor):
             if isinstance(a, Interface) and not a.is_regular():
                 return True
 
-            # AddressRange targets cannot be turned into interface aliases
-            # (neither fwf nor fwbuilder implement that), so we simply skip
-            # the virtual-address hook for them.  The DNAT/SNAT rule itself
-            # is still compiled; the kernel only needs the virtual address
-            # when a local process actually has to bind to the mapped IP,
-            # which is not the common case.
-            # An address the *cluster* carries is not a virtual address
-            # either: the failover daemon puts it on the interface, and
-            # adding it here would put it on every member at once
+            # An address the *cluster* carries is not a virtual address:
+            # the failover daemon puts it on the interface, and adding it
+            # here would put it on every member at once
             # (`NATCompiler_ipt::addVirtualAddress` asks both).
             cluster = nat_comp.get_cluster()
-            if (
-                not nat_comp.complex_match(a, nat_comp.fw)
-                and not (cluster is not None and nat_comp.complex_match(a, cluster))
-                and not isinstance(a, AddressRange)
-                and nat_comp.oscnf is not None
+            if nat_comp.complex_match(a, nat_comp.fw) or (
+                cluster is not None and nat_comp.complex_match(a, cluster)
             ):
+                return True
+
+            if isinstance(a, AddressRange):
+                # No interface alias is built for a range, and the rule is
+                # still compiled - but the firewall then answers ARP for
+                # none of the addresses the rule translates to, so the
+                # translated traffic never comes back.  Firewall Builder
+                # names the object rather than leaving that to be
+                # discovered (`NATCompiler_ipt::addVirtualAddress`, and
+                # `firewall2-5.fw.orig:15`).
+                nat_comp.warning(
+                    rule,
+                    'Adding of virtual address for address range is not '
+                    f'implemented (object {a.name})',
+                )
+                return True
+
+            if nat_comp.oscnf is not None:
                 nat_comp.oscnf.add_virtual_address_for_nat(a)
 
             return True

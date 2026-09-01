@@ -12,6 +12,7 @@
 #
 # Rule 51 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+# firewall2:NAT:22: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule '0 (eth1)' shadows rule '2 ()' below it, for service 'bootpc'
 # Rule '0 (eth1)' shadows rule '3 (eth1,eth3)' below it, for service 'bootpc'
 # Rule '4 (eth1,eth3)' shadows rule '5 (eth1,eth3)' below it, for destination 'broadcast' and service 'bootpc'
@@ -1115,6 +1116,7 @@ table ip fwf_nat {
         #
         # Rule 22 (NAT)
         #
+        # firewall2:NAT:22: warning: Adding of virtual address for address range is not implemented (object ext_range)
         oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
         #
         # Rule 23 (NAT)

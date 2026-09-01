@@ -15,6 +15,7 @@
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# firewall:NAT:2: warning: Adding of virtual address for address range is not implemented (object r-222.222.222.0)
 # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
 # firewall:Policy:41: warning: Can not match the MAC address of "host-with-mac-1/addr" in the output chain, where the packet does not carry one yet; the rule matches on the address alone
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -1023,6 +1024,7 @@ table ip fwf_nat {
         #
         # Rule 2 (NAT)
         #
+        # firewall:NAT:2: warning: Adding of virtual address for address range is not implemented (object r-222.222.222.0)
         oifname "eth*" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
         #
         # Rule 4 (NAT)

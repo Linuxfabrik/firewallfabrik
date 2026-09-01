@@ -10,6 +10,7 @@
 #
 #  another copy of firewall2 but new iptables version
 #
+# firewall2-2:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule '0 (eth1)' shadows rule '3 (eth1,eth3)' below it, for service 'bootpc'
 # Rule '4 (eth1,eth3)' shadows rule '5 (eth1,eth3)' below it, for destination 'broadcast' and service 'bootpc'
 # Rule '4 (eth1,eth3)' shadows rule '6 (eth1,eth3)' below it, for destination 'broadcast' and service 'bootpc'
@@ -1084,6 +1085,7 @@ table ip fwf_nat {
         #
         # Rule 20 (NAT)
         #
+        # firewall2-2:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
         oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
         #
         # Rule 21 (NAT)

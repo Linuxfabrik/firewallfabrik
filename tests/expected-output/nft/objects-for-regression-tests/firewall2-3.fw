@@ -10,6 +10,7 @@
 #
 #  copy of firewall2, version >= 1.2.6
 #
+# firewall2-3:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
@@ -929,6 +930,7 @@ table ip fwf_nat {
         #
         # Rule 20 (NAT)
         #
+        # firewall2-3:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
         oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
         #
         # Rule 21 (NAT)

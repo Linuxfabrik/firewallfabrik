@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
 * Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
 * Compiler (nftables): a firewall that builds its bridges but leaves the addresses to another tool gets its bridges, the way it already did on iptables.
+* Compiler (iptables, nftables): a NAT rule that translates to an address range says that the firewall is not given those addresses, instead of leaving the translated traffic to fail silently.
 * Compiler (iptables, nftables): a firewall whose NAT rule translates to an address none of its interfaces is on says so, where the message was raised and thrown away - the rule then quietly did not work, because the firewall never answered ARP for that address.
 * Compiler (iptables, nftables): a firewall that configures its own bridges attaches every port to them, where until now only the last port of each bridge was attached and the rest stayed outside it.
 * Compiler (iptables, nftables): a firewall that configures its own bridges creates them before it configures their addresses, instead of stopping the activation on the very run that was to create them.

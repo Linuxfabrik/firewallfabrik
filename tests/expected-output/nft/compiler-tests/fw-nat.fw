@@ -8,6 +8,7 @@
 #
 # files: * fw-nat.fw /etc/fwf.sh
 #
+# fw-nat:NAT:7: warning: Adding of virtual address for address range is not implemented (object addr-range-on-prefix-boundary)
 # fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
 # Can not add virtual address 00:10:4b:de:e9:6f (object "mac-only-host:eth0:mac"): no interface of the firewall is on that network
 
@@ -380,6 +381,7 @@ table ip fwf_nat {
         # Rule 7 (NAT)
         #
         # Translated source is a range covering a whole prefix, plus a port range
+        # fw-nat:NAT:7: warning: Adding of virtual address for address range is not implemented (object addr-range-on-prefix-boundary)
         oifname "eth*" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 203.0.113.0-203.0.113.255:1024-2048
         #
         # Rule 8 (NAT)
