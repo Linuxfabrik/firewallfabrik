@@ -40,9 +40,9 @@ from firewallfabrik.platforms.nftables._policy_compiler import (
 class _Firewall:
     id = uuid.uuid4()
     name = 'fw'
-    interfaces: list = []
 
     def __init__(self, forwards: bool) -> None:
+        self.interfaces: list = []
         self._forwards = forwards
 
     def get_option(self, key, default=None):
