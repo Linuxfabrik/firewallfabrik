@@ -77,9 +77,11 @@ IP=\$(command -v ip)
 # A firewall that configures none of its interfaces has no such function.
 type configure_interfaces >/dev/null 2>&1 || { echo "@@SKIP"; exit 0; }
 
-# In a subshell, because `update_addresses_of_interface` answers a missing
-# interface with `exit 1` and that has to be reported rather than end the
+# In a subshell, because update_addresses_of_interface answers a missing
+# interface with "exit 1" and that has to be reported rather than end the
 # probe.  The commands it did run have already reached the kernel.
+# No backticks anywhere in this heredoc: it is unquoted, so bash would run
+# what stands between them while it writes the file.
 echo "@@FIRST"
 ( configure_interfaces ); echo "@@STATUS \$?"
 echo "@@SECOND"
