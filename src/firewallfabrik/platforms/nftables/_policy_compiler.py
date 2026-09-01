@@ -53,6 +53,7 @@ from firewallfabrik.compiler.processors._generic import (
     VerifyTimeIntervals,
 )
 from firewallfabrik.compiler.processors._policy import (
+    CheckForUnnumbered,
     CheckForZeroAddr,
     DropRuleWithImpossibleInterface,
     ExpandMultipleAddressesIfNotFWInDst,
@@ -2896,25 +2897,6 @@ class CheckForStatefulICMP6Rules(PolicyRuleProcessor):
                     rule, 'Making rule stateless because it matches ICMPv6'
                 )
                 rule.set_option('stateless', True)
-        self.tmp_queue.append(rule)
-        return True
-
-
-class CheckForUnnumbered(PolicyRuleProcessor):
-    """Check for unnumbered interfaces in src/dst."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        for slot in ('src', 'dst'):
-            for obj in getattr(rule, slot):
-                if isinstance(obj, Interface) and (
-                    obj.is_unnumbered() or obj.is_bridge_port()
-                ):
-                    self.compiler.abort(
-                        rule, 'Can not use unnumbered interfaces in rules.'
-                    )
         self.tmp_queue.append(rule)
         return True
 

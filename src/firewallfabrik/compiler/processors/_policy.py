@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import ipaddress as _ipa
 import uuid
+from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core._options import option_int, option_is_true
@@ -39,6 +40,53 @@ from firewallfabrik.core.objects import (
     netmask_prefix_length,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
+
+if TYPE_CHECKING:
+    from firewallfabrik.compiler._comp_rule import CompRule
+
+
+class CheckForUnnumbered(PolicyRuleProcessor):
+    """Abort if src/dst contains unnumbered or bridge-port interfaces.
+
+    Unnumbered and bridge-port interfaces have no IP address and cannot
+    be used as address objects in rules.
+
+    Corresponds to C++ ``PolicyCompiler::checkForUnnumbered``, whose
+    ``abort()`` throws, so the ``tmp_queue.push_back`` written under it is
+    unreachable and no script is produced.  Shared here because fwf had a
+    copy per platform and only the iptables one read that: the nftables
+    copy reported and appended the rule, which is the shape round 8 found
+    four times on the other platform.
+    """
+
+    @staticmethod
+    def _catch_unnumbered(rule: CompRule, slot: str) -> bool:
+        """Return True if an unnumbered/bridge-port interface is found."""
+        for obj in getattr(rule, slot):
+            if isinstance(obj, Interface) and (
+                obj.is_unnumbered() or obj.is_bridge_port()
+            ):
+                return True
+        return False
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if self._catch_unnumbered(rule, 'src') or self._catch_unnumbered(rule, 'dst'):
+            # The interface has no address, so there is nothing to match on.
+            # Keeping the rule would widen it to every address on that side,
+            # which is the opposite of naming an interface.  The C++ throws
+            # here and emits nothing at all.
+            self.compiler.abort(
+                rule,
+                'Can not use unnumbered interfaces in rules. The rule is left out',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class CheckForZeroAddr(PolicyRuleProcessor):

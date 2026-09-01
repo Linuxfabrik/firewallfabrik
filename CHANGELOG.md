@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a rule naming an unnumbered interface or a bridge port as its source or destination is left out, the way the iptables compiler leaves it out - such an interface has no address, so the rule was compiled with nothing to match on, which is a rule for every address there is.
 * Compiler (nftables): an address object that stands for the whole IPv6 internet is reported as being equivalent to "any", the way the iptables compiler reports it - the check read an IPv6 netmask as an address and answered "not zero" for every one of them.
 * Compiler (iptables, nftables): a rule whose Custom action holds a command written for the other packet filter is reported and left out, instead of stopping the activation with every policy already at DROP on iptables and costing the whole ruleset on nftables - the text is one field with no platform beside it, so nothing rewrote it when the firewall was switched over.
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
