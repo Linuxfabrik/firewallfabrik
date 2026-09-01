@@ -197,7 +197,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
-        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
         self.tmp_chain_counters: dict[str, int] = {}
 
         # The chain a branch rule set writes into, set by the driver through
@@ -794,9 +793,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         return ''.join(parts)
 
-    def insert_upstream_chain(self, parent: str, child: str) -> None:
-        self.upstream_chains[parent].append(child)
-
     def register_rule_set_chain(self, chain_name: str) -> None:
         self.chain_usage_counter[chain_name] = 1
         # Every rule of this rule set belongs into that chain, not into a
@@ -807,35 +803,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def set_chain(self, rule: CompRule, chain: str) -> None:
         rule.ipt_chain = chain
-
-    def is_chain_descendant_of(
-        self, chain: str, ancestor: str, seen: set[str] | None = None
-    ) -> bool:
-        """Is *chain* reachable from *ancestor* by following the jumps?
-
-        What the kernel allows in a rule is decided by the hook, not by the
-        name of the chain the rule is in: a match that registers for
-        PREROUTING, INPUT and FORWARD is refused just as much in a chain
-        the POSTROUTING chain jumps to.  Every processor that moves a rule
-        into a temporary chain records the jump
-        (`insert_upstream_chain`), so the question can be asked of the
-        chain the rule ended up in.
-
-        A chain can be reached from more than one place, so every parent is
-        followed rather than the first one found, and `seen` keeps a jump
-        graph that leads back on itself from looping here.
-        """
-        if chain == ancestor:
-            return True
-        if seen is None:
-            seen = set()
-        if chain in seen:
-            return False
-        seen.add(chain)
-        return any(
-            chain in children and self.is_chain_descendant_of(parent, ancestor, seen)
-            for parent, children in self.upstream_chains.items()
-        )
 
     def is_chain_descendant_of_input(self, chain: str) -> bool:
         return self.is_chain_descendant_of(chain, 'INPUT')

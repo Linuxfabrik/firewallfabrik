@@ -238,6 +238,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         entered into ``chain_rules`` here rather than where the first rule
         happens to be printed, and into ``temp_chains`` so the print rule
         knows the jump is one of ours.
+
+        The jump is recorded as well: what a match may do is decided by the
+        hook the chain hangs off, and the rule that ends up in this chain is
+        still reached through the chain it came from.  ``rule.ipt_chain`` is
+        that chain, because every caller splits a rule before its chain is
+        touched again.
         """
         stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
@@ -249,6 +255,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.tmp_chain_counters[chain_id] = n + 1
         self.temp_chains.add(name)
         self.chain_rules.setdefault(name, [])
+        if rule.ipt_chain:
+            self.insert_upstream_chain(rule.ipt_chain, name)
         return name
 
     def log_rate_limit(self) -> int:
@@ -1016,7 +1024,6 @@ class CheckUserServiceInWrongChains(PolicyRuleProcessor):
             return False
 
         srv = rule.srv[0] if rule.srv else None
-        chain = (rule.ipt_chain or '').upper()
 
         # "meta skuid" reads the socket that produced the packet, which only
         # exists once the packet is on its way out; elsewhere the match
@@ -1024,9 +1031,15 @@ class CheckUserServiceInWrongChains(PolicyRuleProcessor):
         # nft_meta_get_eval).  The iptables owner match is restricted to the
         # same two hooks, so the rule is dropped rather than shipped as one
         # that can never match.
-        # Unlike iptables there is no temporary-chain hierarchy to walk here:
-        # the nftables rules live in the hook chains themselves.
-        if isinstance(srv, UserService) and chain not in ('OUTPUT', 'POSTROUTING'):
+        # The question is about the hook, not about the name of the chain:
+        # `TimeNegation` and `SplitLogWithStatefulLimit` run in front of
+        # this and move a rule into a temporary chain, which is named after
+        # neither hook and is reached from one of them.
+        in_a_hook_that_has_the_socket = any(
+            self.compiler.is_chain_descendant_of(rule.ipt_chain, hook)
+            for hook in ('output', 'postrouting')
+        )
+        if isinstance(srv, UserService) and not in_a_hook_that_has_the_socket:
             self.compiler.warning(
                 rule,
                 "nftables matches 'meta skuid' only in the output and "
@@ -3168,7 +3181,19 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if rule.ipt_chain not in self.FORBIDDEN_CHAINS:
+        # The hook decides what a match may do, not the name of the chain:
+        # `TimeNegation` and `SplitLogWithStatefulLimit` run in front of
+        # this and move a rule into a temporary chain, which is named after
+        # neither hook and is reached from one of them.
+        hook = next(
+            (
+                name
+                for name in self.FORBIDDEN_CHAINS
+                if self.compiler.is_chain_descendant_of(rule.ipt_chain, name)
+            ),
+            '',
+        )
+        if not hook:
             self.tmp_queue.append(rule)
             return True
 
@@ -3180,7 +3205,7 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
                 self.compiler.abort(
                     rule,
                     f'Can not match the MAC address of "{mac_name}" in the '
-                    f'{rule.ipt_chain} chain, where the packet does not carry '
+                    f'{hook} chain, where the packet does not carry '
                     f'one yet',
                 )
                 return True
@@ -3188,7 +3213,7 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
             self.compiler.warning(
                 rule,
                 f'Can not match the MAC address of "{mac_name}" in the '
-                f'{rule.ipt_chain} chain, where the packet does not carry one '
+                f'{hook} chain, where the packet does not carry one '
                 f'yet; the rule matches on the address alone',
             )
 

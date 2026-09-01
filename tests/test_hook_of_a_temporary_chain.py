@@ -23,6 +23,12 @@ OUTPUT is allowed there too.
 (netfilter ``net/netfilter/xt_mac.c``) and ``xt_owner`` for OUTPUT and
 POSTROUTING (``net/netfilter/xt_owner.c``).  Firewall Builder asks the
 chain name in both places and has the same blind spot.
+
+The nftables compiler grew temporary chains of its own with the negated
+time interval and the log split, so the two checks there ask the same
+question and get it wrong the same way.  Its chain names are lowercase
+and ``ether saddr`` is refused in the output chain alone - a forwarded
+packet still carries the header it arrived with.
 """
 
 import uuid
@@ -36,6 +42,12 @@ from firewallfabrik.platforms.iptables._policy_compiler import (
     CheckMACInOUTPUTChain,
     CheckUserServiceInWrongChains,
     PolicyCompiler_ipt,
+)
+from firewallfabrik.platforms.nftables._policy_compiler import (
+    CheckMACInOUTPUTChain as CheckMACInOUTPUTChain_nft,
+)
+from firewallfabrik.platforms.nftables._policy_compiler import (
+    CheckUserServiceInWrongChains as CheckUserServiceInWrongChains_nft,
 )
 
 
@@ -151,6 +163,49 @@ def test_a_user_service_below_forward_is_reported():
     compiler = _Compiler([('FORWARD', 'C1.0')])
     srv = UserService(name='some-user')
     emitted = _run(CheckUserServiceInWrongChains, _rule('C1.0', srv=[srv]), compiler)
+
+    assert emitted == []
+    assert compiler.messages
+
+
+def test_the_nftables_mac_check_asks_the_hook_too():
+    """`TimeNegation` there moves the rule into a chain of its own."""
+    compiler = _Compiler([('output', 'C1.0')])
+    mac = PhysAddress(name='host-with-mac:1-pa')
+    emitted = _run(CheckMACInOUTPUTChain_nft, _rule('C1.0', src=[mac]), compiler)
+
+    assert emitted == []
+    assert compiler.messages
+    assert 'output' in compiler.messages[0]
+
+
+def test_the_nftables_mac_check_leaves_a_forwarded_packet_alone():
+    compiler = _Compiler([('forward', 'C1.0')])
+    mac = PhysAddress(name='host-with-mac:1-pa')
+    emitted = _run(CheckMACInOUTPUTChain_nft, _rule('C1.0', src=[mac]), compiler)
+
+    assert len(emitted) == 1
+    assert compiler.messages == []
+
+
+def test_the_nftables_user_service_below_output_is_kept():
+    """Dropping it takes away a rule the hook can carry."""
+    compiler = _Compiler([('output', 'C1.0')])
+    srv = UserService(name='some-user')
+    emitted = _run(
+        CheckUserServiceInWrongChains_nft, _rule('C1.0', srv=[srv]), compiler
+    )
+
+    assert len(emitted) == 1
+    assert compiler.messages == []
+
+
+def test_the_nftables_user_service_below_input_is_reported():
+    compiler = _Compiler([('input', 'C1.0')])
+    srv = UserService(name='some-user')
+    emitted = _run(
+        CheckUserServiceInWrongChains_nft, _rule('C1.0', srv=[srv]), compiler
+    )
 
     assert emitted == []
     assert compiler.messages

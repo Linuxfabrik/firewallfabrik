@@ -25,10 +25,12 @@ though the iptables mac match cannot be used there at all.
 """
 
 import uuid
+from collections import defaultdict
 
 import pytest
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import PhysAddress
 from firewallfabrik.platforms.nftables._policy_compiler import CheckMACInOUTPUTChain
@@ -37,8 +39,14 @@ MAC = 'aa:bb:cc:dd:ee:ff'
 
 
 class _Compiler:
+    # The guard asks the hook a chain hangs off, not the chain's name, so
+    # the stub answers that question with the real implementation.
+    is_chain_descendant_of = PolicyCompiler.is_chain_descendant_of
+    insert_upstream_chain = PolicyCompiler.insert_upstream_chain
+
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
 
     def abort(self, _rule, msg: str) -> None:
         self.messages.append(msg)
@@ -86,8 +94,10 @@ class _Feeder(PolicyRuleProcessor):
         return False
 
 
-def _check(chain: str, src=(), dst=()):
+def _check(chain: str, src=(), dst=(), jumps=()):
     compiler = _Compiler()
+    for parent, child in jumps:
+        compiler.insert_upstream_chain(parent, child)
     proc = CheckMACInOUTPUTChain('check MAC')
     proc.compiler = compiler
     proc.set_data_source(_Feeder(_Rule(chain, list(src), list(dst))))
@@ -146,3 +156,40 @@ def test_a_rule_without_a_mac_passes_through_output():
     kept, messages = _check('output', src=[_Address('plain', '192.0.2.1')])
     assert kept
     assert not messages
+
+
+def test_a_temporary_chain_is_judged_by_the_hook_it_hangs_off():
+    """`TimeNegation` and `SplitLogWithStatefulLimit` build chains here.
+
+    Both run before this check and both move the rule into a chain of
+    their own, so asking whether the chain is called "output" answers no
+    for a rule that is reached from exactly that hook - and `ether saddr`
+    there matches no packet, because the header is not written yet.
+    """
+    kept, messages = _check(
+        'C0123456789ab.0',
+        src=[_phys()],
+        jumps=[('output', 'C0123456789ab.0')],
+    )
+    assert not kept
+    assert messages and 'output chain' in messages[0]
+
+
+def test_a_temporary_chain_of_another_hook_keeps_its_match():
+    kept, messages = _check(
+        'C0123456789ab.0',
+        src=[_phys()],
+        jumps=[('forward', 'C0123456789ab.0')],
+    )
+    assert kept
+    assert not messages
+
+
+def test_a_chain_reached_through_two_jumps_is_still_found():
+    """A nested negation builds a chain inside a chain."""
+    kept, _messages = _check(
+        'Cffff.0',
+        src=[_phys()],
+        jumps=[('output', 'C0123456789ab.0'), ('C0123456789ab.0', 'Cffff.0')],
+    )
+    assert not kept
