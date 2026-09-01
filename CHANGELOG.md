@@ -69,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a cluster member configures the addresses of an interface whose cluster counterpart runs no failover protocol, instead of leaving them to nobody.
 * Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
 * Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
+* Compiler (iptables, nftables): a firewall that configures its own bridges attaches every port to them, where until now only the last port of each bridge was attached and the rest stayed outside it.
 * Compiler (iptables, nftables): a firewall that configures its own bridges creates them before it configures their addresses, instead of stopping the activation on the very run that was to create them.
 * Compiler (iptables, nftables): a firewall that configures its own bridges no longer deletes every other bridge on the machine when it activates - Docker's, podman's and libvirt's among them, which took every container and virtual machine off the network.
 * Compiler (iptables, nftables): a firewall whose conntrack limits are left unset no longer sets them to zero on activation, which made the kernel refuse every new connection.

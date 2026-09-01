@@ -496,6 +496,12 @@ class OSConfigurator_nft(OSConfigurator):
                 for sub in bridge.sub_interfaces
                 if sub.get_option('type', '') not in ('vlan',)
             ]
+            # The whole port list goes in as one argument, the way
+            # `printBridgeInterfaceConfigurationCommands` writes the call
+            # (OSConfigurator_linux24_interfaces.cpp:390) and the way the
+            # configlet's own example documents it.  The loop in
+            # `update_bridge` splits it again, which is why that loop must
+            # not quote its arguments.
             gencmd.append(f'update_bridge {bridge.name} "{" ".join(port_names)}"')
 
             enable_stp = bridge.get_option('enable_stp', False)

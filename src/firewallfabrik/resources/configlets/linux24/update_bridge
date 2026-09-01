@@ -43,7 +43,9 @@ update_bridge() {
     CURRENT_PORTS=""
 
     FWB_PORTS=$(
-        for subint in "$@"; do
+        # The port list arrives as one argument, so the splitting is meant.
+        # shellcheck disable=SC2048,SC2086
+        for subint in $*; do
           echo "${subint}@$bridge_interface"
         done | sort
     )
