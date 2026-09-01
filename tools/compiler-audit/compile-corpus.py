@@ -173,6 +173,38 @@ def force_iptables_version(version: str) -> None:
     firewallfabrik.core.DatabaseManager.load = load_and_pin
 
 
+def force_nftables_version(version: str) -> None:
+    """Compile every firewall as if it were an nftables one pinning *version*.
+
+    The nftables release is the second version model, and no corpus
+    firewall can reach it: every `.fwb` Firewall Builder writes names the
+    iptables platform, and `get_nftables_version` deliberately reads a
+    release only off a firewall whose platform is nftables.  So the
+    gates - `ip option <name> exists` at 0.9.2, `meta hour` / `meta day` /
+    `meta time` at 0.9.3, `snat prefix to` at 0.9.5 - are compiled by
+    nothing unless the platform is forced with the release.
+
+    Meant with `--platform nft`: an iptables compile of a firewall whose
+    platform says nftables reads no iptables release either, which is
+    correct and not what this is measuring.
+    """
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_pin(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for fw in session.execute(sqlalchemy.select(Firewall)).scalars():
+            fw.data = {
+                **(fw.data or {}),
+                'platform': 'nftables',
+                'version': version,
+            }
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_pin
+
+
 def corpus_files(corpus: Path) -> list[Path]:
     """Return the data files of *corpus*, which may be a file or a directory.
 
@@ -219,12 +251,20 @@ def main() -> int:
         'so the version-gated branches the corpus does not reach are compiled '
         'too (for example 1.8.11)',
     )
+    parser.add_argument(
+        '--nftables-version',
+        help='compile every firewall as an nftables one pinning this release, '
+        'so the nftables release gates are compiled at all (for example '
+        '0.9.0); meant with `--platform nft`',
+    )
     args = parser.parse_args()
 
     if args.address_family:
         force_address_family(args.address_family)
     if args.iptables_version:
         force_iptables_version(args.iptables_version)
+    if args.nftables_version:
+        force_nftables_version(args.nftables_version)
 
     platforms = args.platform or ['ipt', 'nft']
     files = [p for p in corpus_files(args.corpus) if p.exists()]
