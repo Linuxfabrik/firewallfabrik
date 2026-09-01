@@ -252,7 +252,6 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-
     missing_port() {
         intf=$1
         cmd=$2

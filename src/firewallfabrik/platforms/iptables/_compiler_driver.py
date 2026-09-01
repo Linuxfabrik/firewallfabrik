@@ -582,6 +582,21 @@ class CompilerDriver_ipt(CompilerDriver):
                 iface_buf = io.StringIO()
                 iface_buf.write('# Configure interfaces\n')
 
+                # A bridge is created before the addresses of any interface
+                # are configured, the order
+                # `CompilerDriver_ipt::run` writes the block in
+                # (CompilerDriver_ipt_run.cpp:557-573).  The other way round
+                # the address of the bridge itself is configured on an
+                # interface that does not exist yet, and
+                # `update_addresses_of_interface` answers that with
+                # "Interface br0 does not exist" and `exit 1` - so the script
+                # stops before it installs a single rule, on exactly the run
+                # that was to create the bridge.
+                if self.firewall_option(fw, 'configure_bridge_interfaces'):
+                    iface_buf.write(
+                        oscnf.print_bridge_interface_configuration_commands()
+                    )
+
                 if self.firewall_option(fw, 'configure_interfaces'):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
                 elif self.firewall_option(fw, 'manage_virtual_addr'):
@@ -590,11 +605,6 @@ class CompilerDriver_ipt(CompilerDriver):
                     # firewall has to carry them or it will not answer ARP for
                     # them and the translated traffic never arrives.
                     iface_buf.write(oscnf.print_virtual_addresses_for_nat_commands())
-
-                if self.firewall_option(fw, 'configure_bridge_interfaces'):
-                    iface_buf.write(
-                        oscnf.print_bridge_interface_configuration_commands()
-                    )
 
                 iface_buf.write(oscnf.print_commands_to_clear_known_interfaces())
                 iface_buf.write(oscnf.print_dynamic_addresses_configuration_commands())

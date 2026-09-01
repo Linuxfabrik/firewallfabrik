@@ -1280,10 +1280,19 @@ class CompilerDriver_nft(CompilerDriver):
 
             if configure_interfaces:
                 buf = io.StringIO()
-                buf.write(oscnf.print_interface_configuration_commands())
-
+                # A bridge is created before the addresses of any interface
+                # are configured, the order `CompilerDriver_ipt::run` writes
+                # the block in (CompilerDriver_ipt_run.cpp:557-573).  The
+                # other way round the address of the bridge itself is
+                # configured on an interface that does not exist yet, and
+                # `update_addresses_of_interface` answers that with
+                # "Interface br0 does not exist" and `exit 1` - so the script
+                # stops before it installs a single rule, on exactly the run
+                # that was to create the bridge.
                 if self.firewall_option(fw, 'configure_bridge_interfaces'):
                     buf.write(oscnf.print_bridge_interface_configuration_commands())
+
+                buf.write(oscnf.print_interface_configuration_commands())
 
                 buf.write(oscnf.print_commands_to_clear_known_interfaces())
                 buf.write(oscnf.print_dynamic_addresses_configuration_commands())
