@@ -11,6 +11,8 @@
 #  this firewall uses iptables-restore format
 #  One interface has dynamic address, script uses echo to generated iptables commands and then pipes them to iptables-restore
 #
+# Can not add virtual address 22.22.22.23 (object "address"): no interface of the firewall is on that network
+# Can not add virtual address 200.200.200.200 (object "address"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

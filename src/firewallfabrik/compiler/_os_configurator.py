@@ -148,20 +148,30 @@ class OSConfigurator(BaseCompiler):
             return []
 
         targets = []
+        unplaceable = []
         for address, forced_prefix in wanted:
             iface, prefix_len = self._interface_carrying(address)
             if iface is None:
-                self.warning(
-                    f'Can not add virtual address {address} (object '
-                    f'"{addr.name}"): no interface of the firewall is on '
-                    f'that network'
-                )
+                unplaceable.append(address)
                 continue
             if self._interface_already_has(iface, address):
                 # The interface is configured with this address anyway, so
                 # adding it again would only repeat it in the ip command.
                 continue
             targets.append((address, forced_prefix or prefix_len, iface))
+        if unplaceable:
+            # One sentence per object, the way fwbuilder says it: its
+            # `addVirtualAddressForNAT(const Network*)` asks
+            # `findInterfaceFor(nw, fw)` once, for the network, and warns
+            # naming the network's own address
+            # (OSConfigurator_linux24.cpp:236).  Saying it once per host a
+            # network stands for is 254 lines about one object, and they go
+            # into the generated script as comments.
+            self.warning(
+                f'Can not add virtual address {unplaceable[0]} (object '
+                f'"{addr.name}"): no interface of the firewall is on '
+                f'that network'
+            )
         return targets
 
     @staticmethod

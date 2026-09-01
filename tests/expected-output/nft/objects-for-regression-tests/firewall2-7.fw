@@ -10,6 +10,7 @@
 #
 #  tests for nat rules with inbound and outbound interfaces with complex interface configuration
 #
+# Can not add virtual address 22.22.22.0 (object "external_net"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

@@ -18,6 +18,8 @@
 #  should ignore this address object and issue a warning.
 #
 # firewall20:NAT:4: warning: "Use SNAT instead of MASQUERADE" needs the address of "ppp*" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
+# Can not add virtual address 22.22.22.23 (object "address"): no interface of the firewall is on that network
+# Can not add virtual address 200.200.200.200 (object "address"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

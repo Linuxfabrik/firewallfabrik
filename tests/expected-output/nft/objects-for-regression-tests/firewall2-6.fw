@@ -15,6 +15,7 @@
 # Rule 19 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
 # Rule 20 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
 # Rule 21 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
+# Can not add virtual address 22.22.22.0 (object "external_net"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

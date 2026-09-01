@@ -12,6 +12,7 @@
 #  also testing "Destination NAT Onto the Same Network" per Turorial chapter 3.5
 #  testing a rule with src=dst=firewall6 in the global policy (should use all interfaces including loopback)
 #
+# Can not add virtual address 222.222.222.40 (object "address"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

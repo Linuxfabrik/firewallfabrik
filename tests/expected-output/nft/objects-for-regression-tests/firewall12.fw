@@ -11,6 +11,8 @@
 #  This firewall does not do NAT for addresses, but translates port for a server
 #
 # Rule 16 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
+# Can not add virtual address 192.0.2.1 (object "fw1:eth0:ip"): no interface of the firewall is on that network
+# Can not add virtual address 192.168.1.1 (object "fw1:eth1:ip"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

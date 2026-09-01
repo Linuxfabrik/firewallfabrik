@@ -1180,6 +1180,7 @@ class CompilerDriver_nft(CompilerDriver):
         comment = _prepend('#  ', comment_text) if comment_text else ''
 
         # Build errors/warnings block
+        self.collect_os_configurator_messages(oscnf)
         all_messages = self.all_errors + self.all_warnings
         errors_and_warnings = ''
         if all_messages:

@@ -9,6 +9,7 @@
 # files: * fw-nat.fw /etc/fwf.sh
 #
 # fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
+# Can not add virtual address 00:10:4b:de:e9:6f (object "mac-only-host:eth0:mac"): no interface of the firewall is on that network
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

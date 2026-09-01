@@ -792,6 +792,31 @@ class CompilerDriver(BaseCompiler):
         kind = 'NAT' if rule.nat_action == NATAction.Branch else 'Policy'
         return by_name.get((kind, str(name)))
 
+    def collect_os_configurator_messages(self, oscnf) -> None:
+        """Take over what the OS configurator has to say about the firewall.
+
+        It is a ``BaseCompiler`` like the policy and NAT compilers and it
+        reports the same way, but nothing collected from it - so "Can not
+        add virtual address 192.0.2.1: no interface of the firewall is on
+        that network" was raised and dropped, and the administrator was
+        left with a NAT rule translating to an address the firewall never
+        answers ARP for.
+
+        The same sentence comes back more than once, because the
+        configurator is asked once per address family and again while the
+        script is assembled, so it is only taken over when it is new.  The
+        two lists a driver keeps are short and read in full by everybody
+        who reads the report.
+        """
+        if oscnf is None:
+            return
+        for msg in oscnf.get_errors():
+            if msg not in self.all_errors:
+                self.all_errors.append(msg)
+        for msg in oscnf.get_warnings():
+            if msg not in self.all_warnings:
+                self.all_warnings.append(msg)
+
     def check_interface_addresses(self, fw: Firewall) -> str:
         """Validate IP addresses of a firewall's regular interfaces.
 

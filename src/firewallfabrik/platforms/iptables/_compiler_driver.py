@@ -895,6 +895,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 script_skeleton.set_variable('top_comment', top_comment.expand())
+                self.collect_os_configurator_messages(oscnf)
                 all_messages = self.all_errors + self.all_warnings
                 script_skeleton.set_variable(
                     'errors_and_warnings', _prepend('# ', '\n'.join(all_messages))
