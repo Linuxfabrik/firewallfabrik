@@ -38,6 +38,12 @@ import pytest
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core.objects import PhysAddress, UserService
+from firewallfabrik.platforms.iptables._nat_compiler import (
+    CheckUserServiceInWrongChains as CheckUserServiceInWrongChains_nat,
+)
+from firewallfabrik.platforms.iptables._nat_compiler import (
+    VerifyRuleWithMAC as VerifyRuleWithMAC_nat,
+)
 from firewallfabrik.platforms.iptables._policy_compiler import (
     CheckMACInOUTPUTChain,
     CheckUserServiceInWrongChains,
@@ -78,6 +84,22 @@ class _Compiler:
 
     abort = error
     warning = error
+
+
+def _nat_rule(chain, osrv=()):
+    rule = CompRule(
+        id=uuid.uuid4(),
+        type='NATRule',
+        position=0,
+        label='0 (NAT)',
+        comment='',
+        options={},
+        negations={},
+    )
+    rule.ipt_chain = chain
+    rule.osrv = list(osrv)
+    rule.osrc = []
+    return rule
 
 
 def _rule(chain, src=(), srv=()):
@@ -209,3 +231,41 @@ def test_the_nftables_user_service_below_input_is_reported():
 
     assert emitted == []
     assert compiler.messages
+
+
+def test_the_nat_owner_check_asks_the_hook_too():
+    """`DoOSrcNegation` moves the rule into a chain before one is decided.
+
+    `-m owner` in a chain the nat prerouting hook reaches is refused by
+    the kernel with -EINVAL, and the command iptables then reports stops
+    the activation script with the policies already at DROP.
+    """
+    compiler = _Compiler([('PREROUTING', 'C1.0')])
+    srv = UserService(name='some-user')
+    emitted = _run(
+        CheckUserServiceInWrongChains_nat, _nat_rule('C1.0', osrv=[srv]), compiler
+    )
+
+    assert emitted == []
+    assert compiler.messages
+
+
+def test_the_nat_owner_check_keeps_a_rule_below_postrouting():
+    compiler = _Compiler([('POSTROUTING', 'C1.0')])
+    srv = UserService(name='some-user')
+    emitted = _run(
+        CheckUserServiceInWrongChains_nat, _nat_rule('C1.0', osrv=[srv]), compiler
+    )
+
+    assert len(emitted) == 1
+    assert compiler.messages == []
+
+
+def test_the_nat_mac_check_asks_the_hook_too():
+    compiler = _Compiler([('PREROUTING', 'C1.0')])
+    rule = _nat_rule('C1.0')
+    rule.osrc = [PhysAddress(name='host-with-mac:1-pa')]
+    emitted = _run(VerifyRuleWithMAC_nat, rule, compiler)
+
+    assert len(emitted) == 1
+    assert compiler.messages == []

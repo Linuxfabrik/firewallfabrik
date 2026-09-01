@@ -22,6 +22,7 @@ import io
 import ipaddress
 import socket
 import uuid
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -228,6 +229,13 @@ class Compiler(BaseCompiler):
         self.fw: Firewall = fw
         self.ipv6_policy: bool = ipv6_policy
 
+        #: Which chains each chain jumps into.  A rule the pipeline moves
+        #: into a temporary chain is still reached through the chain it
+        #: came from, and what a match or a target may do is decided by the
+        #: hook, not by the name of the chain the rule ends up in - so the
+        #: checks that ask "is this the output chain" have to be able to
+        #: follow the jumps.
+        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
         self.source_ruleset: RuleSet | None = None
         self.rules: list[CompRule] = []
 
@@ -242,6 +250,39 @@ class Compiler(BaseCompiler):
         self.source_dir: str = '.'
 
         self._multi_address_cache: dict = {}
+
+    def insert_upstream_chain(self, parent: str, child: str) -> None:
+        """Record that *parent* jumps into *child*."""
+        self.upstream_chains[parent].append(child)
+
+    def is_chain_descendant_of(
+        self, chain: str, ancestor: str, seen: set[str] | None = None
+    ) -> bool:
+        """Is *chain* reachable from *ancestor* by following the jumps?
+
+        What the kernel allows in a rule is decided by the hook, not by the
+        name of the chain the rule is in: a match that registers for
+        PREROUTING, INPUT and FORWARD is refused just as much in a chain
+        the POSTROUTING chain jumps to.  Every processor that moves a rule
+        into a temporary chain records the jump
+        (`insert_upstream_chain`), so the question can be asked of the
+        chain the rule ended up in.
+
+        A chain can be reached from more than one place, so every parent is
+        followed rather than the first one found, and `seen` keeps a jump
+        graph that leads back on itself from looping here.
+        """
+        if chain == ancestor:
+            return True
+        if seen is None:
+            seen = set()
+        if chain in seen:
+            return False
+        seen.add(chain)
+        return any(
+            chain in children and self.is_chain_descendant_of(parent, ancestor, seen)
+            for parent, children in self.upstream_chains.items()
+        )
 
     def set_source_ruleset(self, rs: RuleSet) -> None:
         self.source_ruleset = rs

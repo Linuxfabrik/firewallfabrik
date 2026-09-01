@@ -138,7 +138,9 @@ class NATCompiler_ipt(NATCompiler):
 
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
-        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
+        #: The temporary chains this run built, so `DecideOnChain`
+        #: recognises a jump into one and can record where it sits.
+        self.temp_chains: set[str] = set()
 
         # Chain prefix for coexistence mode (e.g. 'fwf' → fwf_PREROUTING)
         self.chain_prefix: str = ''
@@ -194,6 +196,13 @@ class NATCompiler_ipt(NATCompiler):
         rule's persistent XML id, which no second rule ever repeats.  The
         key here is not unique that way, so the counter belongs to the
         compile run.
+
+        The name is remembered, because a rule moved into such a chain is
+        still reached from the chain the jump sits in, and the checks that
+        ask which hook a rule is under have to be able to follow it.  The
+        jump itself cannot be recorded here - the NAT pipeline decides the
+        chain after the negations run, so at this point there is nothing
+        to record it against - which is why `DecideOnChain` does it.
         """
         stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
@@ -203,6 +212,7 @@ class NATCompiler_ipt(NATCompiler):
         n = self.tmp_chain_counters.get(chain_id, 0)
         name = f'C{chain_id}.{n}'
         self.tmp_chain_counters[chain_id] = n + 1
+        self.temp_chains.add(name)
         return name
 
     def register_rule_set_chain(self, chain_name: str) -> None:
@@ -211,9 +221,6 @@ class NATCompiler_ipt(NATCompiler):
         # ones register the chains a branching rule jumps to.
         if not self.rule_set_chain:
             self.rule_set_chain = chain_name
-
-    def insert_upstream_chain(self, parent: str, child: str) -> None:
-        self.upstream_chains[parent].append(child)
 
     def get_rule_set_name(self) -> str:
         if self.source_ruleset:
@@ -1131,9 +1138,9 @@ class DecideOnChain(NATRuleProcessor):
 
         rt = rule.nat_rule_type
         chain = chain_map.get(rt, '') if rt is not None else ''
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
 
         if rule.ipt_chain:
-            nat_comp = cast('NATCompiler_ipt', self.compiler)
             if rule.ipt_chain == nat_comp.rule_set_chain and chain:
                 # A branch rule set writes into a chain of its own, but the
                 # nat table reaches PREROUTING and POSTROUTING through
@@ -1146,6 +1153,13 @@ class DecideOnChain(NATRuleProcessor):
 
         if chain:
             rule.ipt_chain = chain
+            # A rule that jumps into a temporary chain is the only place
+            # the hook of that chain can be learnt: the negations build it
+            # before any chain is decided.  What a match may do is decided
+            # by the hook and not by the name of the chain the rule ended
+            # up in, so the checks further down follow this.
+            if rule.ipt_target in nat_comp.temp_chains:
+                nat_comp.insert_upstream_chain(chain, rule.ipt_target)
 
         return True
 
@@ -1602,8 +1616,14 @@ class VerifyRuleWithMAC(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        chain = rule.ipt_chain or ''
-        if chain in ('PREROUTING', 'FORWARD', 'INPUT'):
+        # The hook a chain hangs off is what the kernel decides by, not
+        # the name: a rule the negations moved into a chain of their own is
+        # still reached from one of the three hooks the match registers for.
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
+        if any(
+            ipt_comp.is_chain_descendant_of(rule.ipt_chain, hook)
+            for hook in ('PREROUTING', 'FORWARD', 'INPUT')
+        ):
             self.tmp_queue.append(rule)
             return True
 
@@ -1650,7 +1670,14 @@ class CheckUserServiceInWrongChains(NATRuleProcessor):
             return False
 
         srv = rule.osrv[0] if rule.osrv else None
-        if isinstance(srv, UserService) and rule.ipt_chain == 'PREROUTING':
+        # The hook decides, not the name of the chain: a rule with a
+        # negated element is moved into a temporary chain that the
+        # prerouting chain jumps into, and the command the kernel refuses
+        # stops the activation script with the policies already at DROP.
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
+        if isinstance(srv, UserService) and ipt_comp.is_chain_descendant_of(
+            rule.ipt_chain, 'PREROUTING'
+        ):
             self.compiler.warning(
                 rule,
                 "Iptables matches module 'owner' only in the OUTPUT and "

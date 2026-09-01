@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables): a NAT rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule with a negated element is moved into a chain of its own before the chain is decided, and the kernel then refused a command that stopped the activation with every policy already at DROP.
 * Compiler (nftables): a rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule the compiler moves into a chain of its own then kept a match the kernel never fires there, or lost one it does.
 * Compiler (nftables): a rule naming an unnumbered interface or a bridge port as its source or destination is left out, the way the iptables compiler leaves it out - such an interface has no address, so the rule was compiled with nothing to match on, which is a rule for every address there is.
 * Compiler (nftables): an address object that stands for the whole IPv6 internet is reported as being equivalent to "any", the way the iptables compiler reports it - the check read an IPv6 netmask as an address and answered "not zero" for every one of them.

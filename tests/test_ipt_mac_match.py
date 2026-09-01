@@ -25,10 +25,12 @@ depend on the iptables release the firewall pins.
 """
 
 import re
+from collections import defaultdict
 
 import pytest
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._compiler import Compiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.platforms.iptables._nat_compiler import VerifyRuleWithMAC
 from firewallfabrik.platforms.iptables._nat_print_rule import NATPrintRule
@@ -46,8 +48,15 @@ INTRAPOSITIONED = f'-m mac --mac-source ! {MAC}'
 class _Compiler:
     """Just enough compiler for the two printers' negation helper."""
 
+    # The NAT guard asks which hook the rule's chain hangs off, not what
+    # the chain is called, so the stub answers with the real method.
+    is_chain_descendant_of = Compiler.is_chain_descendant_of
+    insert_upstream_chain = Compiler.insert_upstream_chain
+
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
+        self.temp_chains: set[str] = set()
 
     def warning(self, _rule, msg: str) -> None:
         self.messages.append(msg)
@@ -142,9 +151,11 @@ class _Feeder(NATRuleProcessor):
         return False
 
 
-def _verify_mac(chain: str, osrc: list):
+def _verify_mac(chain: str, osrc: list, jumps=()):
     """Run VerifyRuleWithMAC over a rule and return (rule or None, messages)."""
     compiler = _Compiler()
+    for parent, child in jumps:
+        compiler.insert_upstream_chain(parent, child)
     rule = _NATRule(chain, osrc)
     proc = VerifyRuleWithMAC('verify MAC')
     proc.compiler = compiler
@@ -183,3 +194,31 @@ def test_prerouting_keeps_the_mac():
     assert out is not None
     assert out.osrc == [combined]
     assert not messages
+
+
+def test_a_temporary_chain_is_judged_by_the_hook_it_hangs_off():
+    """A negated element moves the rule into a chain of its own.
+
+    `DoOSrcNegation` and its two siblings run before the chain is decided,
+    so the rule the check sees is in `C<hash>.0` - a name that is neither
+    of the three hooks the mac match registers for, and asking the name
+    took the MAC out of a rule sitting below PREROUTING, where the kernel
+    takes it.
+    """
+    combined = CombinedAddress(_Address('host-with-mac/addr', '192.0.2.5'), _Phys())
+    out, messages = _verify_mac(
+        'C0123456789ab.0', [combined], jumps=[('PREROUTING', 'C0123456789ab.0')]
+    )
+    assert out is not None
+    assert out.osrc == [combined]
+    assert not messages
+
+
+def test_a_temporary_chain_below_postrouting_still_loses_its_mac():
+    combined = CombinedAddress(_Address('host-with-mac/addr', '192.0.2.5'), _Phys())
+    out, messages = _verify_mac(
+        'C0123456789ab.0', [combined], jumps=[('POSTROUTING', 'C0123456789ab.0')]
+    )
+    assert out is not None
+    assert [obj.get_address() for obj in out.osrc] == ['192.0.2.5']
+    assert messages
