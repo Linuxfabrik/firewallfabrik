@@ -26,7 +26,7 @@ RETVAL=0
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
-NFT="/usr/sbin/nft"
+NFT="nft"
 
 log() {
     echo "$1"

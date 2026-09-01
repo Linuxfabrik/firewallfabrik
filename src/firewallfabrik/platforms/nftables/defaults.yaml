@@ -282,12 +282,15 @@ options:
 
   ip_path:
     type: 'str'
-    default: '/sbin/ip'
+    default: 'ip'
     supported: true
     widget: ~
     description: >-
-      Path to the ip command used for interface configuration
-      in the generated script.
+      Path to the ip command used for interface configuration in the
+      generated script.  A bare name is looked up in the PATH the script
+      sets for itself, which is what the iptables compiler writes for
+      every tool it calls; give an absolute path only where the tool is
+      somewhere else.
 
   ipv4_6_order:
     type: 'enum'
@@ -445,11 +448,14 @@ options:
 
   nft_path:
     type: 'str'
-    default: '/usr/sbin/nft'
+    default: 'nft'
     supported: true
     widget: ~
     description: >-
-      Path to the nft binary used in the generated script.
+      Path to the nft binary used in the generated script.  A bare name
+      is looked up in the PATH the script sets for itself, which is what
+      the iptables compiler writes for every tool it calls; give an
+      absolute path only where the tool is somewhere else.
 
   output_file:
     type: 'str'

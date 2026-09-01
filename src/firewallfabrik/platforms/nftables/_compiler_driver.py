@@ -1173,7 +1173,12 @@ class CompilerDriver_nft(CompilerDriver):
         epilog_script = self.firewall_option(fw, 'epilog_script')
         prolog_place = self.firewall_option(fw, 'prolog_place') or 'top'
 
-        nft_path = self.firewall_option(fw, 'nft_path') or '/usr/sbin/nft'
+        # A bare name, so the PATH the script sets for itself decides -
+        # which is what the iptables compiler writes for every tool
+        # (`OSConfigurator_linux24.DEFAULT_TOOL_PATHS`).  A single absolute
+        # path is right for one distribution and wrong for the next, and
+        # the script's own `find_program` then stops the activation.
+        nft_path = self.firewall_option(fw, 'nft_path') or 'nft'
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
