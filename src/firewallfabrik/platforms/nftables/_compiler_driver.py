@@ -1278,34 +1278,38 @@ class CompilerDriver_nft(CompilerDriver):
             if need_shell_functions:
                 shell_functions = oscnf.print_shell_functions()
 
+            buf = io.StringIO()
+            # A bridge is created before the addresses of any interface are
+            # configured, the order `CompilerDriver_ipt::run` writes the
+            # block in (CompilerDriver_ipt_run.cpp:557-573).  The other way
+            # round the address of the bridge itself is configured on an
+            # interface that does not exist yet, and
+            # `update_addresses_of_interface` answers that with "Interface
+            # br0 does not exist" and `exit 1` - so the script stops before
+            # it installs a single rule, on exactly the run that was to
+            # create the bridge.
+            #
+            # "Configure bridge interfaces" is a question of its own, the way
+            # the C++ driver and the iptables driver here ask it: a firewall
+            # whose addresses come from somewhere else can still be the one
+            # that builds its bridges.
+            if self.firewall_option(fw, 'configure_bridge_interfaces'):
+                buf.write(oscnf.print_bridge_interface_configuration_commands())
+
             if configure_interfaces:
-                buf = io.StringIO()
-                # A bridge is created before the addresses of any interface
-                # are configured, the order `CompilerDriver_ipt::run` writes
-                # the block in (CompilerDriver_ipt_run.cpp:557-573).  The
-                # other way round the address of the bridge itself is
-                # configured on an interface that does not exist yet, and
-                # `update_addresses_of_interface` answers that with
-                # "Interface br0 does not exist" and `exit 1` - so the script
-                # stops before it installs a single rule, on exactly the run
-                # that was to create the bridge.
-                if self.firewall_option(fw, 'configure_bridge_interfaces'):
-                    buf.write(oscnf.print_bridge_interface_configuration_commands())
-
                 buf.write(oscnf.print_interface_configuration_commands())
-
                 buf.write(oscnf.print_commands_to_clear_known_interfaces())
                 buf.write(oscnf.print_dynamic_addresses_configuration_commands())
-                raw = textwrap.dedent(buf.getvalue()).strip()
-                configure_interfaces_code = textwrap.indent(raw, '    ')
             elif manage_virtual_addr:
                 # The addresses a NAT rule needs are added even when the
                 # interfaces themselves are configured elsewhere; the firewall
                 # has to carry them or it will not answer ARP for them and the
                 # translated traffic never arrives.
-                raw = oscnf.print_virtual_addresses_for_nat_commands().strip()
-                if raw:
-                    configure_interfaces_code = textwrap.indent(raw, '    ')
+                buf.write(oscnf.print_virtual_addresses_for_nat_commands())
+
+            raw = textwrap.dedent(buf.getvalue()).strip()
+            if raw:
+                configure_interfaces_code = textwrap.indent(raw, '    ')
 
             if verify_interfaces_opt:
                 raw = textwrap.dedent(oscnf.print_verify_interfaces_commands()).strip()
