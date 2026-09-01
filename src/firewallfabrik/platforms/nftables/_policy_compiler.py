@@ -2635,13 +2635,23 @@ class RemoveFW(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        # The hook decides, not the name of the chain: `TimeNegation` and
+        # `SplitLogWithStatefulLimit` run in front of this and leave the
+        # rule in a chain of their own, which the input or the output
+        # chain jumps into.
         chain = rule.ipt_chain
 
-        if chain == 'input' and not rule.dst_single_object_negation:
+        if (
+            nft_comp.is_chain_descendant_of(chain, 'input')
+            and not rule.dst_single_object_negation
+        ):
             rule.dst = [
                 obj for obj in rule.dst if not self.compiler.is_firewall_or_cluster(obj)
             ]
-        elif chain == 'output' and not rule.src_single_object_negation:
+        elif (
+            nft_comp.is_chain_descendant_of(chain, 'output')
+            and not rule.src_single_object_negation
+        ):
             rule.src = [
                 obj for obj in rule.src if not self.compiler.is_firewall_or_cluster(obj)
             ]

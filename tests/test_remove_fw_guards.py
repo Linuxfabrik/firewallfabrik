@@ -23,6 +23,7 @@ to everything the rule permits.
 """
 
 import uuid
+from collections import defaultdict
 
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._compiler import Compiler
@@ -57,13 +58,18 @@ class _Compiler:
 
     def __init__(self, virtual_addresses=()):
         self.oscnf = _OSConfigurator(virtual_addresses)
-        self.upstream_chains = {}
+        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
 
     def is_chain_descendant_of_input(self, chain):
         return chain.startswith('In_')
 
     def is_chain_descendant_of_output(self, chain):
         return chain.startswith('Out_')
+
+    # Both compilers ask which hook a chain hangs off, not what it is
+    # called, so the stub answers with the real implementation.
+    is_chain_descendant_of = Compiler.is_chain_descendant_of
+    insert_upstream_chain = Compiler.insert_upstream_chain
 
     # The real one, not a stub: what counts as the firewall is the whole
     # question this processor asks, and a cluster counts too.
@@ -122,3 +128,22 @@ def test_nftables_keeps_it_for_a_virtual_address_too():
     out = _run(RemoveFWNft, _Compiler(virtual_addresses=['192.168.1.10']), 'input')
     assert len(out.dst) == 1
     assert _run(RemoveFWNft, _Compiler(), 'input').dst == []
+
+
+def test_a_temporary_chain_below_input_counts_as_input_on_nftables():
+    """`TimeNegation` and the log split leave the rule in a chain of their own.
+
+    The chain is named after neither hook, so asking for the name kept the
+    firewall object in the destination of a rule the input hook reaches -
+    a longer rule than the one the iptables compiler writes for the same
+    policy.
+    """
+    compiler = _Compiler()
+    compiler.insert_upstream_chain('input', 'C0123456789ab.0')
+    assert _run(RemoveFWNft, compiler, 'C0123456789ab.0').dst == []
+
+
+def test_a_temporary_chain_below_forward_keeps_the_firewall_object():
+    compiler = _Compiler()
+    compiler.insert_upstream_chain('forward', 'C0123456789ab.0')
+    assert len(_run(RemoveFWNft, compiler, 'C0123456789ab.0').dst) == 1
