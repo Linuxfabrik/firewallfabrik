@@ -140,13 +140,22 @@ update_addresses_of_interface() {
 ## fwbuilder. Addresses will be removed from all other interfaces with
 ## addresses found on the firewall.
 ##
+## The loopback is never touched, whether the firewall object names it or
+## not.  Nobody configures it and every local service depends on it, so
+## "ip link set lo down" - which is what this function does to an
+## interface it does not know - takes the machine's own traffic down
+## while the packet filter it belongs to is being installed.  Firewall
+## Builder has no such exception and an object without a loopback child
+## is ordinary, which is how the interface ends up unknown.  The flag is
+## asked for, not the name: it is what the kernel says about the device.
+
 clear_addresses_except_known_interfaces() {
     "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
-         (/state/ && !($2 in ignored_dict)) {print $2;}' | \
+         (/state/ && $3 !~ /LOOPBACK/ && !($2 in ignored_dict)) {print $2;}' | \
          while read -r intf; do
             echo "# Removing addresses not configured in fwbuilder from interface $intf"
             $FWBDEBUG "$IP" addr flush dev "$intf" scope global

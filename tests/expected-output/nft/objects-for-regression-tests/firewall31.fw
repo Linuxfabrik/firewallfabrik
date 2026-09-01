@@ -195,7 +195,7 @@ clear_addresses_except_known_interfaces() {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
-         (/state/ && !($2 in ignored_dict)) {print $2;}' | \
+         (/state/ && $3 !~ /LOOPBACK/ && !($2 in ignored_dict)) {print $2;}' | \
          while read -r intf; do
             echo "# Removing addresses not configured in fwbuilder from interface $intf"
             $FWBDEBUG "$IP" addr flush dev "$intf" scope global
