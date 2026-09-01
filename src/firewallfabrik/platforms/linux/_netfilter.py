@@ -237,6 +237,28 @@ def nat_interface_problem(
 MAX_INTERFACE_NAME_LENGTH = 15
 
 
+def interface_name_is_a_pattern(name: str) -> bool:
+    """Whether this name stands for a set of interfaces, not for one.
+
+    Firewall Builder stores the wildcard as ``*`` and iptables spells it
+    ``+``; both print rules translate the one into the other when they
+    write a rule, and a data file may carry either.  There is no device
+    of such a name, so nothing that talks to the machine about a single
+    interface - configuring its addresses, verifying that it is there,
+    asking what address it has - may be given one.
+    """
+    return '*' in name or name.endswith('+')
+
+
+def interface_name_prefix(name: str) -> str:
+    """The literal part of a wildcard interface name.
+
+    ``ppp*`` and ``ppp+`` both stand for every interface whose name
+    starts with ``ppp``.
+    """
+    return name.split('*', 1)[0].rstrip('+')
+
+
 def interface_name_fits(name: str) -> bool:
     """Whether the kernel can carry an interface of this name.
 

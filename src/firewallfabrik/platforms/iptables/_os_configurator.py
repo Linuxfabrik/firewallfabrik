@@ -37,6 +37,10 @@ from firewallfabrik.platforms.iptables._utils import (
     normalize_set_name,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import (
+    interface_name_is_a_pattern,
+    interface_name_prefix,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -365,7 +369,7 @@ class OSConfigurator_linux24(OSConfigurator):
             name = iface.name
             if not self.interface_exists_on_the_machine(iface):
                 continue
-            if name and '*' not in name and name not in interfaces:
+            if name and name not in interfaces:
                 interfaces.append(name)
 
         verify = Configlet('linux24', 'verify_interfaces')
@@ -385,6 +389,12 @@ class OSConfigurator_linux24(OSConfigurator):
         gencmd: list[str] = []
 
         for iface in self.fw.interfaces:
+            # `known_interfaces` is the list the "clear unknown interfaces"
+            # option spares, and a wildcard name belongs in it: it stands
+            # for the interfaces the firewall does own, which the function
+            # matches by prefix.  What it must not do is claim to configure
+            # the addresses of a name no device carries.
+            self.known_interfaces.append(iface.name)
             if not self.interface_exists_on_the_machine(iface):
                 continue
             should_manage, update_addresses, ignore_addresses = (
@@ -401,8 +411,6 @@ class OSConfigurator_linux24(OSConfigurator):
                     )
                 )
                 need_promote_command = need_promote_command or len(update_addresses) > 2
-
-            self.known_interfaces.append(iface.name)
 
         script.set_variable('have_interfaces', len(self.fw.interfaces) > 0)
         script.set_variable('need_promote_command', need_promote_command)
@@ -432,8 +440,6 @@ class OSConfigurator_linux24(OSConfigurator):
             if not self.interface_exists_on_the_machine(iface):
                 continue
             name = iface.name
-            if '*' in name:
-                continue
 
             var_name = get_interface_var_name(iface)
             var_name_v6 = get_interface_var_name(iface, suffix='v6')
@@ -533,11 +539,11 @@ class OSConfigurator_linux24(OSConfigurator):
             iface = variables.get(match.group(1))
             if iface is None:
                 continue
-            if '*' in iface.name:
+            if interface_name_is_a_pattern(iface.name):
                 # Only one wildcard interface per rule, the same limit
                 # fwbuilder documents in the configlet.  The loop resolves
                 # the address into $addr, so the variable is replaced.
-                wildcard_family = iface.name.split('*', 1)[0]
+                wildcard_family = interface_name_prefix(iface.name)
                 command = command[: match.start()] + '$addr' + command[match.end() :]
                 break
             if match.group(1) not in used:

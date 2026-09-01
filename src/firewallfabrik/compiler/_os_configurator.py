@@ -63,25 +63,33 @@ class OSConfigurator(BaseCompiler):
     def interface_exists_on_the_machine(self, iface: Interface) -> bool:
         """Whether the script can talk about this interface at all.
 
-        A name longer than IFNAMSIZ-1 cannot be on the machine - the
-        kernel enforces the limit - so nothing the script says about it
-        can work.  `update_addresses_of_interface` answers a name it does
-        not find with "Interface <name> does not exist" and `exit 1`, and
-        that stops the activation before a single rule is installed, on
-        every run, for good.  The rules matching on such an interface are
-        already left out with the same reason (`check_interface_name` in
-        `platforms/linux/_netfilter.py`); the interface block has to ask
-        the same question.
+        Two names have no device behind them.
 
-        Reported once per name, because every caller walks the same list
-        of interfaces.
+        A **wildcard** name - ``ppp*`` in the object, ``ppp+`` in an
+        iptables command - stands for every interface whose name starts
+        with what is in front of it.  That is not a mistake and nothing is
+        reported; it just means the script cannot configure its
+        addresses, cannot verify that it is there and cannot ask what
+        address it has.
+
+        A name **longer than IFNAMSIZ-1** cannot be on the machine at all,
+        and both compilers already know it: `check_interface_name` leaves
+        every rule matching on such an interface out and says so.
+        `update_addresses_of_interface` answers a name it does not find
+        with "Interface <name> does not exist" and `exit 1`, which stops
+        the activation before a single rule is installed, on every run,
+        for good - so the interface block has to ask the same question and
+        it says so once per name.
         """
         from firewallfabrik.platforms.linux._netfilter import (
             MAX_INTERFACE_NAME_LENGTH,
             interface_name_fits,
+            interface_name_is_a_pattern,
         )
 
         name = iface.name or ''
+        if interface_name_is_a_pattern(name):
+            return False
         if interface_name_fits(name):
             return True
         if name not in self._reported_long_interfaces:
