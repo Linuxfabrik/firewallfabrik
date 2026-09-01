@@ -204,11 +204,23 @@ update_addresses_of_interface() {
 
 clear_addresses_except_known_interfaces() {
     "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
-        'BEGIN {
-           split(IGNORED,ignored_arr);
-           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+        'function known(name,   i, prefix) {
+           if (name in ignored_dict) return 1;
+           for (i in wildcard_arr) {
+             prefix = wildcard_arr[i];
+             if (substr(name, 1, length(prefix)) == prefix) return 1;
+           }
+           return 0;
          }
-         (/state/ && $3 !~ /LOOPBACK/ && !($2 in ignored_dict)) {print $2;}' | \
+         BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {
+             ignored_dict[ignored_arr[a]]=1;
+             if (ignored_arr[a] ~ /[*+]$/)
+               wildcard_arr[a]=substr(ignored_arr[a],1,length(ignored_arr[a])-1);
+           }
+         }
+         (/state/ && $3 !~ /LOOPBACK/ && !known($2)) {print $2;}' | \
          while read -r intf; do
             echo "# Removing addresses not configured in fwbuilder from interface $intf"
             $FWBDEBUG "$IP" addr flush dev "$intf" scope global

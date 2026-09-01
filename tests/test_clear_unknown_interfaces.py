@@ -19,6 +19,10 @@ of interface must survive that:
 * the **loopback**, whether the object names it or not.  Every local
   service depends on it, and a firewall object without a loopback child
   is ordinary.  Firewall Builder has no such exception.
+* an interface the object *does* name with a **wildcard** - ``ppp*`` in
+  the object, ``ppp0`` on the machine.  The ignore list was compared name
+  for name, so the firewall's own dial-up link was flushed and taken down
+  by its own script.
 The shell is asked directly, with ``ip`` stubbed on PATH, so the test
 needs neither privileges nor a network namespace.
 """
@@ -81,4 +85,21 @@ def _cleared(tmp_path, ignore_list):
     ],
 )
 def test_the_loopback_is_never_taken_down(tmp_path, ignore_list, expected):
+    assert _cleared(tmp_path, ignore_list) == expected
+
+
+@pytest.mark.parametrize(
+    ('ignore_list', 'expected'),
+    [
+        # The object names its dial-up link the only way it can.
+        ('eth0 ppp*', ['virbr0']),
+        # And the iptables spelling of the same wildcard.
+        ('eth0 ppp+', ['virbr0']),
+        # A wildcard is a prefix, not a joker: virbr0 is still unknown.
+        ('eth* ppp*', ['virbr0']),
+    ],
+)
+def test_a_wildcard_covers_the_interfaces_it_stands_for(
+    tmp_path, ignore_list, expected
+):
     assert _cleared(tmp_path, ignore_list) == expected

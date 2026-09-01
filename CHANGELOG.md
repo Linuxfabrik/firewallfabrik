@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
 * Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
 * Compiler (nftables): a firewall that builds its bridges but leaves the addresses to another tool gets its bridges, the way it already did on iptables.
+* Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" recognises an interface the firewall names with a wildcard, instead of taking its own dial-up link down.
 * Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" no longer takes the loopback down on a firewall whose object does not list it, which cut off every service on the machine itself.
 * Compiler (iptables, nftables): an interface whose name is longer than an interface name can be is left out of the interface configuration and reported, instead of stopping every activation before the first rule is installed.
 * Compiler (iptables, nftables): a NAT rule that translates to an address range says that the firewall is not given those addresses, instead of leaving the translated traffic to fail silently.
