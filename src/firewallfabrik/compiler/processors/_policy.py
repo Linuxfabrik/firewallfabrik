@@ -24,9 +24,11 @@ import uuid
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core._options import option_int, option_is_true
 from firewallfabrik.core.objects import (
+    Address,
     AddressRange,
     Direction,
     Firewall,
+    Host,
     Interface,
     IPv4,
     IPv6,
@@ -34,8 +36,142 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PhysAddress,
     PolicyAction,
+    netmask_prefix_length,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
+
+
+class CheckForZeroAddr(PolicyRuleProcessor):
+    """Check src/dst for zero addresses and hosts without interfaces.
+
+    Aborts compilation if:
+    - A Host object has no interfaces (no address).
+    - An Address object has address 0.0.0.0 with netmask 0.0.0.0
+      (equivalent to 'any', likely a mistake).
+    - A Network object has non-zero address but /0 netmask (likely typo).
+
+    The rule is kept, unlike the other checks of this kind.  Nothing is
+    lost by compiling it: an object whose netmask is /0 really does mean
+    "any", so the rule matches what it says and the message is about the
+    address probably being a typo rather than about a condition the
+    compiler cannot express.  The C++ regression output, produced in test
+    mode where ``abort()`` returns instead of throwing, carries these rules
+    for the same reason.
+
+    Corresponds to C++ ``PolicyCompiler::checkForZeroAddr``, which
+    Firewall Builder writes once and every platform inherits.  Shared here
+    for the same reason: fwf had a copy per platform and the two had
+    drifted.  The nftables one read the netmask with ``ipaddress.
+    ip_address``, which raises for the bit length Firewall Builder writes
+    for an IPv6 mask, so ``::/0`` - "the whole internet" - answered "not
+    zero" and the object the check exists to report was not reported on
+    that platform; it also reported every offending object of both slots
+    where the C++ reports the first, and worded the message its own way.
+    """
+
+    @staticmethod
+    def _find_host_with_no_interfaces(elements: list) -> Host | None:
+        """Find a Host object with no interfaces."""
+        for obj in elements:
+            if (
+                isinstance(obj, Host)
+                and not isinstance(obj, Firewall)
+                and not obj.interfaces
+            ):
+                return obj
+        return None
+
+    @staticmethod
+    def _find_zero_address(elements: list) -> Address | None:
+        """Find an address with 0.0.0.0 or netmask /0.
+
+        The C++ guards both tests with ``!addr->isAny()``, and
+        ``Address::isAny()`` (libfwbuilder Address.cpp) asks for the *id* of
+        the predefined "Any" object, not for the value: the check is written
+        to report exactly the object whose address and netmask are both
+        zero.  fwf has no such predefined object - an element that says
+        "any" is empty and never reaches here - so there is nothing to skip,
+        and skipping by value made the first of the two branches dead code.
+
+        The netmask goes through :func:`netmask_prefix_length` because
+        Firewall Builder writes an IPv6 one as a bit length, which reading
+        it as an address answers with a raise.
+        """
+        import ipaddress as _ipaddress
+
+        for obj in elements:
+            if not isinstance(obj, Address):
+                continue
+
+            # Skip dynamic/unnumbered/bridge-port interfaces
+            if isinstance(obj, Interface) and (
+                obj.is_dynamic() or obj.is_unnumbered() or obj.is_bridge_port()
+            ):
+                continue
+
+            # Skip AddressRange -- 0.0.0.0 is acceptable for ranges
+            if isinstance(obj, AddressRange):
+                continue
+
+            addr_str = obj.get_address()
+            mask_str = obj.get_netmask()
+
+            if not addr_str or not mask_str:
+                continue
+
+            try:
+                ip = _ipaddress.ip_address(addr_str)
+            except ValueError:
+                continue
+
+            if netmask_prefix_length(addr_str, mask_str) != 0:
+                continue
+
+            # Address 0.0.0.0 with a zero netmask -- equivalent to 'any'
+            if int(ip) == 0:
+                return obj
+
+            # Network with non-zero address but /0 netmask -- likely typo
+            if isinstance(obj, (Network, NetworkIPv6)):
+                return obj
+
+        return None
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        # Check for hosts with no interfaces
+        a = self._find_host_with_no_interfaces(rule.src)
+        if a is None:
+            a = self._find_host_with_no_interfaces(rule.dst)
+        if a is not None:
+            self.compiler.abort(
+                rule,
+                f"Object '{a.name}' has no interfaces, therefore it does "
+                f'not have address and can not be used in the rule.',
+            )
+
+        # Check for zero addresses
+        a2 = self._find_zero_address(rule.src)
+        if a2 is None:
+            a2 = self._find_zero_address(rule.dst)
+        if a2 is not None:
+            err = f"Object '{a2.name}'"
+            if isinstance(a2, IPv4):
+                iface = getattr(a2, 'interface', None)
+                if iface is not None:
+                    iface_label = iface.name
+                    err += f' (an address of interface {iface_label} )'
+            err += (
+                ' has address or netmask 0.0.0.0, which is equivalent '
+                "to 'any'. This is likely an error."
+            )
+            self.compiler.abort(rule, err)
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class InterfacePolicyRules(PolicyRuleProcessor):

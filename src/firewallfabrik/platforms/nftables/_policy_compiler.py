@@ -53,6 +53,7 @@ from firewallfabrik.compiler.processors._generic import (
     VerifyTimeIntervals,
 )
 from firewallfabrik.compiler.processors._policy import (
+    CheckForZeroAddr,
     DropRuleWithImpossibleInterface,
     ExpandMultipleAddressesIfNotFWInDst,
     ExpandMultipleAddressesIfNotFWInSrc,
@@ -81,7 +82,6 @@ from firewallfabrik.core.objects import (
     CustomService,
     Direction,
     Firewall,
-    Host,
     ICMP6Service,
     Interface,
     IPv4,
@@ -2915,57 +2915,6 @@ class CheckForUnnumbered(PolicyRuleProcessor):
                     self.compiler.abort(
                         rule, 'Can not use unnumbered interfaces in rules.'
                     )
-        self.tmp_queue.append(rule)
-        return True
-
-
-class CheckForZeroAddr(PolicyRuleProcessor):
-    """Check for zero addresses and hosts without interfaces.
-
-    A /0 netmask is detected family-independently: ``int(netmask) == 0``
-    catches both the IPv4 literal ``0.0.0.0`` and the IPv6 literal ``::``.
-    """
-
-    @staticmethod
-    def _is_zero(value: str) -> bool:
-        """Return True if an address/netmask string is numerically zero (any family)."""
-        if not value:
-            return False
-        import ipaddress as _ipa
-
-        # Numeric zero check, not a socket bind; detects the 'any' address/mask.
-        try:
-            return int(_ipa.ip_address(value)) == 0  # nosec B104
-        except ValueError:
-            return False
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        for slot in ('src', 'dst'):
-            for obj in getattr(rule, slot):
-                if isinstance(obj, Host) and not obj.interfaces:
-                    self.compiler.abort(rule, f"Object '{obj.name}' has no interfaces")
-                if isinstance(obj, Address):
-                    addr_zero = self._is_zero(obj.get_address())
-                    mask_zero = self._is_zero(obj.get_netmask())
-                    if addr_zero and mask_zero:
-                        self.compiler.abort(
-                            rule,
-                            f"Object '{obj.name}' has address 0.0.0.0/0.0.0.0",
-                        )
-                    if (
-                        isinstance(obj, (Network, NetworkIPv6))
-                        and obj.get_address()
-                        and not addr_zero
-                        and mask_zero
-                    ):
-                        self.compiler.abort(
-                            rule,
-                            f"Object '{obj.name}' has netmask 0.0.0.0"
-                            f" (equivalent to 'any')",
-                        )
         self.tmp_queue.append(rule)
         return True
 

@@ -27,8 +27,8 @@ writes an IPv6 one as a bit length (``NetworkIPv6::toXML``), so reading it
 as an address answers "not any" for every ``::/0`` there is.
 """
 
+from firewallfabrik.compiler.processors._policy import CheckForZeroAddr
 from firewallfabrik.core.objects import IPv4, IPv6, Network, NetworkIPv6
-from firewallfabrik.platforms.iptables._policy_compiler import CheckForZeroAddr
 from firewallfabrik.platforms.linux._routing_compiler import route_address
 
 ZERO_V4 = '0.0.0.0'  # nosec B104
@@ -96,6 +96,15 @@ def test_an_ipv6_zero_network_is_reported_too():
 
     typo = _obj(NetworkIPv6, '2001:db8::', '0', name='net-err-v6')
     assert CheckForZeroAddr._find_zero_address([typo]) is typo
+
+
+def test_both_platforms_ask_one_check():
+    """The C++ has one `checkForZeroAddr`; two copies here had drifted."""
+    from firewallfabrik.platforms.iptables import _policy_compiler as ipt
+    from firewallfabrik.platforms.nftables import _policy_compiler as nft
+
+    assert ipt.CheckForZeroAddr is CheckForZeroAddr
+    assert nft.CheckForZeroAddr is CheckForZeroAddr
 
 
 def _ipt_printer():

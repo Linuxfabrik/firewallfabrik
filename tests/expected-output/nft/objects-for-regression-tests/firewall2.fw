@@ -11,7 +11,7 @@
 #  this object has several interfaces and shows different rules for NAT. Also testing policy rule options
 #
 # Rule 51 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+# Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
 # firewall2:NAT:22: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule '0 (eth1)' shadows rule '2 ()' below it, for service 'bootpc'
 # Rule '0 (eth1)' shadows rule '3 (eth1,eth3)' below it, for service 'bootpc'
@@ -438,7 +438,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
         ip saddr 1.2.3.0/0 counter drop
     }
 
@@ -585,7 +585,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
         ip saddr 1.2.3.0/0 counter drop
     }
 
@@ -714,7 +714,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
         ip saddr 1.2.3.0/0 counter drop
     }
 }
