@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables): a rule branching into a NAT rule set that the IPv6 pass does not compile no longer jumps into a chain only the IPv4 script created, which ip6tables refuses and which stopped the activation with every policy already at DROP.
 * Compiler (nftables): a tagging or classifying rule that ends up in the forward chain is left out on a firewall configured not to forward packets, the way the iptables compiler leaves it out - it had nothing to match there and only lengthened the ruleset.
 * Compiler (iptables): a NAT rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule with a negated element is moved into a chain of its own before the chain is decided, and the kernel then refused a command that stopped the activation with every policy already at DROP.
 * Compiler (nftables): a rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule the compiler moves into a chain of its own then kept a match the kernel never fires there, or lost one it does.

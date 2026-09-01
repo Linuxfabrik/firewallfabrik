@@ -365,6 +365,15 @@ class CompilerDriver_ipt(CompilerDriver):
                     minus_n_commands_filter.clear()
                     minus_n_commands_mangle.clear()
                     minus_n_commands_nat.clear()
+                    # The nat table is per address family, so the chains a
+                    # branch rule set filled in the other pass say nothing
+                    # about this one: a rule branching into a rule set that
+                    # this pass does not compile would jump to a chain
+                    # `ip6tables` never created, which answers "No
+                    # chain/target/match by that name" and stops the
+                    # activation with the policies already at DROP.  The
+                    # nftables driver clears it for the same reason.
+                    self._nat_branch_chains = {}
 
                     # Run preprocessor if we have rules
                     nat_count = sum(
