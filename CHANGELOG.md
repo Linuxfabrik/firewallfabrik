@@ -132,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor: a failover group can be created on a cluster interface and a state sync group on a cluster, and both are stored where they belong instead of beside the firewalls ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
 * Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.
 * Editor: changing the address of a host also marks every firewall whose rules name that host as needing a recompile, so the compile dialog no longer offers one of the two ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
+* Editor: deleting an object also marks every firewall whose rules named it, so a policy the deletion changed elsewhere in the file is offered for a recompile ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
 * Editor: opening the action parameters of a NAT rule no longer risks clearing the rule's other settings.
 * Editor: renaming an interface or the firewall above it also renames the failover group and the "Attached Networks" object under it, so they no longer keep naming an interface that is gone.
 * Editor: the Branch action can be set on a rule again, and the rule set it jumps into is chosen by dragging it out of the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).

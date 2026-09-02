@@ -39,39 +39,14 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
-    group_membership,
-    rule_elements,
+)
+from firewallfabrik.gui.object_usage import (
+    containment_chain,
+    find_referencing_firewalls,
 )
 from firewallfabrik.gui.policy_model import _action_label
 
 logger = logging.getLogger(__name__)
-
-
-def _containment_chain(obj):
-    """Return *obj* and every object that contains it, innermost first.
-
-    A rule never names the address under an interface; it names the
-    interface, or the host the interface belongs to.  So the question
-    "who is affected by this change" cannot be asked of the edited
-    object alone - changing the IP of a host changes every rule that
-    names *the host*, and nothing at all references the address object
-    itself.  The chain is address → interface → parent interfaces →
-    device, which is the containment fwbuilder walks in
-    ``FWObject::getParent()``.
-    """
-    chain = []
-    seen = set()
-    current = obj
-    while current is not None and getattr(current, 'id', None) not in seen:
-        seen.add(current.id)
-        chain.append(current)
-        if isinstance(current, Address):
-            current = current.interface
-        elif isinstance(current, Interface):
-            current = current.parent_interface or current.device
-        else:
-            current = None
-    return chain
 
 
 def _find_parent_firewall(obj):
@@ -82,7 +57,7 @@ def _find_parent_firewall(obj):
     fwbuilder's ``UsageResolver::findFirewallsForObject`` direct-parent
     walk (``while (f && !Firewall::cast(f)) f=f->getParent()``).
     """
-    for parent in _containment_chain(obj):
+    for parent in containment_chain(obj):
         if isinstance(parent, Firewall):
             return parent
     return None
@@ -105,62 +80,6 @@ def _session_has_real_changes(session):
             if getattr(obj, key, old_val) != old_val:
                 return True
     return False
-
-
-def _find_referencing_firewalls(session, obj_or_id):
-    """Find all Firewalls whose rules reference *obj_or_id*.
-
-    Two hierarchies are walked, because a rule can name the changed
-    object through either of them:
-
-    * the group hierarchy (transitively), so editing a member of a
-      ServiceGroup also stamps the firewalls using that group - this is
-      fwbuilder's ``UsageResolver::findWhereUsedRecursively``;
-    * the containment hierarchy, so editing the address under an
-      interface also stamps the firewalls whose rules name *the
-      interface* or *the host*.  Nothing ever references the address
-      object itself, which is why asking about it alone finds nobody
-      (#159).
-    """
-    if isinstance(obj_or_id, uuid.UUID | str):
-        seeds = [obj_or_id]
-    else:
-        seeds = [o.id for o in _containment_chain(obj_or_id)]
-
-    # Collect the seeds plus all groups (transitively) containing them.
-    search_ids = set(seeds)
-    queue = list(seeds)
-    while queue:
-        member_id = queue.pop()
-        parent_group_ids = set(
-            session.scalars(
-                sqlalchemy.select(group_membership.c.group_id).where(
-                    group_membership.c.member_id == member_id,
-                ),
-            ).all()
-        )
-        for gid in parent_group_ids:
-            if gid not in search_ids:
-                search_ids.add(gid)
-                queue.append(gid)
-
-    # Find every Firewall that references any of these IDs in its rules.
-    device_ids = set(
-        session.scalars(
-            sqlalchemy.select(RuleSet.device_id)
-            .distinct()
-            .join(Rule, Rule.rule_set_id == RuleSet.id)
-            .join(rule_elements, rule_elements.c.rule_id == Rule.id)
-            .where(rule_elements.c.target_id.in_(search_ids)),
-        ).all()
-    )
-
-    firewalls = []
-    for did in device_ids:
-        fw = session.get(Host, did)
-        if isinstance(fw, Firewall):
-            firewalls.append(fw)
-    return firewalls
 
 
 # Messages shown when double-clicking an "Any" element in a rule cell.
@@ -709,7 +628,7 @@ class EditorManager(QObject):
             if obj is not None:
                 ref_firewalls = [
                     rfw
-                    for rfw in _find_referencing_firewalls(session, obj)
+                    for rfw in find_referencing_firewalls(session, obj)
                     if fw is None or rfw.id != fw.id
                 ]
                 if ref_firewalls:

@@ -40,10 +40,11 @@ from firewallfabrik.core.objects import (
 
 pytest.importorskip('PySide6')
 
-from firewallfabrik.gui.editor_manager import (
-    _containment_chain,
-    _find_parent_firewall,
-    _find_referencing_firewalls,
+from firewallfabrik.gui.editor_manager import _find_parent_firewall
+from firewallfabrik.gui.object_tree_ops import TreeOperations
+from firewallfabrik.gui.object_usage import (
+    containment_chain,
+    find_referencing_firewalls,
 )
 
 from .conftest import FIXTURES_DIR
@@ -97,7 +98,7 @@ def test_the_fixture_has_one_firewall_naming_another(database):
 def test_the_chain_from_an_address_reaches_its_firewall(database):
     with database.session() as session:
         fw, iface, addr = _address_of(session, NAMED_FIREWALL)
-        chain = _containment_chain(addr)
+        chain = containment_chain(addr)
         kinds = [type(o).__name__ for o in chain]
         reaches_interface = any(
             isinstance(o, Interface) and o.id == iface.id for o in chain
@@ -127,7 +128,7 @@ def test_changing_a_host_marks_the_firewall_that_names_it(database, level):
         fw, iface, addr = _address_of(session, NAMED_FIREWALL)
         edited = {'address': addr, 'interface': iface, 'firewall': fw}[level]
 
-        found = {f.name for f in _find_referencing_firewalls(session, edited)}
+        found = {f.name for f in find_referencing_firewalls(session, edited)}
 
     assert FIREWALL_THAT_NAMES_IT in found
 
@@ -142,12 +143,47 @@ def test_an_address_of_a_host_nobody_names_reaches_nobody(database):
             if a.interface is not None
             and not session.execute(
                 sqlalchemy.select(rule_elements).where(
-                    rule_elements.c.target_id.in_([o.id for o in _containment_chain(a)])
+                    rule_elements.c.target_id.in_([o.id for o in containment_chain(a)])
                 )
             ).all()
         ]
         if not unused:
             pytest.skip('every address of the fixture is named somewhere')
-        found = _find_referencing_firewalls(session, unused[0])
+        found = find_referencing_firewalls(session, unused[0])
 
     assert found == []
+
+
+def test_deleting_an_object_marks_the_firewalls_that_lose_it():
+    """The delete path edits rules of firewalls it never walks into.
+
+    ``_cleanup_references_and_delete`` takes the object out of every rule
+    that names it and disables the ones it leaves matching everything.
+    Those rules belong to other firewalls, so the deletion changes their
+    policy without their ``lastModified`` moving.
+    """
+    dm = firewallfabrik.core.DatabaseManager()
+    dm.load(str(FIXTURES_DIR / 'compiler-tests.fwf'))
+
+    with dm.session() as session:
+        named = session.scalars(
+            sqlalchemy.select(Firewall).where(Firewall.name == NAMED_FIREWALL)
+        ).one()
+        victim_id = named.id
+        other = session.scalars(
+            sqlalchemy.select(Firewall).where(Firewall.name == FIREWALL_THAT_NAMES_IT)
+        ).one()
+        # Put the neighbour's clock ahead of the change, so only the
+        # deletion can move it.
+        other.data = {**(other.data or {}), 'lastModified': 1, 'lastCompiled': 2}
+        session.commit()
+
+    TreeOperations(dm).delete_object(victim_id, Firewall, NAMED_FIREWALL, 'Firewall')
+
+    with dm.session() as session:
+        other = session.scalars(
+            sqlalchemy.select(Firewall).where(Firewall.name == FIREWALL_THAT_NAMES_IT)
+        ).one()
+        data = other.data or {}
+
+    assert int(data.get('lastModified', 0)) > int(data.get('lastCompiled', 0))
