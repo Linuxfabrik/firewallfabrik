@@ -33,10 +33,21 @@ class _FakeAddress:
 
 
 class _FakeInterface:
-    def __init__(self, name, addresses, regular=True, iface_id='iface-uuid-1'):
+    def __init__(
+        self,
+        name,
+        addresses,
+        regular=True,
+        iface_id='iface-uuid-1',
+        sub_interfaces=(),
+    ):
         self.name = name
         self.id = iface_id
         self.addresses = addresses
+        # The check walks the sub-interfaces too, the way
+        # `getByTypeDeep(Interface::TYPENAME)` reads them: a VLAN
+        # interface carries an address of its own.
+        self.sub_interfaces = list(sub_interfaces)
         self._regular = regular
 
     def is_regular(self):

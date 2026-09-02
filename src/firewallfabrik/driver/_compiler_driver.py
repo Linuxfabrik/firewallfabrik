@@ -60,6 +60,26 @@ def _as_uuid(value):
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
 
 
+def _every_interface(fw):
+    """Yield every interface of *fw*, sub-interfaces included.
+
+    ``fw.interfaces`` is the top level alone.  Firewall Builder reads
+    the same list with ``getByTypeDeep(Interface::TYPENAME)``
+    (CompilerDriver.cpp:443), and it has to: a VLAN interface hangs
+    under the interface it tags and carries an address of its own, and
+    a bridge port hangs under the bridge.
+    """
+    pending = list(fw.interfaces)
+    seen: set = set()
+    while pending:
+        iface = pending.pop()
+        if iface.id in seen:
+            continue
+        seen.add(iface.id)
+        yield iface
+        pending.extend(iface.sub_interfaces)
+
+
 def _one_edit_apart(typed: str, known: str) -> bool:
     """Is *typed* what *known* looks like after a single slip of the hand?
 
@@ -834,10 +854,16 @@ class CompilerDriver(BaseCompiler):
         so the interface of a firewall silently stood for one host instead
         of for its network, in a script that loads without a word.
 
+        Sub-interfaces are checked too, the way ``commonChecks2`` reads
+        them (``fw->getByTypeDeep(Interface::TYPENAME)``): a VLAN
+        interface carries the address of its tag, and a netmask of /0 on
+        it makes every rule naming it match every address - which is the
+        failure this check exists to stop, one level down.
+
         Returns a human-readable error string, or an empty string on
         success.
         """
-        for iface in fw.interfaces:
+        for iface in _every_interface(fw):
             if not iface.is_regular():
                 continue
             for addr in iface.addresses:
