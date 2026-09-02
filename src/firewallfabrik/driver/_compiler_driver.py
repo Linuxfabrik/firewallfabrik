@@ -927,7 +927,36 @@ class CompilerDriver(BaseCompiler):
                 self.warning(msg)
         if fw is not None:
             self._warn_uncreatable_interfaces(fw)
+            if option_is_true(options.get('configure_bridge_interfaces', False)):
+                self._report_nested_bridges(fw)
             self._warn_misspelled_options(options, fw)
+
+    def _report_nested_bridges(self, fw) -> None:
+        """Report a bridge that hangs under another interface.
+
+        The bridge block collects its bridges from the firewall's
+        top-level interfaces, the way
+        ``printBridgeInterfaceConfigurationCommands`` does, so a bridge
+        that is a sub-interface of something is never built: no
+        ``sync_bridge_interfaces``, no ``update_bridge``, and none of its
+        own ports enslaved - and until now not a word either.
+        ``OSConfigurator_linux24::validateInterfaces`` calls the same
+        configuration unsupported and aborts on it, so this says so too.
+        """
+
+        def walk(iface, depth: int) -> None:
+            if depth and iface.get_option('type', '') == 'bridge':
+                self.error(
+                    f'Interface "{iface.name}" is a bridge below the interface '
+                    f'"{iface.parent_interface.name}". A bridge has to be an '
+                    'interface of the firewall itself; below another one it is '
+                    'not configured at all'
+                )
+            for child in iface.sub_interfaces:
+                walk(child, depth + 1)
+
+        for iface in fw.interfaces:
+            walk(iface, 0)
 
     def _warn_uncreatable_interfaces(self, fw) -> None:
         """Warn about an interface the script names and cannot create.

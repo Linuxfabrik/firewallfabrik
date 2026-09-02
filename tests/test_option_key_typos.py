@@ -38,6 +38,7 @@ class _Interface:
         self.name = name
         self.iface_type = iface_type
         self.sub_interfaces = list(sub_interfaces)
+        self.parent_interface = None
 
     def get_option(self, key, default=None):
         return self.iface_type if key == 'type' else default
@@ -54,6 +55,9 @@ class _Driver(CompilerDriver):
 
     def warning(self, message):
         self.said.append(message)
+
+    def error(self, message, msg=None):
+        self.said.append(message if msg is None else msg)
 
 
 def _warnings(options):
@@ -174,3 +178,49 @@ def test_a_sub_interface_is_reached_too():
 
     assert len(driver.said) == 1
     assert 'VLAN' in driver.said[0]
+
+
+def test_a_bridge_below_another_interface_is_reported():
+    """The bridge block only collects top-level interfaces (#95, bridges).
+
+    `validateInterfaces` calls the configuration unsupported and aborts;
+    without a word the bridge is simply never built - no
+    `sync_bridge_interfaces`, no `update_bridge`, no port enslaved.
+    """
+    inner = _Interface('br1', 'bridge')
+    outer = _Interface('br0', 'bridge', [inner])
+    inner.parent_interface = outer
+
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bridge_interfaces': True},
+        _FirewallWithInterfaces([outer]),
+    )
+
+    assert len(driver.said) == 1
+    assert 'br1' in driver.said[0]
+    assert 'br0' in driver.said[0]
+
+
+def test_a_bridge_of_the_firewall_itself_says_nothing():
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bridge_interfaces': True},
+        _FirewallWithInterfaces(
+            [_Interface('br0', 'bridge', [_Interface('eth1', 'ethernet')])]
+        ),
+    )
+
+    assert driver.said == []
+
+
+def test_a_nested_bridge_says_nothing_when_bridges_are_not_configured():
+    """With the setting off the script builds no bridge at all."""
+    inner = _Interface('br1', 'bridge')
+    outer = _Interface('br0', 'bridge', [inner])
+    inner.parent_interface = outer
+
+    driver = _Driver()
+    driver._warn_unsupported_options({}, _FirewallWithInterfaces([outer]))
+
+    assert driver.said == []
