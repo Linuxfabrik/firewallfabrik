@@ -43,9 +43,18 @@ class _Interface:
         self.name = name
         self.addresses = list(addresses)
         self.sub_interfaces = list(sub_interfaces)
+        self.parent_interface = None
+        for child in self.sub_interfaces:
+            child.parent_interface = self
 
     def is_regular(self):
         return True
+
+    def get_option(self, key, default=None):
+        return default
+
+    def get_failover_group(self):
+        return None
 
 
 class _Firewall:
@@ -97,9 +106,10 @@ def test_a_zero_address_on_a_sub_interface_is_refused():
 def test_a_sub_interface_two_levels_down_is_reached():
     """One level is all Firewall Builder allows, but the walk is a walk."""
     inner = _Interface('eth0.100.7', [_Address('198.51.100.1', '0.0.0.0')])  # nosec B104
+    middle = _Interface('eth0.100', [_Address('203.0.113.1', '255.255.255.0')], [inner])
     eth0 = _Interface(
         'eth0',
         [_Address('192.0.2.1', '255.255.255.0')],
-        [_Interface('eth0.100', [], [inner])],
+        [middle],
     )
     assert 'eth0.100.7' in _check([eth0])

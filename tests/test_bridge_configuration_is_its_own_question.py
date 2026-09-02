@@ -31,6 +31,8 @@ import sqlalchemy
 import firewallfabrik.core
 from firewallfabrik.core.objects import Firewall
 
+from .test_bridge_before_addresses import give_the_vlan_interface_an_address
+
 FIXTURE = Path(__file__).parent / 'fixtures' / 'cluster-tests.fwb'
 FIREWALL = 'gw1-bridge'
 
@@ -46,6 +48,7 @@ def _compile_with_options(platform, tmp_path, options):
         ).scalar_one()
         fw.options = {**(fw.options or {}), **options}
         fw_id = str(fw.id)
+        give_the_vlan_interface_an_address(session)
 
     if platform == 'ipt':
         from firewallfabrik.platforms.iptables._compiler_driver import (

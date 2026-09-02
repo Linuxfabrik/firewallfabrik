@@ -40,6 +40,9 @@ from firewallfabrik.core.objects import (
     StateSyncClusterGroup,
     netmask_prefix_length,
 )
+from firewallfabrik.driver._interface_properties import (
+    FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS,
+)
 from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
@@ -866,6 +869,15 @@ class CompilerDriver(BaseCompiler):
         for iface in _every_interface(fw):
             if not iface.is_regular():
                 continue
+            if not isinstance(fw, Cluster):
+                # A cluster compiled as itself is fwf's own mode - Firewall
+                # Builder answers a cluster name by compiling its members -
+                # and there an interface without an address is ordinary:
+                # the address of that name is on the member, and the member
+                # is checked when it is compiled.
+                said = self._check_interface_has_an_address(iface)
+                if said:
+                    return said
             for addr in iface.addresses:
                 # Only an address/netmask pair is this check's business.  A
                 # physAddress child of the same interface carries a MAC,
@@ -914,6 +926,53 @@ class CompilerDriver(BaseCompiler):
                         'interface would match every address.'
                     )
         return ''
+
+    @staticmethod
+    def _check_interface_has_an_address(iface) -> str:
+        """A regular interface without an address matches nothing.
+
+        Ports the "Missing IP address for interface" abort of
+        ``CompilerDriver::commonChecks2``.  Every rule naming such an
+        interface is compiled with an empty element, and an empty element
+        is "any" everywhere in both compilers - so a rule written for one
+        host becomes a rule for every address there is, in a script that
+        loads without a word.  The interface block names it as well and
+        `update_addresses_of_interface` then has nothing to configure.
+
+        The one exception Firewall Builder makes is the interface of a
+        cluster whose failover protocol brings the shared address with it:
+        `no_ip_ok` is True for heartbeat, openais and "none" and False for
+        vrrp (`res/os/linux24.xml`).  The protocol is read off the copy
+        the driver makes for the member (`failover_protocol`) and, when
+        the cluster object itself is compiled, off the group under the
+        interface.
+        """
+        # The same exclusion the address loop below makes, so the two
+        # readers of one collection answer the same question: a MAC, an
+        # address range and a run-time object are not the address of an
+        # interface.  The C++ asks it by type
+        # (`getByType(IPv4::TYPENAME)` plus the IPv6 one).
+        if any(
+            not isinstance(addr, AddressRange | MultiAddressRunTime | PhysAddress)
+            and addr.get_address()
+            for addr in iface.addresses
+        ):
+            return ''
+        if iface.get_option('cluster_interface', False):
+            group = iface.get_failover_group()
+            protocol = (
+                group.get_protocol()
+                if group is not None
+                else str(iface.get_option('failover_protocol', '') or '')
+            )
+            if protocol in FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS:
+                return ''
+        return (
+            f'Interface {iface.name} (id={iface.id}) has no IP address. '
+            'Every rule naming it would match every address. Give it the '
+            'address it has on the firewall, or mark it dynamic if it gets '
+            'one at boot time, or unnumbered if it never has one.'
+        )
 
     # -- Option validation --
 

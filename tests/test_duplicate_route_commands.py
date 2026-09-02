@@ -178,6 +178,22 @@ def test_two_interface_objects_of_one_name_install_one_route(
         )
         session.add(copy_iface)
         session.flush()
+        # `_copy_cluster_interface` copies the addresses of the cluster's
+        # interface onto the member's copy, so the copy carries one - and
+        # a regular interface without an address stops the compile.
+        session.add(
+            IPv4(
+                id=uuid.uuid4(),
+                type='IPv4',
+                name='cluster:eth0:ip',
+                interface=copy_iface,
+                inet_addr_mask={
+                    'address': '192.0.2.9',
+                    'netmask': '255.255.255.0',
+                },
+            )
+        )
+        session.flush()
         # The second rule leaves through the copy rather than through the
         # member's own interface.  Same name, different object.
         second = session.scalars(

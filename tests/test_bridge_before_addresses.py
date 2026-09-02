@@ -26,12 +26,40 @@ every `update_addresses_of_interface` line to the end of the
 to the same text.
 """
 
+import uuid
 from pathlib import Path
 
 import pytest
+import sqlalchemy
+
+from firewallfabrik.core.objects import Firewall, IPv4
 
 FIXTURE = Path(__file__).parent / 'fixtures' / 'cluster-tests.fwb'
 FIREWALL = 'gw1-bridge'
+
+
+def give_the_vlan_interface_an_address(session):
+    """`gw1-bridge` is the only bridge firewall of the corpus, and broken.
+
+    Its `eth0.100` carries no address, which Firewall Builder refuses
+    outright - `fwb_ipt` 5.3.7 answers the same file with "Missing IP
+    address for interface eth0.100" - and so does this compiler now. The
+    fixture is shared with the reference comparison, so the repair is
+    made here rather than in the file.
+    """
+    firewall = session.execute(
+        sqlalchemy.select(Firewall).where(Firewall.name == FIREWALL),
+    ).scalar_one()
+    iface = next(i for i in firewall.interfaces if i.name == 'eth0.100')
+    session.add(
+        IPv4(
+            id=uuid.uuid4(),
+            name='gw1-bridge:eth0.100:ip',
+            interface_id=iface.id,
+            library_id=iface.library_id,
+            inet_addr_mask={'address': '192.0.2.1', 'netmask': '255.255.255.0'},
+        )
+    )
 
 
 def _positions(script: str) -> tuple[int, int]:
@@ -53,7 +81,9 @@ def test_bridge_is_created_before_its_address_is_configured(
     platform, compile_ipt, compile_nft, tmp_path
 ):
     compile_fw = compile_ipt if platform == 'ipt' else compile_nft
-    script = compile_fw(FIXTURE, FIREWALL, tmp_path).read_text()
+    script = compile_fw(
+        FIXTURE, FIREWALL, tmp_path, give_the_vlan_interface_an_address
+    ).read_text()
     sync, addr = _positions(script)
     assert sync < addr, (
         f'{platform}: the address of an interface is configured on line {addr} '

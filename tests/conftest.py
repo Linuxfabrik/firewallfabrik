@@ -78,7 +78,13 @@ def _find_firewalls(fixture_path: Path) -> list[str]:
         return [fw.name for fw in firewalls]
 
 
-def _compile(fixture_path: Path, fw_name: str, tmp_path: Path, platform: str) -> Path:
+def _compile(
+    fixture_path: Path,
+    fw_name: str,
+    tmp_path: Path,
+    platform: str,
+    prepare=None,
+) -> Path:
     """Compile a firewall from a .fwf/.fwb fixture and return the output file path.
 
     Args:
@@ -86,11 +92,19 @@ def _compile(fixture_path: Path, fw_name: str, tmp_path: Path, platform: str) ->
         fw_name: Name of the firewall object to compile.
         tmp_path: Temporary directory for output.
         platform: 'ipt' or 'nft'.
+        prepare: Optional callable taking a session, run before the
+            compile.  A shared fixture is shared, so a test that needs
+            one object changed repairs its own copy here rather than
+            editing the file every other test reads.
 
     Returns:
         Path to the generated output file.
     """
     db = _get_db(fixture_path)
+
+    if prepare is not None:
+        with db.session() as session:
+            prepare(session)
 
     with db.session() as session:
         fw = session.execute(
@@ -137,8 +151,8 @@ def _compile(fixture_path: Path, fw_name: str, tmp_path: Path, platform: str) ->
 def compile_ipt():
     """Return a helper that compiles a .fwf fixture with the iptables driver."""
 
-    def _inner(fixture_path: Path, fw_name: str, tmp_path: Path) -> Path:
-        return _compile(fixture_path, fw_name, tmp_path, 'ipt')
+    def _inner(fixture_path: Path, fw_name: str, tmp_path: Path, prepare=None) -> Path:
+        return _compile(fixture_path, fw_name, tmp_path, 'ipt', prepare)
 
     return _inner
 
@@ -147,8 +161,8 @@ def compile_ipt():
 def compile_nft():
     """Return a helper that compiles a .fwf/.fwb fixture with the nftables driver."""
 
-    def _inner(fixture_path: Path, fw_name: str, tmp_path: Path) -> Path:
-        return _compile(fixture_path, fw_name, tmp_path, 'nft')
+    def _inner(fixture_path: Path, fw_name: str, tmp_path: Path, prepare=None) -> Path:
+        return _compile(fixture_path, fw_name, tmp_path, 'nft', prepare)
 
     return _inner
 
