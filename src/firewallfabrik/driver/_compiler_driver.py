@@ -867,6 +867,11 @@ class CompilerDriver(BaseCompiler):
         success.
         """
         for iface in _every_interface(fw):
+            parent = iface.parent_interface
+            if parent is not None:
+                said = self._check_bridge_port(fw, iface, parent)
+                if said:
+                    return said
             if not iface.is_regular():
                 continue
             if not isinstance(fw, Cluster):
@@ -973,6 +978,40 @@ class CompilerDriver(BaseCompiler):
             'address it has on the firewall, or mark it dynamic if it gets '
             'one at boot time, or unnumbered if it never has one.'
         )
+
+    def _check_bridge_port(self, fw, iface, parent) -> str:
+        """A bridge port named like a VLAN interface needs its own object.
+
+        Ports the second abort of ``CompilerDriver::commonChecks2``.  The
+        port is typed `ethernet`, so nothing creates the VLAN device it is
+        named after; Firewall Builder builds it from the *top-level*
+        interface object of the same name, and without one the bridge is
+        given a port that is not there.  `update_bridge` then fails on it
+        and the activation stops before the first rule.
+        """
+        if parent.get_option('type', '') != 'bridge':
+            return ''
+        if (iface.get_option('type', '') or 'ethernet') != 'ethernet':
+            return ''
+        if not self._interface_properties().looks_like_vlan(iface.name):
+            return ''
+        for other in _every_interface(fw):
+            if other.id != iface.id and other.name == iface.name:
+                return ''
+        return (
+            f'Interface {iface.name} is a port of the bridge {parent.name} '
+            'and is named like a VLAN interface. Nothing creates it under '
+            'that name, so give the firewall an interface of its own called '
+            f'"{iface.name}" for the bridge to take as a port.'
+        )
+
+    @staticmethod
+    def _interface_properties():
+        from firewallfabrik.driver._interface_properties import (
+            LinuxInterfaceProperties,
+        )
+
+        return LinuxInterfaceProperties()
 
     # -- Option validation --
 

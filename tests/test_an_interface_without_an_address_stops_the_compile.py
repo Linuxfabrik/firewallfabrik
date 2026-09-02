@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""The "Missing IP address" abort of ``CompilerDriver::commonChecks2``.
+"""Two aborts of ``CompilerDriver::commonChecks2``.
 
 An empty rule element is "any" everywhere in both compilers, so a rule
 naming an interface that has no address is a rule for every address there
@@ -18,6 +18,10 @@ is - installed by a script that loads without a word. Firewall Builder
 refuses the firewall instead, and `fwb_ipt` 5.3.7 answers
 `tests/fixtures/cluster-tests.fwb` with "Missing IP address for interface
 eth0.100" for exactly the firewall this compiler used to accept.
+
+The second one is the bridge port named like a VLAN interface: the port is
+typed `ethernet`, so nothing creates the device under that name, and the
+bridge is given a port that is not there.
 """
 
 import uuid
@@ -119,3 +123,27 @@ def test_a_vrrp_cluster_interface_needs_one():
         options={'cluster_interface': True, 'failover_protocol': 'vrrp'},
     )
     assert 'eth0' in _check([iface])
+
+
+def test_a_bridge_port_named_like_a_vlan_needs_its_own_object():
+    port = _Interface('eth0.100', [_Address()], options={'type': 'ethernet'})
+    br0 = _Interface('br0', [_Address()], [port], options={'type': 'bridge'})
+    said = _check([br0])
+
+    assert 'eth0.100' in said
+    assert 'br0' in said
+
+
+def test_a_top_level_object_of_the_same_name_makes_it_a_bridge_port():
+    port = _Interface('eth0.100', [_Address()], options={'type': 'ethernet'})
+    br0 = _Interface('br0', [_Address()], [port], options={'type': 'bridge'})
+    top = _Interface('eth0.100', [_Address()], options={'type': '8021q'})
+
+    assert _check([br0, top]) == ''
+
+
+def test_an_ordinary_bridge_port_says_nothing():
+    port = _Interface('eth1', [_Address()], options={'type': 'ethernet'})
+    br0 = _Interface('br0', [_Address()], [port], options={'type': 'bridge'})
+
+    assert _check([br0]) == ''
