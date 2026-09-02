@@ -899,18 +899,24 @@ class CompilerDriver(BaseCompiler):
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
         (
-            'configure_bonding_interfaces',
+            'use_ULOG',
+            'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
+        ),
+    ]
+
+    # The interface kinds Firewall Builder creates and this compiler does
+    # not (#95), by the `type` its editor and Firewall Builder both store
+    # (`res/os/linux24.xml`, and `iface_opts_dialog.py`).
+    _UNCREATABLE_INTERFACE_TYPES: ClassVar[list[tuple[str, str]]] = [
+        (
+            'bonding',
             'the generated script does not create or remove bonding interfaces; '
             'they have to exist on the firewall before it runs',
         ),
         (
-            'configure_vlan_interfaces',
+            '8021q',
             'the generated script does not create or remove VLAN interfaces; '
             'they have to exist on the firewall before it runs',
-        ),
-        (
-            'use_ULOG',
-            'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
         ),
     ]
 
@@ -920,7 +926,37 @@ class CompilerDriver(BaseCompiler):
             if option_is_true(options.get(opt, False)):
                 self.warning(msg)
         if fw is not None:
+            self._warn_uncreatable_interfaces(fw)
             self._warn_misspelled_options(options, fw)
+
+    def _warn_uncreatable_interfaces(self, fw) -> None:
+        """Warn about an interface the script names and cannot create.
+
+        The question is what the firewall *has*, not what its options
+        say.  Firewall Builder creates a bonding or VLAN interface when
+        `configure_bonding_interfaces` / `configure_vlan_interfaces` is
+        set, so there the option is the whole answer; this compiler
+        creates neither, either way.  What it does do is name the
+        interface in `verify_interfaces` and in
+        `update_addresses_of_interface`, and the first of those ends the
+        activation with `exit 1` on a machine where nothing has created
+        it - before a single rule is installed.  Keying the warning on
+        the option left three firewalls of the reference corpus silent
+        about exactly that.
+        """
+        present = set()
+
+        def walk(iface) -> None:
+            present.add(str(iface.get_option('type', '') or ''))
+            for child in iface.sub_interfaces:
+                walk(child)
+
+        for iface in fw.interfaces:
+            walk(iface)
+
+        for iface_type, msg in self._UNCREATABLE_INTERFACE_TYPES:
+            if iface_type in present:
+                self.warning(msg)
 
     def _warn_misspelled_options(self, options: dict, fw) -> None:
         """Warn about an option key that looks like a misspelled one.
