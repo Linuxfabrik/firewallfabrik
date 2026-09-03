@@ -69,7 +69,15 @@ def rules(path: Path, platform: str) -> list[str]:
     for raw in path.read_text(errors='replace').splitlines():
         line = raw.strip()
         if platform == 'nft':
-            if line.startswith('$NFT -f') or line.endswith("<<'NFT_RULES'"):
+            # Only the here-document holds the ruleset.  `$NFT -f` also
+            # appears further down, reading the same ruleset from a pipe
+            # (`nft_ruleset | $NFT -f /dev/stdin`) and reading standard
+            # input in the block action - and reading those as the start of
+            # a ruleset made every shell line below them a rule, keyed on
+            # the last chain seen.  A tenth of what this tool counted was
+            # not a rule, and a change that adds a chain at the end of a
+            # table moved all of it at once.
+            if line.endswith("<<'NFT_RULES'"):
                 in_ruleset = True
                 continue
             if line == 'NFT_RULES':

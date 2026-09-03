@@ -237,6 +237,14 @@ statement is normalised away. Both matter: without them an unchanged corpus
 reads as a hundred percent changed, because `counter` decides nothing and
 `reset_all` contains `$IPTABLES` without installing a rule.
 
+Only the here-document holds the ruleset, and the tool stops reading
+there.  `$NFT -f` appears twice more further down - once reading the same
+ruleset back from a pipe, once reading standard input in the block action
+- and treating either as the start of a ruleset made every shell line
+below it a rule, keyed on the last chain the tool had seen.  A tenth of
+what it counted was not a rule, and any change that adds a chain at the
+end of a table moved all of it at once.
+
 Every nftables rule is compared together with the table and chain it sits
 in. An iptables command names its chain (`-A input`), an nft rule only has
 the block around it, so without that the whole policy of a firewall can
