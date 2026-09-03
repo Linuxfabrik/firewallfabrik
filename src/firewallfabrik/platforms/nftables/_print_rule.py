@@ -1420,6 +1420,14 @@ class PrintRule_nft(PolicyRuleProcessor):
                 )
                 return None
             neg = '!= ' if rule.srv_single_object_negation else ''
+            if neg and len(rule.srv) > 1:
+                # A negated element means "none of these", so its users
+                # belong in one match.  One rule per user would say "not
+                # this *or* not that", which every packet satisfies -
+                # a socket has one owner.  `GroupServicesByProtocol`
+                # keeps them together for exactly this.
+                uids = [str(s.userid) for s in rule.srv if isinstance(s, UserService)]
+                return f'meta skuid != {{ {", ".join(uids)} }}'
             return f'meta skuid {neg}{uid}'
 
         self.compiler.error(

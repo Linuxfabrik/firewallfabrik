@@ -2758,10 +2758,11 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        negated = bool(rule.get_neg('srv') or rule.srv_single_object_negation)
         chunks = [
             chunk
             for _proto, srvs in sorted(groups.items())
-            for chunk in self._printable_chunks(srvs)
+            for chunk in self._printable_chunks(srvs, negated)
         ]
 
         if len(chunks) == 1:
@@ -2777,7 +2778,7 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         return True
 
     @staticmethod
-    def _printable_chunks(srvs: list) -> list[list]:
+    def _printable_chunks(srvs: list, negated: bool = False) -> list[list]:
         """Split a same-protocol service list into per-rule chunks.
 
         The print rule renders several TCP/UDP services as one destination
@@ -2794,6 +2795,13 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         the iptables ``SeparatePortRanges`` performs, which reads all-zero
         bounds as the full range.
         """
+        if negated and len(srvs) > 1 and all(isinstance(s, UserService) for s in srvs):
+            # A negated element is a conjunction: "none of these users".
+            # A rule each would say "not this *or* not that", which holds
+            # for every packet - a socket has one owner - so the whole
+            # rule would match everything.  The print rule renders them as
+            # one `meta skuid != { ... }`.
+            return [list(srvs)]
         if all(isinstance(s, (TCPService, UDPService)) for s in srvs):
             any_port = [s for s in srvs if not _names_a_port(s)]
             with_port = [s for s in srvs if _names_a_port(s)]

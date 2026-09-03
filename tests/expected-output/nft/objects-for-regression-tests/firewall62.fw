@@ -395,15 +395,12 @@ table ip fwf_filter {
         #
         # bug 2186568
         # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-        meta skuid != 2000 ct state new counter accept
-        # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-        meta skuid != 500 ct state new counter accept
+        meta skuid != { 2000, 500 } ct state new counter accept
         #
         # Rule 15 (global)
         #
         # bug 2186568
-        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new counter accept
-        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 500 ct state new counter accept
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != { 2000, 500 } ct state new counter accept
         #
         # Rule 16 (global)
         #
