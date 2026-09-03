@@ -1690,6 +1690,15 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
     overlapping a firewall interface IP would be pulled out together
     with the firewall object, leaving the original rule with an empty
     src.
+
+    A negated element is left alone.  Its objects are a conjunction -
+    "none of these" - and one rule per object turns them into "not this
+    *or* not that", which any packet satisfies as soon as the objects
+    differ.  The C++ never meets the case because ``SrcNegation`` has
+    already moved the objects into a chain of their own by the time this
+    runs; here the negation is still on the element, so the split has to
+    ask.  Same guard as ``SplitIfSeveralSetsInRE`` and
+    ``SplitIfMacAndAddressInRE``.
     """
 
     def process_next(self) -> bool:
@@ -1699,7 +1708,7 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
-        if len(rule.src) <= 1:
+        if len(rule.src) <= 1 or rule.src_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
@@ -1726,7 +1735,8 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
     """Split rule if dst contains the firewall object.
 
     See :class:`SplitIfSrcMatchesFw` for the rationale behind the
-    ``len(remaining) > 1`` guard.
+    ``len(remaining) > 1`` guard and for why a negated element is left
+    whole.
     """
 
     def process_next(self) -> bool:
@@ -1736,7 +1746,7 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
-        if len(rule.dst) <= 1:
+        if len(rule.dst) <= 1 or rule.dst_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
