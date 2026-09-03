@@ -802,7 +802,20 @@ class PolicyCompiler_ipt(PolicyCompiler):
             self.rule_set_chain = chain_name
 
     def set_chain(self, rule: CompRule, chain: str) -> None:
+        """Put *rule* into *chain*, and record the jump it carries.
+
+        A rule that jumps somewhere is the only thing that says which
+        chain the target is reachable from, and the negation expansions
+        build the jump before anything decides where it goes: they can
+        only record the chain the rule had at the time, which is still
+        empty.  Recording the edge here is what fills the ancestry, and it
+        is what `is_chain_descendant_of` answers from - the hook a
+        temporary chain hangs off decides which matches the kernel allows
+        in it (fwbuilder ``PolicyCompiler_ipt::setChain``).
+        """
         rule.ipt_chain = chain
+        if rule.ipt_target:
+            self.insert_upstream_chain(chain, rule.ipt_target)
 
     def is_chain_descendant_of_input(self, chain: str) -> bool:
         return self.is_chain_descendant_of(chain, 'INPUT')

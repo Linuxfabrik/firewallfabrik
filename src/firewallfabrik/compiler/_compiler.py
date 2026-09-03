@@ -252,7 +252,19 @@ class Compiler(BaseCompiler):
         self._multi_address_cache: dict = {}
 
     def insert_upstream_chain(self, parent: str, child: str) -> None:
-        """Record that *parent* jumps into *child*."""
+        """Record that *parent* jumps into *child*.
+
+        A nameless parent is no parent: a processor may split a rule into
+        a jump and a temporary chain before anything has decided which
+        chain the jump itself goes into, and recording ``''`` as the
+        ancestor of the new chain hides the real one behind a node no
+        built-in chain can be reached through.  `set_chain` records the
+        edge again once the jump has its chain, which is where the answer
+        comes from (fwbuilder ``PolicyCompiler_ipt::insertUpstreamChain``
+        skips an empty name for the same reason).
+        """
+        if not parent:
+            return
         self.upstream_chains[parent].append(child)
 
     def is_chain_descendant_of(
