@@ -10,7 +10,6 @@
 #
 #  testing different cmbinations of objects in the policy rules on loopback interface
 #
-# Rule 9 (global): the service "new AIM connection" inspects TCP flags and names a port, and the nftables compiler cannot exclude both at once; split it into one service per condition
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
@@ -427,7 +426,7 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        meta l4proto != tcp counter reject with icmp host-prohibited
+        counter jump Caaf6d0fea780.0
         #
         # Rule 11 (global)
         #
@@ -465,7 +464,7 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        meta l4proto != tcp counter reject with icmp host-prohibited
+        counter jump Caaf6d0fea780.0
         #
         # Rule 12 (global)
         #
@@ -517,7 +516,7 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        meta l4proto != tcp counter reject with icmp host-prohibited
+        counter jump Caaf6d0fea780.0
         #
         # Rule 11 (global)
         #
@@ -526,6 +525,14 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         counter log prefix "RULE 12 -- DENY " level info drop
+    }
+
+    chain Caaf6d0fea780.0 {
+        #
+        # Rule 9 (global)
+        #
+        tcp dport 5190 tcp flags syn / syn,rst,ack counter return
+        counter reject with icmp host-prohibited
     }
 }
 

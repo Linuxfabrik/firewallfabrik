@@ -458,3 +458,78 @@ def test_a_service_naming_both_ports_joins_the_others():
     assert _print_element([_tcp('mixed', dport=443, sport=1024), _tcp('http', 80)]) == (
         'tcp dport != 80 tcp sport . tcp dport != { 1024 . 443 }'
     )
+
+
+def _srv_negation(rule, ipv6: bool = False) -> list:
+    from firewallfabrik.platforms.nftables._policy_compiler import SrvNegation
+
+    class _ChainCompiler(_Compiler):
+        def __init__(self) -> None:
+            super().__init__(ipv6)
+            self.chains: list[str] = []
+
+        def get_new_tmp_chain_name(self, _rule) -> str:
+            self.chains.append(f'C{len(self.chains)}.0')
+            return self.chains[-1]
+
+    processor = SrvNegation(name='p')
+    processor.compiler = _ChainCompiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return list(processor.tmp_queue)
+
+
+def test_a_flagged_service_with_a_port_gets_a_chain():
+    """The shape firewall19 of the regression fixtures carries.
+
+    `tcp dport != 5190 tcp flags ... != syn` is an AND of negations where
+    the negation of a conjunction is needed, so the Reject rule written
+    for "anything but a new AIM connection" rejected nothing else.
+    """
+    out = _srv_negation(_comp_rule([_flagged()]))
+    assert [r.subrule_suffix for r in out] == ['1', '2', '3']
+    jump, ret, action = out
+    assert jump.srv == [] and jump.ipt_target == 'C0.0'
+    assert [s.name for s in ret.srv] == ['syn only']
+    assert ret.ipt_chain == 'C0.0'
+    assert ret.action is PolicyAction.Return
+    assert action.srv == [] and action.ipt_chain == 'C0.0'
+    assert action.action is PolicyAction.Deny
+
+
+def test_a_packet_mark_beside_a_port_gets_a_chain():
+    """The shape firewall38 of the regression fixtures carries.
+
+    A mark match says nothing about the protocol, so it is not disjoint
+    from the rule the protocol split makes beside it: an HTTP packet with
+    another mark matched "not mark 16" and was accepted, although the
+    element excludes HTTP.
+    """
+    from firewallfabrik.core.objects import TagService
+
+    tag = TagService(id=uuid.uuid4(), name='sixteen', data={'tagcode': '16'})
+    out = _srv_negation(_comp_rule([tag, _tcp('http', 80)]))
+    assert [r.subrule_suffix for r in out] == ['1', '2', '3']
+    assert [s.name for s in out[1].srv] == ['sixteen', 'http']
+    assert out[1].action is PolicyAction.Return
+    assert out[2].srv == []
+
+
+def test_an_element_the_rules_can_say_is_left_alone():
+    out = _srv_negation(_comp_rule([_tcp('ssh', 22), _tcp('http', 80)]))
+    assert len(out) == 1
+    assert out[0].get_neg('srv') is True
+
+
+def test_a_custom_service_keeps_the_old_answer():
+    """A chain missing a return rule would act on all traffic.
+
+    The print rule may not be able to match a Custom Service, so such an
+    element is left for the printer to report rather than given a chain.
+    """
+    from firewallfabrik.core.objects import CustomService
+
+    custom = CustomService(id=uuid.uuid4(), name='c')
+    out = _srv_negation(_comp_rule([custom, _tcp('http', 80)]))
+    assert len(out) == 1
+    assert out[0].get_neg('srv') is True

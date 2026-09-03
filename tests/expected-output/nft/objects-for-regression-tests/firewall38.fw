@@ -374,8 +374,7 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp dport != 80 ct state new counter accept
-        meta mark != 16 ct state new counter accept
+        ct state new counter jump C204df9a50077.0
         #
         # Rule 14 (global)
         #
@@ -416,8 +415,7 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp dport != 80 ct state new counter accept
-        meta mark != 16 ct state new counter accept
+        ct state new counter jump C204df9a50077.0
         #
         # Rule 13 (global)
         #
@@ -465,8 +463,7 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp dport != 80 ct state new counter accept
-        meta mark != 16 ct state new counter accept
+        ct state new counter jump C204df9a50077.0
         #
         # Rule 13 (global)
         #
@@ -479,6 +476,15 @@ table ip fwf_filter {
         # Rule 15 (global)
         #
         counter log prefix "RULE 15 -- DENY " level info drop
+    }
+
+    chain C204df9a50077.0 {
+        #
+        # Rule 12 (global)
+        #
+        tcp dport 80 counter return
+        meta mark 16 counter return
+        counter accept
     }
 }
 

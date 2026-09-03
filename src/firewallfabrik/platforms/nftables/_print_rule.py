@@ -587,6 +587,92 @@ def print_negated_services(srvs: list, ipv6: bool) -> str | None:
     return ' '.join(parts) if parts else None
 
 
+# Firewall Builder numbers the three services that carry no IP protocol
+# above every real one (`Service::PSEUDO_PROTOCOL_MAP`).  A match built from
+# one of them - a packet mark, a socket owner, a fragment of platform text -
+# says nothing about the protocol, so two such rules are not disjoint the
+# way two protocol groups are.
+_PSEUDO_PROTOCOL_FLOOR = 65000
+
+
+def negated_services_need_a_chain(srvs: list, ipv6: bool) -> bool:
+    """Whether a negated element cannot be excluded by rules alone.
+
+    The mirror of what the print rules can say, and the question
+    :class:`SrvNegation` asks before it builds a chain.
+
+    A negated element is split by protocol, and that is sound as long as
+    the pieces are disjoint: a packet is one protocol, so the rule for TCP
+    and the rule for UDP never both see it, and the companion rule for
+    every other protocol covers the rest.  Two conditions break it - a
+    piece that carries no protocol at all beside another piece, and a
+    piece the printer cannot invert in one match.
+    """
+    groups: dict[int, list] = {}
+    for srv in srvs:
+        key = srv.get_protocol_number() if hasattr(srv, 'get_protocol_number') else -1
+        groups.setdefault(key, []).append(srv)
+
+    if len(groups) > 1 and any(key >= _PSEUDO_PROTOCOL_FLOOR for key in groups):
+        return True
+
+    for group in groups.values():
+        if len(group) == 1:
+            if _single_negated_service_needs_a_chain(group[0]):
+                return True
+        elif print_negated_services(group, ipv6) is None:
+            return True
+    return False
+
+
+def _single_negated_service_needs_a_chain(srv) -> bool:
+    """Whether a lone service cannot be inverted where it stands.
+
+    Everything else a lone service says is one condition, or a pair the
+    print rule concatenates.  A TCP flag beside a port is two conditions
+    with no field to concatenate them with, so its negation is a
+    disjunction and one rule cannot hold it.
+    """
+    if not isinstance(srv, (TCPService, UDPService)):
+        return False
+    masks = getattr(srv, 'tcp_flags_masks', None) or {}
+    names_a_port = any(
+        (
+            srv.src_range_start or 0,
+            srv.src_range_end or 0,
+            srv.dst_range_start or 0,
+            srv.dst_range_end or 0,
+        )
+    )
+    return bool(any(masks.values())) and names_a_port
+
+
+def negated_services_can_be_a_chain(srvs: list) -> bool:
+    """Whether every service can be *matched* inside such a chain.
+
+    The chain excludes the element by returning on each service, so a
+    service the print rule cannot render leaves the chain with nothing but
+    its action - which acts on all traffic.  Only the service types that
+    always render are let in; for the rest the element is reported and the
+    rule left out, the way it was before the chain existed.
+    """
+    for srv in srvs:
+        if isinstance(srv, (TCPService, UDPService, ICMPService, ICMP6Service)):
+            continue
+        if isinstance(srv, TagService):
+            code = srv.get_code()
+            if code and is_valid_packet_mark(code):
+                continue
+            return False
+        if isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid and is_valid_user_id(uid):
+                continue
+            return False
+        return False
+    return True
+
+
 def _port_range_text(start: int, end: int) -> str:
     """Format a port range for nftables, empty when it names no port."""
     if start <= 0 and end <= 0:
