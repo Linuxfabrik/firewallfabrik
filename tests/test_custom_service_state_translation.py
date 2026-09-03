@@ -55,7 +55,15 @@ TRANSLATED = {
     ),
     # Whitespace around the code is what a text field collects.
     '  -m conntrack   --ctstate  ESTABLISHED  ': 'ct state established',
-    '-m conntrack ! --ctstate NEW': 'ct state != new',
+    # `!` and not `!=`.  On a bitmask the two are different operators:
+    # `!` compiles to `state & <bits> == 0`, which is what
+    # `! --ctstate NEW,RELATED` says, and `!=` to `state != <bits>`,
+    # which a packet carrying exactly one state bit always satisfies -
+    # so the second spelling matches every packet there is
+    # (netfilter nftables src/netlink_linearize.c, netlink_gen_flagcmp).
+    '-m conntrack ! --ctstate NEW': 'ct state ! new',
+    '-m conntrack ! --ctstate NEW,RELATED': 'ct state ! new,related',
+    '-m state ! --state ESTABLISHED,RELATED': 'ct state ! related,established',
     # A TCP flag inspection, alone and beside a state match.  `-m tcp`
     # carries no match of its own; its options do.
     '-m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW': (
@@ -247,12 +255,14 @@ def test_against_iptables_translate(code, expected):
     )
     if result.returncode != 0:
         pytest.skip(f'iptables-translate refuses this release: {result.stderr.strip()}')
-    # Two spellings the tool writes short where nftables prints them back
-    # in full: a negation as `! new` rather than `!= new`, and the socket
-    # user as `skuid` rather than `meta skuid`.  Both parse either way, and
-    # fwf writes the one the rest of its output uses.
-    printed = result.stdout.replace('ct state ! ', 'ct state != ')
-    printed = printed.replace('skuid ', 'meta skuid ').replace('skgid ', 'meta skgid ')
+    # One spelling the tool writes short where nftables prints it back in
+    # full: the socket user as `skuid` rather than `meta skuid`.  Both
+    # parse and mean the same, and fwf writes the one the rest of its
+    # output uses.  The negation is *not* normalised: `!` and `!=` are
+    # different operators on a bitmask, so a difference there is a
+    # finding and not a spelling.
+    printed = result.stdout.replace('skuid ', 'meta skuid ')
+    printed = printed.replace('skgid ', 'meta skgid ')
     assert expected in printed
 
 
