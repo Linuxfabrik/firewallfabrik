@@ -736,3 +736,46 @@ def test_a_flagged_tcp_service_is_not_merged_with_its_udp_twin():
         id=uuid.uuid4(), name='udp-8443', dst_range_start=8443, dst_range_end=8443
     )
     assert not _can_merge([_flagged(), udp])
+
+
+def _print_merged(srvs: list, negated: bool) -> str:
+    class _MergedRule:
+        srv = srvs
+        merged_tcp_udp = True
+
+    printer = PrintRule_nft.__new__(PrintRule_nft)
+    return printer._print_merged_tcp_udp_service(_MergedRule(), negated)
+
+
+def test_the_merged_form_negates_a_port_pair_as_a_pair():
+    """`th sport != X th dport != Y` asks for a packet on neither.
+
+    The service names the combination, so a Deny rule written for
+    "anything but 1024 to 443" let a packet from 1024 to another port
+    through.
+    """
+    tcp = _tcp('tcp-pair', dport=443, sport=1024)
+    udp = UDPService(
+        id=uuid.uuid4(),
+        name='udp-pair',
+        src_range_start=1024,
+        src_range_end=1024,
+        dst_range_start=443,
+        dst_range_end=443,
+    )
+    assert _print_merged([tcp, udp], negated=True) == (
+        'meta l4proto { tcp, udp } th sport . th dport != { 1024 . 443 }'
+    )
+    assert _print_merged([tcp, udp], negated=False) == (
+        'meta l4proto { tcp, udp } th sport 1024 th dport 443'
+    )
+
+
+def test_the_merged_form_still_negates_a_plain_port_set():
+    tcp = _tcp('tcp-53', 53)
+    udp = UDPService(
+        id=uuid.uuid4(), name='udp-53', dst_range_start=53, dst_range_end=53
+    )
+    assert _print_merged([tcp, udp], negated=True) == (
+        'meta l4proto { tcp, udp } th dport != 53'
+    )

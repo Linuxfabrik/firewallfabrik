@@ -1834,9 +1834,35 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         A negated element inverts the port match; the protocol stays as it is,
         because the rule is about those ports, not about TCP and UDP as such.
+        A service that names a source *and* a destination port names the
+        combination, so the two go into one concatenated lookup - inverting
+        each on its own asks for a packet that is on neither, which is
+        narrower than the rule written.
         """
         neg = '!= ' if negated else ''
         parts = ['meta l4proto { tcp, udp }']
+
+        if negated:
+            pairs = [
+                (
+                    _port_range_text(s.src_range_start or 0, s.src_range_end or 0),
+                    _port_range_text(s.dst_range_start or 0, s.dst_range_end or 0),
+                )
+                for s in rule.srv
+                if isinstance(s, (TCPService, UDPService))
+            ]
+            both = [f'{src} . {dst}' for src, dst in pairs if src and dst]
+            if both:
+                only_src = sorted({src for src, dst in pairs if src and not dst})
+                only_dst = sorted({dst for src, dst in pairs if dst and not src})
+                if only_src:
+                    parts.append(f'th sport {_negated_set(only_src)}')
+                if only_dst:
+                    parts.append(f'th dport {_negated_set(only_dst)}')
+                parts.append(
+                    f'th sport . th dport != {{ {", ".join(dict.fromkeys(both))} }}'
+                )
+                return ' '.join(parts)
 
         # Collect unique port ranges from all TCP/UDP services
         src_ports: list[str] = []
