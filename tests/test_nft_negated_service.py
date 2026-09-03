@@ -703,3 +703,36 @@ def test_a_nat_flagged_service_naming_a_port_is_reported():
     printer.compiler = _DroppingNATCompiler()
     assert printer._print_service(srv, rule) is None
     assert len(printer.compiler.errors) == 1
+
+
+def _can_merge(srvs: list) -> bool:
+    from firewallfabrik.platforms.nftables._policy_compiler import (
+        GroupServicesByProtocol,
+    )
+
+    groups: dict[int, list] = {}
+    for srv in srvs:
+        groups.setdefault(srv.get_protocol_number(), []).append(srv)
+    return GroupServicesByProtocol._can_merge_tcp_udp(groups)
+
+
+def test_tcp_and_udp_on_one_port_are_merged():
+    tcp = _tcp('tcp-8443', 8443)
+    udp = UDPService(
+        id=uuid.uuid4(), name='udp-8443', dst_range_start=8443, dst_range_end=8443
+    )
+    assert _can_merge([tcp, udp])
+
+
+def test_a_flagged_tcp_service_is_not_merged_with_its_udp_twin():
+    """The merged form carries the two protocols and the ports, nothing else.
+
+    The flagged service has the same ports as its UDP twin, so the pair
+    test says yes - and the merged rule then dropped the flag match and
+    applied to every TCP packet on the port instead of the handshake stage
+    the service names.
+    """
+    udp = UDPService(
+        id=uuid.uuid4(), name='udp-8443', dst_range_start=8443, dst_range_end=8443
+    )
+    assert not _can_merge([_flagged(), udp])

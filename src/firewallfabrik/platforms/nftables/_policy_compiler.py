@@ -3018,11 +3018,25 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         The merged form also carries exactly one destination port set, so
         the services have to fit into a single printable chunk; otherwise
         the split the non-merged path performs would be skipped.
+
+        And it carries nothing but the two protocols and the ports, so a
+        TCP service that inspects the flags cannot be in it: the ports of
+        such a service are the same as its UDP twin's, so the pair test
+        below says yes, and the merged rule then drops the flag match and
+        applies to every TCP packet on that port instead of the handshake
+        stage the service names.  `Optimize3` folds the two identical
+        halves into one afterwards, which is what made it read like a
+        single correct rule.
         """
         if set(groups.keys()) != {6, 17}:
             return False
 
         tcp_srvs = groups[6]
+        if any(
+            any((getattr(s, 'tcp_flags_masks', None) or {}).values()) for s in tcp_srvs
+        ):
+            return False
+
         udp_srvs = groups[17]
 
         def port_pairs(srvs: list) -> set[tuple[int, int, int, int]]:
