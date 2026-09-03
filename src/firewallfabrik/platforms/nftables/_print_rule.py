@@ -647,14 +647,20 @@ def _single_negated_service_needs_a_chain(srv) -> bool:
     return bool(any(masks.values())) and names_a_port
 
 
-def negated_services_can_be_a_chain(srvs: list) -> bool:
-    """Whether every service can be *matched* inside such a chain.
+def negated_services_are_renderable(srvs: list, platform: str) -> bool:
+    """Whether every service of the element is certain to be matched.
 
-    The chain excludes the element by returning on each service, so a
-    service the print rule cannot render leaves the chain with nothing but
-    its action - which acts on all traffic.  Only the service types that
-    always render are let in; for the rest the element is reported and the
-    rule left out, the way it was before the chain existed.
+    Two answers depend on it, and both are about what is left standing
+    when one service cannot be rendered.  A chain excludes the element by
+    returning on each service, so a return rule that is dropped leaves the
+    chain with nothing but its action, which acts on all traffic.  And the
+    split by protocol writes one rule per group, so a group that is
+    dropped leaves the others matching what the element excludes.  Either
+    way the whole rule has to go instead.
+
+    The four types listed first always render.  The two that may not are
+    read for the property that decides it, which is the same property the
+    print rule reads.
     """
     for srv in srvs:
         if isinstance(srv, (TCPService, UDPService, ICMPService, ICMP6Service)):
@@ -669,6 +675,25 @@ def negated_services_can_be_a_chain(srvs: list) -> bool:
             if uid and is_valid_user_id(uid):
                 continue
             return False
+        if isinstance(srv, CustomService):
+            # The code *is* the match; without one the print rule reports
+            # the service and renders nothing.
+            if custom_service_code(srv, platform):
+                continue
+            return False
+        if isinstance(srv, IPService):
+            data = srv.data or {}
+            # nftables has no ToS matcher, it refuses an unknown DiffServ
+            # class, and an IPv4 header option is gated on a release this
+            # function is not told about.
+            if data.get('tos', ''):
+                return False
+            dscp = data.get('dscp', '')
+            if dscp and not is_valid_dscp(dscp):
+                return False
+            if has_ip_options(data):
+                return False
+            continue
         return False
     return True
 

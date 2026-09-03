@@ -468,6 +468,10 @@ def _srv_negation(rule, ipv6: bool = False) -> list:
             super().__init__(ipv6)
             self.chains: list[str] = []
 
+        @staticmethod
+        def my_platform_name() -> str:
+            return 'nftables'
+
         def get_new_tmp_chain_name(self, _rule) -> str:
             self.chains.append(f'C{len(self.chains)}.0')
             return self.chains[-1]
@@ -521,15 +525,181 @@ def test_an_element_the_rules_can_say_is_left_alone():
     assert out[0].get_neg('srv') is True
 
 
-def test_a_custom_service_keeps_the_old_answer():
-    """A chain missing a return rule would act on all traffic.
+def test_a_custom_service_with_nftables_code_gets_a_chain():
+    """It renders positively, so the chain can return on it.
 
-    The print rule may not be able to match a Custom Service, so such an
-    element is left for the printer to report rather than given a chain.
+    A mark and a Custom Service carry no protocol, so the protocol split
+    puts them in rules of their own and those are not disjoint - which is
+    what the chain is for.
     """
     from firewallfabrik.core.objects import CustomService
 
-    custom = CustomService(id=uuid.uuid4(), name='c')
+    custom = CustomService(
+        id=uuid.uuid4(), name='frag', codes={'nftables': 'ip frag-off & 0x1fff != 0'}
+    )
     out = _srv_negation(_comp_rule([custom, _tcp('http', 80)]))
+    assert [r.subrule_suffix for r in out] == ['1', '2', '3']
+    assert [s.name for s in out[1].srv] == ['frag', 'http']
+
+
+def _renderable(srvs: list) -> bool:
+    from firewallfabrik.platforms.nftables._print_rule import (
+        negated_services_are_renderable,
+    )
+
+    return negated_services_are_renderable(srvs, 'nftables')
+
+
+def test_a_custom_service_is_renderable_only_with_code_for_the_platform():
+    from firewallfabrik.core.objects import CustomService
+
+    with_code = CustomService(
+        id=uuid.uuid4(), name='frag', codes={'nftables': 'ip frag-off & 0x1fff != 0'}
+    )
+    without = CustomService(
+        id=uuid.uuid4(), name='recent', codes={'iptables': '-m recent --update'}
+    )
+    assert _renderable([with_code])
+    assert not _renderable([without])
+
+
+def test_an_ip_service_is_renderable_unless_it_says_something_nftables_lacks():
+    from firewallfabrik.core.objects import IPService
+
+    plain = IPService(id=uuid.uuid4(), name='gre', data={'protocol_num': '47'})
+    with_tos = IPService(
+        id=uuid.uuid4(), name='tos', data={'protocol_num': '47', 'tos': '0x10'}
+    )
+    bad_dscp = IPService(
+        id=uuid.uuid4(), name='dscp', data={'protocol_num': '47', 'dscp': 'AF4'}
+    )
+    assert _renderable([plain])
+    assert not _renderable([with_tos])
+    assert not _renderable([bad_dscp])
+
+
+class _DroppingCompiler(_Compiler):
+    def __init__(self) -> None:
+        super().__init__(False)
+        self.errors: list[str] = []
+
+    def error(self, _rule, message: str) -> None:
+        self.errors.append(message)
+
+    @staticmethod
+    def my_platform_name() -> str:
+        return 'nftables'
+
+    def get_new_tmp_chain_name(self, _rule) -> str:
+        return 'C0.0'
+
+
+def _srv_negation_dropping(rule) -> tuple[list, list[str]]:
+    from firewallfabrik.platforms.nftables._policy_compiler import SrvNegation
+
+    processor = SrvNegation(name='p')
+    processor.compiler = _DroppingCompiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return list(processor.tmp_queue), processor.compiler.errors
+
+
+def test_an_element_naming_an_unmatchable_service_leaves_no_rule():
+    """Splitting it would leave the groups that do render standing alone.
+
+    Each of them then matches packets the element excludes, so an Accept
+    rule written for "anything but this" accepted what it excluded.
+    """
+    from firewallfabrik.core.objects import CustomService
+
+    without = CustomService(
+        id=uuid.uuid4(), name='recent', codes={'iptables': '-m recent --update'}
+    )
+    out, errors = _srv_negation_dropping(_comp_rule([without, _tcp('http', 80)]))
+    assert out == []
+    assert len(errors) == 1
+
+
+def test_that_one_service_alone_is_left_to_the_printer():
+    """One service is one rule, and dropping it drops the whole rule."""
+    from firewallfabrik.core.objects import CustomService
+
+    without = CustomService(
+        id=uuid.uuid4(), name='recent', codes={'iptables': '-m recent --update'}
+    )
+    out, errors = _srv_negation_dropping(_comp_rule([without]))
     assert len(out) == 1
-    assert out[0].get_neg('srv') is True
+    assert errors == []
+
+
+class _DroppingNATCompiler(_NATCompiler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.errors: list[str] = []
+
+    def error(self, _rule, message: str) -> None:
+        self.errors.append(message)
+
+    @staticmethod
+    def my_platform_name() -> str:
+        return 'nftables'
+
+
+def _nft_negation_osrv(rule) -> tuple[list, list[str]]:
+    from firewallfabrik.platforms.nftables._nat_compiler import NftNegationOSrv
+
+    processor = NftNegationOSrv(name='p')
+    processor.compiler = _DroppingNATCompiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return list(processor.tmp_queue), processor.compiler.errors
+
+
+def test_a_nat_element_that_needs_a_chain_leaves_no_rule():
+    """A nat hook reaches its chains through the translation, not a jump.
+
+    So the policy compiler's answer is not available here, and leaving the
+    groups that do render behind would translate exactly the traffic the
+    element excludes.
+    """
+    from firewallfabrik.core.objects import TagService
+
+    tag = TagService(id=uuid.uuid4(), name='one', data={'tagcode': '1'})
+    rule = _nat_rule([tag, _tcp('http', 80)])
+    out, errors = _nft_negation_osrv(rule)
+    assert out == []
+    assert len(errors) == 1
+
+
+def test_a_nat_element_of_one_protocol_is_converted():
+    rule = _nat_rule([_tcp('ssh', 22), _tcp('http', 80)])
+    out, errors = _nft_negation_osrv(rule)
+    assert len(out) == 1
+    assert out[0].osrv_single_object_negation is True
+    assert out[0].get_neg('osrv') is False
+    assert errors == []
+
+
+def test_a_nat_service_naming_both_ports_is_excluded_as_a_pair():
+    from firewallfabrik.platforms.nftables._nat_print_rule import NATPrintRule_nft
+
+    srv = _tcp('mixed', dport=443, sport=1024)
+    rule = _nat_rule([srv])
+    rule.osrv_single_object_negation = True
+    printer = NATPrintRule_nft.__new__(NATPrintRule_nft)
+    printer.compiler = _DroppingNATCompiler()
+    assert printer._print_service(srv, rule) == (
+        'tcp sport . tcp dport != { 1024 . 443 }'
+    )
+
+
+def test_a_nat_flagged_service_naming_a_port_is_reported():
+    from firewallfabrik.platforms.nftables._nat_print_rule import NATPrintRule_nft
+
+    srv = _flagged()
+    rule = _nat_rule([srv])
+    rule.osrv_single_object_negation = True
+    printer = NATPrintRule_nft.__new__(NATPrintRule_nft)
+    printer.compiler = _DroppingNATCompiler()
+    assert printer._print_service(srv, rule) is None
+    assert len(printer.compiler.errors) == 1

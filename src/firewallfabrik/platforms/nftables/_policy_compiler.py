@@ -117,7 +117,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     NEGATED_SRV_PROTOCOLS_OPTION,
     NO_OTHER_PROTOCOLS_OPTION,
     OTHER_PROTOCOLS_OPTION,
-    negated_services_can_be_a_chain,
+    negated_services_are_renderable,
     negated_services_need_a_chain,
     other_protocols_for,
 )
@@ -1383,11 +1383,13 @@ class SrvNegation(PolicyRuleProcessor):
        again without being acted on,
     3. the action rule, which everything that did not return reaches.
 
-    The chain only works while every service can be *matched*, so a
-    service the print rule may not be able to render - a Custom Service
-    without nftables code, an IP Service with a ToS byte - keeps the old
-    answer: the printer reports it and the rule is left out.  A chain
-    missing one of its return rules would act on all traffic.
+    A chain missing one of its return rules would act on all traffic, and
+    so would the groups of a split element whose other groups are dropped.
+    So an element naming a service the print rule may not be able to
+    render - a Custom Service without nftables code, an IP Service with a
+    ToS byte - is reported and the whole rule left out, unless it names
+    that one service alone, where dropping the rule is what the printer
+    does anyway.
     """
 
     def process_next(self) -> bool:
@@ -1395,13 +1397,32 @@ class SrvNegation(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-        if (
-            not rule.get_neg('srv')
-            or not rule.srv
-            or not negated_services_need_a_chain(rule.srv, ipv6)
-            or not negated_services_can_be_a_chain(rule.srv)
+        if not rule.get_neg('srv') or not rule.srv:
+            self.tmp_queue.append(rule)
+            return True
+
+        if not negated_services_are_renderable(
+            rule.srv, self.compiler.my_platform_name()
         ):
+            if len(rule.srv) == 1:
+                # One service is one rule, and a print rule that cannot
+                # render it drops that rule - which is the whole rule, so
+                # nothing is left over matching what the element excludes.
+                self.tmp_queue.append(rule)
+                return True
+            # Splitting the element would leave the groups that do render
+            # standing on their own, and each of them matches packets the
+            # element excludes.  There is nothing to keep.
+            self.compiler.error(
+                rule,
+                'this rule excludes several services and the nftables '
+                'compiler cannot match one of them, so it cannot exclude '
+                'them together; the rule is left out',
+            )
+            return True
+
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        if not negated_services_need_a_chain(rule.srv, ipv6):
             self.tmp_queue.append(rule)
             return True
 

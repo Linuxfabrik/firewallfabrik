@@ -756,6 +756,33 @@ class NATPrintRule_nft(NATRuleProcessor):
         src_start = srv.src_range_start or 0
         src_end = srv.src_range_end or 0
         src_ports = self._format_port_range(src_start, src_end)
+
+        if neg and len(rule.osrv) == 1:
+            # A negated service says "not (all of what it names)".  One
+            # condition inverts by turning its comparison into `!=`; two
+            # would have to be inverted as a disjunction.  A source and a
+            # destination port go into one concatenated lookup, which
+            # nftables inverts as a whole; a TCP flag beside a port has no
+            # field to be concatenated with and is reported.
+            dst_ports = self._format_port_range(
+                srv.dst_range_start or 0, srv.dst_range_end or 0
+            )
+            flags = (
+                tcp_flags_match_nft(srv, True) if isinstance(srv, TCPService) else ''
+            )
+            if flags and (src_ports or dst_ports):
+                self.compiler.error(
+                    rule,
+                    f'the service "{srv.name}" inspects TCP flags and names a '
+                    'port, and the nftables compiler cannot exclude both at '
+                    'once; split it into one service per condition',
+                )
+                return None
+            if src_ports and dst_ports:
+                return (
+                    f'{proto} sport . {proto} dport != {{ {src_ports} . {dst_ports} }}'
+                )
+
         if src_ports:
             parts.append(f'{proto} sport {neg}{src_ports}')
 

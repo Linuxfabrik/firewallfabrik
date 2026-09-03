@@ -80,6 +80,8 @@ from firewallfabrik.platforms.linux._netfilter import (
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._print_rule import (
     OTHER_PROTOCOLS_OPTION,
+    negated_services_are_renderable,
+    negated_services_need_a_chain,
     other_protocols_for,
 )
 
@@ -970,15 +972,43 @@ class NftNegationOSrv(NATRuleProcessor):
 
     nftables supports native '!=' matching, so multi-object negation in
     OSrv can be converted to inline negation without temporary chains.
+
+    An element that needs more than one rule to be excluded has nowhere to
+    go here: the policy compiler answers that with a chain of its own
+    (``SrvNegation``) and this compiler has no chain to build - a nat hook
+    reaches its chains through the translation, not through a jump the
+    negation could hang off.  Such a rule is reported and left out, and
+    the whole rule at that: the protocol split would leave the groups that
+    do render standing on their own, each of them matching packets the
+    element excludes, so the rule would translate exactly the traffic it
+    was written to leave alone.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.get_neg('osrv'):
-            rule.osrv_single_object_negation = True
-            rule.set_neg('osrv', False)
+        if not rule.get_neg('osrv'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        if len(rule.osrv) > 1 and (
+            negated_services_need_a_chain(rule.osrv, ipv6)
+            or not negated_services_are_renderable(
+                rule.osrv, self.compiler.my_platform_name()
+            )
+        ):
+            self.compiler.error(
+                rule,
+                'this rule excludes several services the nftables compiler '
+                'cannot exclude in one rule, and a NAT rule has no chain to '
+                'put them in; split it into one service per rule',
+            )
+            return True
+
+        rule.osrv_single_object_negation = True
+        rule.set_neg('osrv', False)
         self.tmp_queue.append(rule)
         return True
 
