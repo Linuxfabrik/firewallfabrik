@@ -499,6 +499,7 @@ def print_negated_services(srvs: list, ipv6: bool) -> str | None:
 
     dst_ports: list[str] = []
     src_ports: list[str] = []
+    port_pairs: list[str] = []
     icmp_pairs: list[str] = []
     icmp_types: list[str] = []
     marks: list[str] = []
@@ -518,10 +519,11 @@ def print_negated_services(srvs: list, ipv6: bool) -> str | None:
             src = _port_range_text(srv.src_range_start or 0, srv.src_range_end or 0)
             dst = _port_range_text(srv.dst_range_start or 0, srv.dst_range_end or 0)
             if src and dst:
-                # Both halves are one condition, so both have to be
-                # inverted together; see `_print_tcp_udp_service`.
-                return None
-            if src:
+                # The two halves of one service are a conjunction of their
+                # own, so they have to be inverted together; a concatenated
+                # lookup is what nftables inverts as a whole.
+                port_pairs.append(f'{src} . {dst}')
+            elif src:
                 src_ports.append(src)
             elif dst:
                 dst_ports.append(dst)
@@ -563,6 +565,11 @@ def print_negated_services(srvs: list, ipv6: bool) -> str | None:
         parts.append(f'{proto_keyword} sport {_negated_set(src_ports)}')
     if dst_ports:
         parts.append(f'{proto_keyword} dport {_negated_set(dst_ports)}')
+    if port_pairs:
+        parts.append(
+            f'{proto_keyword} sport . {proto_keyword} dport '
+            f'!= {{ {", ".join(port_pairs)} }}'
+        )
     if icmp_pairs:
         payload = 'icmpv6' if ipv6 else 'icmp'
         parts.append(
@@ -1620,11 +1627,21 @@ class PrintRule_nft(PolicyRuleProcessor):
         """Format TCP flag inspection for nftables."""
         return tcp_flags_match_nft(srv, negated)
 
-    def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
+    def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str | None:
         """Print TCP/UDP service matching.
 
         For multiple services (multiport), nftables uses sets natively:
             tcp dport { 22, 80, 443 }
+
+        A negated service says "not (all of what it names)".  One
+        condition inverts by turning its comparison into ``!=``; a source
+        port *and* a destination port are two, and inverting each of them
+        asks for a packet that is neither on that source port nor on that
+        destination port - a narrower rule than the one written, so the
+        traffic the element excludes goes unmatched.  The pair goes into
+        one concatenated lookup instead, which nftables inverts as a whole
+        (``lookup ... 0x1`` in ``nft --debug=netlink``).  A TCP flag
+        beside a port cannot be paired that way and is reported.
         """
         parts = []
 
@@ -1666,6 +1683,19 @@ class PrintRule_nft(PolicyRuleProcessor):
                 flags = self._print_tcp_flags(
                     srv, negated=bool(rule.srv_single_object_negation)
                 )
+
+            if neg and src_ports and dst_ports and not flags:
+                return (
+                    f'{proto} sport . {proto} dport != {{ {src_ports} . {dst_ports} }}'
+                )
+            if neg and flags and (src_ports or dst_ports):
+                self.compiler.error(
+                    rule,
+                    f'the service "{srv.name}" inspects TCP flags and names a '
+                    'port, and the nftables compiler cannot exclude both at '
+                    'once; split it into one service per condition',
+                )
+                return None
 
             if src_ports:
                 parts.append(f'{proto} sport {neg}{src_ports}')

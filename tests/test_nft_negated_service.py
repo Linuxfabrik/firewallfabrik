@@ -347,13 +347,6 @@ def test_a_whole_protocol_swallows_the_ports_of_it():
     assert _print_element([_tcp('All TCP'), _tcp('ssh', 22)]) == 'meta l4proto != tcp'
 
 
-def test_a_service_naming_both_ports_cannot_be_excluded_alongside_another():
-    """The two halves of one service are a conjunction of their own."""
-    assert (
-        _print_element([_tcp('mixed', dport=443, sport=1024), _tcp('http', 80)]) is None
-    )
-
-
 def test_a_custom_service_cannot_be_excluded():
     from firewallfabrik.core.objects import CustomService
 
@@ -422,3 +415,46 @@ def test_a_positive_element_is_still_separated():
         [flagged],
         [plain],
     ]
+
+
+class _Reporter:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+
+    def error(self, _rule, message: str) -> None:
+        self.errors.append(message)
+
+
+def _print_single(srv, proto: str) -> tuple[str | None, list[str]]:
+    printer = PrintRule_nft.__new__(PrintRule_nft)
+    printer.compiler = _Reporter()
+    out = printer._print_tcp_udp_service(_Rule([srv], True), srv, proto)
+    return out, printer.compiler.errors
+
+
+def test_a_service_naming_both_ports_is_excluded_as_a_pair():
+    """`sport != X dport != Y` is not the negation of `sport X dport Y`.
+
+    It asks for a packet that is on neither, where the service names the
+    combination - so a Deny rule written for "anything but 1024 to 443"
+    let a packet from 1024 to any other port through.  nftables inverts a
+    concatenated lookup as a whole.
+    """
+    srv = _tcp('mixed', dport=443, sport=1024)
+    assert _print_single(srv, 'tcp') == (
+        'tcp sport . tcp dport != { 1024 . 443 }',
+        [],
+    )
+
+
+def test_a_flagged_service_naming_a_port_is_reported():
+    out, errors = _print_single(_flagged(), 'tcp')
+    assert out is None
+    assert len(errors) == 1
+    assert 'TCP flags' in errors[0]
+
+
+def test_a_service_naming_both_ports_joins_the_others():
+    assert _print_element([_tcp('mixed', dport=443, sport=1024), _tcp('http', 80)]) == (
+        'tcp dport != 80 tcp sport . tcp dport != { 1024 . 443 }'
+    )
