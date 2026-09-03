@@ -380,3 +380,45 @@ def test_a_nat_rule_keeps_a_negated_element_whole():
     processor.set_data_source(_Feeder([rule]))
     assert processor.process_next() is True
     assert [r.osrv for r in processor.tmp_queue] == [[request, reply]]
+
+
+def _flagged() -> TCPService:
+    return TCPService(
+        id=uuid.uuid4(),
+        name='syn only',
+        dst_range_start=8443,
+        dst_range_end=8443,
+        tcp_flags_masks={'syn': True, 'ack': True},
+        tcp_flags={'syn': True},
+    )
+
+
+def _separated(rule) -> list[list]:
+    from firewallfabrik.compiler.processors._service import SeparateTCPWithFlags
+
+    processor = SeparateTCPWithFlags(name='p')
+    processor.compiler = _Compiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return [r.srv for r in processor.tmp_queue]
+
+
+def test_a_negated_element_is_not_separated_by_service_type():
+    """`SeparateTCPWithFlags` and its siblings split on service *type*.
+
+    That is right for an element whose objects are alternatives and wrong
+    for a negated one: the halves say "not this *or* not that", so a
+    packet the element excludes matches the half it is not named in.
+    """
+    flagged, plain = _flagged(), _tcp('http', 80)
+    rule = _comp_rule([flagged, plain], negated=False)
+    rule.srv_single_object_negation = True
+    assert _separated(rule) == [[flagged, plain]]
+
+
+def test_a_positive_element_is_still_separated():
+    flagged, plain = _flagged(), _tcp('http', 80)
+    assert _separated(_comp_rule([flagged, plain], negated=False)) == [
+        [flagged],
+        [plain],
+    ]

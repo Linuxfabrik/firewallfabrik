@@ -39,6 +39,16 @@ class SeparateServiceObject(BasicRuleProcessor):
     ``condition()``, creates a new rule with just that service.
     Remaining (non-matching) services stay in the original rule.
 
+    A **negated** element is left whole.  Its objects are not
+    alternatives: "none of these" is a conjunction, so a rule per service
+    says "not this *or* not that", which every packet satisfies as soon as
+    two of the services differ - the rule then matches everything.  The
+    nftables print rule excludes such an element in one rule
+    (``print_negated_services``) and reports it where it cannot.  The
+    iptables compiler never gets here with a negated element: its
+    ``SrvNegation`` has moved the services into a temporary chain long
+    before, which is what makes the conjunction on that platform.
+
     Corresponds to C++ ``Compiler::separateServiceObject``.
     """
 
@@ -55,7 +65,10 @@ class SeparateServiceObject(BasicRuleProcessor):
         slot = 'srv' if rule.type == 'PolicyRule' else 'osrv'
         services = getattr(rule, slot)
 
-        if len(services) <= 1:
+        negated = rule.get_neg(slot) or bool(
+            getattr(rule, f'{slot}_single_object_negation', False)
+        )
+        if len(services) <= 1 or negated:
             self.tmp_queue.append(rule)
             return True
 
