@@ -137,6 +137,18 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # adds.  See that processor for why the extra rule exists.
 OTHER_PROTOCOLS_OPTION = 'nft_other_protocols'
 
+#: The protocols a negated service element named, recorded before a
+#: processor splits the element into rules of its own.  The companion rule
+#: "every protocol the element does not name" has to be written once for
+#: the whole element: one per half says "not tcp" beside "not udp", and a
+#: packet is one protocol, so between them the two halves cover
+#: everything.  See `AddOtherProtocolsForNegatedService`.
+NEGATED_SRV_PROTOCOLS_OPTION = 'nft_negated_srv_protocols'
+
+#: Set on the half of such a split that must *not* write the companion,
+#: so the rule is written once and not once per half.
+NO_OTHER_PROTOCOLS_OPTION = 'nft_no_other_protocols'
+
 
 def other_protocols_for(services: list, ipv6: bool) -> list[str]:
     """Return the protocols a negated service element does *not* name.

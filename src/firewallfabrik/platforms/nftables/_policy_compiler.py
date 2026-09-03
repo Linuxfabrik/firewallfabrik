@@ -113,6 +113,8 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_set_reference_name,
 )
 from firewallfabrik.platforms.nftables._print_rule import (
+    NEGATED_SRV_PROTOCOLS_OPTION,
+    NO_OTHER_PROTOCOLS_OPTION,
     OTHER_PROTOCOLS_OPTION,
     other_protocols_for,
 )
@@ -928,15 +930,31 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        # `AddOtherProtocolsForNegatedService` runs behind this processor
+        # and would then read each half on its own: "not tcp" beside "not
+        # udp", and a packet is one protocol, so between them the two
+        # cover every packet there is - the rule would reject everything.
+        # The protocols the *whole* element named are recorded here and
+        # the companion is written once, from the first half.
+        protocols = (
+            other_protocols_for(rule.srv, bool(self.compiler.ipv6_policy))
+            if rule.get_neg('srv')
+            else []
+        )
+
         r1 = rule.clone()
         r1.srv = other_services
         r1.set_option('action_on_reject', '')
         r1.subrule_suffix = '1'
+        if protocols:
+            r1.set_option(NEGATED_SRV_PROTOCOLS_OPTION, protocols)
         self.tmp_queue.append(r1)
 
         r2 = rule.clone()
         r2.srv = tcp_services
         r2.subrule_suffix = '2'
+        if protocols:
+            r2.set_option(NO_OTHER_PROTOCOLS_OPTION, True)
         self.tmp_queue.append(r2)
 
         return True
@@ -1389,7 +1407,19 @@ class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
         return True
 
     def _other_protocols(self, rule) -> list[str]:
-        """Return the protocols to exclude, or an empty list to do nothing."""
+        """Return the protocols to exclude, or an empty list to do nothing.
+
+        A processor upstream may already have split the element - the
+        reject block does, so a TCP reset only reaches TCP packets - and
+        then the element this rule carries is half of what the editor
+        wrote.  The full list travels on the rule from there, and the half
+        that must not write the companion says so.
+        """
+        if rule.get_option(NO_OTHER_PROTOCOLS_OPTION, False):
+            return []
+        recorded = rule.get_option(NEGATED_SRV_PROTOCOLS_OPTION, None)
+        if recorded:
+            return list(recorded)
         if not rule.get_neg('srv'):
             return []
         return other_protocols_for(rule.srv, self.compiler.ipv6_policy)
