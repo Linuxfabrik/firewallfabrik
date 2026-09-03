@@ -191,6 +191,11 @@ class CompilerDriver_nft(CompilerDriver):
         self.filter_address_tables: dict[str, tuple[str, bool, str]] = {}
         self.mangle_address_tables: dict[str, tuple[str, bool, str]] = {}
         self.nat_address_tables: dict[str, dict[str, tuple[str, bool, str]]] = {}
+        # The regular chains a NAT rule translating to a run-time address
+        # jumps into, per address family.  Each maps the chain name to the
+        # interface the address comes from and the rule the script writes
+        # once per address it finds.
+        self.nat_runtime_chains: dict[str, dict[str, tuple[str, bool, str]]] = {}
         # The (family, name) pairs the generated ruleset installs.
         self.installed_tables: list[tuple[str, str]] = []
 
@@ -682,6 +687,9 @@ class CompilerDriver_nft(CompilerDriver):
         self.nat_address_tables.setdefault(family_key, {}).update(
             nat_compiler.address_tables
         )
+        self.nat_runtime_chains.setdefault(family_key, {}).update(
+            nat_compiler.runtime_nat_chains
+        )
 
         if nat_compiler.get_errors() or nat_compiler.get_warnings():
             self.all_errors.extend(nat_compiler.get_errors())
@@ -1150,6 +1158,14 @@ class CompilerDriver_nft(CompilerDriver):
                 out.write(rules)
                 out.write('    }\n')
 
+            # A translation to an address the firewall only learns while it
+            # runs jumps into a chain of its own, declared empty here and
+            # filled by the script once the ruleset is loaded.
+            for chain in sorted(self.nat_runtime_chains.get(fam, {})):
+                out.write('\n')
+                out.write(f'    chain {chain} {{\n')
+                out.write('    }\n')
+
             out.write('}\n')
             out.write('\n')
 
@@ -1378,10 +1394,29 @@ class CompilerDriver_nft(CompilerDriver):
             'address_table_code': self._address_table_load_commands(
                 filter_family, filter_table, mangle_table, nat_table
             ),
+            'runtime_nat_code': self._runtime_nat_load_commands(nat_table),
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')
         return template.render(context)
+
+    def _runtime_nat_load_commands(self, nat_table: str) -> str:
+        """Return one load command per NAT chain filled while the firewall runs.
+
+        The chain is declared empty in the ruleset and the script writes one
+        rule into it per address the interface turns out to carry, which is
+        what the iptables script's loop over ``$i_<iface>_list`` does.
+        """
+        lines: list[str] = []
+        for fam, chains in sorted(self.nat_runtime_chains.items()):
+            for name, (source, ipv6, statement) in sorted(chains.items()):
+                af = '-6' if ipv6 else '-4'
+                lines.append(
+                    f'    load_interface_nat_rule "{fam}" "{nat_table}" '
+                    f'"{name}" "{source}" "{af}" "{statement}" '
+                    f'|| fwf_nat_failures=1'
+                )
+        return '\n'.join(lines)
 
     def _address_table_load_commands(
         self,

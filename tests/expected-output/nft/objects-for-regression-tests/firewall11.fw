@@ -15,7 +15,6 @@
 
 #  Interfaces eth0 and eth1 are parts of the bridge; Interface eth2 is external interface (doing NAT and routing on this interface) Interface eth3 is connected to protected network and is used to manage firewall. This is rather realistic configuration for the bridging firewall
 #
-# Rule 3 (NAT): Interface "br0" gets its address while the firewall runs, and the nftables compiler can only translate to an address it knows when it writes the ruleset; use masquerade or an address object. The rule is left out
 # firewall11:NAT:2: warning: "Use SNAT instead of MASQUERADE" needs the address of "br0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
 
 FWBDEBUG=""
@@ -367,6 +366,57 @@ load_address_tables() {
     test "$fwf_set_failures" -eq 0
 }
 
+# A NAT rule can translate to the address of an interface that gets it from
+# DHCP or PPP, and the ruleset cannot name one: `nft -f` reads it in one
+# piece, a translation target takes no set reference the way a match does,
+# and the interface may carry several addresses or none.  So the hooked
+# chain jumps into a regular chain the ruleset leaves empty, and one rule
+# per address goes in here - the same rules the iptables script writes in
+# its loop over `$i_<iface>_list`.  An interface without an address leaves
+# the chain empty and the packet returns to the hooked chain, which is what
+# the `test -n` guard does on that side.
+load_interface_nat_rule() {
+    family=$1
+    table=$2
+    chain=$3
+    pattern=$4
+    af=$5
+    statement=$6
+
+    found=0
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        for a in $($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!'); do
+            found=1
+            # Unquoted on purpose: the statement is a list of nft tokens and
+            # has to reach the tool as one argument each.
+            $NFT add rule "$family" "$table" "$chain" \
+                $(printf '%s' "$statement" | sed "s|@ADDR@|$a|") || return 1
+        done
+    done
+
+    test "$found" -eq 1 || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules translating to it are not installed"
+    }
+    return 0
+}
+
+# A chain that stays empty translates nothing, so the rules that jump into
+# it fall through and the traffic they name is left untranslated.  The
+# function answers for all of them together rather than handing its caller
+# the status of whichever ran last.
+load_runtime_nat_rules() {
+    fwf_nat_failures=0
+    load_interface_nat_rule "ip" "fwf_nat" "rt_dnat_NAT_3" "br0" "-4" "meta l4proto tcp counter dnat to @ADDR@:3128" || fwf_nat_failures=1
+    test "$fwf_nat_failures" -eq 0
+}
+
 nft_ruleset() {
     cat <<'NFT_RULES'
 table ip fwf_filter {}
@@ -559,6 +609,11 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 3 (NAT)
+        #
+        # see SF bug 3057503
+        tcp dport 80 counter jump rt_dnat_NAT_3
     }
 
     chain postrouting {
@@ -578,6 +633,9 @@ table ip fwf_nat {
         # firewall11:NAT:2: warning: "Use SNAT instead of MASQUERADE" needs the address of "br0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
         oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter masquerade to :1000-1010
     }
+
+    chain rt_dnat_NAT_3 {
+    }
 }
 
 NFT_RULES
@@ -596,6 +654,7 @@ script_body() {
     # the last set it filled, and a set that is empty on purpose answers
     # 0 - so a ruleset the kernel refused would be reported as installed.
     nft_ruleset | $NFT -f /dev/stdin || return 1
+    load_runtime_nat_rules || return 1
     load_address_tables
 }
 

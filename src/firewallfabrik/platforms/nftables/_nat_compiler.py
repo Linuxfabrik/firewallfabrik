@@ -132,6 +132,13 @@ class NATCompiler_nft(NATCompiler):
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
 
+        # The regular chains that hold a translation to an address only the
+        # firewall knows, keyed by chain name and holding the interface the
+        # address comes from, its address family and the rule the script
+        # writes once per address it finds.  See `NATPrintRule_nft.
+        # _runtime_translation_chain`.
+        self.runtime_nat_chains: dict[str, tuple[str, bool, str]] = {}
+
         # Per-chain rule collection for nftables output assembly
         self.chain_rules: dict[str, list[str]] = {
             'prerouting': [],

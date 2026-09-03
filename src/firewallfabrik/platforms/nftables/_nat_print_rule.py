@@ -790,6 +790,73 @@ class NATPrintRule_nft(NATRuleProcessor):
             return str(start)
         return f'{start}-{end}'
 
+    #: The placeholder the activation script replaces with each address the
+    #: interface turns out to carry.  It holds no character a shell or an
+    #: nftables statement gives a meaning to, so the substitution needs no
+    #: quoting and the template survives the word splitting that hands the
+    #: rule to `nft` one token at a time.
+    RUNTIME_ADDRESS_PLACEHOLDER = '@ADDR@'
+
+    def _runtime_translation_chain(
+        self, rule: CompRule, obj, verb: str, ports: str, flags: str
+    ) -> str:
+        """Return the chain a translation to a run-time address jumps into.
+
+        An interface that gets its address from DHCP or PPP carries none
+        the compiler could write into the rule, and a translation target
+        takes no set reference the way a match does - there is no
+        ``dnat to @set``.  ``nft -f`` reads the ruleset in one piece, so
+        the address cannot be spliced into the text either: the interface
+        may have several, or none, and each is a rule of its own.
+
+        So the hooked chain jumps into a regular chain that the ruleset
+        declares empty, and the script adds one rule per address it finds
+        once the ruleset is loaded.  That is the same shape the iptables
+        script writes, where the loop over ``$i_<iface>_list`` appends one
+        ``-j DNAT --to-destination $i_<iface>`` per address; an interface
+        without one leaves the chain empty and the packet returns to the
+        hooked chain, exactly as the ``test -n`` guard skips the iptables
+        rule.
+
+        Returns an empty string when *obj* is not such an interface, so
+        the caller falls through to the ordinary rendering.
+        """
+        if not isinstance(obj, Interface) or not obj.is_dynamic():
+            return ''
+        if self._select_af_address(getattr(obj, 'addresses', [])) is not None:
+            return ''
+
+        nft_comp = cast('NATCompiler_nft', self.compiler)
+        ipv6 = bool(nft_comp.ipv6_policy)
+
+        # The statement in the run-time chain carries no match of its own,
+        # so a port mapping there has no transport protocol in front of it
+        # and nft refuses the rule ("transport protocol mapping is only
+        # valid after transport protocol match", src/evaluate.c).  The
+        # protocol comes from the translated service, the same source
+        # `_nat_l4proto_prefix` reads it from for the hooked chain.
+        statement = []
+        if ports:
+            tsrv = nft_comp.get_first_tsrv(rule)
+            if isinstance(tsrv, TCPService):
+                statement.append('meta l4proto tcp')
+            elif isinstance(tsrv, UDPService):
+                statement.append('meta l4proto udp')
+        statement.append('counter')
+        address = self.RUNTIME_ADDRESS_PLACEHOLDER
+        if ports:
+            address = f'[{address}]' if ipv6 else address
+            statement.append(f'{verb} to {address}:{ports}{flags}')
+        else:
+            statement.append(f'{verb} to {address}{flags}')
+
+        rule_set = nft_comp.get_rule_set_name()
+        name = nft_object_name(f'rt_{verb}_{rule_set}_{rule.position}')
+        if ipv6:
+            name += '_v6'
+        nft_comp.runtime_nat_chains[name] = (obj.name, ipv6, ' '.join(statement))
+        return name
+
     @staticmethod
     def _bracket_v6_for_port(addr: str, ipv6: bool) -> str:
         """Wrap an IPv6 NAT target in square brackets before a `:port`.
@@ -895,6 +962,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
+                runtime_chain = self._runtime_translation_chain(
+                    rule, tdst, 'dnat', ports, flags
+                )
+                if runtime_chain:
+                    return f'jump {runtime_chain}'
                 addr = self._print_addr(
                     tdst, rule, for_match=False, fold_range=not ports
                 )
