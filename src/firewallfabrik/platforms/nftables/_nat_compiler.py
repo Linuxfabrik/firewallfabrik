@@ -1173,8 +1173,15 @@ class SplitNONATRule(NATRuleProcessor):
 class SplitOnODst(NATRuleProcessor):
     """Split DNAT/DNetnat rules with multiple ODst into separate rules.
 
-    Called after negation processing to ensure each DNAT rule has
-    at most one object in ODst.
+    The objects of an element are alternatives, and one nftables rule
+    matches one address, so each needs a rule of its own.
+
+    A negated element is the exception and stays whole: "none of these"
+    is a conjunction, and one rule per object says "not this *or* not
+    that", which every packet satisfies as soon as the objects differ -
+    the rule then translates everything.  The print rule renders such an
+    element as one `!=` against a set.  Same guard as the policy
+    compiler's `SplitIfSrcMatchesFw`.
     """
 
     def process_next(self) -> bool:
@@ -1182,9 +1189,14 @@ class SplitOnODst(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.odst) > 1 and rule.nat_rule_type in (
-            NATRuleType.DNAT,
-            NATRuleType.DNetnat,
+        if (
+            len(rule.odst) > 1
+            and not rule.odst_single_object_negation
+            and rule.nat_rule_type
+            in (
+                NATRuleType.DNAT,
+                NATRuleType.DNetnat,
+            )
         ):
             for obj in rule.odst:
                 r = rule.clone()
@@ -1380,7 +1392,10 @@ class SplitIfOSrcMatchesFw(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.osrc) <= 1:
+        # A negated element is left whole for the reason `SplitOnODst`
+        # gives: its objects are a conjunction, and one rule each turns
+        # them into a disjunction that holds for every packet.
+        if len(rule.osrc) <= 1 or rule.osrc_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
