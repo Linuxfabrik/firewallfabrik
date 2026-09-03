@@ -1040,6 +1040,12 @@ class SplitMultipleServices(NATRuleProcessor):
     narrows the rule to the ports the other services name and the protocol
     as a whole stops being translated.  The policy compiler pulls the same
     service out for the same reason.
+
+    A **negated** element is the exception.  "None of these" is a
+    conjunction, so a rule each says "not this *or* not that", which every
+    packet satisfies as soon as two of the services differ - the rule then
+    translates the traffic it was written to leave alone.  Such an element
+    stays whole and ``print_negated_services`` excludes it in one rule.
     """
 
     @staticmethod
@@ -1056,7 +1062,7 @@ class SplitMultipleServices(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.osrv) <= 1:
+        if len(rule.osrv) <= 1 or rule.osrv_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 

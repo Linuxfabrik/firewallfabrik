@@ -359,3 +359,24 @@ def test_a_custom_service_cannot_be_excluded():
 
     custom = CustomService(id=uuid.uuid4(), name='c')
     assert _print_element([custom, _tcp('http', 80)]) is None
+
+
+def test_a_nat_rule_keeps_a_negated_element_whole():
+    """`SplitMultipleServices` gave every service a rule of its own.
+
+    On a negated element that turns "translate nothing of these" into
+    "not this *or* not that", and the rule then translated every packet
+    it was written to leave alone.
+    """
+    from firewallfabrik.platforms.nftables._nat_compiler import SplitMultipleServices
+
+    request = ICMPService(id=uuid.uuid4(), name='ping', data={'type': 8, 'code': 0})
+    reply = ICMPService(id=uuid.uuid4(), name='pong', data={'type': 0, 'code': 0})
+    rule = _nat_rule([request, reply])
+    rule.osrv_single_object_negation = True
+
+    processor = SplitMultipleServices(name='p')
+    processor.compiler = _NATCompiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    assert [r.osrv for r in processor.tmp_queue] == [[request, reply]]

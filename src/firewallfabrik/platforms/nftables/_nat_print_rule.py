@@ -66,6 +66,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_icmp_service,
     print_ip_option_matches,
     print_mark_match,
+    print_negated_services,
     print_pair_clause,
     tcp_flags_match_nft,
 )
@@ -186,6 +187,20 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'meta l4proto != {others[0]}')
             else:
                 parts.append(f'meta l4proto != {{ {", ".join(others)} }}')
+        elif rule.osrv_single_object_negation and len(rule.osrv) > 1:
+            # "None of these" is a conjunction, so the whole element has to
+            # be excluded by this one rule; a rule per service says "not
+            # this *or* not that" and translates every packet there is.
+            srv_match = print_negated_services(rule.osrv, bool(nft_comp.ipv6_policy))
+            if srv_match is None:
+                self.compiler.error(
+                    rule,
+                    'this rule excludes several services the nftables compiler '
+                    'cannot exclude in one rule; split it into one service per '
+                    'rule',
+                )
+                return ''
+            parts.append(srv_match)
         elif osrv:
             srv_match = self._print_service(osrv, rule)
             if srv_match is None:
