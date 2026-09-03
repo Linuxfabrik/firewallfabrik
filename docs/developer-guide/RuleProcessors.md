@@ -2325,9 +2325,10 @@ interfaces). The nftables driver reuses the iptables routing compiler.
 ```
 Begin → SingleRuleFilter → DeprecateOptionRoute →
 [DropMangleTableRules (filter run) OR KeepMangleTableRules (mangle run)] →
-ClearTagClassifyInFilter → ClearActionInTagClassifyIfMangle →
+ClearTagClassifyInFilter → ClearActionInTagClassifyIfMangle → ClearLogInMangle →
 StoreAction → Logging1 →
-ExpandGroupsInItf → ReplaceClusterInterfaceInItfRE(itf) → DecideOnChainForClassify → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth →
+EmptyGroupsInRE(itf) → ExpandGroupsInItf → ReplaceClusterInterfaceInItfRE(itf) →
+SingleObjectNegationItf → ItfNegation → DecideOnChainForClassify → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth →
 ResolveMultiAddress →
 RecursiveGroupsInRE(src/dst/srv) → EmptyGroupsInRE(src/dst/srv/itf) →
 ExpandGroups → DropRuleWithEmptyRE →
@@ -2335,7 +2336,8 @@ EliminateDuplicatesInSRC/DST/SRV →
 CheckForTCPEstablished →
 SplitRuleIfSrvAnyActionReject → FillActionOnReject → SplitServicesIfRejectWithTCPReset →
 FillActionOnReject(2) → SplitServicesIfRejectWithTCPReset(2) →
-ClearLogInMangle → Logging_nft → SplitIfTagAndConnmark → Accounting →
+SrvNegation → AddOtherProtocolsForNegatedService →
+Logging_nft → SplitIfTagAndConnmark → Accounting →
 SplitIfSrcNegAndFw → SplitIfDstNegAndFw → NftNegation → TimeNegation →
 SplitLogWithStatefulLimit →
 [DetectShadowing (if check_shading and not single-rule mode)] →
@@ -2365,7 +2367,7 @@ PrintRule_nft → SimplePrintProgress
 
 ~70 processors vs. ~110 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the temp-chain and multiport processors (nftables has native `!=` negation and sets).
 
-The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`, which still builds a temporary chain and only for the negated interval that says two things at once.  `SplitLogWithStatefulLimit`, right behind it, is the compiler's second and last user of that chain. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
+The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`, which still builds a temporary chain and only for the negated interval that says two things at once.  `SrvNegation` builds the same chain for the two service shapes no `!=` can say - a service inspecting TCP flags *and* naming a port, and a match carrying no protocol beside one that does - and `SplitLogWithStatefulLimit` is the third user of that chain.  Everything else about a negated service element is one rule per protocol group, written by `print_negated_services`. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
 
 ### NAT pipeline order
 
@@ -2383,7 +2385,7 @@ ExpandGroups → DropRuleWithEmptyRE →
 EliminateDuplicatesInOSRC/ODST/OSRV →
 ClassifyNATRule → SplitSDNATRule → ClassifyNATRule(reclassify) → ConvertLoadBalancingRules → VerifyRules →
 SingleObjectNegationOSrc → SingleObjectNegationODst →
-NftNegationOSrc → NftNegationODst → NftNegationOSrv →
+NftNegationOSrc → NftNegationODst → AddOtherProtocolsForNegatedServiceInNAT → NftNegationOSrv →
 SplitOnODst → PortTranslationRules → SpecialCaseWithRedirect →
 [if local_nat: [if fw_part_of_any: SplitIfOSrcAny] → SplitIfOSrcMatchesFw] →
 SplitNONATRule → SplitNATBranchRule → LocalNATRule → DecideOnChain → DecideOnTarget →
@@ -2422,7 +2424,7 @@ the feature at all, independent of our implementation.
 | Connection marking | `ct mark set mark` per rule, `meta mark set ct mark` prepended to the prerouting and output chains |
 | Pipe | `queue`, queue number 0, the same queue the iptables QUEUE target uses |
 | Accounting | `counter name "..."` plus a counter object declared in the table |
-| Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw`; a negated time that names both a window of the day and a set of weekdays becomes a jump / return / action chain, the way iptables says every negated interval |
+| Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw`; a negated time that names both a window of the day and a set of weekdays, and a negated service element no single rule can exclude, become a jump / return / action chain, the way iptables says every negated element |
 | NAT interface negation | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `!=` output |
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |
 | NAT local_nat | `SplitIfOSrcAny` + `SplitIfOSrcMatchesFw` + `LocalNATRule` |
