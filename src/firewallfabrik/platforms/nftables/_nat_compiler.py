@@ -1715,14 +1715,17 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
     """Masquerade a source translation whose address is only known at run time.
 
     An interface that is not regular (dynamic, unnumbered, bridge port)
-    carries no address the compiler could write into the rule.  iptables
-    can name one at activation time through a shell variable and otherwise
-    falls back to the MASQUERADE target (C++
-    ``NATCompiler_ipt::dynamicInterfaceInTSrc``).  nftables loads its whole
-    ruleset in one go and has no such variable, so masquerading, which
-    takes the address of the outgoing interface per packet, is the only way
-    to express the rule; the iptables-only "use SNAT instead of
-    MASQUERADE" option therefore does not apply here.
+    carries no address the compiler could write into the rule, so the rule
+    masquerades: the address of the outgoing interface, picked per packet.
+
+    "Use SNAT instead of MASQUERADE" asks for the address itself, and the
+    rule then keeps its type - ``NATPrintRule_nft`` writes it into a chain
+    the script fills once the ruleset is loaded, one rule per address the
+    device turns out to carry.  That is the same answer the iptables
+    compiler gives (C++ ``NATCompiler_ipt::dynamicInterfaceInTSrc``, whose
+    print rule writes the loop over ``$i_<iface>_list``), and it is why the
+    option exists: masquerading looks the address up for every packet,
+    where SNAT names it once.
     """
 
     def process_next(self) -> bool:
@@ -1736,16 +1739,11 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
             return True
 
         tsrc = rule.tsrc[0]
-        if isinstance(tsrc, Interface) and not tsrc.is_regular():
-            if rule.get_option('ipt_use_snat_instead_of_masq', False):
-                self.compiler.warning(
-                    rule,
-                    '"Use SNAT instead of MASQUERADE" needs the address of '
-                    f'"{tsrc.name}" in the rule, and it is only known while '
-                    'the firewall runs; nftables loads its ruleset in one '
-                    'piece and a source translation takes no set reference, '
-                    'so the rule masquerades',
-                )
+        if (
+            isinstance(tsrc, Interface)
+            and not tsrc.is_regular()
+            and not rule.get_option('ipt_use_snat_instead_of_masq', False)
+        ):
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 

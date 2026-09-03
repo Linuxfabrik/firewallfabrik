@@ -15,7 +15,6 @@
 
 #  Interfaces eth0 and eth1 are parts of the bridge; Interface eth2 is external interface (doing NAT and routing on this interface) Interface eth3 is connected to protected network and is used to manage firewall. This is rather realistic configuration for the bridging firewall
 #
-# firewall11:NAT:2: warning: "Use SNAT instead of MASQUERADE" needs the address of "br0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -414,6 +413,7 @@ load_interface_nat_rule() {
 load_runtime_nat_rules() {
     fwf_nat_failures=0
     load_interface_nat_rule "ip" "fwf_nat" "rt_dnat_NAT_3" "br0" "-4" "meta l4proto tcp counter dnat to @ADDR@:3128" || fwf_nat_failures=1
+    load_interface_nat_rule "ip" "fwf_nat" "rt_snat_NAT_2" "br0" "-4" "meta l4proto tcp counter snat to @ADDR@:1000-1010" || fwf_nat_failures=1
     test "$fwf_nat_failures" -eq 0
 }
 
@@ -630,11 +630,13 @@ table ip fwf_nat {
         # see bug #1693 , SF bug 3048516
         # combination of using SNAT instead of MASQ,
         # source port translation and dynamic interface
-        # firewall11:NAT:2: warning: "Use SNAT instead of MASQUERADE" needs the address of "br0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
-        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter masquerade to :1000-1010
+        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter jump rt_snat_NAT_2
     }
 
     chain rt_dnat_NAT_3 {
+    }
+
+    chain rt_snat_NAT_2 {
     }
 }
 

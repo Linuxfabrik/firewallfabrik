@@ -818,12 +818,16 @@ class NATPrintRule_nft(NATRuleProcessor):
         hooked chain, exactly as the ``test -n`` guard skips the iptables
         rule.
 
+        An address object left under a dynamic interface is ignored, the
+        way the iptables printer ignores it: it is the address the device
+        had before the administrator ticked "dynamic", and
+        `objects-for-regression-tests.fwb` keeps a firewall around for
+        exactly that case.
+
         Returns an empty string when *obj* is not such an interface, so
         the caller falls through to the ordinary rendering.
         """
         if not isinstance(obj, Interface) or not obj.is_dynamic():
-            return ''
-        if self._select_af_address(getattr(obj, 'addresses', [])) is not None:
             return ''
 
         nft_comp = cast('NATCompiler_nft', self.compiler)
@@ -934,6 +938,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
+                runtime_chain = self._runtime_translation_chain(
+                    rule, tsrc, 'snat', ports, flags
+                )
+                if runtime_chain:
+                    return f'jump {runtime_chain}'
                 addr = self._print_addr(
                     tsrc, rule, for_match=False, fold_range=not ports
                 )
