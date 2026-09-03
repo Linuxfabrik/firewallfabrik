@@ -37,6 +37,24 @@ Rules under one label that differ in something *else* as well are a
 legitimate expansion - one rule per address family, per interface, per
 protocol - and are left alone, because then the two do not both see the
 same packet.
+
+What this does **not** see, so that the next round does not assume it
+does.  Three shapes of the same defect differ in more than one value and
+were found by hand instead:
+
+* ``meta l4proto != tcp`` beside ``tcp dport != 22`` - one negates the
+  protocol and the other a port of it, so the keywords differ;
+* ``tcp dport != 80`` beside ``tcp sport != 1024 tcp dport != 443`` - the
+  clause sets are not the same, one is a subset of the other;
+* one rule carrying two ``!=`` clauses that belong to a *single* service,
+  such as ``tcp dport != 5190 tcp flags ... != syn``, where the AND is
+  inside the rule.  Note that two ``!=`` clauses in one rule are right
+  whenever they come from two different services of the element, which is
+  what makes this one hard to ask mechanically.
+
+The first two need the clause sets compared rather than the values; the
+third needs to know which service a clause came from, which the generated
+ruleset does not say.
 """
 
 from __future__ import annotations
