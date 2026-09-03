@@ -2824,13 +2824,15 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         rule falls back to the bare ``meta l4proto`` match - the same split
         the iptables ``SeparatePortRanges`` performs, which reads all-zero
         bounds as the full range.
+
+        None of that holds for a **negated** element.  "None of these" is a
+        conjunction, so every service of it has to be excluded by the same
+        rule; a rule each says "not this *or* not that", which every packet
+        satisfies as soon as two of the services differ.  The services of
+        one protocol therefore stay together and
+        ``print_negated_services`` ANDs their matches.
         """
-        if negated and len(srvs) > 1 and all(isinstance(s, UserService) for s in srvs):
-            # A negated element is a conjunction: "none of these users".
-            # A rule each would say "not this *or* not that", which holds
-            # for every packet - a socket has one owner - so the whole
-            # rule would match everything.  The print rule renders them as
-            # one `meta skuid != { ... }`.
+        if negated:
             return [list(srvs)]
         if all(isinstance(s, (TCPService, UDPService)) for s in srvs):
             any_port = [s for s in srvs if not _names_a_port(s)]

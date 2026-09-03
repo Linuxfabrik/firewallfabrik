@@ -474,6 +474,128 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
     return f'{proto} type {type_str} {proto} code {icmp_code}'
 
 
+def print_negated_services(srvs: list, ipv6: bool) -> str | None:
+    """Return the matches that exclude *every* service in *srvs*, or ``None``.
+
+    A negated service element is a conjunction: "none of these".  Its
+    matches therefore belong in **one** rule, where nftables ANDs them.
+    One rule per service says "not this *or* not that", which every packet
+    satisfies as soon as two of the services differ, so the rule matches
+    everything - a Deny rule blocks all traffic and an Accept rule lets all
+    of it through.
+
+    The services handed in share one protocol, because
+    ``GroupServicesByProtocol`` splits the element by protocol first and
+    matches of two different protocols cannot be ANDed.  That split is
+    sound for a negated element: the rules it makes are disjoint by
+    protocol, and the companion
+    :class:`AddOtherProtocolsForNegatedService` writes covers what is left.
+
+    ``None`` means one of the services cannot be inverted here; the caller
+    reports it and leaves the rule out rather than emit a wider rule.
+    """
+    if not srvs:
+        return None
+
+    dst_ports: list[str] = []
+    src_ports: list[str] = []
+    icmp_pairs: list[str] = []
+    icmp_types: list[str] = []
+    marks: list[str] = []
+    masked_marks: list[str] = []
+    uids: list[str] = []
+    proto_keyword = ''
+
+    for srv in srvs:
+        if isinstance(srv, (TCPService, UDPService)):
+            proto_keyword = 'tcp' if isinstance(srv, TCPService) else 'udp'
+            masks = getattr(srv, 'tcp_flags_masks', None) or {}
+            if any(masks.values()):
+                # The flags and the ports of one service are a conjunction
+                # of their own, and its negation is a disjunction that one
+                # rule cannot say.
+                return None
+            src = _port_range_text(srv.src_range_start or 0, srv.src_range_end or 0)
+            dst = _port_range_text(srv.dst_range_start or 0, srv.dst_range_end or 0)
+            if src and dst:
+                # Both halves are one condition, so both have to be
+                # inverted together; see `_print_tcp_udp_service`.
+                return None
+            if src:
+                src_ports.append(src)
+            elif dst:
+                dst_ports.append(dst)
+            else:
+                # "All TCP" names the protocol and nothing else, so the
+                # element excludes the protocol as a whole and every port
+                # of it the other services name is already covered.
+                return f'meta l4proto != {proto_keyword}'
+        elif isinstance(srv, (ICMPService, ICMP6Service)):
+            proto_keyword = 'ipv6-icmp' if ipv6 else 'icmp'
+            icmp_type, icmp_code = icmp_type_and_code(srv)
+            type_names = _ICMPV6_TYPE_NAMES if ipv6 else _ICMP_TYPE_NAMES
+            if icmp_type < 0:
+                # The service names no type, so it is the whole protocol.
+                return f'meta l4proto != {proto_keyword}'
+            type_str = type_names.get(icmp_type, str(icmp_type))
+            if icmp_code < 0:
+                icmp_types.append(type_str)
+            else:
+                icmp_pairs.append(f'{type_str} . {icmp_code}')
+        elif isinstance(srv, TagService):
+            tag_code = srv.get_code()
+            if not tag_code or not is_valid_packet_mark(tag_code):
+                return None
+            if '/' in tag_code:
+                masked_marks.append(print_mark_match(tag_code, True))
+            else:
+                marks.append(tag_code.strip())
+        elif isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if not uid or not is_valid_user_id(uid):
+                return None
+            uids.append(str(uid))
+        else:
+            return None
+
+    parts: list[str] = []
+    if src_ports:
+        parts.append(f'{proto_keyword} sport {_negated_set(src_ports)}')
+    if dst_ports:
+        parts.append(f'{proto_keyword} dport {_negated_set(dst_ports)}')
+    if icmp_pairs:
+        payload = 'icmpv6' if ipv6 else 'icmp'
+        parts.append(
+            f'{payload} type . {payload} code != {{ {", ".join(icmp_pairs)} }}'
+        )
+    if icmp_types:
+        payload = 'icmpv6' if ipv6 else 'icmp'
+        parts.append(f'{payload} type {_negated_set(icmp_types)}')
+    if marks:
+        parts.append(f'meta mark {_negated_set(marks)}')
+    parts.extend(masked_marks)
+    if uids:
+        parts.append(f'meta skuid {_negated_set(uids)}')
+
+    return ' '.join(parts) if parts else None
+
+
+def _port_range_text(start: int, end: int) -> str:
+    """Format a port range for nftables, empty when it names no port."""
+    if start <= 0 and end <= 0:
+        return ''
+    if start == end or end <= 0:
+        return str(start)
+    return f'{start}-{end}'
+
+
+def _negated_set(values: list[str]) -> str:
+    """Return ``!= value`` for one value and ``!= { a, b }`` for several."""
+    if len(values) == 1:
+        return f'!= {values[0]}'
+    return f'!= {{ {", ".join(values)} }}'
+
+
 def indent_comment_block(block: str) -> str:
     """Put a block of ready-made comment lines into a chain block.
 
@@ -1278,6 +1400,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         if rule.merged_tcp_udp:
             return self._print_merged_tcp_udp_service(rule, negated)
 
+        if negated and len(rule.srv) > 1:
+            # "None of these" is a conjunction, so the whole element has to
+            # be excluded by this one rule.
+            match = print_negated_services(rule.srv, bool(self.compiler.ipv6_policy))
+            if match is None:
+                self.compiler.error(
+                    rule,
+                    'this rule excludes several services the nftables compiler '
+                    'cannot exclude in one rule; split it into one service per '
+                    'rule',
+                )
+            return match
+
         if srv is None:
             return ''
 
@@ -1432,14 +1567,6 @@ class PrintRule_nft(PolicyRuleProcessor):
                 )
                 return None
             neg = '!= ' if rule.srv_single_object_negation else ''
-            if neg and len(rule.srv) > 1:
-                # A negated element means "none of these", so its users
-                # belong in one match.  One rule per user would say "not
-                # this *or* not that", which every packet satisfies -
-                # a socket has one owner.  `GroupServicesByProtocol`
-                # keeps them together for exactly this.
-                uids = [str(s.userid) for s in rule.srv if isinstance(s, UserService)]
-                return f'meta skuid != {{ {", ".join(uids)} }}'
             return f'meta skuid {neg}{uid}'
 
         self.compiler.error(
@@ -1609,11 +1736,7 @@ class PrintRule_nft(PolicyRuleProcessor):
     @staticmethod
     def _format_port_range(start: int, end: int) -> str:
         """Format a port range for nftables."""
-        if start <= 0 and end <= 0:
-            return ''
-        if start == end or end <= 0:
-            return str(start)
-        return f'{start}-{end}'
+        return _port_range_text(start, end)
 
     def _negate_single_match(
         self, rule: CompRule, parts: list[str], what: str

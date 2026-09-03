@@ -263,3 +263,99 @@ def test_a_translated_port_gets_a_warning_instead_of_a_second_rule():
     assert len(out) == 1
     assert len(warnings) == 1
     assert 'untranslated' in warnings[0]
+
+
+class _MultiRule:
+    """A rule whose service element is negated and names several services."""
+
+    def __init__(self, srvs: list) -> None:
+        self.srv = srvs
+        self.srv_single_object_negation = True
+        self.merged_tcp_udp = False
+
+    @staticmethod
+    def get_option(_key, default=None):
+        return default
+
+
+def _print_element(srvs: list, ipv6: bool = False) -> str | None:
+    from firewallfabrik.platforms.nftables._print_rule import print_negated_services
+
+    return print_negated_services(srvs, ipv6)
+
+
+def _tcp(name: str, dport: int = 0, sport: int = 0) -> TCPService:
+    return TCPService(
+        id=uuid.uuid4(),
+        name=name,
+        src_range_start=sport,
+        src_range_end=sport,
+        dst_range_start=dport,
+        dst_range_end=dport,
+    )
+
+
+def test_several_ports_of_one_protocol_are_one_set():
+    assert (
+        _print_element([_tcp('ssh', 22), _tcp('http', 80)]) == 'tcp dport != { 22, 80 }'
+    )
+
+
+def test_several_icmp_messages_are_one_concatenation():
+    """One rule each says "not echo-request *or* not echo-reply".
+
+    Every ICMP packet satisfies that as soon as the two types differ, so a
+    Deny rule written for "any ICMP but ping" dropped ping as well.
+    """
+    request = ICMPService(id=uuid.uuid4(), name='ping', data={'type': 8, 'code': 0})
+    reply = ICMPService(id=uuid.uuid4(), name='pong', data={'type': 0, 'code': 0})
+    assert _print_element([request, reply]) == (
+        'icmp type . icmp code != { echo-request . 0, echo-reply . 0 }'
+    )
+
+
+def test_several_icmp_types_without_a_code_are_one_set():
+    request = ICMPService(id=uuid.uuid4(), name='ping', data={'type': 8})
+    reply = ICMPService(id=uuid.uuid4(), name='pong', data={'type': 0})
+    assert _print_element([request, reply]) == (
+        'icmp type != { echo-request, echo-reply }'
+    )
+
+
+def test_several_packet_marks_are_one_set():
+    from firewallfabrik.core.objects import TagService
+
+    one = TagService(id=uuid.uuid4(), name='one', data={'tagcode': '1'})
+    two = TagService(id=uuid.uuid4(), name='two', data={'tagcode': '2'})
+    assert _print_element([one, two]) == 'meta mark != { 1, 2 }'
+
+
+def test_several_users_are_one_set():
+    from firewallfabrik.core.objects import UserService
+
+    a = UserService(id=uuid.uuid4(), name='a', userid='2000')
+    b = UserService(id=uuid.uuid4(), name='b', userid='500')
+    assert _print_element([a, b]) == 'meta skuid != { 2000, 500 }'
+
+
+def test_a_whole_protocol_swallows_the_ports_of_it():
+    """ "Anything but all TCP and but SSH" is "anything but TCP".
+
+    Keeping the port match beside it asks for a TCP packet that is not
+    port 22, which is exactly what the element excludes.
+    """
+    assert _print_element([_tcp('All TCP'), _tcp('ssh', 22)]) == 'meta l4proto != tcp'
+
+
+def test_a_service_naming_both_ports_cannot_be_excluded_alongside_another():
+    """The two halves of one service are a conjunction of their own."""
+    assert (
+        _print_element([_tcp('mixed', dport=443, sport=1024), _tcp('http', 80)]) is None
+    )
+
+
+def test_a_custom_service_cannot_be_excluded():
+    from firewallfabrik.core.objects import CustomService
+
+    custom = CustomService(id=uuid.uuid4(), name='c')
+    assert _print_element([custom, _tcp('http', 80)]) is None
