@@ -63,6 +63,27 @@ def _as_uuid(value):
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
 
 
+def _interface_path(iface) -> str:
+    """Name an interface the way the object tree shows it.
+
+    Two interfaces of one firewall may share a name - a bridge port and
+    the top-level object of the same name, a VLAN under two different
+    NICs - so a message about one of them has to say which.  It used to
+    say the object's id, which identifies nothing an administrator can
+    look up and is a fresh UUID on every load of a `.fwb`, so two
+    compiles of one file reported the same interface differently.
+    """
+    parts = [iface.name]
+    parent = iface.parent_interface
+    while parent is not None:
+        parts.append(parent.name)
+        parent = parent.parent_interface
+    device = iface.device
+    if device is not None:
+        parts.append(device.name)
+    return ':'.join(reversed(parts))
+
+
 def _every_interface(fw):
     """Yield every interface of *fw*, sub-interfaces included.
 
@@ -897,7 +918,7 @@ class CompilerDriver(BaseCompiler):
                     ip = ipaddress.ip_address(addr_str)
                 except ValueError:
                     return (
-                        f'Interface {iface.name} (id={iface.id}) has IP '
+                        f'Interface {_interface_path(iface)} has IP '
                         f'address {addr_str}, which is not an address any '
                         'compiler can read. Give it the address it has on '
                         'the firewall.'
@@ -908,7 +929,7 @@ class CompilerDriver(BaseCompiler):
                     # obvious: the interface either gets its address or
                     # gets told that it has none.
                     return (
-                        f'Interface {iface.name} (id={iface.id}) has IP '
+                        f'Interface {_interface_path(iface)} has IP '
                         f'address {addr_str}. Give it the address it has on '
                         'the firewall, or mark it dynamic if it gets one at '
                         'boot time, or unnumbered if it never has one.'
@@ -919,14 +940,14 @@ class CompilerDriver(BaseCompiler):
                 prefix = netmask_prefix_length(addr_str, mask_str)
                 if prefix is None:
                     return (
-                        f'Interface {iface.name} (id={iface.id}) has '
+                        f'Interface {_interface_path(iface)} has '
                         f'netmask {mask_str}, which is not a netmask. Every '
                         f'rule naming this interface would match the single '
                         f'address {addr_str} instead of its network.'
                     )
                 if prefix == 0:
                     return (
-                        f'Interface {iface.name} (id={iface.id}) has '
+                        f'Interface {_interface_path(iface)} has '
                         f'invalid netmask {mask_str}. Every rule naming this '
                         'interface would match every address.'
                     )
@@ -973,7 +994,7 @@ class CompilerDriver(BaseCompiler):
             if protocol in FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS:
                 return ''
         return (
-            f'Interface {iface.name} (id={iface.id}) has no IP address. '
+            f'Interface {_interface_path(iface)} has no IP address. '
             'Every rule naming it would match every address. Give it the '
             'address it has on the firewall, or mark it dynamic if it gets '
             'one at boot time, or unnumbered if it never has one.'

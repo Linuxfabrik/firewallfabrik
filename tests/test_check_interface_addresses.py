@@ -49,6 +49,9 @@ class _FakeInterface:
         # interface carries an address of its own.
         self.sub_interfaces = list(sub_interfaces)
         self.parent_interface = None
+        # The message names the interface by its path, so it reads the
+        # device the interface hangs off as well.
+        self.device = None
         for child in self.sub_interfaces:
             child.parent_interface = self
         self._regular = regular
@@ -111,7 +114,7 @@ class TestRegularInterface:
             iface_id='id-eth0',
         )
         err = _check([iface])
-        assert err.startswith('Interface eth0 (id=id-eth0) has IP address 0.0.0.0.')
+        assert err.startswith('Interface eth0 has IP address 0.0.0.0.')
         assert 'mark it dynamic' in err, 'and says what to do about it'
 
     def test_zero_ipv6_aborts(self):
@@ -127,9 +130,7 @@ class TestRegularInterface:
             iface_id='id-eth0',
         )
         err = _check([iface])
-        assert err.startswith(
-            'Interface eth0 (id=id-eth0) has invalid netmask 0.0.0.0.'
-        )
+        assert err.startswith('Interface eth0 has invalid netmask 0.0.0.0.')
 
     def test_address_no_compiler_can_read_aborts(self):
         """Skipping it here is how it became a rule about something else.
@@ -235,3 +236,41 @@ class TestEmpty:
         """An address child that carries no address is not an address."""
         iface = _FakeInterface('eth0', [_FakeAddress('', '')])
         assert 'eth0' in _check([iface])
+
+
+class TestHowTheInterfaceIsNamed:
+    """The message has to name an interface the administrator can find.
+
+    Two interfaces of one firewall may share a name - a bridge port and
+    the top-level object of that name, a VLAN under two different NICs -
+    so the message says which.  It used to say the object's id, which
+    identifies nothing in the editor and is a fresh UUID on every load
+    of a `.fwb`, so two compiles of one file reported the same interface
+    differently.
+    """
+
+    def test_a_sub_interface_is_named_by_its_path(self):
+        child = _FakeInterface(
+            'eth0.100',
+            [_FakeAddress('192.0.2.1', '0.0.0.0')],  # nosec B104
+            iface_id='id-eth0.100',
+        )
+        parent = _FakeInterface(
+            'eth0',
+            [_FakeAddress('192.0.2.254', '255.255.255.0')],
+            iface_id='id-eth0',
+            sub_interfaces=[child],
+        )
+        err = _check([parent])
+        assert 'Interface eth0:eth0.100 has' in err
+        assert 'id=' not in err
+
+    def test_the_firewall_is_part_of_the_path(self):
+        from firewallfabrik.driver._compiler_driver import _interface_path
+
+        class _Device:
+            name = 'fw-1'
+
+        iface = _FakeInterface('eth0', [])
+        iface.device = _Device()
+        assert _interface_path(iface) == 'fw-1:eth0'

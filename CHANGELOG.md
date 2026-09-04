@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a message about an interface without a usable address names the interface by its place in the object tree instead of by an internal id, so it can be found in the editor and reads the same on every compile.
 * Compiler (iptables, nftables): whether an Address Table or a DNS Name is resolved on the firewall or at compile time is read the way Firewall Builder reads it, so a data file that spells the flag out as text no longer turns a compile-time object into a run-time one.
 * Editor: the tooltip of an Address Table and of a DNS Name names the file or the DNS record it resolves from and says whether it is resolved on the firewall; it used to say "Compile-time" for every one of them and never name the source.
 * Compiler (nftables): a rule whose service element is negated and names an IP service that matches a DiffServ code point or a fragment excludes it together with the rest of the element, in the temporary chain the iptables compiler builds for the same rule. Such a service says nothing about the protocol, so the rule it used to get for itself matched packets the element excludes.
