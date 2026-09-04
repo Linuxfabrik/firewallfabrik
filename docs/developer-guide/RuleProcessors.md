@@ -527,7 +527,7 @@ for obj in to_remove:
 
 ```python
 new_rule = rule.duplicate()
-new_rule.src = [object]         # set single object
+new_rule.src = [object]  # set single object
 self.tmp_queue.append(new_rule)
 ```
 

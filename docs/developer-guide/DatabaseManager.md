@@ -8,8 +8,8 @@ The `firewallfabrik.core.DatabaseManager` class manages the in-memory SQLAlchemy
 
 ```python
 with dm.session() as session:
-    fw = session.query(Firewall).filter_by(name="fw1").one()
-    fw.comment = "Updated comment"
+    fw = session.query(Firewall).filter_by(name='fw1').one()
+    fw.comment = 'Updated comment'
 # Transaction is committed and undo state is saved automatically
 ```
 
@@ -21,8 +21,8 @@ Use `session()` for all normal operations — it handles commit and undo trackin
 
 ```python
 session = dm.create_session()
-fw = session.query(Firewall).filter_by(name="fw1").one()
-fw.comment = "Updated comment"
+fw = session.query(Firewall).filter_by(name='fw1').one()
+fw.comment = 'Updated comment'
 session.commit()
 dm.save_state()  # manually push to undo stack if needed
 ```
