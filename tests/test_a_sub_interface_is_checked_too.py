@@ -44,6 +44,9 @@ class _Interface:
         self.addresses = list(addresses)
         self.sub_interfaces = list(sub_interfaces)
         self.parent_interface = None
+        # The message names the interface by its place in the object
+        # tree, so it reads the device it hangs off as well.
+        self.device = None
         for child in self.sub_interfaces:
             child.parent_interface = self
 

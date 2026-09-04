@@ -57,6 +57,9 @@ class _Interface:
         self.sub_interfaces = list(sub_interfaces)
         self.options = options or {}
         self.parent_interface = parent
+        # The message names the interface by its place in the object
+        # tree, so it reads the device it hangs off as well.
+        self.device = None
         self._regular = regular
         for child in self.sub_interfaces:
             child.parent_interface = self
