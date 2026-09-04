@@ -48,7 +48,10 @@ from firewallfabrik.core.objects import (
     PolicyAction,
     TCPService,
 )
-from firewallfabrik.platforms.nftables._print_rule import other_protocols_for
+from firewallfabrik.platforms.nftables._print_rule import (
+    negated_service_excludes_whole_protocol,
+    other_protocols_for,
+)
 
 
 def _srv(cls=ICMPService, **data):
@@ -157,7 +160,7 @@ def test_an_ordinary_icmp_rule_passes_through():
     assert proc.compiler.messages == []
 
 
-@pytest.mark.parametrize('value', ['abc', '', None, '-1'])
+@pytest.mark.parametrize('value', ['abc', '300'])
 def test_the_negated_service_split_answers_before_the_check_runs(value):
     """``AddOtherProtocolsForNegatedService`` is far ahead of VerifyIcmpTypes.
 
@@ -165,13 +168,31 @@ def test_the_negated_service_split_answers_before_the_check_runs(value):
     that is not a number reached ``int()`` there and ended the compile
     with no script at all - ahead of the check that leaves the rule out
     and names the service.  "Cannot say what the element leaves out" is
-    the right answer for a value nobody can read.
+    the right answer for a value nobody can read, and the service must
+    stay in the element so the check still sees it.
     """
     assert other_protocols_for([_srv(type=value)], ipv6=False) == []
+    assert negated_service_excludes_whole_protocol(_srv(type=value), ipv6=False) == ''
+
+
+@pytest.mark.parametrize('value', ['', None, '-1'])
+def test_an_icmp_service_naming_no_type_excludes_the_whole_protocol(value):
+    """ "Any ICMP" is the protocol, so its negation is not a rule of its own.
+
+    ``meta l4proto != icmp`` beside a second group of the element says
+    "not icmp *or* not that", which every packet satisfies.  The service
+    is therefore excluded through the companion rule, which names every
+    protocol of the element in one set.
+    """
+    assert other_protocols_for([_srv(type=value)], ipv6=False) == ['icmp']
+    assert (
+        negated_service_excludes_whole_protocol(_srv(type=value), ipv6=False) == 'icmp'
+    )
 
 
 def test_the_negated_service_split_still_names_a_real_type():
     assert other_protocols_for([_srv(type='8')], ipv6=False) == ['icmp']
+    assert negated_service_excludes_whole_protocol(_srv(type='8'), ipv6=False) == ''
 
 
 @pytest.mark.parametrize(

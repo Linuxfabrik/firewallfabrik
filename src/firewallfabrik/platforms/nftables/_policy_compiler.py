@@ -117,6 +117,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     NEGATED_SRV_PROTOCOLS_OPTION,
     NO_OTHER_PROTOCOLS_OPTION,
     OTHER_PROTOCOLS_OPTION,
+    negated_service_excludes_whole_protocol,
     negated_services_are_renderable,
     negated_services_need_a_chain,
     other_protocols_for,
@@ -1542,9 +1543,30 @@ class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
-        self.tmp_queue.append(rule)
 
         protocols = self._other_protocols(rule)
+        if not protocols and not rule.get_option(NO_OTHER_PROTOCOLS_OPTION, False):
+            self.tmp_queue.append(rule)
+            return True
+
+        # A service excluding its whole protocol is excluded by the
+        # companion and must not stay behind as a rule of its own; the
+        # element may be left with nothing, and then the companion is the
+        # whole answer.  The flag has to be read before the element is
+        # emptied: `get_neg` answers False for an element that names
+        # nothing, whatever the flag beside it says.
+        negated = rule.get_neg('srv')
+        if negated and rule.srv:
+            rule.srv = [
+                srv
+                for srv in rule.srv
+                if not negated_service_excludes_whole_protocol(
+                    srv, bool(self.compiler.ipv6_policy)
+                )
+            ]
+        if rule.srv or not negated:
+            self.tmp_queue.append(rule)
+
         if not protocols:
             return True
 

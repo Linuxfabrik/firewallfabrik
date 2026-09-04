@@ -143,6 +143,54 @@ def test_a_negated_port_gets_a_rule_for_the_other_protocols():
     assert out[1].get_neg('srv') is False
 
 
+def test_a_service_naming_only_its_protocol_leaves_the_element():
+    """Its negation pins nothing, so it cannot be a rule of its own.
+
+    ``meta l4proto != 50`` is true for every packet of every other
+    protocol, so beside a second group it says "not this *or* not that"
+    and the rule matches everything.  The protocol goes into the
+    companion rule instead, which names them all in one set.
+    """
+    from firewallfabrik.core.objects import IPService
+
+    esp = IPService(id=uuid.uuid4(), name='esp', named_protocols={'protocol_num': '50'})
+    http = _tcp('http', 80)
+    out = _run(_comp_rule([esp, http]))
+    assert len(out) == 2
+    assert out[0].srv == [http]
+    assert out[1].srv == []
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['50', 'tcp']
+
+
+def test_an_element_of_such_services_alone_is_the_companion_rule():
+    """Nothing is left to match on, so the companion is the whole answer."""
+    from firewallfabrik.core.objects import IPService
+
+    esp = IPService(id=uuid.uuid4(), name='esp', named_protocols={'protocol_num': '50'})
+    ah = IPService(id=uuid.uuid4(), name='ah', named_protocols={'protocol_num': '51'})
+    out = _run(_comp_rule([esp, ah]))
+    assert len(out) == 1
+    assert out[0].srv == []
+    assert out[0].get_option(OTHER_PROTOCOLS_OPTION, None) == ['50', '51']
+
+
+def test_a_whole_protocol_service_leaves_the_element_too():
+    """ "All TCP" and "any ICMP" say no more than the protocol either."""
+    all_tcp = TCPService(id=uuid.uuid4(), name='All TCP')
+    dns = UDPService(id=uuid.uuid4(), name='dns', dst_range_start=53, dst_range_end=53)
+    out = _run(_comp_rule([all_tcp, dns]))
+    assert len(out) == 2
+    assert out[0].srv == [dns]
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['tcp', 'udp']
+
+    any_icmp = ICMPService(id=uuid.uuid4(), name='any ICMP', data={})
+    http = _tcp('http', 80)
+    out = _run(_comp_rule([any_icmp, http]))
+    assert len(out) == 2
+    assert out[0].srv == [http]
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['icmp', 'tcp']
+
+
 def test_two_protocols_are_both_excluded():
     http = TCPService(
         id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80

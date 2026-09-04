@@ -1,0 +1,144 @@
+name: 'Test: a negated service element that excludes a whole protocol'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'IPService'
+        name: 'ah'
+        named_protocols:
+          protocol_num: '51'
+      - type: 'TCPService'
+        name: 'all tcp'
+      - type: 'ICMPService'
+        name: 'any ICMP'
+        data:
+          type: '-1'
+          code: '-1'
+      - type: 'UDPService'
+        name: 'dns'
+        dst_range_start: 53
+        dst_range_end: 53
+      - type: 'ICMPService'
+        name: 'echo request'
+        data:
+          type: '8'
+          code: '0'
+      - type: 'IPService'
+        name: 'esp'
+        named_protocols:
+          protocol_num: '50'
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: true
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+        rule_sets:
+          - type: 'NAT'
+            name: 'NAT'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'NATRule'
+                comment: 'N1: negated protocol-only service beside a TCP port'
+                action: 'Translate'
+                negations:
+                  osrv: true
+                osrc:
+                  - 'Library:Test Objects/Network:internal-net'
+                osrv:
+                  - 'Library:Test Objects/IPService:esp'
+                  - 'Library:Test Objects/TCPService:http'
+                tsrc:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth0'
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'A: two protocol-only IP services'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/IPService:ah'
+                  - 'Library:Test Objects/IPService:esp'
+              - type: 'PolicyRule'
+                position: 1
+                comment: 'B: protocol-only IP service beside a TCP port'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/IPService:esp'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 2
+                comment: 'C: whole TCP protocol beside a UDP port'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:all tcp'
+                  - 'Library:Test Objects/UDPService:dns'
+              - type: 'PolicyRule'
+                position: 3
+                comment: 'D: any-ICMP beside a TCP port'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/ICMPService:any ICMP'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 4
+                comment: 'E: two typed services of different protocols (known good)'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/ICMPService:echo request'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 5
+                action: 'Accept'
+                direction: 'Both'
+      - type: 'TCPService'
+        name: 'http'
+        dst_range_start: 80
+        dst_range_end: 80
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.168.1.0'
+          netmask: '255.255.255.0'

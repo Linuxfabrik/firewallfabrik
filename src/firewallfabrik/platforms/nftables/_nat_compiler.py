@@ -80,6 +80,7 @@ from firewallfabrik.platforms.linux._netfilter import (
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._print_rule import (
     OTHER_PROTOCOLS_OPTION,
+    negated_service_excludes_whole_protocol,
     negated_services_are_renderable,
     negated_services_need_a_chain,
     other_protocols_for,
@@ -941,23 +942,62 @@ class AddOtherProtocolsForNegatedServiceInNAT(NATRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
-        self.tmp_queue.append(rule)
 
-        if not rule.get_neg('osrv'):
-            return True
-        protocols = other_protocols_for(rule.osrv, self.compiler.ipv6_policy)
+        # The flag has to be read before the element is emptied below:
+        # `get_neg` answers False for an element that names nothing.
+        negated = rule.get_neg('osrv')
+        protocols = (
+            other_protocols_for(rule.osrv, self.compiler.ipv6_policy) if negated else []
+        )
         if not protocols:
+            self.tmp_queue.append(rule)
             return True
 
         if rule.tsrv:
+            # A translated port rules the companion out, so a service
+            # excluding a whole protocol has nowhere to be said: the
+            # protocol split would leave a bare `meta l4proto != 50`
+            # beside the other groups, and that matches every packet of
+            # every other protocol - the rule would translate exactly the
+            # traffic it excludes.
+            if len(rule.osrv) > 1 and any(
+                negated_service_excludes_whole_protocol(
+                    srv, bool(self.compiler.ipv6_policy)
+                )
+                for srv in rule.osrv
+            ):
+                self.compiler.error(
+                    rule,
+                    'the original service excludes a whole protocol beside '
+                    'another service and the rule translates a port, which '
+                    'leaves nftables no way to exclude them together; the '
+                    'rule is left out',
+                )
+                return True
             self.compiler.warning(
                 rule,
-                'the original service is negated and the rule translates a '
-                'port, so nftables cannot cover the protocols the service '
-                'does not name; traffic of those protocols passes '
-                'untranslated',
+                'the original service is negated and the rule translates '
+                'a port, so nftables cannot cover the protocols the '
+                'service does not name; traffic of those protocols '
+                'passes untranslated',
             )
+            self.tmp_queue.append(rule)
             return True
+
+        # A service excluding its whole protocol is excluded by the
+        # companion rule below and must not stay behind as a rule of its
+        # own - see `negated_service_excludes_whole_protocol`.  The
+        # element may be left with nothing, and then the companion is the
+        # whole answer.
+        rule.osrv = [
+            srv
+            for srv in rule.osrv
+            if not negated_service_excludes_whole_protocol(
+                srv, bool(self.compiler.ipv6_policy)
+            )
+        ]
+        if rule.osrv:
+            self.tmp_queue.append(rule)
 
         other = rule.clone()
         other.osrv = []

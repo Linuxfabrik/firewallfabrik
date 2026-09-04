@@ -37,7 +37,11 @@ from firewallfabrik.compiler._interval_helpers import (
     parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
-from firewallfabrik.compiler.processors._service import icmp_type_and_code
+from firewallfabrik.compiler.processors._service import (
+    icmp_type_and_code,
+    icmp_type_problem,
+    ip_protocol_problem,
+)
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import (
     Address,
@@ -150,38 +154,98 @@ NEGATED_SRV_PROTOCOLS_OPTION = 'nft_negated_srv_protocols'
 NO_OTHER_PROTOCOLS_OPTION = 'nft_no_other_protocols'
 
 
+def ip_service_names_only_its_protocol(srv) -> bool:
+    """Whether an IP service constrains nothing beside its protocol.
+
+    The mirror of what ``PrintRule_nft._print_service`` builds for an
+    ``IPService``: the protocol number, a fragment match, a ToS byte or a
+    DiffServ code point, and the IPv4 header options.  Everything but the
+    first is a match of its own, and the ones that are not the protocol
+    say nothing about it.
+    """
+    data = srv.data or {}
+    if srv.get_protocol_number() <= 0:
+        return False
+    if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
+        return False
+    if data.get('tos') or data.get('dscp'):
+        return False
+    return not has_ip_options(data)
+
+
+def negated_service_excludes_whole_protocol(srv, ipv6: bool) -> str:
+    """Return the protocol *srv* excludes as a whole when it is negated.
+
+    An empty string means it excludes less than that, so its negation
+    carries a payload match - a port, an ICMP type, a TCP flag - and that
+    match pins the protocol of every packet it sees.
+
+    The distinction decides whether the service may become a rule of its
+    own.  "Not this service" is written as one rule per protocol group,
+    which is sound only while each of those rules matches packets of one
+    protocol alone: ``tcp dport != 80`` carries ``meta l4proto tcp`` with
+    it, so it never sees a UDP packet, and the groups stay disjoint.  A
+    service naming nothing but its protocol has no such match - its
+    negation is a bare ``meta l4proto != 50``, which is true for every
+    packet of every *other* protocol, so beside a second group it says
+    "not this or not that" and matches everything.  Such a service is
+    therefore excluded through the companion rule
+    :class:`AddOtherProtocolsForNegatedService` writes, which names every
+    protocol of the element in one set.
+
+    A service whose stored value is no value at all answers ``''`` as
+    well: `VerifyIcmpTypes` and `VerifyIpProtocols` leave such a rule out
+    and name the service, and a service taken out of the element here
+    would never reach them.
+    """
+    if isinstance(srv, (TCPService, UDPService)):
+        return srv.get_protocol_name() if srv.is_any() else ''
+    if isinstance(srv, (ICMPService, ICMP6Service)):
+        if icmp_type_problem(srv):
+            return ''
+        icmp_type, _icmp_code = icmp_type_and_code(srv)
+        return ('ipv6-icmp' if ipv6 else 'icmp') if icmp_type < 0 else ''
+    if (
+        isinstance(srv, IPService)
+        and not ip_protocol_problem(srv)
+        and ip_service_names_only_its_protocol(srv)
+    ):
+        return str(srv.get_protocol_number())
+    return ''
+
+
 def other_protocols_for(services: list, ipv6: bool) -> list[str]:
     """Return the protocols a negated service element does *not* name.
 
-    An empty list means the element needs no second rule, either because
-    its negation already applies to every packet or because this compiler
-    cannot say what the element leaves out.  See
-    ``AddOtherProtocolsForNegatedService`` for the whole reasoning; the
-    cases are:
+    The companion rule built from this list matches every protocol the
+    element leaves unnamed, and it is also the rule that excludes the
+    protocols the element names *as a whole* - see
+    :func:`negated_service_excludes_whole_protocol` for why those cannot
+    be a rule of their own.
 
-    * a service naming nothing but its protocol ("All TCP"), whose
-      negation is already ``meta l4proto != tcp`` and complete;
-    * a Tag, User or Custom service, which constrains no protocol at all
-      (and whose ``!=`` therefore already applies to every packet) or
-      carries platform text this compiler cannot read;
-    * an IP service, which the printers invert as a whole.
+    An empty list means the element needs no companion, because this
+    compiler cannot say what it leaves out: a Tag, User or Custom service
+    constrains no protocol at all, an IP service may constrain something
+    other than its protocol, and an ICMP type that is no number is a value
+    nobody can read.  Such an element beside a second one goes into a
+    chain instead (:class:`SrvNegation`).
     """
     if not services:
         return []
 
     names: set[str] = set()
     for srv in services:
-        if isinstance(srv, (TCPService, UDPService)):
-            if srv.is_any():
-                return []
+        whole = negated_service_excludes_whole_protocol(srv, ipv6)
+        if whole:
+            names.add(whole)
+        elif isinstance(srv, (TCPService, UDPService)):
             names.add(srv.get_protocol_name())
         elif isinstance(srv, (ICMPService, ICMP6Service)):
             # This runs long before `VerifyIcmpTypes` leaves the rule out
             # over a stored type that is not a number, and "cannot say
             # what the element leaves out" is the right answer for a
             # value nobody can read anyway.
-            icmp_type, _icmp_code = icmp_type_and_code(srv)
-            if icmp_type < 0:
+            if icmp_type_problem(srv):
                 return []
             names.add('ipv6-icmp' if ipv6 else 'icmp')
         else:

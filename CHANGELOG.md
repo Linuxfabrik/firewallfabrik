@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+* Compiler (nftables): a rule whose service element is negated and names a whole protocol - "All TCP", an ICMP service with no type, or an IP service naming nothing but its protocol number - excludes it together with the rest of the element. Such a service used to get a rule of its own that matched every packet of every other protocol, so a Deny rule written for "anything but IPsec" dropped everything and an Accept rule let everything through.
 
 
 ## [v3.0.0] - 2026-09-04
