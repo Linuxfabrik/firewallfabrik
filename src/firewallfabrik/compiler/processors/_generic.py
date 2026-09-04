@@ -40,6 +40,7 @@ from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    AddressTable,
     CustomService,
     Direction,
     DNSName,
@@ -304,6 +305,24 @@ class EmptyGroupsInRE(BasicRuleProcessor):
             for member in _get_group_members(compiler.session, obj)
         )
 
+    def _holds_the_other_family(self, obj) -> bool:
+        """Whether *obj* is an address table meant for the other family.
+
+        Only a compile-time :class:`AddressTable` can answer yes: it is the
+        one object whose members are read per address family, so it counts
+        zero here while its file is not empty at all.
+        """
+        if not isinstance(obj, AddressTable):
+            return False
+        has_v4, has_v6 = self.compiler.address_table_families(obj)
+        if self.compiler.ipv6_policy:
+            mine, theirs = has_v6, has_v4
+        else:
+            mine, theirs = has_v4, has_v6
+        # A dual-stack table belongs to this pass as well, and a table with
+        # nothing in it at all is the empty one the report exists for.
+        return theirs and not mine
+
     def process_next(self) -> bool:
         rule = self.prev_processor.get_next_rule()
         if rule is None:
@@ -319,11 +338,31 @@ class EmptyGroupsInRE(BasicRuleProcessor):
         # objects — their content is unknown at compile time.  Matches
         # C++ Compiler::emptyGroupsInRE::processNext().
         empty_groups: list = []
+        other_family: list = []
         for obj in elements:
             if isinstance(obj, MultiAddress) and _is_runtime(obj):
                 continue
             if isinstance(obj, Group) and self._count_children(self.compiler, obj) == 0:
-                empty_groups.append(obj)
+                if self._holds_the_other_family(obj):
+                    other_family.append(obj)
+                else:
+                    empty_groups.append(obj)
+
+        if other_family:
+            # An address table is loaded per address family, so a table of
+            # IPv6 prefixes has nothing to contribute to the IPv4 pass -
+            # and that is not an empty table, it is an object that does not
+            # apply here.  Calling it empty makes the one obvious way to
+            # write a dual-stack rule, one table per family, refuse to
+            # compile: each pass aborts over the other pass's table.  It is
+            # taken out of the element the way the address-family filter
+            # takes out an address of the wrong family, without a word,
+            # and a rule left with nothing goes with it.
+            remaining = [o for o in elements if o not in other_family]
+            setattr(rule, self._slot, remaining)
+            if not remaining:
+                return True  # drop the rule, the other family's pass has it
+            elements = remaining
 
         if not empty_groups:
             self.tmp_queue.append(rule)

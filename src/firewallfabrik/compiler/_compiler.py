@@ -215,6 +215,26 @@ def _is_host_mask(mask: str, version: int) -> bool:
         return False
 
 
+def _address_table_entry(line: str) -> str:
+    """Return the address an address-table line names, or the empty string.
+
+    ``AddressTable::loadFromSource`` (libfwbuilder) takes what is left of
+    the first non-blank character up to the first character that is not an
+    address character, so a comment, a blank line and a trailing note all
+    come out empty.
+    """
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return ''
+    addr_str = ''
+    for ch in line:
+        if ch in '0123456789abcdef:/.':
+            addr_str += ch
+        else:
+            break
+    return addr_str
+
+
 class Compiler(BaseCompiler):
     """Base compiler. Manages the rule processor pipeline."""
 
@@ -250,6 +270,10 @@ class Compiler(BaseCompiler):
         self.source_dir: str = '.'
 
         self._multi_address_cache: dict = {}
+        #: Which families the file of a compile-time address table holds,
+        #: per object id.  Read once per compile, unlike the resolution
+        #: above, which answers for one family only.
+        self._address_table_families: dict = {}
 
     def insert_upstream_chain(self, parent: str, child: str) -> None:
         """Record that *parent* jumps into *child*.
@@ -666,37 +690,15 @@ class Compiler(BaseCompiler):
         File format: one address or network (CIDR) per line; lines starting
         with '#' or empty lines are ignored.
         """
-        filename = obj.get_source_name()
-        if not filename:
-            return []
-
-        # C++ AddressTable::getFilename() substitutes %DATADIR%
-        if '%DATADIR%' in filename:
-            filename = filename.replace('%DATADIR%', self.source_dir)
-
-        # Search: source_dir first, then CWD
-        path = Path(self.source_dir) / filename
-        if not path.is_file():
-            path = Path(filename)
-        if not path.is_file():
-            # C++ always throws here; Preprocessor catches and calls abort()
-            self.abort(f'AddressTable "{obj.name}": file not found ({filename})')
+        path = self._address_table_path(obj, report=True)
+        if path is None:
             return []
 
         results: list[Address] = []
         line_num = 0
         for line in path.read_text().splitlines():
             line_num += 1
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            # C++ keeps only valid address chars: 0-9 a-f : / .
-            addr_str = ''
-            for ch in line:
-                if ch in '0123456789abcdef:/.':
-                    addr_str += ch
-                else:
-                    break
+            addr_str = _address_table_entry(line)
             if not addr_str:
                 continue
 
@@ -743,6 +745,66 @@ class Compiler(BaseCompiler):
                 )
                 results.append(addr)
         return results
+
+    def _address_table_path(self, obj: AddressTable, report: bool = False):
+        """Return the file of an address table, or ``None``.
+
+        ``report`` is for the reader: the C++ throws when the file is
+        missing and the preprocessor turns that into an abort.  The family
+        probe asks the same question without saying anything twice.
+        """
+        filename = obj.get_source_name()
+        if not filename:
+            return None
+
+        # C++ AddressTable::getFilename() substitutes %DATADIR%
+        if '%DATADIR%' in filename:
+            filename = filename.replace('%DATADIR%', self.source_dir)
+
+        # Search: source_dir first, then CWD
+        path = Path(self.source_dir) / filename
+        if not path.is_file():
+            path = Path(filename)
+        if not path.is_file():
+            if report:
+                # C++ always throws here; Preprocessor catches and aborts.
+                self.abort(f'AddressTable "{obj.name}": file not found ({filename})')
+            return None
+        return path
+
+    def address_table_families(self, obj: AddressTable) -> tuple[bool, bool]:
+        """Say which families the file of a compile-time table holds.
+
+        ``(has IPv4, has IPv6)``.  Loading a table keeps only the addresses
+        of the family being compiled, the way
+        ``AddressTable::loadFromSource`` does, so a table of one family
+        resolves to nothing in the other family's pass.  That is not an
+        empty table, and the difference decides whether the rule naming it
+        is reported or simply left to the other pass.
+
+        A file that cannot be read answers ``(False, False)``: the reader
+        reports that separately, and here it is the genuinely empty case.
+        """
+        cached = self._address_table_families.get(obj.id)
+        if cached is not None:
+            return cached
+
+        path = self._address_table_path(obj)
+        answer = (False, False)
+        if path is not None:
+            has_v4 = has_v6 = False
+            for line in path.read_text(errors='replace').splitlines():
+                addr_str = _address_table_entry(line)
+                if not addr_str:
+                    continue
+                if '.' in addr_str:
+                    has_v4 = True
+                elif ':' in addr_str:
+                    has_v6 = True
+            answer = (has_v4, has_v6)
+
+        self._address_table_families[obj.id] = answer
+        return answer
 
     def expand_addr(self, comp_rule: CompRule, slot: str) -> None:
         """Expand hosts/firewalls in an element slot into their interface addresses.
