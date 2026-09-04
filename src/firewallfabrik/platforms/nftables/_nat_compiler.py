@@ -778,7 +778,14 @@ class ClassifyNATRule(NATRuleProcessor):
                 rule.nat_rule_type = NATRuleType.DNAT
             return True
 
-        self.compiler.abort('Unsupported NAT rule')
+        # `NATCompiler::classifyNATRule` names the rule here, and the
+        # message is the only thing an administrator has to go on: the
+        # rule translates something the compiler cannot classify - a port
+        # with no original service to translate it from, which is what a
+        # negated original service leaves behind once its temporary chain
+        # has taken the services out.  Without the rule the report says
+        # "Unsupported NAT rule" and nothing else.
+        self.compiler.abort(rule, 'Unsupported NAT rule')
         return True
 
 
