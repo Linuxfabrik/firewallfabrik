@@ -274,6 +274,10 @@ class Compiler(BaseCompiler):
         #: per object id.  Read once per compile, unlike the resolution
         #: above, which answers for one family only.
         self._address_table_families: dict = {}
+        #: Every DNS lookup this compile has made, per (name, family).  A
+        #: name is asked for the other family only when its own came back
+        #: empty, so a name that resolves costs one lookup, as before.
+        self._dns_lookup_cache: dict = {}
 
     def insert_upstream_chain(self, parent: str, child: str) -> None:
         """Record that *parent* jumps into *child*.
@@ -597,6 +601,66 @@ class Compiler(BaseCompiler):
         result.sort(key=lambda o: getattr(o, 'name', ''))
         return result
 
+    def _dns_lookup(self, name: str, af: int) -> list[str]:
+        """Return the addresses *name* has in family *af*, cached.
+
+        An empty list is not the same answer as "the name does not
+        exist": a host with an A record and no AAAA resolves perfectly
+        well and has nothing to say in the IPv6 pass.  The callers tell
+        the two apart by asking for the other family too.
+        """
+        key = (name, af)
+        cached = self._dns_lookup_cache.get(key)
+        if cached is not None:
+            return list(cached)
+
+        try:
+            infos = socket.getaddrinfo(name, None, af, socket.SOCK_STREAM)
+        except socket.gaierror:
+            infos = []
+
+        seen: set[str] = set()
+        addresses: list[str] = []
+        for info in infos:
+            ip_str = str(info[4][0])
+            if ip_str in seen:
+                continue
+            seen.add(ip_str)
+            addresses.append(ip_str)
+
+        self._dns_lookup_cache[key] = addresses
+        return list(addresses)
+
+    def dns_name_families(self, obj: DNSName) -> tuple[bool, bool]:
+        """Say which families a compile-time DNS name resolves in.
+
+        ``(has an A record, has an AAAA record)``.  The counterpart of
+        :meth:`address_table_families`: a name is looked up per address
+        family, so an IPv4-only host contributes nothing to the IPv6 pass
+        - and that is not a failed lookup.
+        """
+        dnsrec = obj.get_source_name() or obj.name
+        if not dnsrec:
+            return (False, False)
+        return (
+            bool(self._dns_lookup(dnsrec, socket.AF_INET)),
+            bool(self._dns_lookup(dnsrec, socket.AF_INET6)),
+        )
+
+    def multi_address_families(self, obj) -> tuple[bool, bool]:
+        """Say which families a compile-time MultiAddress has members in.
+
+        ``(has IPv4, has IPv6)``, and ``(False, False)`` for an object
+        that cannot answer - which is the "nothing at all" case the empty
+        group report exists for.  One place for the two kinds whose
+        members are read per address family, so the next one has a home.
+        """
+        if isinstance(obj, AddressTable):
+            return self.address_table_families(obj)
+        if isinstance(obj, DNSName):
+            return self.dns_name_families(obj)
+        return (False, False)
+
     def _resolve_dns_name(self, obj: DNSName) -> list:
         """Resolve a compile-time DNSName via DNS lookup."""
         dnsrec = obj.get_source_name() or obj.name
@@ -604,23 +668,26 @@ class Compiler(BaseCompiler):
             return []
 
         af = socket.AF_INET6 if self.ipv6_policy else socket.AF_INET
-        try:
-            infos = socket.getaddrinfo(dnsrec, None, af, socket.SOCK_STREAM)
-        except socket.gaierror:
+        addresses = self._dns_lookup(dnsrec, af)
+        if not addresses:
+            other = socket.AF_INET if self.ipv6_policy else socket.AF_INET6
+            if self._dns_lookup(dnsrec, other):
+                # The name resolves, just not in the family being
+                # compiled.  A host with an A record and no AAAA has
+                # nothing to say in the IPv6 pass, the same way a table of
+                # IPv6 prefixes has nothing to say in the IPv4 one, and
+                # calling that a failed lookup makes every dual-stack rule
+                # set naming a single-stack host refuse to compile.
+                return []
             self.abort(
                 f'DNSName "{obj.name}" cannot resolve "{dnsrec}": DNS lookup failed'
             )
             return []
 
-        seen: set[str] = set()
         results: list[Address] = []
         addr_type = IPv6 if self.ipv6_policy else IPv4
         netmask = '128' if self.ipv6_policy else '255.255.255.255'
-        for info in infos:
-            ip_str = str(info[4][0])
-            if ip_str in seen:
-                continue
-            seen.add(ip_str)
+        for ip_str in addresses:
             addr = addr_type(
                 id=uuid.uuid4(),
                 type=addr_type.__mapper_args__['polymorphic_identity'],

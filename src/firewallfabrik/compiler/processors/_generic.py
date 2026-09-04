@@ -40,7 +40,6 @@ from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
-    AddressTable,
     CustomService,
     Direction,
     DNSName,
@@ -306,20 +305,20 @@ class EmptyGroupsInRE(BasicRuleProcessor):
         )
 
     def _holds_the_other_family(self, obj) -> bool:
-        """Whether *obj* is an address table meant for the other family.
+        """Whether *obj* has members, but none in the family being compiled.
 
-        Only a compile-time :class:`AddressTable` can answer yes: it is the
-        one object whose members are read per address family, so it counts
-        zero here while its file is not empty at all.
+        Two kinds of object can answer yes, and both are compile-time
+        :class:`MultiAddress` objects whose members are read per address
+        family: an address table, whose file is filtered by family, and a
+        DNS name, which is looked up per family.  Each of them counts zero
+        here while being anything but empty.
         """
-        if not isinstance(obj, AddressTable):
-            return False
-        has_v4, has_v6 = self.compiler.address_table_families(obj)
+        has_v4, has_v6 = self.compiler.multi_address_families(obj)
         if self.compiler.ipv6_policy:
             mine, theirs = has_v6, has_v4
         else:
             mine, theirs = has_v4, has_v6
-        # A dual-stack table belongs to this pass as well, and a table with
+        # A dual-stack object belongs to this pass as well, and one with
         # nothing in it at all is the empty one the report exists for.
         return theirs and not mine
 

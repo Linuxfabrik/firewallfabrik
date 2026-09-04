@@ -13,8 +13,6 @@
 #  there is no ULOG for ip6tables yet
 #  Bug 2141911
 #
-# DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
-# DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
 # Rule 24 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule '3 (global)' shadows rule '4 (global)' below it, for destination 'firewall-ipv6-2:eth0:ip' and service 'ssh'
 # Rule '3 (global)' shadows rule '5 (global)' below it, for destination 'firewall-ipv6-2:eth0:ip' and service 'ssh'

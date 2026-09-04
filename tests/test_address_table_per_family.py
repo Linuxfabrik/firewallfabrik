@@ -10,19 +10,25 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""An address table is read per address family, and that is not "empty".
+"""A compile-time MultiAddress is read per address family, and that is not "empty".
 
+Two kinds of object have members that are read per address family.
 ``AddressTable::loadFromSource`` (libfwbuilder) keeps only the lines of
 the family being compiled - `if (ipv6 && buf.find(":"))` and its IPv4
-mirror - so a table of IPv6 prefixes resolves to nothing in the IPv4
-pass.  Reading that as an empty group makes the one obvious way to write
-a dual-stack rule, one table per family, refuse to compile: the IPv4 pass
-aborts over the IPv6 table and the IPv6 pass over the IPv4 one, and
-"Ignore rules with empty groups" is off by default.
+mirror - and ``DNSName::loadFromSource`` looks the name up for one family
+at a time.  So a table of IPv6 prefixes, and a host with an A record and
+no AAAA, both come back empty in the other family's pass.
 
-The table of the other family is taken out of the element the way the
-address-family filter takes out an address of the wrong family, and a
-rule left with nothing goes with it - the other pass has that rule.
+Reading that as an empty group, or as a failed DNS lookup, makes a
+dual-stack rule set impossible: the IPv4 pass aborts over the IPv6 table
+and the IPv6 pass over the IPv4 one, "Ignore rules with empty groups" is
+off by default, and a single-stack host in any rule ends the compile with
+"cannot resolve" about a name that resolves perfectly well.
+
+Such an object is taken out of the element the way the address-family
+filter takes out an address of the wrong family, and a rule left with
+nothing goes with it - the other pass has that rule.  A name that
+resolves in *neither* family is still an abort: that one really is gone.
 """
 
 import uuid
@@ -53,7 +59,7 @@ class _Compiler:
         self._families = families
         self.ipv6_policy = ipv6
 
-    def address_table_families(self, _obj):
+    def multi_address_families(self, _obj):
         return self._families
 
 
@@ -90,3 +96,77 @@ def test_a_table_with_no_addresses_at_all_is_empty():
     """
     assert not _asks((False, False), ipv6=False)
     assert not _asks((False, False), ipv6=True)
+
+
+class _LookupCompiler:
+    """A compiler whose DNS is a dict, so the test asks no resolver."""
+
+    def __init__(self, answers: dict, ipv6: bool = False) -> None:
+        self._answers = answers
+        self.ipv6_policy = ipv6
+        self._dns_lookup_cache: dict = {}
+        self.aborted: list[str] = []
+
+    def abort(self, message: str) -> None:
+        self.aborted.append(message)
+
+
+def _dns_compiler(answers: dict, ipv6: bool = False):
+    import socket
+
+    from firewallfabrik.compiler._compiler import Compiler
+
+    compiler = _LookupCompiler(answers, ipv6)
+    compiler._dns_lookup = Compiler._dns_lookup.__get__(compiler)
+    compiler.dns_name_families = Compiler.dns_name_families.__get__(compiler)
+    compiler._resolve_dns_name = Compiler._resolve_dns_name.__get__(compiler)
+
+    def getaddrinfo(name, _port, af, _socktype):
+        got = answers.get((name, af))
+        if not got:
+            raise socket.gaierror(socket.EAI_NONAME, 'Name or service not known')
+        return [(af, None, None, '', (ip, 0)) for ip in got]
+
+    return compiler, getaddrinfo
+
+
+def _resolve(answers: dict, ipv6: bool):
+    import socket
+    from unittest import mock
+
+    from firewallfabrik.core.objects import DNSName
+
+    compiler, fake = _dns_compiler(answers, ipv6)
+    name = DNSName(id=uuid.uuid4(), name='h.example.com', data={'dnsrec': ''})
+    with mock.patch.object(socket, 'getaddrinfo', fake):
+        resolved = compiler._resolve_dns_name(name)
+        families = compiler.dns_name_families(name)
+    return resolved, families, compiler.aborted
+
+
+def test_a_host_with_only_an_a_record_is_not_a_failed_lookup():
+    """The IPv6 pass gets nothing from it, and that is not an error.
+
+    Saying "cannot resolve" about a name that resolves ends the compile
+    over a host that is simply IPv4-only, which is most of them.
+    """
+    answers = {('h.example.com', 2): ['198.51.100.7']}  # AF_INET only
+    resolved, families, aborted = _resolve(answers, ipv6=True)
+    assert resolved == []
+    assert aborted == []
+    assert families == (True, False)
+
+
+def test_the_same_host_still_resolves_in_its_own_pass():
+    answers = {('h.example.com', 2): ['198.51.100.7']}
+    resolved, _families, aborted = _resolve(answers, ipv6=False)
+    assert [a.get_address() for a in resolved] == ['198.51.100.7']
+    assert aborted == []
+
+
+def test_a_name_that_resolves_in_neither_family_still_aborts():
+    resolved, families, aborted = _resolve({}, ipv6=False)
+    assert resolved == []
+    assert families == (False, False)
+    assert len(aborted) == 1
+    assert 'cannot resolve' in aborted[0]
