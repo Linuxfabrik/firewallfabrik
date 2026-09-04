@@ -566,15 +566,12 @@ def print_negated_services(srvs: list, ipv6: bool) -> str | None:
     if dst_ports:
         parts.append(f'{proto_keyword} dport {_negated_set(dst_ports)}')
     if port_pairs:
-        parts.append(
-            f'{proto_keyword} sport . {proto_keyword} dport '
-            f'!= {{ {", ".join(port_pairs)} }}'
-        )
+        pairs = ', '.join(dict.fromkeys(port_pairs))
+        parts.append(f'{proto_keyword} sport . {proto_keyword} dport != {{ {pairs} }}')
     if icmp_pairs:
         payload = 'icmpv6' if ipv6 else 'icmp'
-        parts.append(
-            f'{payload} type . {payload} code != {{ {", ".join(icmp_pairs)} }}'
-        )
+        pairs = ', '.join(dict.fromkeys(icmp_pairs))
+        parts.append(f'{payload} type . {payload} code != {{ {pairs} }}')
     if icmp_types:
         payload = 'icmpv6' if ipv6 else 'icmp'
         parts.append(f'{payload} type {_negated_set(icmp_types)}')
@@ -708,10 +705,17 @@ def _port_range_text(start: int, end: int) -> str:
 
 
 def _negated_set(values: list[str]) -> str:
-    """Return ``!= value`` for one value and ``!= { a, b }`` for several."""
-    if len(values) == 1:
-        return f'!= {values[0]}'
-    return f'!= {{ {", ".join(values)} }}'
+    """Return ``!= value`` for one value and ``!= { a, b }`` for several.
+
+    Two service objects may name the same port, and nftables takes the
+    duplicate element without a word - it just says the same thing twice.
+    The order the services came in is kept, because it is the order the
+    editor shows.
+    """
+    unique = list(dict.fromkeys(values))
+    if len(unique) == 1:
+        return f'!= {unique[0]}'
+    return f'!= {{ {", ".join(unique)} }}'
 
 
 def indent_comment_block(block: str) -> str:

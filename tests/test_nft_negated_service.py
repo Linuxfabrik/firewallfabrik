@@ -779,3 +779,8 @@ def test_the_merged_form_still_negates_a_plain_port_set():
     assert _print_merged([tcp, udp], negated=True) == (
         'meta l4proto { tcp, udp } th dport != 53'
     )
+
+
+def test_two_services_naming_one_port_say_it_once():
+    """nftables takes the duplicate element without a word; it reads badly."""
+    assert _print_element([_tcp('ssh', 22), _tcp('ssh-again', 22)]) == 'tcp dport != 22'
