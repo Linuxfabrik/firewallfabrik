@@ -154,23 +154,36 @@ NEGATED_SRV_PROTOCOLS_OPTION = 'nft_negated_srv_protocols'
 NO_OTHER_PROTOCOLS_OPTION = 'nft_no_other_protocols'
 
 
-def ip_service_names_only_its_protocol(srv) -> bool:
-    """Whether an IP service constrains nothing beside its protocol.
+def ip_service_condition_count(srv, ipv6: bool) -> int:
+    """How many matches an IP service compiles to.
 
     The mirror of what ``PrintRule_nft._print_service`` builds for an
-    ``IPService``: the protocol number, a fragment match, a ToS byte or a
-    DiffServ code point, and the IPv4 header options.  Everything but the
-    first is a match of its own, and the ones that are not the protocol
-    say nothing about it.
+    ``IPService`` and it has to stay in step with it: the protocol
+    number, a fragment match, a ToS byte or a DiffServ code point, and
+    one match per IPv4 header option.
+
+    What the count answers is the negation.  One condition inverts where
+    it stands, with ``!=``; two are a conjunction of their own, and the
+    negation of a conjunction is a disjunction that one nftables rule
+    cannot hold - such a service is excluded by a chain instead, the way
+    ``PolicyCompiler_ipt::SrvNegation`` excludes every negated service.
     """
     data = srv.data or {}
-    if srv.get_protocol_number() <= 0:
-        return False
+    count = 1 if srv.get_protocol_number() > 0 else 0
     if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
-        return False
+        count += 1
     if data.get('tos') or data.get('dscp'):
-        return False
-    return not has_ip_options(data)
+        count += 1
+    if ipv6:
+        count += 1 if has_ip_options(data) else 0
+    else:
+        count += len(print_ip_option_matches(data)[0])
+    return count
+
+
+def ip_service_names_only_its_protocol(srv, ipv6: bool) -> bool:
+    """Whether an IP service constrains nothing beside its protocol."""
+    return srv.get_protocol_number() > 0 and ip_service_condition_count(srv, ipv6) == 1
 
 
 def negated_service_excludes_whole_protocol(srv, ipv6: bool) -> str:
@@ -208,7 +221,7 @@ def negated_service_excludes_whole_protocol(srv, ipv6: bool) -> str:
     if (
         isinstance(srv, IPService)
         and not ip_protocol_problem(srv)
-        and ip_service_names_only_its_protocol(srv)
+        and ip_service_names_only_its_protocol(srv, ipv6)
     ):
         return str(srv.get_protocol_number())
     return ''
@@ -674,26 +687,32 @@ def negated_services_need_a_chain(srvs: list, ipv6: bool) -> bool:
         key = srv.get_protocol_number() if hasattr(srv, 'get_protocol_number') else -1
         groups.setdefault(key, []).append(srv)
 
-    if len(groups) > 1 and any(key >= _PSEUDO_PROTOCOL_FLOOR for key in groups):
+    if len(groups) > 1 and any(
+        key <= 0 or key >= _PSEUDO_PROTOCOL_FLOOR for key in groups
+    ):
         return True
 
     for group in groups.values():
         if len(group) == 1:
-            if _single_negated_service_needs_a_chain(group[0]):
+            if _single_negated_service_needs_a_chain(group[0], ipv6):
                 return True
         elif print_negated_services(group, ipv6) is None:
             return True
     return False
 
 
-def _single_negated_service_needs_a_chain(srv) -> bool:
+def _single_negated_service_needs_a_chain(srv, ipv6: bool) -> bool:
     """Whether a lone service cannot be inverted where it stands.
 
     Everything else a lone service says is one condition, or a pair the
     print rule concatenates.  A TCP flag beside a port is two conditions
     with no field to concatenate them with, so its negation is a
-    disjunction and one rule cannot hold it.
+    disjunction and one rule cannot hold it; an IP service naming its
+    protocol beside a fragment or a DiffServ code point says the same
+    thing about a different pair of fields.
     """
+    if isinstance(srv, IPService):
+        return ip_service_condition_count(srv, ipv6) > 1
     if not isinstance(srv, (TCPService, UDPService)):
         return False
     masks = getattr(srv, 'tcp_flags_masks', None) or {}

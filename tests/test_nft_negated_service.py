@@ -549,6 +549,49 @@ def test_a_flagged_service_with_a_port_gets_a_chain():
     assert action.action is PolicyAction.Deny
 
 
+def _needs_a_chain(services: list, ipv6: bool = False) -> bool:
+    from firewallfabrik.platforms.nftables._print_rule import (
+        negated_services_need_a_chain,
+    )
+
+    return negated_services_need_a_chain(services, ipv6)
+
+
+def test_an_ip_service_saying_nothing_about_the_protocol_gets_a_chain():
+    """A DiffServ code point is no protocol, so its rule is not disjoint.
+
+    ``ip dscp != af41`` beside ``tcp dport != 80`` says "not this or not
+    that", which every packet satisfies.  iptables says the element with
+    a chain that returns on each service, and so does this.
+    """
+    from firewallfabrik.core.objects import IPService
+
+    dscp = IPService(id=uuid.uuid4(), name='dscp', data={'dscp': 'af41'})
+    assert _needs_a_chain([dscp, _tcp('http', 80)])
+
+
+def test_an_ip_service_with_two_conditions_gets_a_chain():
+    """Its negation is a disjunction, alone as well as beside another one."""
+    from firewallfabrik.core.objects import IPService
+
+    esp_frag = IPService(
+        id=uuid.uuid4(),
+        name='esp-frag',
+        data={'fragm': True},
+        named_protocols={'protocol_num': '50'},
+    )
+    assert _needs_a_chain([esp_frag])
+    assert _needs_a_chain([esp_frag, _tcp('http', 80)])
+
+
+def test_an_ip_service_naming_only_its_protocol_needs_no_chain():
+    from firewallfabrik.core.objects import IPService
+
+    esp = IPService(id=uuid.uuid4(), name='esp', named_protocols={'protocol_num': '50'})
+    assert not _needs_a_chain([esp])
+    assert not _needs_a_chain([esp, _tcp('http', 80)])
+
+
 def test_a_packet_mark_beside_a_port_gets_a_chain():
     """The shape firewall38 of the regression fixtures carries.
 

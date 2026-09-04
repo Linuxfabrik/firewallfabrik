@@ -104,6 +104,21 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
+        # F: DSCP-only IP service beside a TCP port
+        ip saddr 192.168.1.0/24 ct state new counter jump C9b7d4795a1e8.0
+        #
+        # Rule 6 (global)
+        #
+        # G: protocol + fragment IP service, alone
+        ip saddr 192.168.1.0/24 ct state new counter jump C2966e4a203bc.0
+        #
+        # Rule 7 (global)
+        #
+        # H: protocol + fragment IP service beside a TCP port
+        ip saddr 192.168.1.0/24 ct state new counter jump C1ff31ca7e6e6.0
+        #
+        # Rule 8 (global)
+        #
         ct state new counter accept
     }
 
@@ -143,6 +158,21 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
+        # F: DSCP-only IP service beside a TCP port
+        ip saddr 192.168.1.0/24 ct state new counter jump C9b7d4795a1e8.0
+        #
+        # Rule 6 (global)
+        #
+        # G: protocol + fragment IP service, alone
+        ip saddr 192.168.1.0/24 ct state new counter jump C2966e4a203bc.0
+        #
+        # Rule 7 (global)
+        #
+        # H: protocol + fragment IP service beside a TCP port
+        ip saddr 192.168.1.0/24 ct state new counter jump C1ff31ca7e6e6.0
+        #
+        # Rule 8 (global)
+        #
         ct state new counter accept
     }
 
@@ -150,9 +180,38 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 5 (global)
+        # Rule 8 (global)
         #
         ct state new counter accept
+    }
+
+    chain C1ff31ca7e6e6.0 {
+        #
+        # Rule 7 (global)
+        #
+        # H: protocol + fragment IP service beside a TCP port
+        tcp dport 80 counter return
+        meta l4proto 50 ip frag-off & 0x1fff != 0 counter return
+        counter drop
+    }
+
+    chain C2966e4a203bc.0 {
+        #
+        # Rule 6 (global)
+        #
+        # G: protocol + fragment IP service, alone
+        meta l4proto 50 ip frag-off & 0x1fff != 0 counter return
+        counter drop
+    }
+
+    chain C9b7d4795a1e8.0 {
+        #
+        # Rule 5 (global)
+        #
+        # F: DSCP-only IP service beside a TCP port
+        ip dscp af41 counter return
+        tcp dport 80 counter return
+        counter drop
     }
 }
 

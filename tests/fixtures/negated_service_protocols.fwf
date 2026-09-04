@@ -17,6 +17,12 @@ libraries:
         name: 'dns'
         dst_range_start: 53
         dst_range_end: 53
+      - type: 'IPService'
+        name: 'dscp-only'
+        data:
+          dscp: 'af41'
+        named_protocols:
+          protocol_num: '0'
       - type: 'ICMPService'
         name: 'echo request'
         data:
@@ -24,6 +30,12 @@ libraries:
           code: '0'
       - type: 'IPService'
         name: 'esp'
+        named_protocols:
+          protocol_num: '50'
+      - type: 'IPService'
+        name: 'esp-frag'
+        data:
+          fragm: true
         named_protocols:
           protocol_num: '50'
       - type: 'Firewall'
@@ -131,6 +143,41 @@ libraries:
                   - 'Library:Test Objects/TCPService:http'
               - type: 'PolicyRule'
                 position: 5
+                comment: 'F: DSCP-only IP service beside a TCP port'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/IPService:dscp-only'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 6
+                comment: 'G: protocol + fragment IP service, alone'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/IPService:esp-frag'
+              - type: 'PolicyRule'
+                position: 7
+                comment: 'H: protocol + fragment IP service beside a TCP port'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/IPService:esp-frag'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 8
                 action: 'Accept'
                 direction: 'Both'
       - type: 'TCPService'

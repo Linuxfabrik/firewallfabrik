@@ -563,6 +563,41 @@ script_body() {
  #
  echo "Rule 5 (global)"
  #
+ # F: DSCP-only IP service beside a TCP port
+ $IPTABLES -w 5 -N fwf_CHAIN 2>/dev/null
+ $IPTABLES -w 5 -A fwf_INPUT -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_FORWARD -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_CHAIN -p all -m dscp --dscp-class af41 -j RETURN
+ $IPTABLES -w 5 -A fwf_CHAIN -p tcp -m tcp --dport 80 -j RETURN
+ $IPTABLES -w 5 -A fwf_CHAIN -j DROP
+ #
+ # Rule 6 (global)
+ #
+ echo "Rule 6 (global)"
+ #
+ # G: protocol + fragment IP service, alone
+ $IPTABLES -w 5 -N fwf_CHAIN 2>/dev/null
+ $IPTABLES -w 5 -A fwf_INPUT -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_FORWARD -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_CHAIN -p 50 -f -j RETURN
+ $IPTABLES -w 5 -A fwf_CHAIN -j DROP
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ # H: protocol + fragment IP service beside a TCP port
+ $IPTABLES -w 5 -N fwf_CHAIN 2>/dev/null
+ $IPTABLES -w 5 -A fwf_INPUT -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_FORWARD -s 192.168.1.0/24 -m conntrack --ctstate NEW -j fwf_CHAIN
+ $IPTABLES -w 5 -A fwf_CHAIN -p tcp -m tcp --dport 80 -j RETURN
+ $IPTABLES -w 5 -A fwf_CHAIN -p 50 -f -j RETURN
+ $IPTABLES -w 5 -A fwf_CHAIN -j DROP
+ #
+ # Rule 8 (global)
+ #
+ echo "Rule 8 (global)"
+ #
  $IPTABLES -w 5 -A fwf_OUTPUT -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w 5 -A fwf_INPUT -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w 5 -A fwf_FORWARD -m conntrack --ctstate NEW -j ACCEPT
