@@ -8,8 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Compiler (nftables): the generated script says which nftables release it was compiled for, the way the iptables script has always said its own.
+
 ### Fixed
 
+* Compiler (iptables): the generated script says it was compiled for iptables even when the firewall object names the other platform; the header used to name a packet filter the script does not use.
 * Compiler (iptables, nftables): a rule with the Branch action jumps into the rule set it points at even after that rule set has been renamed. The jump used to go to the old name: iptables created an empty chain of that name and jumped into it, so the branch did nothing in a script that activated cleanly, and nftables left the rule out.
 * Compiler (iptables, nftables): a NAT rule the compiler cannot classify is named in the message that reports it, instead of leaving the administrator with "Unsupported NAT rule" and no rule number.
 * Compiler (iptables, nftables): a message about an interface without a usable address names the interface by its place in the object tree instead of by an internal id, so it can be found in the editor and reads the same on every compile.

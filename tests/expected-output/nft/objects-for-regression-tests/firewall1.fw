@@ -8,6 +8,8 @@
 #
 # files: * firewall1.fw /etc/fw/firewall1.fw
 #
+# Compiled for nftables (any version)
+#
 #  this object is used to test all kinds of negation in policy and NAT rules.
 #  Assume firewall is part of any is ON
 #

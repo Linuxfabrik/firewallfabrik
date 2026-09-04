@@ -8,6 +8,8 @@
 #
 # files: * fw-test.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # Rule '2 (global)' shadows rule '3 (global)' below it, for destination 'external-host'
 
 FWBDEBUG=""

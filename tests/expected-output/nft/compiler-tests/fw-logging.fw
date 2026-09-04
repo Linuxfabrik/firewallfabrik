@@ -8,6 +8,8 @@
 #
 # files: * fw-logging.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
 
 FWBDEBUG=""

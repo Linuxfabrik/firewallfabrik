@@ -192,7 +192,20 @@ class CompilerDriver_ipt(CompilerDriver):
                 return ''
 
             try:
-                fw_version = fw.version or '(any version)'
+                # The header says which packet filter the script is for
+                # and which release of it the compiler read - both the
+                # compiler's own, not the firewall object's.  Either
+                # compiler can be handed either firewall here, which
+                # Firewall Builder cannot, and a release belongs to the
+                # platform that names it (`get_iptables_version`): an
+                # iptables script headed "Compiled for nftables 0.9.3"
+                # names a tool it does not use and a release it did not
+                # read.
+                fw_version = (
+                    '(any version)'
+                    if fw.platform == 'nftables'
+                    else (fw.version or '(any version)')
+                )
                 options = fw.options or {}
 
                 # Validate prolog placement with iptables-restore
@@ -901,7 +914,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     manifest += f' {remote}'
                 manifest += '\n'
                 top_comment.set_variable('manifest', manifest)
-                top_comment.set_variable('platform', fw.platform or 'iptables')
+                top_comment.set_variable('platform', 'iptables')
                 top_comment.set_variable('fw_version', fw_version)
                 comment_text = (fw.comment or '').rstrip('\n')
                 top_comment.set_variable(

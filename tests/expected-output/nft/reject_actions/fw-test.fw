@@ -8,6 +8,8 @@
 #
 # files: * fw-test.fw /etc/fw/fw-test.fw
 #
+# Compiled for nftables (any version)
+#
 # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 # fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 

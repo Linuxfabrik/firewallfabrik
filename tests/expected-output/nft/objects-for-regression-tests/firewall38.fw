@@ -8,6 +8,8 @@
 #
 # files: * firewall38.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing TAG rules
 
 #  using  iptables-restore

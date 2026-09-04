@@ -8,6 +8,8 @@
 #
 # files: * firewall2-2.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  another copy of firewall2 but new iptables version
 #
 # firewall2-2:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)

@@ -8,6 +8,8 @@
 #
 # files: * firewall62.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing rules using UserService object
 #  Note that iptables does not allow entering
 #  iptables command that tries to match using module 'owner' in any chain

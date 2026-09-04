@@ -8,6 +8,8 @@
 #
 # files: * fw-A.fw /sw/FWbuilder/fw-A.fw
 #
+# Compiled for nftables (any version)
+#
 # Rule 0 (main): Object "gw_200" is used as the gateway but 200.200.200.200 is on none of the local networks of this firewall, so the route cannot be installed; give the interface facing it an address in that network. The rule is left out
 # the generated script does not create or remove bonding interfaces; they have to exist on the firewall before it runs
 # the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs

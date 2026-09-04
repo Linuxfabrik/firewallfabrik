@@ -8,6 +8,8 @@
 #
 # files: * firewall17.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  doing SNAT with virtual addresses of two external interface
 #
 

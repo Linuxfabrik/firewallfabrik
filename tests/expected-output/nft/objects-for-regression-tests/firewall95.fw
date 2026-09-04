@@ -8,6 +8,8 @@
 #
 # files: * firewall95.fw /etc/fw/firewall95.fw
 #
+# Compiled for nftables (any version)
+#
 #  firewall has intrface with netmask /31
 #
 

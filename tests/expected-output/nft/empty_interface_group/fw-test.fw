@@ -8,6 +8,8 @@
 #
 # files: * fw-test.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # fw-test:Policy:0: warning: Empty group or address table object 'no-interfaces'
 # fw-test:Policy:0: warning: After removal of all empty groups rule element itf becomes 'any'; dropping rule 0 () because option 'Ignore rules with empty groups' is in effect
 

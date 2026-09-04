@@ -8,6 +8,8 @@
 #
 # files: * firewall34.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing AddressTable object
 #
 # firewall34:Policy:12: warning: Empty group or address table object 'empty table'

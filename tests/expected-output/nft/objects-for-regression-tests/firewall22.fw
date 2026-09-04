@@ -8,6 +8,8 @@
 #
 # files: * firewall22.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing NAT rules using custom services
 #
 # Rule 0 (NAT): Custom service 'string' is not configured for the platform 'nftables'

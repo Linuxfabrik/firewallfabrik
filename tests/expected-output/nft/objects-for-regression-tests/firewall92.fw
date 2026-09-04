@@ -8,6 +8,8 @@
 #
 # files: * firewall92.fw /etc/fw/firewall92.fw
 #
+# Compiled for nftables (any version)
+#
 #  rules for the TOR transparent proxy per
 #  https://trac.torproject.org/projects/tor/wiki/TheOnionRouter/TransparentProxy
 #  See ticket 1685

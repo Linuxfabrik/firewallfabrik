@@ -8,6 +8,8 @@
 #
 # files: * firewall29.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  two dynamic interfaces in the same policy or NAT rule. Interfaces have a dot in their names
 #
 

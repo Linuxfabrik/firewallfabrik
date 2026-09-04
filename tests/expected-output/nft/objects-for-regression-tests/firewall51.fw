@@ -8,6 +8,8 @@
 #
 # files: * firewall51.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing branching rules that point
 #  at rule sets defined in object
 #  firewall-base-rulesets

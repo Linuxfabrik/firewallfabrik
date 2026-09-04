@@ -8,6 +8,8 @@
 #
 # files: * linux-3.fw /etc/linux-3.fw
 #
+# Compiled for nftables (any version)
+#
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

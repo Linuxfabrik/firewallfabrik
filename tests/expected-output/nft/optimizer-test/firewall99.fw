@@ -8,6 +8,8 @@
 #
 # files: * firewall99.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing rules with  action-on-reject "TCP reset"
 #
 # firewall99:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out

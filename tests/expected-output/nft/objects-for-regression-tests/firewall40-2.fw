@@ -8,6 +8,8 @@
 #
 # files: * firewall40-2.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 
 #  more complex and realistic combination of Tag and Route rules that are in the separate Policy rule set. Here the top Policy rule set is empty
 #

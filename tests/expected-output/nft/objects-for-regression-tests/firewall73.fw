@@ -8,6 +8,8 @@
 #
 # files: * firewall73.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing for "-i +" that is generated
 #  when interface rule element is "any"
 #  but direction is inbound. Trying different

@@ -8,6 +8,8 @@
 #
 # files: * firewall4.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  this object is used to test a configuration where firewall has dynamic address
 #
 # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees

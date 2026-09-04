@@ -8,6 +8,8 @@
 #
 # files: * firewall6.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing rule with firewall in dst and negation
 #  also testing "Destination NAT Onto the Same Network" per Turorial chapter 3.5
 #  testing a rule with src=dst=firewall6 in the global policy (should use all interfaces including loopback)

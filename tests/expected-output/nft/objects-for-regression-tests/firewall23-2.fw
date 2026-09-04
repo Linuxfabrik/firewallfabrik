@@ -8,6 +8,8 @@
 #
 # files: * firewall23-2.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 
 #  This is BRIDGING FIREWALL
 #  with two bridges and wildcard bridge port interfaces

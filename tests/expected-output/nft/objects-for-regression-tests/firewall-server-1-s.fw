@@ -8,6 +8,8 @@
 #
 # files: * firewall-server-1-s.fw /etc/fw/firewall-server-1-s.fw
 #
+# Compiled for nftables (any version)
+#
 #  fw is part of any is OFF
 #  ip forwarding is OFF
 #

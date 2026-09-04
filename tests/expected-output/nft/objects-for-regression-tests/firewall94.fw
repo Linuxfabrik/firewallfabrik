@@ -8,6 +8,8 @@
 #
 # files: * firewall94.fw /etc/fw/firewall94.fw
 #
+# Compiled for nftables (any version)
+#
 #  testing rules that use address ranges that include or not include fw
 #
 

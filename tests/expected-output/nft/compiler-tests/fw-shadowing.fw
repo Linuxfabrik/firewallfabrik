@@ -8,6 +8,8 @@
 #
 # files: * fw-shadowing.fw /etc/fw/fw-shadowing.fw
 #
+# Compiled for nftables (any version)
+#
 # Rule '0 (global)' shadows rule '1 (global)' below it, for destination 'external-host:eth0:ip' and service 'ssh'
 
 FWBDEBUG=""

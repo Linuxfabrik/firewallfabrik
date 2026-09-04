@@ -8,6 +8,8 @@
 #
 # files: * firewall25.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  this firewall uses iptables-restore format. Firewall has wildcard interface ppp*; script is generated dynamically and then piped to iptables-restore
 
 #  two rule sets for the filter table, to make sure there is only

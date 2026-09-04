@@ -8,6 +8,8 @@
 #
 # files: * firewall82_B.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  this object is used to hold branch rulesets for firewall82 and firewall82_A
 #
 

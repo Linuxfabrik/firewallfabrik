@@ -8,6 +8,8 @@
 #
 # files: * firewall93.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing shell code generated for dynamic interface with "-" in the name
 #
 

@@ -8,6 +8,8 @@
 #
 # files: * fw-part-of-any.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

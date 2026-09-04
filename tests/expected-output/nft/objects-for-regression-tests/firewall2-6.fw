@@ -8,6 +8,8 @@
 #
 # files: * firewall2-6.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  tests for nat rules with inbound and outbound interfaces
 #
 # Rule 17 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out

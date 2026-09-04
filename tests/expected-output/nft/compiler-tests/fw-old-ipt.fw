@@ -8,6 +8,8 @@
 #
 # files: * fw-old-ipt.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  Pinned to an iptables release that predates several matches and targets the compiler emits
 #
 # Interface name "this-name-is-too-long" is longer than the 15 characters iptables and nftables can carry; the rules matching on it are left out. Rename the interface.

@@ -8,6 +8,8 @@
 #
 # files: * heartbeat_cluster_1_d.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # Rule 4 (NAT): Can not build rule using dynamic interface 'eth0' of the object 'linux-1-d' because its address is unknown. The rule is left out
 # Rule 5 (global): Interface "eth0" has no addresses
 # Rule 6 (global): Interface "eth0" has no addresses

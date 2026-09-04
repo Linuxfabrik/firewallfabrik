@@ -8,6 +8,8 @@
 #
 # files: * firewall-ipv6-7.fw /etc/firewall-ipv6-7.fw
 #
+# Compiled for nftables (any version)
+#
 #  one interface has dynamic address, testing functions that get the address at run time
 #
 

@@ -8,6 +8,8 @@
 #
 # files: * firewall-ipv6-8.fw /etc/firewall-ipv6-8.fw
 #
+# Compiled for nftables (any version)
+#
 #  matching multicast with different directions
 #
 

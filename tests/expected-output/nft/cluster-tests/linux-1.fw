@@ -8,6 +8,8 @@
 #
 # files: * linux-1.fw /etc/linux-1.fw
 #
+# Compiled for nftables (any version)
+#
 #
 #
 # the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs

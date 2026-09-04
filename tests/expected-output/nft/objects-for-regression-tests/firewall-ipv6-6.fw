@@ -8,6 +8,8 @@
 #
 # files: * firewall-ipv6-6.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  one interfaces with both ipv4 and ipv6 addresses
 #
 

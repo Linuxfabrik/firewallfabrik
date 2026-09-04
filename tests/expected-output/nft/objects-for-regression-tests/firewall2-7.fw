@@ -8,6 +8,8 @@
 #
 # files: * firewall2-7.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  tests for nat rules with inbound and outbound interfaces with complex interface configuration
 #
 # the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs

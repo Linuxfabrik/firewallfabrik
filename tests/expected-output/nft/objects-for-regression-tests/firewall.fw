@@ -8,6 +8,8 @@
 #
 # files: * firewall.fw /etc/fw/firewall.fw
 #
+# Compiled for nftables (any version)
+#
 #  this is simple firewall with two interfaces. Test regular policy rules, including IP_fragments rule
 #
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options

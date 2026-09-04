@@ -8,6 +8,8 @@
 #
 # files: * firewall15.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  Testing "Accept TCP sessions opened prior to firewall restart flag"
 #  in combination with "Assume firewall is part of any" - both
 #  flags are OFF here

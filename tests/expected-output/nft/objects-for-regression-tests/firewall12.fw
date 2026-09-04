@@ -8,6 +8,8 @@
 #
 # files: * firewall12.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  This firewall does not do NAT for addresses, but translates port for a server
 #
 # Rule 16 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.

@@ -8,6 +8,8 @@
 #
 # files: * openais_cluster_1.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # Rule 1 (main): Object "gw1" is used as the gateway but 172.24.0.100 is not on the network of interface "eth1", which the rule routes through, so the route cannot be installed. The rule is left out
 
 FWBDEBUG=""

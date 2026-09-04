@@ -8,6 +8,8 @@
 #
 # files: * firewall2-5.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  various tests for the "-o itf" clause in SNAT rules
 #
 # Rule 6 (NAT): Original and translated source should both be networks of the same size.

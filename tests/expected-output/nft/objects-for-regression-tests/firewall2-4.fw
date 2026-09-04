@@ -8,6 +8,8 @@
 #
 # files: * firewall2-4.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  tests for error conditions in NATCompiler_ipt::VerifyRules
 #
 # Rule 0 (NAT): Can not use negation in translated source

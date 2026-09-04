@@ -8,6 +8,8 @@
 #
 # files: * firewall36-2.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  Testing routing configuration where routing rules install simple (not ECMP) default route
 #
 

@@ -8,6 +8,8 @@
 #
 # files: * fw-empty-src.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # fw-empty-src:Policy:0: warning: Rule is left out because "empty-ip" contributes no address to it
 
 FWBDEBUG=""

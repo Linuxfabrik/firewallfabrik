@@ -8,6 +8,8 @@
 #
 # files: * firewall31.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  used to test time matching rules
 #
 # firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees

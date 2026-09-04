@@ -8,6 +8,8 @@
 #
 # files: * firewall32.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing AddressTable
 #
 

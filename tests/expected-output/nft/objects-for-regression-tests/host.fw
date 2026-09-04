@@ -8,6 +8,8 @@
 #
 # files: * host.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  firewall protects host it is running on
 #
 # host:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out

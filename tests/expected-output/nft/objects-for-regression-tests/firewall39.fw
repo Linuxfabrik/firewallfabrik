@@ -8,6 +8,8 @@
 #
 # files: * firewall39.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing branching rules
 
 #  normal script mode (not using  iptables-restore)

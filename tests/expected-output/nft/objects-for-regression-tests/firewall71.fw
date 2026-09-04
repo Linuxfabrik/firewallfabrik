@@ -8,6 +8,8 @@
 #
 # files: * firewall71.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  this firewall uses iptables-restore format.
 
 #  two rule sets for the filter table, no rules in mangle, to make sure there is only one COMMIT for both

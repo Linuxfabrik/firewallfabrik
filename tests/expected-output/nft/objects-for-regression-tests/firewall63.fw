@@ -8,6 +8,8 @@
 #
 # files: * firewall63.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing TOS and DSCP matching
 #
 # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead

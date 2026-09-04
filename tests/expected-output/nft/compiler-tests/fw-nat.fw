@@ -8,6 +8,8 @@
 #
 # files: * fw-nat.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 # fw-nat:NAT:7: warning: Adding of virtual address for address range is not implemented (object addr-range-on-prefix-boundary)
 # fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
 # Can not add a virtual address for object "mac-only-host:eth0:mac": "00:10:4b:de:e9:6f" is not an IP address

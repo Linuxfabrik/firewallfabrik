@@ -8,6 +8,8 @@
 #
 # files: * firewall-ipv6-2.fw /etc/firewall-ipv6-2.fw
 #
+# Compiled for nftables (any version)
+#
 #  Using ULOG globally, but ipv6 rules
 #  should fall back to LOG because
 #  there is no ULOG for ip6tables yet

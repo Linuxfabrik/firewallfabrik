@@ -8,6 +8,8 @@
 #
 # files: * test-shadowing-3.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing shadowing detection
 #  compiler runs with -xt flag
 #  testing shadowing when rules have non-default options

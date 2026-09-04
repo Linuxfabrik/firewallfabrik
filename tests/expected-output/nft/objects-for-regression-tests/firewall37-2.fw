@@ -8,6 +8,8 @@
 #
 # files: * firewall37-2.fw /etc/fw/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing TAG and CLASSIFY rules and combinations
 
 #  normal script mode (not using  iptables-restore)

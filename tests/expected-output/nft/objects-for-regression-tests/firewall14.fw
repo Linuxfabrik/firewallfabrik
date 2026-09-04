@@ -8,6 +8,8 @@
 #
 # files: * firewall14.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  special configuration with overlapping subnets on external and dmz interfaces
 #  testing NAT rules (especially choice of interfaces for -o )
 #

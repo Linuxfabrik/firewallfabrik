@@ -8,6 +8,8 @@
 #
 # files: * firewall5.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing firewall_is_part_of_any_and_networks. Also testing SNAT and DNAT rules when external interface has dynamic address.
 
 #  dynamic interface ppp0 has an address object attached to it (interface used to be static and had an address, then got converted to dynamic but address object is still there). Compiler should ignore this address object and issue a warning.

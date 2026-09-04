@@ -8,6 +8,8 @@
 #
 # files: * heartbeat_cluster_2.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
 
 #  same as heartbeat_cluster_1 except using unicast for conntrack and heartbeat

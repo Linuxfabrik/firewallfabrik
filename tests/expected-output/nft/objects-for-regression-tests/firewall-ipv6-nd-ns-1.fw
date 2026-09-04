@@ -8,6 +8,8 @@
 #
 # files: * firewall-ipv6-nd-ns-1.fw /etc/firewall-ipv6-nd-ns-1.fw
 #
+# Compiled for nftables (any version)
+#
 #  automatic ND/NS rules
 #
 

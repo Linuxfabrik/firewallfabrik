@@ -8,6 +8,8 @@
 #
 # files: * firewall13.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  Testing empty groups thing
 #
 # firewall13:NAT:0: warning: Empty group or address table object 'empty Ogroup'

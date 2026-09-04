@@ -1364,8 +1364,19 @@ class CompilerDriver_nft(CompilerDriver):
         # Determine filter family (must match _assemble_nft_rules_body)
         filter_family = 'inet' if self._any_rs_ipv6 else 'ip'
 
+        # Which release of nftables the compiler read, the way
+        # `get_nftables_version` reads it: a release written on a firewall
+        # whose platform is iptables is an iptables release and this
+        # compiler ignores it, so the header must not name it either.
+        fw_version = (
+            (fw.version or '(any version)')
+            if fw.platform == 'nftables'
+            else '(any version)'
+        )
+
         context = {
             'version': __compiler_version__,
+            'fw_version': fw_version,
             'user': user_name,
             'comment': comment,
             'errors_and_warnings': errors_and_warnings,

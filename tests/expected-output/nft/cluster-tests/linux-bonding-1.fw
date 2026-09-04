@@ -8,6 +8,8 @@
 #
 # files: * linux-bonding-1.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  VLAN and bonding interface configuration
 #
 # the generated script does not create or remove bonding interfaces; they have to exist on the firewall before it runs

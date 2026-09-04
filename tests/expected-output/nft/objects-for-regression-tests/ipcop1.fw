@@ -8,6 +8,8 @@
 #
 # files: * ipcop1.fw /etc/rc.d/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  Endian firewall appliance, 2 interfaces:
 #  br0 is GREEN
 #  eth1 is RED

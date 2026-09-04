@@ -8,6 +8,8 @@
 #
 # files: * firewall60.fw /etc/fwf.sh
 #
+# Compiled for nftables (any version)
+#
 #  testing time litmiting for iptables < 1.4.0
 #
 # firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
