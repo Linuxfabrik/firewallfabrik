@@ -44,9 +44,9 @@ tests/
 │   ├── ipt/                             # Expected iptables output (normalized)
 │   │   ├── basic_accept_deny/
 │   │   │   └── fw-test.fw
-│   │   ├── cluster-tests/              # 18 C++ reference expected output files
-│   │   ├── objects-for-regression-tests/ # 105 C++ reference expected output files
-│   │   ├── optimizer-test/             # 2 C++ reference expected output files
+│   │   ├── cluster-tests/              # 32 expected output files, 17 of them the C++ reference
+│   │   ├── objects-for-regression-tests/ # 119 C++ reference expected output files
+│   │   ├── optimizer-test/             # 2 expected output files, neither a C++ reference
 │   │   └── ...
 │   └── nft/                             # Expected nftables output (normalized)
 │       └── basic_accept_deny/
@@ -168,11 +168,33 @@ We imported these test suites to serve as a **compatibility target** for the Pyt
 
 Three C++ reference fixtures are currently imported:
 
-| Fixture | Expected Output Files |
-|---|---|
-| `objects-for-regression-tests` | 105 |
-| `cluster-tests` | 18 |
-| `optimizer-test` | 2 |
+| Fixture | Expected output files | Of those, the C++ reference |
+|---|---|---|
+| `objects-for-regression-tests` | 119 | 119 |
+| `cluster-tests` | 32 | 17 |
+| `optimizer-test` | 2 | 0 |
+
+**Not every file under those three directories is the C++ reference.**  A
+file is one when `fwbuilder5/test/ipt/<name>.fw.orig` exists; seventeen do
+not, and they are FirewallFabrik's own output from whenever they were
+added.  They are `xfail`ed with the rest of the fixture and
+`update_expected_output.py` refuses to regenerate the iptables output of a
+`.fwb` fixture, so they are frozen and guard nothing - read them as a
+record, not as a target.  The fifteen in `cluster-tests` are the compiles
+Firewall Builder has no counterpart for: a cluster compiled as itself,
+which is fwf's own mode, and a member compiled without its cluster.
+
+### A cluster member is named after both objects
+
+A cluster is compiled by compiling each of its members with the cluster
+named alongside, and both Firewall Builder and `compile-corpus.py` write
+the result as `<cluster>_<member>.fw`.  The expected-output file therefore
+names two objects, and the test harness resolves it that way
+(`_resolve_target` in `conftest.py`): a name that is no firewall is split
+at a cluster name and the rest is looked up among that cluster's members.
+Without that the reference output for every cluster member could not be
+used at all, which is why it went unimported until the cluster port was
+already finished.
 
 ### What It Covers
 

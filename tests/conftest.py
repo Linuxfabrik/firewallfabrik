@@ -106,11 +106,7 @@ def _compile(
         with db.session() as session:
             prepare(session)
 
-    with db.session() as session:
-        fw = session.execute(
-            sqlalchemy.select(Firewall).where(Firewall.name == fw_name),
-        ).scalar_one()
-        fw_id = str(fw.id)
+    cluster_id, fw_id = _resolve_target(db, fw_name)
 
     if platform == 'ipt':
         from firewallfabrik.platforms.iptables._compiler_driver import (
@@ -132,7 +128,7 @@ def _compile(
     driver.source_dir = str(fixture_path.parent)
     driver.file_name_setting = f'{fw_name}.fw'
 
-    result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+    result = driver.run(cluster_id=cluster_id, fw_id=fw_id, single_rule_id='')
 
     if result:
         pytest.fail(f'Compilation error for {fw_name} ({platform}): {result}')
@@ -145,6 +141,38 @@ def _compile(
     output_path = Path(driver.file_names[fw_id])
     assert output_path.exists(), f'Output file not created: {output_path}'
     return output_path
+
+
+def _resolve_target(db, fw_name: str) -> tuple[str, str]:
+    """Return ``(cluster id, firewall id)`` for an expected-output name.
+
+    A cluster is not a machine: it is compiled by compiling each of its
+    members with the cluster named alongside, and both Firewall Builder
+    and `compile-corpus.py` write the result as `<cluster>_<member>.fw`.
+    The name of such a file therefore names two objects, and looking it
+    up as one firewall finds nothing - which is why the C++ reference
+    output for every cluster member was never imported.
+    """
+    with db.session() as session:
+        fw = session.execute(
+            sqlalchemy.select(Firewall).where(Firewall.name == fw_name),
+        ).scalar_one_or_none()
+        if fw is not None:
+            return '', str(fw.id)
+
+        from firewallfabrik.core.objects import Cluster
+
+        for cluster in session.execute(sqlalchemy.select(Cluster)).scalars():
+            prefix = f'{cluster.name}_'
+            if not fw_name.startswith(prefix):
+                continue
+            member_name = fw_name[len(prefix) :]
+            for member in cluster.get_members_list():
+                if member.name == member_name:
+                    return str(cluster.id), str(member.id)
+
+    msg = f'No firewall or cluster member named "{fw_name}"'
+    raise LookupError(msg)
 
 
 @pytest.fixture()
