@@ -286,6 +286,11 @@ class CompilerDriver_ipt(CompilerDriver):
                 all_policies = [*all_policies, *imported_policies]
                 all_nat = [*all_nat, *imported_nat]
 
+                # Every reader after this point names the branch target by
+                # the name on the rule, and only the id beside it is kept
+                # current.
+                self.resolve_branch_names(session, [*all_policies, *all_nat])
+
                 have_ipv4 = False
                 have_ipv6 = False
 

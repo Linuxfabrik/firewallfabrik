@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a rule with the Branch action jumps into the rule set it points at even after that rule set has been renamed. The jump used to go to the old name: iptables created an empty chain of that name and jumped into it, so the branch did nothing in a script that activated cleanly, and nftables left the rule out.
 * Compiler (iptables, nftables): a NAT rule the compiler cannot classify is named in the message that reports it, instead of leaving the administrator with "Unsupported NAT rule" and no rule number.
 * Compiler (iptables, nftables): a message about an interface without a usable address names the interface by its place in the object tree instead of by an internal id, so it can be found in the editor and reads the same on every compile.
 * Compiler (iptables, nftables): whether an Address Table or a DNS Name is resolved on the firewall or at compile time is read the way Firewall Builder reads it, so a data file that spells the flag out as text no longer turns a compile-time object into a run-time one.

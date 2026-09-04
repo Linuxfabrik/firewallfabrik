@@ -339,6 +339,11 @@ class CompilerDriver_nft(CompilerDriver):
                 all_policies = [*all_policies, *imported_policies]
                 all_nat = [*all_nat, *imported_nat]
 
+                # Every reader after this point names the branch target by
+                # the name on the rule, and only the id beside it is kept
+                # current.
+                self.resolve_branch_names(session, [*all_policies, *all_nat])
+
                 # Determine whether to run IPv4/IPv6 compilation passes
                 # based on the rule sets' explicit address-family flags.
                 # If no rule set enables IPv6, skip the IPv6 pass entirely.

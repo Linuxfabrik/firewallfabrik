@@ -671,6 +671,42 @@ class CompilerDriver(BaseCompiler):
 
         return imported
 
+    def resolve_branch_names(self, session, rule_sets) -> None:
+        """Give every Branch rule the current name of the rule set it points at.
+
+        A branch rule carries two references to its target: the id, which
+        identifies it, and the name, which is the chain the jump goes to.
+        Only the first is kept current.  Firewall Builder itself does not
+        keep the second - firewall51 of the reference corpus branches into
+        `mail_server_inbound` by id while its `branch_name` still says
+        `rule0_branch` - and neither does this editor: renaming a rule set
+        writes the new name onto the rule set and nothing else.
+
+        Everything after this point reads the name: the target of the jump,
+        whether the branch goes into the mangle table, whether the target
+        assigns a traffic class.  With a stale name iptables creates the
+        named chain, leaves it empty and jumps into it, so the branch does
+        nothing in a script that activates cleanly; nftables reports the
+        rule and leaves it out.  Both are wrong about a rule set that is
+        compiled and reachable.
+
+        The `.fwb` reader repairs the name at load time for the file it
+        reads.  This is the same repair for fwf's own format and for a
+        rename made since, and it runs in the rolled-back compile session,
+        so nothing is written to the data file.
+        """
+        for rule_set in rule_sets:
+            for rule in rule_set.rules:
+                options = rule.options or {}
+                if not options.get('branch_id'):
+                    continue
+                target = self._branch_target(session, rule)
+                if target is None or target.name == options.get('branch_name'):
+                    continue
+                # A new dict, not an in-place write: the column is JSON and
+                # SQLAlchemy compares it against the committed value.
+                rule.options = {**options, 'branch_name': target.name}
+
     def _is_top_ruleset(self, ruleset) -> bool:
         """Whether *ruleset* fills the built-in chains of this script.
 
