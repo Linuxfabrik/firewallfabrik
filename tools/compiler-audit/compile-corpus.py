@@ -46,7 +46,13 @@ from pathlib import Path
 import sqlalchemy
 
 import firewallfabrik.core
-from firewallfabrik.core.objects import Cluster, Firewall
+from firewallfabrik.core.objects import (
+    Cluster,
+    Direction,
+    Firewall,
+    PolicyRule,
+    Rule,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS = REPO_ROOT / 'tests' / 'fixtures'
@@ -205,6 +211,57 @@ def force_nftables_version(version: str) -> None:
     firewallfabrik.core.DatabaseManager.load = load_and_pin
 
 
+def force_negation(slot: str) -> None:
+    """Compile every firewall with one rule element negated everywhere.
+
+    The corpus carries almost no negation, and negation is where the two
+    compilers differ most: "none of these" is a conjunction, and nftables
+    says it inside the rule where iptables says it with a chain.  Setting
+    the flag on one element of every rule reaches those code paths over
+    the whole corpus instead of over the handful of rules that happen to
+    use them - `check-negations.py` answered 0 on the corpus as it stands
+    and 208 with the service element forced.
+
+    One slot per run: `src`, `dst`, `srv`, `itf`, `when` for a policy
+    rule and `osrc`, `odst`, `osrv` for a NAT rule.  An element that names
+    nothing is "any" and stays unnegated whatever the flag says
+    (`CompRule.get_neg`), so a run only reaches the rules that name
+    something in that element.
+    """
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_negate(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for rule in session.execute(sqlalchemy.select(Rule)).scalars():
+            rule.negations = {**(rule.negations or {}), slot: True}
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_negate
+
+
+def force_direction(direction: str) -> None:
+    """Compile every policy rule as if it named this direction.
+
+    The direction decides the chain a rule ends up in, and the corpus
+    leaves most rules at "Both".  Forcing one reaches the other two
+    branches of every chain decision.
+    """
+    which = int(getattr(Direction, direction))
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_force(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for rule in session.execute(sqlalchemy.select(PolicyRule)).scalars():
+            rule.policy_direction = which
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_force
+
+
 def corpus_files(corpus: Path) -> list[Path]:
     """Return the data files of *corpus*, which may be a file or a directory.
 
@@ -257,8 +314,25 @@ def main() -> int:
         'so the nftables release gates are compiled at all (for example '
         '0.9.0); meant with `--platform nft`',
     )
+    parser.add_argument(
+        '--negate',
+        choices=('src', 'dst', 'srv', 'itf', 'when', 'osrc', 'odst', 'osrv'),
+        help='compile every firewall with this rule element negated on every '
+        'rule, which is how the negation code paths are reached at all - the '
+        'corpus carries almost no negation',
+    )
+    parser.add_argument(
+        '--direction',
+        choices=('Inbound', 'Outbound', 'Both'),
+        help='compile every policy rule as if it named this direction, which '
+        'reaches the chain decisions the corpus leaves at "Both"',
+    )
     args = parser.parse_args()
 
+    if args.negate:
+        force_negation(args.negate)
+    if args.direction:
+        force_direction(args.direction)
     if args.address_family:
         force_address_family(args.address_family)
     if args.iptables_version:

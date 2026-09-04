@@ -104,6 +104,27 @@ for message, n in counter.most_common(20):
 EOF
 ```
 
+## Forcing what the corpus does not carry
+
+Every oracle above only sees the code paths the corpus reaches, and a
+corpus is a collection of firewalls somebody actually wrote.  Whole parts
+of both compilers are therefore never compiled by it.  `compile-corpus.py`
+can force the value that reaches them:
+
+| Flag | Reaches |
+|---|---|
+| `--negate <element>` | the negation handling, which the corpus barely uses. One element per run (`src dst srv itf when osrc odst osrv`) |
+| `--direction <Inbound\|Outbound\|Both>` | the chain decisions the corpus leaves at "Both" |
+| `--iptables-version <release>` | the version-gated matches; forced to a release current iptables still speaks it also takes the old-spelling noise out of the replay |
+| `--nftables-version <release>` | the nftables release gates, which no corpus firewall can reach: every `.fwb` names the iptables platform |
+| `--address-family <4\|6>` | one family alone, the way the compiler's own `-4` / `-6` does |
+
+Run the *whole* set of oracles on a forced tree, not the one that
+motivated the run.  `--negate srv` was answered by `check-negations.py`
+with 208 findings where the unforced corpus answers 0, and the two bugs
+behind them were invisible to every other check: both rulesets parse,
+both load, and `compare-reference.sh` counts lines.
+
 ## Comparing against Firewall Builder
 
 `compare-reference.sh` needs a Firewall Builder checkout, because the
