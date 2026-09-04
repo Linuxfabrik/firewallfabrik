@@ -8,159 +8,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Highlights:** Clusters are supported: compiling a cluster compiles each of its members, with the cluster's interfaces, addresses, rule sets and routes, and each member permits the failover protocol and the state sync link it needs, so a default-drop cluster no longer has both members thinking they are master. The nftables compiler catches up with the iptables one on what it was still missing: negated elements, Custom Services, custom actions, translating to a DHCP or PPP address, and "Use SNAT instead of MASQUERADE". A large group of fixes is about rules that quietly matched something other than what they say, most of them around negation, and about activations that stopped half-way with the firewall already at DROP while reporting success. Configurations that used to be compiled from unusable data are now refused. Recompile and review your rulesets after updating, and read the breaking changes first.
+
+### Breaking Changes
+
+* A bridge port named like a VLAN interface is refused unless the firewall also has an interface of its own under that name. Add it; nothing else creates the device.
+* A firewall with an interface that has no address is refused instead of compiled. Give the interface an address, or take it out of the firewall object.
+* A rule whose Custom action holds a command written for the other packet filter is reported and left out. Rewrite the statement after switching a firewall between iptables and nftables.
+* The release a firewall names belongs to the platform it names, so a firewall switched between the two platforms may compile differently. Check the release in the firewall panel.
+
 ### Added
 
-* Compiler (iptables, nftables): a cluster member installs the routes its cluster keeps for all of its members, instead of activating the new packet filter with no route at all ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Compiler (iptables, nftables): a cluster member leaves the address the cluster shares to the failover daemon instead of adding it itself and taking it away from the other member on every activation.
-* Compiler (iptables, nftables): a cluster member permits the failover protocol and the state sync link it needs to see the other members, so a default-drop cluster no longer has both members thinking they are master ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Compiler (iptables, nftables): a cluster whose interface gets its address by DHCP translates to it again, instead of losing every NAT rule that names it.
-* Compiler (iptables, nftables): a rule naming an "Attached Networks" object matches the subnets of that interface, worked out again on every compile ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
-* Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses and rule sets ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Compiler (nftables): a Custom Service whose iptables code is nothing but a connection-state match compiles, so the "accept established and related" rule an imported policy is built out of no longer disappears from the ruleset.
-* Compiler (nftables): a Custom Service matching TCP flags or the user a packet belongs to compiles instead of being left out, so a rule an imported policy carries reaches the ruleset.
-* Compiler (nftables): a Custom Service matching the IPv6 routing header compiles instead of being left out, so a rule written to stop source-routed packets reaches the ruleset.
-* Compiler (nftables): a logged rule that also limits connections or keeps a rate per key is written with a chain of its own, so it keeps its own limit and the log rate of the firewall settings at the same time, the way the iptables compiler has always written it.
-* Compiler (nftables): a NAT rule can translate to the address of an interface that gets it from DHCP or PPP, the way the iptables compiler has always translated to it - the rule was left out of the ruleset before.
-* Compiler (nftables): a NAT rule with "Use SNAT instead of MASQUERADE" translates to the address of the interface it names, the way the iptables compiler does - it masqueraded instead, looking the address up per packet.
-* Compiler (nftables): a rule whose time restriction is negated and names both hours and weekdays is compiled instead of being left out, the way the iptables compiler has always compiled it.
-* Compiler (nftables): a rule with a Custom action writes its statement into the ruleset, the way the iptables compiler writes its custom target.
-* Compiler (nftables): a rule the pinned nftables release cannot parse is reported and left out instead of costing the whole ruleset - an IPv4 header option match needs 0.9.2, a time restriction 0.9.3 and a 1:1 network translation 0.9.5, all younger than the nftables some supported distributions ship.
-* Editor: the firewall panel offers the releases of iptables or nftables a firewall can be compiled for, so a target older than the newest can be named at all - the compilers have always adapted their output to it, but nothing except an imported Firewall Builder file could put a value there.
-* Editor: an "Attached Networks" object can be created on an interface and has an editor of its own, showing the subnets a rule naming it will match ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
-* Editor: the address, port and mode of a cluster group's failover or state sync protocol can be edited, so a cluster that replicates on its own address or port is no longer blocked by its own policy ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Standard library: the "ESTABLISHED" custom services carry nftables code, so a rule naming one compiles on that platform instead of being left out.
+* Compiler (iptables, nftables): a cluster member permits the failover protocol and the state sync link it needs, and leaves the shared address to the failover daemon ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
+* Compiler (iptables, nftables): a rule can name an "Attached Networks" object, whose subnets are worked out on every compile ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
+* Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses, rule sets and routes ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
+* Compiler (nftables): a Custom Service that matches the connection state, TCP flags, the socket owner or the IPv6 routing header compiles instead of being left out.
+* Compiler (nftables): a logged rule keeps its own connection or rate limit beside the firewall's log rate.
+* Compiler (nftables): a NAT rule translates to the address of a DHCP or PPP interface, and "Use SNAT instead of MASQUERADE" names that address instead of masquerading.
+* Compiler (nftables): a negated time restriction that names both hours and weekdays compiles.
+* Compiler (nftables): a rule the pinned nftables release cannot parse is reported and left out instead of costing the whole ruleset.
+* Compiler (nftables): a rule with a Custom action writes its statement into the ruleset.
+* Editor: a cluster has an editor of its own, and a failover or state sync group can be created where it belongs, with its address, port and mode ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84), [#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
+* Editor: an "Attached Networks" object can be created on an interface and has an editor of its own ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
+* Editor: the Branch action can be set on a rule again, and the rule set it jumps into is chosen by dragging it out of the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
+* Editor: the firewall panel offers the iptables and nftables releases a firewall can be compiled for.
+* Standard library: the "ESTABLISHED" custom services carry nftables code.
 
 ### Fixed
 
-* Compiler (iptables): a rule branching into a NAT rule set that the IPv6 pass does not compile no longer jumps into a chain only the IPv4 script created, which ip6tables refuses and which stopped the activation with every policy already at DROP.
-* Compiler (nftables): a tagging or classifying rule that ends up in the forward chain is left out on a firewall configured not to forward packets, the way the iptables compiler leaves it out - it had nothing to match there and only lengthened the ruleset.
-* Compiler (iptables): a rule whose negated element is matched in a chain of its own keeps its negation - the chain lost track of where it is reached from, so a check meant to drop one impossible rule dropped the half that carries the condition and left the rule matching everything.
-* Compiler (iptables): a NAT rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule with a negated element is moved into a chain of its own before the chain is decided, and the kernel then refused a command that stopped the activation with every policy already at DROP.
-* Compiler (nftables): a Custom Service that matches on the connection state and negates it keeps its negation - the rule matched every packet instead, so a Deny rule built on it blocked everything and an Accept rule let everything through.
-* Compiler (nftables): a rule whose source or destination is negated and names the firewall among its objects keeps its negation - the objects were given a rule each, which says "not this or not that" and matches every packet, so an anti-spoofing rule dropped all traffic and an Accept rule let all of it through.
-* Compiler (nftables): a NAT rule whose original source or destination is negated keeps its negation - the objects were given a rule each, which matches every packet, so the rule translated traffic it was written to leave alone.
-* Compiler (nftables): a NAT rule whose original service is negated and names several services of one protocol keeps its negation - the services were given a rule each, which matches every packet, so the rule translated the traffic it was written to leave alone.
-* Compiler (nftables): a rule whose service element is negated and names several services of one protocol keeps its negation - the services were given a rule each, which says "not this or not that" and matches every packet, so a Deny rule blocked all traffic and an Accept rule let all of it through.
-* Compiler (nftables): a rule whose service element is negated and names a service inspecting TCP flags, or a packet mark or a socket owner beside a port, is compiled with a chain of its own the way the iptables compiler compiles it - the rules written before matched packets the element excludes, so a Deny rule blocked traffic it was written to let through and an Accept rule let through what it was written to stop.
-* Compiler (nftables): a rule, a NAT rule included, whose service element is negated and names a service restricted to a source *and* a destination port keeps its negation - the two ports were excluded separately, which asks for a packet on neither and let through what the rule was written to stop.
-* Compiler (nftables): a rule whose service element is negated and names a service nftables cannot match at all - a Custom Service with no nftables code, an IP Service matching the ToS byte - leaves no rule behind, instead of leaving the part that could be written matching the traffic the rule excludes.
-* Compiler (nftables): a rule naming a TCP service that inspects the TCP flags beside the matching UDP service keeps the flag inspection - the two were written as one rule for both protocols, which accepted or denied every packet on that port instead of the handshake stage the service names.
-* Compiler (nftables): a rule whose service element is negated and names TCP and UDP on the same source *and* destination port excludes the combination, not each port on its own - the rule asked for a packet on neither and let through what it was written to stop.
-* Compiler (nftables): a Reject rule with a TCP reset whose service element is negated no longer rejects the traffic it was written to let through - the rule that covers the other protocols was written once per half of the split and the two halves together covered every packet.
-* Compiler (nftables): a rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - a rule the compiler moves into a chain of its own then kept a match the kernel never fires there, or lost one it does.
-* Compiler (nftables): a rule naming an unnumbered interface or a bridge port as its source or destination is left out, the way the iptables compiler leaves it out - such an interface has no address, so the rule was compiled with nothing to match on, which is a rule for every address there is.
-* Compiler (nftables): an address object that stands for the whole IPv6 internet is reported as being equivalent to "any", the way the iptables compiler reports it - the check read an IPv6 netmask as an address and answered "not zero" for every one of them.
-* Compiler (iptables, nftables): a rule naming one address table per address family compiles - the table of the other family was reported as an empty group, and with "Ignore rules with empty groups" off, which is the default, that stopped the firewall from compiling at all.
-* Compiler (iptables, nftables): a rule naming a host that has only an IPv4 address compiles in a dual-stack rule set - the IPv6 pass reported it as unresolvable and stopped the firewall from compiling, although the name resolves.
-* Compiler (iptables, nftables): the address and netmask of a VLAN interface or a bridge port is checked the way the firewall's own interfaces are; a netmask of /0 one level down used to make every rule naming it match everything.
-* Compiler (iptables, nftables): a bridge port named like a VLAN interface is refused unless the firewall has an interface of its own under that name - nothing creates the device, so the bridge was given a port that is not there.
-* Compiler (iptables, nftables): a firewall with an interface that has no address is refused instead of compiled - every rule naming such an interface matched every address, in a script that installed without a word.
-* Compiler (iptables, nftables): a bridge configured below another interface is reported instead of being silently left unbuilt, with none of its ports enslaved.
-* Compiler (iptables, nftables): a bridge keeps the VLAN interface it has as a port; a filter meant to drop one compared against a name the editor never writes.
-* Compiler (iptables, nftables): a firewall that names a VLAN or bonding interface is warned that the script does not create it, whether or not the matching setting is ticked - the activation stopped before the first rule with no word about why ([#95](https://github.com/Linuxfabrik/firewallfabrik/issues/95)).
-* Compiler (iptables, nftables): a rule whose Custom action holds a command written for the other packet filter is reported and left out, instead of stopping the activation with every policy already at DROP on iptables and costing the whole ruleset on nftables - the text is one field with no platform beside it, so nothing rewrote it when the firewall was switched over.
 * Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
-* Compiler (iptables): a custom service that matches on the connection state in lower case is recognised.
-* Compiler (iptables): a firewall that handles IPv6 hardens its IPv6 stack against redirects and source routing even when its IPv6 rules were all dropped, the way the nftables compiler already does.
+* Compiler (iptables): a firewall that keeps other tools' rules honours the setting when it activates through `iptables-restore`, and no longer gains a copy of its clamping and connection-mark rules on every activation ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 * Compiler (iptables): a firewall using ipsets fills them before it installs the rules that name them, so the first activation after a reboot no longer loses every rule about an address table while reporting success.
-* Compiler (iptables): a firewall that activates through iptables-restore waits for the lock the way every other command in its script does, instead of failing when another tool holds it.
-* Compiler (iptables): a firewall that shares the machine with Docker, CrowdSec or fail2ban and activates through iptables-restore no longer wipes their rules and then fails to install its own ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-* Compiler (iptables): a logged rule that both tags and classifies no longer puts the traffic class in the chain the mark belongs in, which the kernel refuses and which stopped the activation with every policy already at DROP.
-* Compiler (iptables): a rate limit whose table name is longer than iptables can store is cut and reported, so two rules that share a table by accident are named.
-* Compiler (iptables): a rate limit in a branch rule set counts into a table of its own, instead of silently taking over the key and the rate of a rule at the same position in the main policy.
-* Compiler (iptables): a masquerading rule whose source or destination is negated no longer writes "--random" and "--to-ports" onto the jump into its temporary chain, which iptables refuses outright and which stopped the activation with every policy at DROP.
-* Compiler (iptables, nftables): the half of a rule that sets a traffic class stays in the postrouting chain the qdisc reads, instead of being copied into a chain where the kernel refuses it and the activation stops with every policy at DROP - which a negation on the same rule made happen on iptables even after the chain names were split.
-* Compiler (iptables, nftables): a logged rule that answers with a TCP reset keeps the protocol the target needs when its service is a Custom Service, instead of producing a command iptables refuses and an activation that stops with every policy at DROP.
-* Compiler (iptables): a rule that matches a MAC address or the user a packet belongs to is judged by the hook its chain hangs off, not by the chain's name - the optimizer moves a rule into a chain of its own, and the checks then let a MAC reach POSTROUTING, where the kernel refuses it and the activation stops with every policy at DROP.
-* Compiler (iptables): a generated script answers "status" with "Firewall is active" once it has installed its rules, instead of reporting itself off whenever the policy needed no chain of its own - which an init system and a monitoring check read as a dead firewall.
-* Compiler (iptables, nftables): "reload" no longer stops the firewall first, which left the machine with no rules and no policy for as long as the second command needed to start - and on nftables with nothing at all when the new ruleset turned out to be unloadable.
-* Compiler (iptables): a firewall that keeps other tools' rules and activates through iptables-restore no longer reports that the setting was ignored; it is honoured, with --noflush.
-* Compiler (iptables): a firewall that keeps other tools' rules no longer gains a copy of its "Clamp MSS to MTU" and connection-mark rules on every activation.
-* Compiler (nftables): the generated script finds nft and ip wherever the distribution puts them, instead of insisting on one absolute path and refusing to start where the tool is somewhere else.
-* Compiler (nftables): the "interfaces" and "test_interfaces" commands check that the tools they need are there, the way every other command of the script does.
-* Compiler (iptables): a rule matching an IP protocol by number names it where the protocol has a name, and an "any protocol" service no longer writes a match into an IPv6 command.
-* Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address on the interface again.
-* Compiler (iptables): a rule with two negated elements no longer lets through what the second negation exists to exclude; an "outside business hours" rule matched around the clock.
-* Compiler (iptables): a rule with two negated elements is compiled into the rules Firewall Builder writes for it, instead of twice as many, half of them doing nothing.
-* Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC, instead of dropping the "use kernel timezone" setting without a word.
-* Compiler (iptables): the chain a logged or accounting rule gets behind a negation is named after the part of the rule it belongs to, so two parts of one rule no longer share a chain.
-* Compiler (iptables, nftables): a NAT rule whose interface group turns out to be empty is reported instead of applying to every interface the firewall has.
-* Compiler (iptables, nftables): a generated script reports the activation as failed when any command of it was refused, instead of answering with the status of whichever command happened to run last - a rule the tool rejected in the middle left the ruleset incomplete under a clean "Firewall script is done".
-* Compiler (iptables, nftables): a branch into another firewall's rule set of the same name gets chains of its own, instead of sharing them with this firewall's policy - two rules then landed in one chain and the first of them decided for both.
-* Compiler (iptables, nftables): a branch rule that jumps back into the rule set it is in is left out, instead of producing a ruleset the kernel refuses whole on nftables and a script that installs the branch nowhere on iptables.
-* Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop.
-* Compiler (iptables, nftables): a branch rule loop is found on a firewall stored in FirewallFabrik's own format as well, where until now only an imported Firewall Builder file was checked - the loop went out unreported and cost the whole nftables ruleset.
-* Compiler (iptables, nftables): a NAT rule set that branches into another NAT rule set is translated instead of being left out on nftables and split into both directions on iptables; the branch targets are now compiled first, so each jump names the chain it belongs in.
-* Compiler (iptables, nftables): a NAT branch rule that leads back to where it started says so, instead of reporting that the rule set it points at installs no rule.
-* Compiler (iptables, nftables): the release a firewall names is read as a release of the platform it names, so an nftables firewall no longer loses every version-gated iptables match and the other way round.
-* Compiler (iptables, nftables): a rule that names a packet mark, a connection owner or a custom service beside an ordinary service installs the two in the order Firewall Builder installs them - the special one after the ordinary one, where it used to come first and decide the match for traffic both cover.
-* Compiler (iptables, nftables): a cluster group whose failover or state sync address is an IPv6 address keeps its rules, instead of losing them without a word.
-* Compiler (iptables, nftables): a cluster group whose failover or state sync port is not a number is reported instead of breaking the compile.
-* Compiler (iptables, nftables): a cluster member configures the addresses of an interface whose cluster counterpart runs no failover protocol, instead of leaving them to nobody.
-* Compiler (iptables, nftables): a cluster whose peer gets its address by DHCP no longer permits the state sync port from every source; the rule is reported and left out instead.
-* Compiler (iptables, nftables): a dual-stack interface is configured with its IPv6 addresses first, the way Firewall Builder writes them, so the two produce the same line.
-* Compiler (nftables): a firewall that builds its bridges but leaves the addresses to another tool gets its bridges, the way it already did on iptables.
-* Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" recognises an interface the firewall names with a wildcard, instead of taking its own dial-up link down.
-* Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" no longer takes the loopback down on a firewall whose object does not list it, which cut off every service on the machine itself.
-* Compiler (iptables, nftables): an interface named with the iptables spelling of a wildcard is no longer verified or asked for its address as if it were a single device, which stopped the activation of a firewall that verifies its interfaces.
-* Compiler (iptables, nftables): an interface whose name is longer than an interface name can be is left out of the interface configuration and reported, instead of stopping every activation before the first rule is installed.
-* Compiler (iptables, nftables): a NAT rule whose destination is a host known only by its MAC address is reported for what it is, instead of being told that no interface is on that network.
-* Compiler (iptables, nftables): a NAT rule that translates to an address range says that the firewall is not given those addresses, instead of leaving the translated traffic to fail silently.
-* Compiler (iptables, nftables): a firewall whose NAT rule translates to an address none of its interfaces is on says so, where the message was raised and thrown away - the rule then quietly did not work, because the firewall never answered ARP for that address.
-* Compiler (iptables, nftables): a bridge port named with a wildcard - the tap devices of virtual machines, for one - keeps the interfaces it stands for in the bridge, instead of emptying the bridge on every activation.
-* Compiler (iptables, nftables): a firewall that configures its own bridges attaches every port to them, where until now only the last port of each bridge was attached and the rest stayed outside it.
-* Compiler (iptables, nftables): a firewall that configures its own bridges creates them before it configures their addresses, instead of stopping the activation on the very run that was to create them.
-* Compiler (iptables, nftables): a firewall that configures its own bridges no longer deletes every other bridge on the machine when it activates - Docker's, podman's and libvirt's among them, which took every container and virtual machine off the network.
+* Compiler (iptables): a masquerading rule with a negated element no longer produces a command iptables refuses.
+* Compiler (iptables): a rate limit gets a table of its own per rule set, and a name too long for iptables is cut and reported instead of shared by accident.
+* Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address again.
+* Compiler (iptables): a rule with two negated elements matches what it says and is compiled into the rules Firewall Builder writes for it; an "outside business hours" rule used to match around the clock.
+* Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC.
+* Compiler (iptables): an IPv6-capable firewall hardens its IPv6 stack even when all its IPv6 rules were dropped.
+* Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" recognises an interface named with a wildcard and never takes the loopback down.
+* Compiler (iptables, nftables): "reload" no longer stops the firewall first, which left the machine unprotected until the second command finished.
+* Compiler (iptables, nftables): a branch into a rule set of another firewall or cluster, and a NAT rule set branching into another one, compile that rule set into the script with chains of their own ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156)).
+* Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop, in FirewallFabrik's own file format as well.
+* Compiler (iptables, nftables): a bridge configured below another interface is reported instead of being silently left unbuilt.
+* Compiler (iptables, nftables): a cluster group keeps its rules when its failover or state sync address is IPv6, instead of losing them without a word, and a port that is not a number is reported.
+* Compiler (iptables, nftables): a cluster whose interface gets its address by DHCP translates to it again, instead of losing every NAT rule that names it.
+* Compiler (iptables, nftables): a firewall that configures its own bridges creates them before their addresses, attaches every port including one named with a wildcard, and leaves the bridges of Docker, podman and libvirt alone.
+* Compiler (iptables, nftables): a firewall that names a VLAN or bonding interface is warned that the script does not create it, instead of stopping the activation before the first rule with no word about why ([#95](https://github.com/Linuxfabrik/firewallfabrik/issues/95)).
 * Compiler (iptables, nftables): a firewall whose conntrack limits are left unset no longer sets them to zero on activation, which made the kernel refuse every new connection.
-* Compiler (iptables, nftables): a firewall option a data file stores as "0" is read as off, the way Firewall Builder reads it, instead of switching the option on.
-* Compiler (iptables, nftables): a logging rule whose netlink group, NFLOG copy range or queue threshold is unusable falls back to the default instead of breaking the activation.
-* Compiler (iptables, nftables): a route two rules install the same way is installed once, so the activation no longer stops at the second one and puts the previous routing table back.
-* Compiler (iptables, nftables): a routing rule marked "non-critical" is now allowed to fail, and every other one puts the previous routing table back and stops the activation instead of leaving the firewall half-routed and reporting success.
-* Compiler (iptables, nftables): a routing rule of a cluster whose gateway is not on the network of the interface it names is reported, instead of taking the whole route down at activation.
-* Compiler (iptables, nftables): a routing rule that leaves through an interface of a cluster the firewall does not belong to is reported instead of naming a device the firewall has not got.
-* Compiler (iptables, nftables): a routing rule whose metric is not a number is reported instead of breaking the compile.
-* Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them separately, so a dual-stack rule no longer disappears from one address family because the first interface has no address in it.
-* Compiler (iptables, nftables): a rule branching into a rule set of another firewall or cluster compiles that rule set into the script instead of jumping into an empty chain ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156)).
-* Compiler (iptables, nftables): a rule left out because a group it names is empty is no longer also reported as shadowing the rule below it.
-* Compiler (iptables, nftables): a rule naming a cluster interface is compiled against the interface the member firewall actually has, instead of a name that matches nothing.
-* Compiler (iptables, nftables): a rule naming a host or the firewall no longer matches an address that sits on an interface marked as unnumbered or as a bridge port.
-* Compiler (iptables, nftables): a rule naming an interface covers every address that interface carries, and the VLANs below it, instead of the first address alone.
-* Compiler (iptables, nftables): a rule that switches "assume firewall is part of any" off is compiled as written, instead of getting the extra rules about the firewall that the setting exists to suppress.
-* Compiler (iptables, nftables): a rule whose interface group turns out to be empty is reported instead of being compiled as a rule about every interface the firewall has.
-* Compiler (iptables, nftables): a rule whose source or destination is a host object reaches the chains it belongs in; on a bridging firewall outbound rules to a broadcast address were left out.
-* Compiler (iptables, nftables): a rule whose time object names an hour or a weekday that does not exist is reported instead of breaking the compile.
-* Compiler (iptables, nftables): a rule written for "any interface except these" is no longer reported as shadowing an unrelated rule.
-* Compiler (iptables, nftables): a rule written for "any interface except these" leaves out an interface marked as a dedicated failover link, which carries nothing but the cluster's heartbeat.
-* Compiler (iptables, nftables): an ICMP service whose type or code is stored empty is read as "any" instead of breaking the compile.
-* Compiler (iptables, nftables): an ICMP service with an impossible type or code is reported instead of breaking the activation.
-* Compiler (iptables, nftables): an IP service naming a protocol number that does not exist is reported instead of matching every protocol.
-* Compiler (iptables, nftables): an address object whose address and netmask are both zero matches every address, the way it says, instead of the single address 0.0.0.0 - and a routing rule naming one installs the default route rather than a host route. Such an object is reported as well, which it was not.
-* Compiler (iptables, nftables): an address table whose file name needs the firewall's data directory is reported when the firewall names none.
-* Compiler (iptables, nftables): an address table, a DNS name or a dynamic interface whose name holds shell syntax is reported instead of running as a command on the firewall.
-* Compiler (iptables, nftables): the "Netlink group" set on a logging rule is used, not only the firewall-wide one.
-* Compiler (nftables): "Log all rules" also logs the rules that tag or classify, the way the iptables compiler does.
-* Compiler (nftables): a NAT rule that translates to an interface whose address comes from DHCP or PPP says so, instead of reporting the interface as having no address at all and repeating itself.
-* Compiler (nftables): a packet mark written in octal keeps the mask it was given.
-* Compiler (nftables): a rate limit sharing a table with another rule at a different rate is reported, the way the iptables compiler already reports it.
-* Compiler (nftables): a rule naming a dynamic interface of the cluster the firewall belongs to is compiled, the way the iptables compiler already compiles it, instead of being left out.
-* Compiler (nftables): a rule whose addresses cannot be resolved is reported once, with the reason, instead of once with the reason and once without it.
-* Compiler (nftables): a time-based rule on a firewall that uses the kernel timezone writes its start and end date in a form nftables accepts, instead of one that makes it refuse the whole ruleset.
-* Compiler (nftables): an accounting rule that logs counts every packet once on a firewall that caps its log messages, instead of counting each packet twice and the logged ones three times.
-* Compiler (nftables): the generated script checks that its tools are there before it touches the firewall.
-* Compiler (nftables): the old rules are removed after the new ones are in place, so an activation no longer leaves the machine with no firewall at all for the moment in between.
-* Editor: a cluster group is checked against the cluster it belongs to, so a member of the second cluster in a file is no longer marked invalid.
-* Editor: a cluster has an editor of its own and no longer offers an iptables release, which nothing read - each member compiles for the release it names itself.
-* Editor: a cluster's failover group is shown below the cluster interface it belongs to and its state sync group below the cluster, instead of at the top of the library.
-* Editor: a failover group can be created on a cluster interface and a state sync group on a cluster, and both are stored where they belong instead of beside the firewalls ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
+* Compiler (iptables, nftables): a generated script reports the activation as failed when any of its commands was refused, and answers "status" with "Firewall is active" once its rules are installed.
+* Compiler (iptables, nftables): a NAT rule that translates to an address none of the firewall's interfaces is on says so, instead of failing silently because nobody answers ARP for it.
+* Compiler (iptables, nftables): a routing rule that fails puts the previous routing table back and stops the activation unless it is marked "non-critical"; a route two rules install the same way is installed once, and an unreachable gateway is reported.
+* Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them, so a dual-stack rule no longer disappears from one address family.
+* Compiler (iptables, nftables): a rule matching a MAC address or the socket owner is judged by the hook its chain hangs off, so the kernel no longer refuses a command in the middle of an activation.
+* Compiler (iptables, nftables): a rule naming a host that has only an IPv4 address, or one address table per address family, compiles in a dual-stack rule set instead of stopping the firewall from compiling.
+* Compiler (iptables, nftables): a rule naming an interface covers every address it carries and the VLANs below it, instead of the first address alone.
+* Compiler (iptables, nftables): a rule that names a packet mark, a connection owner or a custom service beside an ordinary service installs the two in the order Firewall Builder installs them.
+* Compiler (iptables, nftables): a rule whose group, interface group or address table turns out to be empty is reported instead of applying to every address or every interface the firewall has.
+* Compiler (iptables, nftables): a rule written for "any interface except these" leaves out a dedicated failover link and is no longer reported as shadowing an unrelated rule.
+* Compiler (iptables, nftables): an address object whose address and netmask are both zero matches every address, and is reported as being equivalent to "any".
+* Compiler (iptables, nftables): an ICMP service, an IP protocol number, a time object or a routing metric that is empty or impossible is reported instead of breaking the compile or matching everything.
+* Compiler (iptables, nftables): an interface whose name is longer than an interface name can be is reported instead of stopping every activation before the first rule.
+* Compiler (iptables, nftables): the address and netmask of a VLAN interface or a bridge port is checked the way the firewall's own interfaces are; a netmask of /0 one level down used to make every rule naming it match everything.
+* Compiler (iptables, nftables): the half of a rule that sets a traffic class stays in the chain the qdisc reads, instead of one where the kernel refuses it.
+* Compiler (nftables): "Log all rules" also logs the rules that tag or classify.
+* Compiler (nftables): a negated service the compiler cannot say in one rule gets a chain of its own, the way iptables writes it, or is reported - no part of it is left behind matching what it excludes.
+* Compiler (nftables): a rule naming a dynamic interface of the firewall's own cluster is compiled instead of being left out.
+* Compiler (nftables): a rule naming a TCP service that inspects the TCP flags beside the matching UDP service keeps the flag inspection, instead of applying to every packet on that port.
+* Compiler (nftables): a rule naming an unnumbered interface or a bridge port is left out instead of matching every address there is.
+* Compiler (nftables): a rule whose source, destination or service is negated matches what it says; several of them matched every packet, so a Deny rule blocked all traffic and an Accept rule let all of it through.
+* Compiler (nftables): a tagging or classifying rule is left out on a firewall configured not to forward packets, the way the iptables compiler leaves it out.
+* Compiler (nftables): a time-based rule on a firewall that uses the kernel timezone writes dates nftables accepts, instead of ones that make it refuse the whole ruleset.
+* Compiler (nftables): an accounting rule that logs counts every packet once.
+* Compiler (nftables): the generated script finds `nft` and `ip` wherever the distribution puts them, and checks that its tools are there before it touches the firewall.
+* Compiler (nftables): the old rules are removed after the new ones are in place, so an activation no longer leaves the machine without a firewall in between.
+* Editor: a failover group is shown below its cluster interface and a state sync group below its cluster, and each is checked against the cluster it belongs to ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
 * Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.
-* Editor: changing the address of a host also marks every firewall whose rules name that host as needing a recompile, so the compile dialog no longer offers one of the two ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
-* Editor: deleting an object also marks every firewall whose rules named it, so a policy the deletion changed elsewhere in the file is offered for a recompile ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
-* Editor: opening the action parameters of a NAT rule no longer risks clearing the rule's other settings.
-* Editor: renaming an interface or the firewall above it also renames the failover group and the "Attached Networks" object under it, so they no longer keep naming an interface that is gone.
-* Editor: the Branch action can be set on a rule again, and the rule set it jumps into is chosen by dragging it out of the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
-* Editor: the Branch action of a NAT rule names the NAT rule set it asks for, not the policy one.
-* Editor: the conntrack limits and the two TCP timeouts of the Linux host settings can be left at the kernel default again; the fields used to turn that into a zero.
-* Editor: the iptables settings offer "use kernel timezone" and the ipset match only on a firewall pinned to a release that has them, the way Firewall Builder does.
+* Editor: changing or deleting an object marks every firewall whose rules name it as needing a recompile ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
+* Editor: opening the action parameters of a NAT rule no longer risks clearing the rule's other settings, and names the NAT rule set a Branch action asks for.
+* Editor: renaming an interface or its firewall also renames the failover group and the "Attached Networks" object below it.
+* Editor: the conntrack limits and the two TCP timeouts of the Linux host settings can be left at the kernel default again.
+* Editor: the iptables settings offer "use kernel timezone" and the ipset match only on a firewall pinned to a release that has them.
+
 
 ## [v2.0.0] - 2026-08-24
 
