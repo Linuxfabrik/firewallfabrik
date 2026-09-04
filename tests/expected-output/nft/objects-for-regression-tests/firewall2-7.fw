@@ -10,6 +10,7 @@
 #
 #  tests for nat rules with inbound and outbound interfaces with complex interface configuration
 #
+# the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs
 # Can not add virtual address 22.22.22.0 (object "external_net"): no interface of the firewall is on that network
 
 FWBDEBUG=""

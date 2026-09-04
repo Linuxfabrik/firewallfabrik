@@ -66,6 +66,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_icmp_service,
     print_ip_option_matches,
     print_mark_match,
+    print_negated_services,
     print_pair_clause,
     tcp_flags_match_nft,
 )
@@ -186,6 +187,20 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'meta l4proto != {others[0]}')
             else:
                 parts.append(f'meta l4proto != {{ {", ".join(others)} }}')
+        elif rule.osrv_single_object_negation and len(rule.osrv) > 1:
+            # "None of these" is a conjunction, so the whole element has to
+            # be excluded by this one rule; a rule per service says "not
+            # this *or* not that" and translates every packet there is.
+            srv_match = print_negated_services(rule.osrv, bool(nft_comp.ipv6_policy))
+            if srv_match is None:
+                self.compiler.error(
+                    rule,
+                    'this rule excludes several services the nftables compiler '
+                    'cannot exclude in one rule; split it into one service per '
+                    'rule',
+                )
+                return ''
+            parts.append(srv_match)
         elif osrv:
             srv_match = self._print_service(osrv, rule)
             if srv_match is None:
@@ -741,6 +756,33 @@ class NATPrintRule_nft(NATRuleProcessor):
         src_start = srv.src_range_start or 0
         src_end = srv.src_range_end or 0
         src_ports = self._format_port_range(src_start, src_end)
+
+        if neg and len(rule.osrv) == 1:
+            # A negated service says "not (all of what it names)".  One
+            # condition inverts by turning its comparison into `!=`; two
+            # would have to be inverted as a disjunction.  A source and a
+            # destination port go into one concatenated lookup, which
+            # nftables inverts as a whole; a TCP flag beside a port has no
+            # field to be concatenated with and is reported.
+            dst_ports = self._format_port_range(
+                srv.dst_range_start or 0, srv.dst_range_end or 0
+            )
+            flags = (
+                tcp_flags_match_nft(srv, True) if isinstance(srv, TCPService) else ''
+            )
+            if flags and (src_ports or dst_ports):
+                self.compiler.error(
+                    rule,
+                    f'the service "{srv.name}" inspects TCP flags and names a '
+                    'port, and the nftables compiler cannot exclude both at '
+                    'once; split it into one service per condition',
+                )
+                return None
+            if src_ports and dst_ports:
+                return (
+                    f'{proto} sport . {proto} dport != {{ {src_ports} . {dst_ports} }}'
+                )
+
         if src_ports:
             parts.append(f'{proto} sport {neg}{src_ports}')
 
@@ -789,6 +831,77 @@ class NATPrintRule_nft(NATRuleProcessor):
         if start == end or end <= 0:
             return str(start)
         return f'{start}-{end}'
+
+    #: The placeholder the activation script replaces with each address the
+    #: interface turns out to carry.  It holds no character a shell or an
+    #: nftables statement gives a meaning to, so the substitution needs no
+    #: quoting and the template survives the word splitting that hands the
+    #: rule to `nft` one token at a time.
+    RUNTIME_ADDRESS_PLACEHOLDER = '@ADDR@'
+
+    def _runtime_translation_chain(
+        self, rule: CompRule, obj, verb: str, ports: str, flags: str
+    ) -> str:
+        """Return the chain a translation to a run-time address jumps into.
+
+        An interface that gets its address from DHCP or PPP carries none
+        the compiler could write into the rule, and a translation target
+        takes no set reference the way a match does - there is no
+        ``dnat to @set``.  ``nft -f`` reads the ruleset in one piece, so
+        the address cannot be spliced into the text either: the interface
+        may have several, or none, and each is a rule of its own.
+
+        So the hooked chain jumps into a regular chain that the ruleset
+        declares empty, and the script adds one rule per address it finds
+        once the ruleset is loaded.  That is the same shape the iptables
+        script writes, where the loop over ``$i_<iface>_list`` appends one
+        ``-j DNAT --to-destination $i_<iface>`` per address; an interface
+        without one leaves the chain empty and the packet returns to the
+        hooked chain, exactly as the ``test -n`` guard skips the iptables
+        rule.
+
+        An address object left under a dynamic interface is ignored, the
+        way the iptables printer ignores it: it is the address the device
+        had before the administrator ticked "dynamic", and
+        `objects-for-regression-tests.fwb` keeps a firewall around for
+        exactly that case.
+
+        Returns an empty string when *obj* is not such an interface, so
+        the caller falls through to the ordinary rendering.
+        """
+        if not isinstance(obj, Interface) or not obj.is_dynamic():
+            return ''
+
+        nft_comp = cast('NATCompiler_nft', self.compiler)
+        ipv6 = bool(nft_comp.ipv6_policy)
+
+        # The statement in the run-time chain carries no match of its own,
+        # so a port mapping there has no transport protocol in front of it
+        # and nft refuses the rule ("transport protocol mapping is only
+        # valid after transport protocol match", src/evaluate.c).  The
+        # protocol comes from the translated service, the same source
+        # `_nat_l4proto_prefix` reads it from for the hooked chain.
+        statement = []
+        if ports:
+            tsrv = nft_comp.get_first_tsrv(rule)
+            if isinstance(tsrv, TCPService):
+                statement.append('meta l4proto tcp')
+            elif isinstance(tsrv, UDPService):
+                statement.append('meta l4proto udp')
+        statement.append('counter')
+        address = self.RUNTIME_ADDRESS_PLACEHOLDER
+        if ports:
+            address = f'[{address}]' if ipv6 else address
+            statement.append(f'{verb} to {address}:{ports}{flags}')
+        else:
+            statement.append(f'{verb} to {address}{flags}')
+
+        rule_set = nft_comp.get_rule_set_name()
+        name = nft_object_name(f'rt_{verb}_{rule_set}_{rule.position}')
+        if ipv6:
+            name += '_v6'
+        nft_comp.runtime_nat_chains[name] = (obj.name, ipv6, ' '.join(statement))
+        return name
 
     @staticmethod
     def _bracket_v6_for_port(addr: str, ipv6: bool) -> str:
@@ -867,6 +980,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
+                runtime_chain = self._runtime_translation_chain(
+                    rule, tsrc, 'snat', ports, flags
+                )
+                if runtime_chain:
+                    return f'jump {runtime_chain}'
                 addr = self._print_addr(
                     tsrc, rule, for_match=False, fold_range=not ports
                 )
@@ -895,6 +1013,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
+                runtime_chain = self._runtime_translation_chain(
+                    rule, tdst, 'dnat', ports, flags
+                )
+                if runtime_chain:
+                    return f'jump {runtime_chain}'
                 addr = self._print_addr(
                     tdst, rule, for_match=False, fold_range=not ports
                 )

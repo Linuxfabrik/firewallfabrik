@@ -137,6 +137,18 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # adds.  See that processor for why the extra rule exists.
 OTHER_PROTOCOLS_OPTION = 'nft_other_protocols'
 
+#: The protocols a negated service element named, recorded before a
+#: processor splits the element into rules of its own.  The companion rule
+#: "every protocol the element does not name" has to be written once for
+#: the whole element: one per half says "not tcp" beside "not udp", and a
+#: packet is one protocol, so between them the two halves cover
+#: everything.  See `AddOtherProtocolsForNegatedService`.
+NEGATED_SRV_PROTOCOLS_OPTION = 'nft_negated_srv_protocols'
+
+#: Set on the half of such a split that must *not* write the companion,
+#: so the rule is written once and not once per half.
+NO_OTHER_PROTOCOLS_OPTION = 'nft_no_other_protocols'
+
 
 def other_protocols_for(services: list, ipv6: bool) -> list[str]:
     """Return the protocols a negated service element does *not* name.
@@ -460,6 +472,250 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
         # concatenation of the two fields against a one-element set.
         return f'{proto} type . {proto} code != {{ {type_str} . {icmp_code} }}'
     return f'{proto} type {type_str} {proto} code {icmp_code}'
+
+
+def print_negated_services(srvs: list, ipv6: bool) -> str | None:
+    """Return the matches that exclude *every* service in *srvs*, or ``None``.
+
+    A negated service element is a conjunction: "none of these".  Its
+    matches therefore belong in **one** rule, where nftables ANDs them.
+    One rule per service says "not this *or* not that", which every packet
+    satisfies as soon as two of the services differ, so the rule matches
+    everything - a Deny rule blocks all traffic and an Accept rule lets all
+    of it through.
+
+    The services handed in share one protocol, because
+    ``GroupServicesByProtocol`` splits the element by protocol first and
+    matches of two different protocols cannot be ANDed.  That split is
+    sound for a negated element: the rules it makes are disjoint by
+    protocol, and the companion
+    :class:`AddOtherProtocolsForNegatedService` writes covers what is left.
+
+    ``None`` means one of the services cannot be inverted here; the caller
+    reports it and leaves the rule out rather than emit a wider rule.
+    """
+    if not srvs:
+        return None
+
+    dst_ports: list[str] = []
+    src_ports: list[str] = []
+    port_pairs: list[str] = []
+    icmp_pairs: list[str] = []
+    icmp_types: list[str] = []
+    marks: list[str] = []
+    masked_marks: list[str] = []
+    uids: list[str] = []
+    proto_keyword = ''
+
+    for srv in srvs:
+        if isinstance(srv, (TCPService, UDPService)):
+            proto_keyword = 'tcp' if isinstance(srv, TCPService) else 'udp'
+            masks = getattr(srv, 'tcp_flags_masks', None) or {}
+            if any(masks.values()):
+                # The flags and the ports of one service are a conjunction
+                # of their own, and its negation is a disjunction that one
+                # rule cannot say.
+                return None
+            src = _port_range_text(srv.src_range_start or 0, srv.src_range_end or 0)
+            dst = _port_range_text(srv.dst_range_start or 0, srv.dst_range_end or 0)
+            if src and dst:
+                # The two halves of one service are a conjunction of their
+                # own, so they have to be inverted together; a concatenated
+                # lookup is what nftables inverts as a whole.
+                port_pairs.append(f'{src} . {dst}')
+            elif src:
+                src_ports.append(src)
+            elif dst:
+                dst_ports.append(dst)
+            else:
+                # "All TCP" names the protocol and nothing else, so the
+                # element excludes the protocol as a whole and every port
+                # of it the other services name is already covered.
+                return f'meta l4proto != {proto_keyword}'
+        elif isinstance(srv, (ICMPService, ICMP6Service)):
+            proto_keyword = 'ipv6-icmp' if ipv6 else 'icmp'
+            icmp_type, icmp_code = icmp_type_and_code(srv)
+            type_names = _ICMPV6_TYPE_NAMES if ipv6 else _ICMP_TYPE_NAMES
+            if icmp_type < 0:
+                # The service names no type, so it is the whole protocol.
+                return f'meta l4proto != {proto_keyword}'
+            type_str = type_names.get(icmp_type, str(icmp_type))
+            if icmp_code < 0:
+                icmp_types.append(type_str)
+            else:
+                icmp_pairs.append(f'{type_str} . {icmp_code}')
+        elif isinstance(srv, TagService):
+            tag_code = srv.get_code()
+            if not tag_code or not is_valid_packet_mark(tag_code):
+                return None
+            if '/' in tag_code:
+                masked_marks.append(print_mark_match(tag_code, True))
+            else:
+                marks.append(tag_code.strip())
+        elif isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if not uid or not is_valid_user_id(uid):
+                return None
+            uids.append(str(uid))
+        else:
+            return None
+
+    parts: list[str] = []
+    if src_ports:
+        parts.append(f'{proto_keyword} sport {_negated_set(src_ports)}')
+    if dst_ports:
+        parts.append(f'{proto_keyword} dport {_negated_set(dst_ports)}')
+    if port_pairs:
+        pairs = ', '.join(dict.fromkeys(port_pairs))
+        parts.append(f'{proto_keyword} sport . {proto_keyword} dport != {{ {pairs} }}')
+    if icmp_pairs:
+        payload = 'icmpv6' if ipv6 else 'icmp'
+        pairs = ', '.join(dict.fromkeys(icmp_pairs))
+        parts.append(f'{payload} type . {payload} code != {{ {pairs} }}')
+    if icmp_types:
+        payload = 'icmpv6' if ipv6 else 'icmp'
+        parts.append(f'{payload} type {_negated_set(icmp_types)}')
+    if marks:
+        parts.append(f'meta mark {_negated_set(marks)}')
+    parts.extend(masked_marks)
+    if uids:
+        parts.append(f'meta skuid {_negated_set(uids)}')
+
+    return ' '.join(parts) if parts else None
+
+
+# Firewall Builder numbers the three services that carry no IP protocol
+# above every real one (`Service::PSEUDO_PROTOCOL_MAP`).  A match built from
+# one of them - a packet mark, a socket owner, a fragment of platform text -
+# says nothing about the protocol, so two such rules are not disjoint the
+# way two protocol groups are.
+_PSEUDO_PROTOCOL_FLOOR = 65000
+
+
+def negated_services_need_a_chain(srvs: list, ipv6: bool) -> bool:
+    """Whether a negated element cannot be excluded by rules alone.
+
+    The mirror of what the print rules can say, and the question
+    :class:`SrvNegation` asks before it builds a chain.
+
+    A negated element is split by protocol, and that is sound as long as
+    the pieces are disjoint: a packet is one protocol, so the rule for TCP
+    and the rule for UDP never both see it, and the companion rule for
+    every other protocol covers the rest.  Two conditions break it - a
+    piece that carries no protocol at all beside another piece, and a
+    piece the printer cannot invert in one match.
+    """
+    groups: dict[int, list] = {}
+    for srv in srvs:
+        key = srv.get_protocol_number() if hasattr(srv, 'get_protocol_number') else -1
+        groups.setdefault(key, []).append(srv)
+
+    if len(groups) > 1 and any(key >= _PSEUDO_PROTOCOL_FLOOR for key in groups):
+        return True
+
+    for group in groups.values():
+        if len(group) == 1:
+            if _single_negated_service_needs_a_chain(group[0]):
+                return True
+        elif print_negated_services(group, ipv6) is None:
+            return True
+    return False
+
+
+def _single_negated_service_needs_a_chain(srv) -> bool:
+    """Whether a lone service cannot be inverted where it stands.
+
+    Everything else a lone service says is one condition, or a pair the
+    print rule concatenates.  A TCP flag beside a port is two conditions
+    with no field to concatenate them with, so its negation is a
+    disjunction and one rule cannot hold it.
+    """
+    if not isinstance(srv, (TCPService, UDPService)):
+        return False
+    masks = getattr(srv, 'tcp_flags_masks', None) or {}
+    names_a_port = any(
+        (
+            srv.src_range_start or 0,
+            srv.src_range_end or 0,
+            srv.dst_range_start or 0,
+            srv.dst_range_end or 0,
+        )
+    )
+    return bool(any(masks.values())) and names_a_port
+
+
+def negated_services_are_renderable(srvs: list, platform: str) -> bool:
+    """Whether every service of the element is certain to be matched.
+
+    Two answers depend on it, and both are about what is left standing
+    when one service cannot be rendered.  A chain excludes the element by
+    returning on each service, so a return rule that is dropped leaves the
+    chain with nothing but its action, which acts on all traffic.  And the
+    split by protocol writes one rule per group, so a group that is
+    dropped leaves the others matching what the element excludes.  Either
+    way the whole rule has to go instead.
+
+    The four types listed first always render.  The two that may not are
+    read for the property that decides it, which is the same property the
+    print rule reads.
+    """
+    for srv in srvs:
+        if isinstance(srv, (TCPService, UDPService, ICMPService, ICMP6Service)):
+            continue
+        if isinstance(srv, TagService):
+            code = srv.get_code()
+            if code and is_valid_packet_mark(code):
+                continue
+            return False
+        if isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid and is_valid_user_id(uid):
+                continue
+            return False
+        if isinstance(srv, CustomService):
+            # The code *is* the match; without one the print rule reports
+            # the service and renders nothing.
+            if custom_service_code(srv, platform):
+                continue
+            return False
+        if isinstance(srv, IPService):
+            data = srv.data or {}
+            # nftables has no ToS matcher, it refuses an unknown DiffServ
+            # class, and an IPv4 header option is gated on a release this
+            # function is not told about.
+            if data.get('tos', ''):
+                return False
+            dscp = data.get('dscp', '')
+            if dscp and not is_valid_dscp(dscp):
+                return False
+            if has_ip_options(data):
+                return False
+            continue
+        return False
+    return True
+
+
+def _port_range_text(start: int, end: int) -> str:
+    """Format a port range for nftables, empty when it names no port."""
+    if start <= 0 and end <= 0:
+        return ''
+    if start == end or end <= 0:
+        return str(start)
+    return f'{start}-{end}'
+
+
+def _negated_set(values: list[str]) -> str:
+    """Return ``!= value`` for one value and ``!= { a, b }`` for several.
+
+    Two service objects may name the same port, and nftables takes the
+    duplicate element without a word - it just says the same thing twice.
+    The order the services came in is kept, because it is the order the
+    editor shows.
+    """
+    unique = list(dict.fromkeys(values))
+    if len(unique) == 1:
+        return f'!= {unique[0]}'
+    return f'!= {{ {", ".join(unique)} }}'
 
 
 def indent_comment_block(block: str) -> str:
@@ -1266,6 +1522,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         if rule.merged_tcp_udp:
             return self._print_merged_tcp_udp_service(rule, negated)
 
+        if negated and len(rule.srv) > 1:
+            # "None of these" is a conjunction, so the whole element has to
+            # be excluded by this one rule.
+            match = print_negated_services(rule.srv, bool(self.compiler.ipv6_policy))
+            if match is None:
+                self.compiler.error(
+                    rule,
+                    'this rule excludes several services the nftables compiler '
+                    'cannot exclude in one rule; split it into one service per '
+                    'rule',
+                )
+            return match
+
         if srv is None:
             return ''
 
@@ -1473,11 +1742,21 @@ class PrintRule_nft(PolicyRuleProcessor):
         """Format TCP flag inspection for nftables."""
         return tcp_flags_match_nft(srv, negated)
 
-    def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
+    def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str | None:
         """Print TCP/UDP service matching.
 
         For multiple services (multiport), nftables uses sets natively:
             tcp dport { 22, 80, 443 }
+
+        A negated service says "not (all of what it names)".  One
+        condition inverts by turning its comparison into ``!=``; a source
+        port *and* a destination port are two, and inverting each of them
+        asks for a packet that is neither on that source port nor on that
+        destination port - a narrower rule than the one written, so the
+        traffic the element excludes goes unmatched.  The pair goes into
+        one concatenated lookup instead, which nftables inverts as a whole
+        (``lookup ... 0x1`` in ``nft --debug=netlink``).  A TCP flag
+        beside a port cannot be paired that way and is reported.
         """
         parts = []
 
@@ -1520,6 +1799,19 @@ class PrintRule_nft(PolicyRuleProcessor):
                     srv, negated=bool(rule.srv_single_object_negation)
                 )
 
+            if neg and src_ports and dst_ports and not flags:
+                return (
+                    f'{proto} sport . {proto} dport != {{ {src_ports} . {dst_ports} }}'
+                )
+            if neg and flags and (src_ports or dst_ports):
+                self.compiler.error(
+                    rule,
+                    f'the service "{srv.name}" inspects TCP flags and names a '
+                    'port, and the nftables compiler cannot exclude both at '
+                    'once; split it into one service per condition',
+                )
+                return None
+
             if src_ports:
                 parts.append(f'{proto} sport {neg}{src_ports}')
             if dst_ports:
@@ -1546,9 +1838,35 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         A negated element inverts the port match; the protocol stays as it is,
         because the rule is about those ports, not about TCP and UDP as such.
+        A service that names a source *and* a destination port names the
+        combination, so the two go into one concatenated lookup - inverting
+        each on its own asks for a packet that is on neither, which is
+        narrower than the rule written.
         """
         neg = '!= ' if negated else ''
         parts = ['meta l4proto { tcp, udp }']
+
+        if negated:
+            pairs = [
+                (
+                    _port_range_text(s.src_range_start or 0, s.src_range_end or 0),
+                    _port_range_text(s.dst_range_start or 0, s.dst_range_end or 0),
+                )
+                for s in rule.srv
+                if isinstance(s, (TCPService, UDPService))
+            ]
+            both = [f'{src} . {dst}' for src, dst in pairs if src and dst]
+            if both:
+                only_src = sorted({src for src, dst in pairs if src and not dst})
+                only_dst = sorted({dst for src, dst in pairs if dst and not src})
+                if only_src:
+                    parts.append(f'th sport {_negated_set(only_src)}')
+                if only_dst:
+                    parts.append(f'th dport {_negated_set(only_dst)}')
+                parts.append(
+                    f'th sport . th dport != {{ {", ".join(dict.fromkeys(both))} }}'
+                )
+                return ' '.join(parts)
 
         # Collect unique port ranges from all TCP/UDP services
         src_ports: list[str] = []
@@ -1589,11 +1907,7 @@ class PrintRule_nft(PolicyRuleProcessor):
     @staticmethod
     def _format_port_range(start: int, end: int) -> str:
         """Format a port range for nftables."""
-        if start <= 0 and end <= 0:
-            return ''
-        if start == end or end <= 0:
-            return str(start)
-        return f'{start}-{end}'
+        return _port_range_text(start, end)
 
     def _negate_single_match(
         self, rule: CompRule, parts: list[str], what: str

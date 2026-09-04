@@ -40,6 +40,9 @@ from firewallfabrik.core.objects import (
     StateSyncClusterGroup,
     netmask_prefix_length,
 )
+from firewallfabrik.driver._interface_properties import (
+    FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS,
+)
 from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
@@ -58,6 +61,26 @@ STATE_SYNC_PROTOCOLS = frozenset({'conntrack'})
 def _as_uuid(value):
     """Accept either a UUID or its string spelling."""
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+
+
+def _every_interface(fw):
+    """Yield every interface of *fw*, sub-interfaces included.
+
+    ``fw.interfaces`` is the top level alone.  Firewall Builder reads
+    the same list with ``getByTypeDeep(Interface::TYPENAME)``
+    (CompilerDriver.cpp:443), and it has to: a VLAN interface hangs
+    under the interface it tags and carries an address of its own, and
+    a bridge port hangs under the bridge.
+    """
+    pending = list(fw.interfaces)
+    seen: set = set()
+    while pending:
+        iface = pending.pop()
+        if iface.id in seen:
+            continue
+        seen.add(iface.id)
+        yield iface
+        pending.extend(iface.sub_interfaces)
 
 
 def _one_edit_apart(typed: str, known: str) -> bool:
@@ -834,12 +857,32 @@ class CompilerDriver(BaseCompiler):
         so the interface of a firewall silently stood for one host instead
         of for its network, in a script that loads without a word.
 
+        Sub-interfaces are checked too, the way ``commonChecks2`` reads
+        them (``fw->getByTypeDeep(Interface::TYPENAME)``): a VLAN
+        interface carries the address of its tag, and a netmask of /0 on
+        it makes every rule naming it match every address - which is the
+        failure this check exists to stop, one level down.
+
         Returns a human-readable error string, or an empty string on
         success.
         """
-        for iface in fw.interfaces:
+        for iface in _every_interface(fw):
+            parent = iface.parent_interface
+            if parent is not None:
+                said = self._check_bridge_port(fw, iface, parent)
+                if said:
+                    return said
             if not iface.is_regular():
                 continue
+            if not isinstance(fw, Cluster):
+                # A cluster compiled as itself is fwf's own mode - Firewall
+                # Builder answers a cluster name by compiling its members -
+                # and there an interface without an address is ordinary:
+                # the address of that name is on the member, and the member
+                # is checked when it is compiled.
+                said = self._check_interface_has_an_address(iface)
+                if said:
+                    return said
             for addr in iface.addresses:
                 # Only an address/netmask pair is this check's business.  A
                 # physAddress child of the same interface carries a MAC,
@@ -889,6 +932,87 @@ class CompilerDriver(BaseCompiler):
                     )
         return ''
 
+    @staticmethod
+    def _check_interface_has_an_address(iface) -> str:
+        """A regular interface without an address matches nothing.
+
+        Ports the "Missing IP address for interface" abort of
+        ``CompilerDriver::commonChecks2``.  Every rule naming such an
+        interface is compiled with an empty element, and an empty element
+        is "any" everywhere in both compilers - so a rule written for one
+        host becomes a rule for every address there is, in a script that
+        loads without a word.  The interface block names it as well and
+        `update_addresses_of_interface` then has nothing to configure.
+
+        The one exception Firewall Builder makes is the interface of a
+        cluster whose failover protocol brings the shared address with it:
+        `no_ip_ok` is True for heartbeat, openais and "none" and False for
+        vrrp (`res/os/linux24.xml`).  The protocol is read off the copy
+        the driver makes for the member (`failover_protocol`) and, when
+        the cluster object itself is compiled, off the group under the
+        interface.
+        """
+        # The same exclusion the address loop below makes, so the two
+        # readers of one collection answer the same question: a MAC, an
+        # address range and a run-time object are not the address of an
+        # interface.  The C++ asks it by type
+        # (`getByType(IPv4::TYPENAME)` plus the IPv6 one).
+        if any(
+            not isinstance(addr, AddressRange | MultiAddressRunTime | PhysAddress)
+            and addr.get_address()
+            for addr in iface.addresses
+        ):
+            return ''
+        if iface.get_option('cluster_interface', False):
+            group = iface.get_failover_group()
+            protocol = (
+                group.get_protocol()
+                if group is not None
+                else str(iface.get_option('failover_protocol', '') or '')
+            )
+            if protocol in FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS:
+                return ''
+        return (
+            f'Interface {iface.name} (id={iface.id}) has no IP address. '
+            'Every rule naming it would match every address. Give it the '
+            'address it has on the firewall, or mark it dynamic if it gets '
+            'one at boot time, or unnumbered if it never has one.'
+        )
+
+    def _check_bridge_port(self, fw, iface, parent) -> str:
+        """A bridge port named like a VLAN interface needs its own object.
+
+        Ports the second abort of ``CompilerDriver::commonChecks2``.  The
+        port is typed `ethernet`, so nothing creates the VLAN device it is
+        named after; Firewall Builder builds it from the *top-level*
+        interface object of the same name, and without one the bridge is
+        given a port that is not there.  `update_bridge` then fails on it
+        and the activation stops before the first rule.
+        """
+        if parent.get_option('type', '') != 'bridge':
+            return ''
+        if (iface.get_option('type', '') or 'ethernet') != 'ethernet':
+            return ''
+        if not self._interface_properties().looks_like_vlan(iface.name):
+            return ''
+        for other in _every_interface(fw):
+            if other.id != iface.id and other.name == iface.name:
+                return ''
+        return (
+            f'Interface {iface.name} is a port of the bridge {parent.name} '
+            'and is named like a VLAN interface. Nothing creates it under '
+            'that name, so give the firewall an interface of its own called '
+            f'"{iface.name}" for the bridge to take as a port.'
+        )
+
+    @staticmethod
+    def _interface_properties():
+        from firewallfabrik.driver._interface_properties import (
+            LinuxInterfaceProperties,
+        )
+
+        return LinuxInterfaceProperties()
+
     # -- Option validation --
 
     # Firewall options recognised by the C++ Firewall Builder that are not
@@ -899,18 +1023,24 @@ class CompilerDriver(BaseCompiler):
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
         (
-            'configure_bonding_interfaces',
+            'use_ULOG',
+            'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
+        ),
+    ]
+
+    # The interface kinds Firewall Builder creates and this compiler does
+    # not (#95), by the `type` its editor and Firewall Builder both store
+    # (`res/os/linux24.xml`, and `iface_opts_dialog.py`).
+    _UNCREATABLE_INTERFACE_TYPES: ClassVar[list[tuple[str, str]]] = [
+        (
+            'bonding',
             'the generated script does not create or remove bonding interfaces; '
             'they have to exist on the firewall before it runs',
         ),
         (
-            'configure_vlan_interfaces',
+            '8021q',
             'the generated script does not create or remove VLAN interfaces; '
             'they have to exist on the firewall before it runs',
-        ),
-        (
-            'use_ULOG',
-            'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
         ),
     ]
 
@@ -920,7 +1050,66 @@ class CompilerDriver(BaseCompiler):
             if option_is_true(options.get(opt, False)):
                 self.warning(msg)
         if fw is not None:
+            self._warn_uncreatable_interfaces(fw)
+            if option_is_true(options.get('configure_bridge_interfaces', False)):
+                self._report_nested_bridges(fw)
             self._warn_misspelled_options(options, fw)
+
+    def _report_nested_bridges(self, fw) -> None:
+        """Report a bridge that hangs under another interface.
+
+        The bridge block collects its bridges from the firewall's
+        top-level interfaces, the way
+        ``printBridgeInterfaceConfigurationCommands`` does, so a bridge
+        that is a sub-interface of something is never built: no
+        ``sync_bridge_interfaces``, no ``update_bridge``, and none of its
+        own ports enslaved - and until now not a word either.
+        ``OSConfigurator_linux24::validateInterfaces`` calls the same
+        configuration unsupported and aborts on it, so this says so too.
+        """
+
+        def walk(iface, depth: int) -> None:
+            if depth and iface.get_option('type', '') == 'bridge':
+                self.error(
+                    f'Interface "{iface.name}" is a bridge below the interface '
+                    f'"{iface.parent_interface.name}". A bridge has to be an '
+                    'interface of the firewall itself; below another one it is '
+                    'not configured at all'
+                )
+            for child in iface.sub_interfaces:
+                walk(child, depth + 1)
+
+        for iface in fw.interfaces:
+            walk(iface, 0)
+
+    def _warn_uncreatable_interfaces(self, fw) -> None:
+        """Warn about an interface the script names and cannot create.
+
+        The question is what the firewall *has*, not what its options
+        say.  Firewall Builder creates a bonding or VLAN interface when
+        `configure_bonding_interfaces` / `configure_vlan_interfaces` is
+        set, so there the option is the whole answer; this compiler
+        creates neither, either way.  What it does do is name the
+        interface in `verify_interfaces` and in
+        `update_addresses_of_interface`, and the first of those ends the
+        activation with `exit 1` on a machine where nothing has created
+        it - before a single rule is installed.  Keying the warning on
+        the option left three firewalls of the reference corpus silent
+        about exactly that.
+        """
+        present = set()
+
+        def walk(iface) -> None:
+            present.add(str(iface.get_option('type', '') or ''))
+            for child in iface.sub_interfaces:
+                walk(child)
+
+        for iface in fw.interfaces:
+            walk(iface)
+
+        for iface_type, msg in self._UNCREATABLE_INTERFACE_TYPES:
+            if iface_type in present:
+                self.warning(msg)
 
     def _warn_misspelled_options(self, options: dict, fw) -> None:
         """Warn about an option key that looks like a misspelled one.

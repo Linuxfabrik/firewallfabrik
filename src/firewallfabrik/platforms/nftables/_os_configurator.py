@@ -499,11 +499,16 @@ class OSConfigurator_nft(OSConfigurator):
         gencmd.append(f'sync_bridge_interfaces {" ".join(bridge_names)}')
 
         for bridge in bridges:
-            port_names = [
-                sub.name
-                for sub in bridge.sub_interfaces
-                if sub.get_option('type', '') not in ('vlan',)
-            ]
+            # Every sub-interface is a port, the way
+            # `printBridgeInterfaceConfigurationCommands` collects them
+            # (OSConfigurator_linux24_interfaces.cpp:376, no test on the
+            # type).  The filter that stood here asked for the type
+            # `vlan`, which neither Firewall Builder nor this editor ever
+            # writes - both spell it `8021q` - so it read as a guard and
+            # was none.  A VLAN sub-interface of a bridge is the shape
+            # `validateInterfaces` refuses; here it is covered by the
+            # warning that this script creates no VLAN interface (#95).
+            port_names = [sub.name for sub in bridge.sub_interfaces]
             # The whole port list goes in as one argument, the way
             # `printBridgeInterfaceConfigurationCommands` writes the call
             # (OSConfigurator_linux24_interfaces.cpp:390) and the way the

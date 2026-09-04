@@ -33,12 +33,31 @@ class _Firewall:
     host_os = 'linux24'
 
 
+class _Interface:
+    def __init__(self, name, iface_type, sub_interfaces=()):
+        self.name = name
+        self.iface_type = iface_type
+        self.sub_interfaces = list(sub_interfaces)
+        self.parent_interface = None
+
+    def get_option(self, key, default=None):
+        return self.iface_type if key == 'type' else default
+
+
+class _FirewallWithInterfaces(_Firewall):
+    def __init__(self, interfaces):
+        self.interfaces = list(interfaces)
+
+
 class _Driver(CompilerDriver):
     def __init__(self):
         self.said = []
 
     def warning(self, message):
         self.said.append(message)
+
+    def error(self, message, msg=None):
+        self.said.append(message if msg is None else msg)
 
 
 def _warnings(options):
@@ -98,17 +117,38 @@ def test_the_slips_a_hand_makes_are_all_covered():
 
 
 def test_a_setting_the_compiler_does_not_implement_is_named():
-    """The option is in the schema, the script does not act on it.
+    driver = _Driver()
+    driver._warn_unsupported_options({'use_ULOG': True})
 
-    Both belong to the bonding and VLAN interface configuration
-    (https://github.com/Linuxfabrik/firewallfabrik/issues/95), which
-    Firewall Builder writes into the generated script and this compiler
-    does not.  Without a word the administrator gets a script that comes
-    up without the interfaces the rules are written for.
+    assert len(driver.said) == 1
+    assert 'ULOG' in driver.said[0]
+
+
+def test_a_setting_left_at_its_default_says_nothing():
+    driver = _Driver()
+    driver._warn_unsupported_options({'use_ULOG': False})
+
+    assert driver.said == []
+
+
+def test_an_interface_the_script_cannot_create_is_named():
+    """Bonding and VLAN interfaces (#95).
+
+    Firewall Builder creates them and this compiler does not, so the
+    activation stops at `verify_interfaces` on a machine where nothing
+    else has.  The answer is what the firewall *has*, not what its
+    options say: three firewalls of the reference corpus name a VLAN
+    interface with `configure_vlan_interfaces` off, and an
+    option-keyed warning left every one of them silent.
     """
     driver = _Driver()
-    driver._warn_unsupported_options(
-        {'configure_bonding_interfaces': True, 'configure_vlan_interfaces': True}
+    driver._warn_uncreatable_interfaces(
+        _FirewallWithInterfaces(
+            [
+                _Interface('bond0', 'bonding', [_Interface('bond0.1', '8021q')]),
+                _Interface('eth0', 'ethernet'),
+            ]
+        )
     )
 
     assert len(driver.said) == 2
@@ -116,10 +156,71 @@ def test_a_setting_the_compiler_does_not_implement_is_named():
     assert any('VLAN' in message for message in driver.said)
 
 
-def test_a_setting_left_at_its_default_says_nothing():
+def test_an_option_without_such_an_interface_says_nothing():
+    """There is nothing to create, so the script is the same either way."""
     driver = _Driver()
     driver._warn_unsupported_options(
-        {'configure_bonding_interfaces': False, 'configure_vlan_interfaces': False}
+        {'configure_bonding_interfaces': True, 'configure_vlan_interfaces': True},
+        _FirewallWithInterfaces([_Interface('eth0', 'ethernet')]),
     )
+
+    assert driver.said == []
+
+
+def test_a_sub_interface_is_reached_too():
+    """A VLAN hangs under the interface it tags, never at the top."""
+    driver = _Driver()
+    driver._warn_uncreatable_interfaces(
+        _FirewallWithInterfaces(
+            [_Interface('eth0', 'ethernet', [_Interface('eth0.100', '8021q')])]
+        )
+    )
+
+    assert len(driver.said) == 1
+    assert 'VLAN' in driver.said[0]
+
+
+def test_a_bridge_below_another_interface_is_reported():
+    """The bridge block only collects top-level interfaces (#95, bridges).
+
+    `validateInterfaces` calls the configuration unsupported and aborts;
+    without a word the bridge is simply never built - no
+    `sync_bridge_interfaces`, no `update_bridge`, no port enslaved.
+    """
+    inner = _Interface('br1', 'bridge')
+    outer = _Interface('br0', 'bridge', [inner])
+    inner.parent_interface = outer
+
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bridge_interfaces': True},
+        _FirewallWithInterfaces([outer]),
+    )
+
+    assert len(driver.said) == 1
+    assert 'br1' in driver.said[0]
+    assert 'br0' in driver.said[0]
+
+
+def test_a_bridge_of_the_firewall_itself_says_nothing():
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bridge_interfaces': True},
+        _FirewallWithInterfaces(
+            [_Interface('br0', 'bridge', [_Interface('eth1', 'ethernet')])]
+        ),
+    )
+
+    assert driver.said == []
+
+
+def test_a_nested_bridge_says_nothing_when_bridges_are_not_configured():
+    """With the setting off the script builds no bridge at all."""
+    inner = _Interface('br1', 'bridge')
+    outer = _Interface('br0', 'bridge', [inner])
+    inner.parent_interface = outer
+
+    driver = _Driver()
+    driver._warn_unsupported_options({}, _FirewallWithInterfaces([outer]))
 
     assert driver.said == []

@@ -39,8 +39,10 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
-    group_membership,
-    rule_elements,
+)
+from firewallfabrik.gui.object_usage import (
+    containment_chain,
+    find_referencing_firewalls,
 )
 from firewallfabrik.gui.policy_model import _action_label
 
@@ -55,17 +57,9 @@ def _find_parent_firewall(obj):
     fwbuilder's ``UsageResolver::findFirewallsForObject`` direct-parent
     walk (``while (f && !Firewall::cast(f)) f=f->getParent()``).
     """
-    if isinstance(obj, Firewall):
-        return obj
-    if isinstance(obj, Interface):
-        # Sub-interface → walk up to top-level interface first.
-        iface = obj
-        while iface.parent_interface is not None:
-            iface = iface.parent_interface
-        device = iface.device
-        return device if isinstance(device, Firewall) else None
-    if isinstance(obj, Address) and obj.interface is not None:
-        return _find_parent_firewall(obj.interface)
+    for parent in containment_chain(obj):
+        if isinstance(parent, Firewall):
+            return parent
     return None
 
 
@@ -86,50 +80,6 @@ def _session_has_real_changes(session):
             if getattr(obj, key, old_val) != old_val:
                 return True
     return False
-
-
-def _find_referencing_firewalls(session, obj_id):
-    """Find all Firewalls whose rules reference *obj_id*.
-
-    Walks up the group hierarchy (transitively) so that editing a
-    member of a ServiceGroup also stamps Firewalls using that group.
-    Mirrors fwbuilder's ``UsageResolver::findFirewallsForObject``
-    rule-element search.
-    """
-    # Collect the object itself plus all groups (transitively) containing it.
-    search_ids = {obj_id}
-    queue = [obj_id]
-    while queue:
-        member_id = queue.pop()
-        parent_group_ids = set(
-            session.scalars(
-                sqlalchemy.select(group_membership.c.group_id).where(
-                    group_membership.c.member_id == member_id,
-                ),
-            ).all()
-        )
-        for gid in parent_group_ids:
-            if gid not in search_ids:
-                search_ids.add(gid)
-                queue.append(gid)
-
-    # Find every Firewall that references any of these IDs in its rules.
-    device_ids = set(
-        session.scalars(
-            sqlalchemy.select(RuleSet.device_id)
-            .distinct()
-            .join(Rule, Rule.rule_set_id == RuleSet.id)
-            .join(rule_elements, rule_elements.c.rule_id == Rule.id)
-            .where(rule_elements.c.target_id.in_(search_ids)),
-        ).all()
-    )
-
-    firewalls = []
-    for did in device_ids:
-        fw = session.get(Host, did)
-        if isinstance(fw, Firewall):
-            firewalls.append(fw)
-    return firewalls
 
 
 # Messages shown when double-clicking an "Any" element in a rule cell.
@@ -660,26 +610,30 @@ class EditorManager(QObject):
         ref_firewalls = []
 
         if has_changes:
-            # Stamp the lastModified timestamp on the owning
-            # Firewall/Cluster so the compile dialog and bold-tree
-            # display know recompilation is needed.  Walk up the
-            # hierarchy (Address → Interface → Firewall) just like
-            # fwbuilder's UsageResolver::findFirewallsForObject.
+            # Stamp the lastModified timestamp so the compile dialog and
+            # the bold tree entry know a recompile is due.  Two answers,
+            # and fwbuilder gives both (ProjectPanel_events.cpp:137-150
+            # walks up to the firewall *and* calls
+            # registerModifiedObject, which reaches
+            # UsageResolver::findFirewallsForObject): the firewall the
+            # object belongs to, and every other firewall whose rules
+            # name it.  Asking only the first leaves the neighbour
+            # compiling against an address that has changed (#159).
             now_epoch = None
             if fw is not None:
                 now_epoch = int(datetime.now(tz=UTC).timestamp())
                 data = dict(fw.data or {})
                 data['lastModified'] = now_epoch
                 fw.data = data
-            elif obj is not None:
-                # Shared library object: stamp every Firewall that
-                # references it (directly or through group membership).
-                ref_firewalls = _find_referencing_firewalls(
-                    session,
-                    obj.id,
-                )
+            if obj is not None:
+                ref_firewalls = [
+                    rfw
+                    for rfw in find_referencing_firewalls(session, obj)
+                    if fw is None or rfw.id != fw.id
+                ]
                 if ref_firewalls:
-                    now_epoch = int(datetime.now(tz=UTC).timestamp())
+                    if now_epoch is None:
+                        now_epoch = int(datetime.now(tz=UTC).timestamp())
                     for rfw in ref_firewalls:
                         data = dict(rfw.data or {})
                         data['lastModified'] = now_epoch
@@ -752,7 +706,7 @@ class EditorManager(QObject):
                 self.object_saved.emit(fw)
             self.mdi_titles_changed.emit(fw)
 
-        # Refresh all referencing Firewalls for shared library objects.
+        # Refresh every other firewall whose rules name the object.
         for rfw in ref_firewalls:
             self.object_saved.emit(rfw)
             self.mdi_titles_changed.emit(rfw)

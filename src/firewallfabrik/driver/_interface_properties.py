@@ -28,6 +28,15 @@ from firewallfabrik.core.objects import (
 #: from.
 FAILOVER_PROTOCOLS_MANAGING_ADDRESSES: frozenset[str] = frozenset()
 
+#: The failover protocols whose cluster interface may carry no address at
+#: all.  `no_ip_ok` in `res/os/linux24.xml`: True for heartbeat, openais
+#: and "none", False for vrrp, which needs one.  Every other regular
+#: interface without an address is refused, because a rule naming it
+#: compiles into an element that matches everything.
+FAILOVER_PROTOCOLS_WITHOUT_AN_ADDRESS: frozenset[str] = frozenset(
+    {'heartbeat', 'none', 'openais'}
+)
+
 
 def get_interface_var_name(iface: Interface, suffix: str = '') -> str:
     """Generate a shell variable name for an interface.

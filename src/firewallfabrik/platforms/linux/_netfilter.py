@@ -1185,7 +1185,18 @@ def custom_service_nftables_code(
                 index += 1
                 if states is None:
                     return None
-                parts.append(f'ct state {"!= " if negated else ""}{states}')
+                # `!` and not `!=`: a connection state is a bitmask, and
+                # the two operators mean different things on one.  `!`
+                # compiles to `state & <bits> == 0` - none of them set,
+                # which is what `! --state NEW,RELATED` says.  `!=` on a
+                # list compiles to `state != <bits>`, and since a packet
+                # carries exactly one state bit that is true for every
+                # packet there is, NEW and RELATED included (netfilter
+                # nftables src/netlink_linearize.c, netlink_gen_flagcmp;
+                # `nft --debug=netlink` prints both).  It is also the
+                # spelling netfilter's own translator writes
+                # (extensions/libxt_conntrack.txlate).
+                parts.append(f'ct state {"! " if negated else ""}{states}')
                 continue
             if module == 'owner':
                 negated, index = _take_negation(index)

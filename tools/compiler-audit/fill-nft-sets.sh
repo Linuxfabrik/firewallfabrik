@@ -47,19 +47,22 @@ command -v unshare >/dev/null 2>&1 || { echo "unshare not installed" >&2; exit 2
 failed=0
 total=0
 while IFS= read -r script; do
-    grep -q '^load_address_tables() {' "$script" || continue
+    grep -qE '^(load_address_tables|load_runtime_nat_rules)\(\) \{' "$script" || continue
     rules=$(mktemp)
     awk "/<<.?NFT_RULES.?\$/{flag=1;next}/^NFT_RULES\$/{flag=0}flag" "$script" >"$rules"
     [ -s "$rules" ] || { rm -f "$rules"; continue; }
     total=$((total + 1))
 
     funcs=$(mktemp)
-    awk '/^(load_address_table|load_dns_name|load_interface_address|load_address_tables)\(\) \{/{f=1}
+    awk '/^(load_address_table|load_dns_name|load_interface_address|load_address_tables|load_interface_nat_rule|load_runtime_nat_rules)\(\) \{/{f=1}
          f{print}
          f&&/^\}$/{f=0}' "$script" >"$funcs"
 
-    # Every device a loader names, with the glob part cut off.
-    devices=$(grep -oE 'load_interface_address "[^"]*" "[^"]*" "[^"]*" "[^"]*"' "$script" |
+    # Every device a loader names, with the glob part cut off.  The NAT
+    # loader names one too: its chain is filled with one rule per address
+    # of that device, and a device that is not there leaves it empty.
+    devices=$( { grep -oE 'load_interface_address "[^"]*" "[^"]*" "[^"]*" "[^"]*"' "$script"
+        grep -oE 'load_interface_nat_rule "[^"]*" "[^"]*" "[^"]*" "[^"]*"' "$script"; } |
         sed -E 's/.*" "([^"]*)"$/\1/' | sed 's/[*+].*//' | grep -v '^$' | sort -u)
 
     # Every name a load_dns_name call resolves, with two addresses per
@@ -102,7 +105,8 @@ while IFS= read -r script; do
         done
         echo "nft --file '$rules' || exit 9"
         cat "$funcs"
-        echo 'load_address_tables'
+        echo 'type load_address_tables >/dev/null 2>&1 && load_address_tables'
+        echo 'type load_runtime_nat_rules >/dev/null 2>&1 && load_runtime_nat_rules'
         # A set that stayed empty matches nothing, which is the silent half
         # of this.  A `flags dynamic` set is meant to start empty: the rule
         # that counts in it puts the elements there as it sees them.
@@ -112,6 +116,14 @@ nft --stateless list ruleset | awk '
     /flags .*dynamic/ { dynamic = 1 }
     /elements =/ { empty = 0 }
     /^\t*}$/     { if (name != "" && empty && !dynamic) print "EMPTY SET " name; name = "" }
+'
+# A chain the script fills after the load is the same silent half: a NAT
+# rule jumps into it, and while it is empty the traffic that rule names
+# goes out untranslated.
+nft --stateless list ruleset | awk '
+    /^\t*chain rt_/ { name = $2; empty = 1 }
+    /^\t\t[a-z]/    { if (name != "") empty = 0 }
+    /^\t*}$/       { if (name != "" && empty) print "EMPTY CHAIN " name; name = "" }
 '
 PROBE
     } >"$driver"

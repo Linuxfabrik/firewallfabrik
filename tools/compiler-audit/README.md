@@ -27,6 +27,7 @@ not.
 | `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
+| `check-negations.py` | is a negated element still one rule? | "not this *or* not that", which every packet satisfies - a Deny that blocks nothing, an Accept that lets nothing through |
 | `compare-order.py` | do the two platforms put one base chain's rules in one order? | a Deny that lands after the Accept it was written above, which no other check can see - first match wins and every other oracle compares sets |
 | `parity.py` | do our nftables rules check what `iptables-translate` says they should? | a condition one platform checks and the other does not |
 | `parity.py --values` | and do they check it against the same value? | a wrong port, a wrong mask, an inverted operator |
@@ -51,6 +52,7 @@ tools/compiler-audit/replay-twice.sh /tmp/audit
 tools/compiler-audit/replay-routes.sh /tmp/audit
 tools/compiler-audit/replay-interfaces.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
+python tools/compiler-audit/check-negations.py /tmp/audit
 ```
 
 `replay-iptables.sh` calls `script_body` and nothing above it, so the
@@ -234,6 +236,14 @@ Only lines that append a rule are compared, and the nftables `counter`
 statement is normalised away. Both matter: without them an unchanged corpus
 reads as a hundred percent changed, because `counter` decides nothing and
 `reset_all` contains `$IPTABLES` without installing a rule.
+
+Only the here-document holds the ruleset, and the tool stops reading
+there.  `$NFT -f` appears twice more further down - once reading the same
+ruleset back from a pipe, once reading standard input in the block action
+- and treating either as the start of a ruleset made every shell line
+below it a rule, keyed on the last chain the tool had seen.  A tenth of
+what it counted was not a rule, and any change that adds a chain at the
+end of a table moved all of it at once.
 
 Every nftables rule is compared together with the table and chain it sits
 in. An iptables command names its chain (`-A input`), an nft rule only has

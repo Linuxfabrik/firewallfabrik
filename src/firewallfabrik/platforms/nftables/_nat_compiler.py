@@ -80,6 +80,8 @@ from firewallfabrik.platforms.linux._netfilter import (
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._print_rule import (
     OTHER_PROTOCOLS_OPTION,
+    negated_services_are_renderable,
+    negated_services_need_a_chain,
     other_protocols_for,
 )
 
@@ -131,6 +133,13 @@ class NATCompiler_nft(NATCompiler):
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
+
+        # The regular chains that hold a translation to an address only the
+        # firewall knows, keyed by chain name and holding the interface the
+        # address comes from, its address family and the rule the script
+        # writes once per address it finds.  See `NATPrintRule_nft.
+        # _runtime_translation_chain`.
+        self.runtime_nat_chains: dict[str, tuple[str, bool, str]] = {}
 
         # Per-chain rule collection for nftables output assembly
         self.chain_rules: dict[str, list[str]] = {
@@ -963,15 +972,43 @@ class NftNegationOSrv(NATRuleProcessor):
 
     nftables supports native '!=' matching, so multi-object negation in
     OSrv can be converted to inline negation without temporary chains.
+
+    An element that needs more than one rule to be excluded has nowhere to
+    go here: the policy compiler answers that with a chain of its own
+    (``SrvNegation``) and this compiler has no chain to build - a nat hook
+    reaches its chains through the translation, not through a jump the
+    negation could hang off.  Such a rule is reported and left out, and
+    the whole rule at that: the protocol split would leave the groups that
+    do render standing on their own, each of them matching packets the
+    element excludes, so the rule would translate exactly the traffic it
+    was written to leave alone.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.get_neg('osrv'):
-            rule.osrv_single_object_negation = True
-            rule.set_neg('osrv', False)
+        if not rule.get_neg('osrv'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        if len(rule.osrv) > 1 and (
+            negated_services_need_a_chain(rule.osrv, ipv6)
+            or not negated_services_are_renderable(
+                rule.osrv, self.compiler.my_platform_name()
+            )
+        ):
+            self.compiler.error(
+                rule,
+                'this rule excludes several services the nftables compiler '
+                'cannot exclude in one rule, and a NAT rule has no chain to '
+                'put them in; split it into one service per rule',
+            )
+            return True
+
+        rule.osrv_single_object_negation = True
+        rule.set_neg('osrv', False)
         self.tmp_queue.append(rule)
         return True
 
@@ -1033,6 +1070,12 @@ class SplitMultipleServices(NATRuleProcessor):
     narrows the rule to the ports the other services name and the protocol
     as a whole stops being translated.  The policy compiler pulls the same
     service out for the same reason.
+
+    A **negated** element is the exception.  "None of these" is a
+    conjunction, so a rule each says "not this *or* not that", which every
+    packet satisfies as soon as two of the services differ - the rule then
+    translates the traffic it was written to leave alone.  Such an element
+    stays whole and ``print_negated_services`` excludes it in one rule.
     """
 
     @staticmethod
@@ -1049,7 +1092,7 @@ class SplitMultipleServices(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.osrv) <= 1:
+        if len(rule.osrv) <= 1 or rule.osrv_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
@@ -1166,8 +1209,15 @@ class SplitNONATRule(NATRuleProcessor):
 class SplitOnODst(NATRuleProcessor):
     """Split DNAT/DNetnat rules with multiple ODst into separate rules.
 
-    Called after negation processing to ensure each DNAT rule has
-    at most one object in ODst.
+    The objects of an element are alternatives, and one nftables rule
+    matches one address, so each needs a rule of its own.
+
+    A negated element is the exception and stays whole: "none of these"
+    is a conjunction, and one rule per object says "not this *or* not
+    that", which every packet satisfies as soon as the objects differ -
+    the rule then translates everything.  The print rule renders such an
+    element as one `!=` against a set.  Same guard as the policy
+    compiler's `SplitIfSrcMatchesFw`.
     """
 
     def process_next(self) -> bool:
@@ -1175,9 +1225,14 @@ class SplitOnODst(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.odst) > 1 and rule.nat_rule_type in (
-            NATRuleType.DNAT,
-            NATRuleType.DNetnat,
+        if (
+            len(rule.odst) > 1
+            and not rule.odst_single_object_negation
+            and rule.nat_rule_type
+            in (
+                NATRuleType.DNAT,
+                NATRuleType.DNetnat,
+            )
         ):
             for obj in rule.odst:
                 r = rule.clone()
@@ -1373,7 +1428,10 @@ class SplitIfOSrcMatchesFw(NATRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.osrc) <= 1:
+        # A negated element is left whole for the reason `SplitOnODst`
+        # gives: its objects are a conjunction, and one rule each turns
+        # them into a disjunction that holds for every packet.
+        if len(rule.osrc) <= 1 or rule.osrc_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
@@ -1708,14 +1766,17 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
     """Masquerade a source translation whose address is only known at run time.
 
     An interface that is not regular (dynamic, unnumbered, bridge port)
-    carries no address the compiler could write into the rule.  iptables
-    can name one at activation time through a shell variable and otherwise
-    falls back to the MASQUERADE target (C++
-    ``NATCompiler_ipt::dynamicInterfaceInTSrc``).  nftables loads its whole
-    ruleset in one go and has no such variable, so masquerading, which
-    takes the address of the outgoing interface per packet, is the only way
-    to express the rule; the iptables-only "use SNAT instead of
-    MASQUERADE" option therefore does not apply here.
+    carries no address the compiler could write into the rule, so the rule
+    masquerades: the address of the outgoing interface, picked per packet.
+
+    "Use SNAT instead of MASQUERADE" asks for the address itself, and the
+    rule then keeps its type - ``NATPrintRule_nft`` writes it into a chain
+    the script fills once the ruleset is loaded, one rule per address the
+    device turns out to carry.  That is the same answer the iptables
+    compiler gives (C++ ``NATCompiler_ipt::dynamicInterfaceInTSrc``, whose
+    print rule writes the loop over ``$i_<iface>_list``), and it is why the
+    option exists: masquerading looks the address up for every packet,
+    where SNAT names it once.
     """
 
     def process_next(self) -> bool:
@@ -1729,16 +1790,11 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
             return True
 
         tsrc = rule.tsrc[0]
-        if isinstance(tsrc, Interface) and not tsrc.is_regular():
-            if rule.get_option('ipt_use_snat_instead_of_masq', False):
-                self.compiler.warning(
-                    rule,
-                    '"Use SNAT instead of MASQUERADE" needs the address of '
-                    f'"{tsrc.name}" in the rule, and it is only known while '
-                    'the firewall runs; nftables loads its ruleset in one '
-                    'piece and a source translation takes no set reference, '
-                    'so the rule masquerades',
-                )
+        if (
+            isinstance(tsrc, Interface)
+            and not tsrc.is_regular()
+            and not rule.get_option('ipt_use_snat_instead_of_masq', False)
+        ):
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 

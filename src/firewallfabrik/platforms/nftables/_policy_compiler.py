@@ -103,6 +103,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
+    make_any_tcp_service,
     reset_srv_preserving_tcp,
     rule_keeps_a_stateful_rate,
     strip_mac_objects,
@@ -113,7 +114,11 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_set_reference_name,
 )
 from firewallfabrik.platforms.nftables._print_rule import (
+    NEGATED_SRV_PROTOCOLS_OPTION,
+    NO_OTHER_PROTOCOLS_OPTION,
     OTHER_PROTOCOLS_OPTION,
+    negated_services_are_renderable,
+    negated_services_need_a_chain,
     other_protocols_for,
 )
 
@@ -413,6 +418,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         # the reject block, whose processors read the service element as
         # "any" when it is empty, and ahead of everything else, so the
         # extra rule is an ordinary rule from here on.
+        # A shape the `!=` cannot say goes into a chain of its own instead,
+        # and then carries no negation for the rule below to complete.
+        self.add(SrvNegation('process negation in Srv'))
         self.add(AddOtherProtocolsForNegatedService('negated service: other protocols'))
 
         # Logging — inline in nftables, no temp chain needed
@@ -928,15 +936,31 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        # `AddOtherProtocolsForNegatedService` runs behind this processor
+        # and would then read each half on its own: "not tcp" beside "not
+        # udp", and a packet is one protocol, so between them the two
+        # cover every packet there is - the rule would reject everything.
+        # The protocols the *whole* element named are recorded here and
+        # the companion is written once, from the first half.
+        protocols = (
+            other_protocols_for(rule.srv, bool(self.compiler.ipv6_policy))
+            if rule.get_neg('srv')
+            else []
+        )
+
         r1 = rule.clone()
         r1.srv = other_services
         r1.set_option('action_on_reject', '')
         r1.subrule_suffix = '1'
+        if protocols:
+            r1.set_option(NEGATED_SRV_PROTOCOLS_OPTION, protocols)
         self.tmp_queue.append(r1)
 
         r2 = rule.clone()
         r2.srv = tcp_services
         r2.subrule_suffix = '2'
+        if protocols:
+            r2.set_option(NO_OTHER_PROTOCOLS_OPTION, True)
         self.tmp_queue.append(r2)
 
         return True
@@ -1337,6 +1361,159 @@ class TimeNegation(PolicyRuleProcessor):
         return True
 
 
+class SrvNegation(PolicyRuleProcessor):
+    """Exclude a service element nftables cannot exclude in one rule.
+
+    Most negated elements are said where they stand: nftables inverts a
+    match with ``!=`` and a whole element with a set, and the companion
+    :class:`AddOtherProtocolsForNegatedService` covers the protocols it
+    does not name.  Two shapes do not fit into that.  A service inspecting
+    TCP flags *and* naming a port is two conditions with no field to
+    concatenate them with, so its negation is a disjunction; and a match
+    that says nothing about the protocol - a packet mark, a socket owner -
+    is not disjoint from the rules the protocol split makes beside it, so
+    the pieces say "not this *or* not that" and match every packet.
+
+    Both are said with the three-rule expansion
+    ``PolicyCompiler_ipt::SrvNegation`` uses for every negated element,
+    which excludes the services instead of negating them:
+
+    1. a jump rule carrying the rest of the match into a new chain,
+    2. a return rule per service, so traffic the element names leaves
+       again without being acted on,
+    3. the action rule, which everything that did not return reaches.
+
+    A chain missing one of its return rules would act on all traffic, and
+    so would the groups of a split element whose other groups are dropped.
+    So an element naming a service the print rule may not be able to
+    render - a Custom Service without nftables code, an IP Service with a
+    ToS byte - is reported and the whole rule left out, unless it names
+    that one service alone, where dropping the rule is what the printer
+    does anyway.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('srv') or not rule.srv:
+            self.tmp_queue.append(rule)
+            return True
+
+        if not negated_services_are_renderable(
+            rule.srv, self.compiler.my_platform_name()
+        ):
+            if len(rule.srv) == 1:
+                # One service is one rule, and a print rule that cannot
+                # render it drops that rule - which is the whole rule, so
+                # nothing is left over matching what the element excludes.
+                self.tmp_queue.append(rule)
+                return True
+            # Splitting the element would leave the groups that do render
+            # standing on their own, and each of them matches packets the
+            # element excludes.  There is nothing to keep.
+            self.compiler.error(
+                rule,
+                'this rule excludes several services and the nftables '
+                'compiler cannot match one of them, so it cannot exclude '
+                'them together; the rule is left out',
+            )
+            return True
+
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        if not negated_services_need_a_chain(rule.srv, ipv6):
+            self.tmp_queue.append(rule)
+            return True
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        rule.set_neg('srv', False)
+        new_chain = nft_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: everything except the service, which is checked in
+        # the chain.
+        r_jump = rule.clone()
+        r_jump.subrule_suffix = '1'
+        r_jump.srv = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        # `Logging_nft` has not run yet, but the option is what it reads;
+        # only the rule that carries the action logs.
+        r_jump.nft_log = False
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only the services, which are what is excluded.
+        # They are no longer negated, so the ordinary splitting downstream
+        # gives each of them the match it needs.
+        r_return = rule.clone()
+        r_return.subrule_suffix = '2'
+        r_return.src = []
+        r_return.dst = []
+        r_return.itf = []
+        r_return.when = []
+        r_return.ipt_chain = new_chain
+        r_return.ipt_target = ''
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.nft_log = False
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        self.tmp_queue.append(r_return)
+
+        # Action rule: everything that did not return.  The service
+        # element is cleared, because the jump rule does not carry it -
+        # anything left there would narrow the action to a protocol the
+        # element only excludes.
+        def make_action_rule() -> CompRule:
+            r = rule.clone()
+            r.subrule_suffix = '3'
+            r.src = []
+            r.dst = []
+            r.srv = []
+            r.itf = []
+            r.when = []
+            r.ipt_chain = new_chain
+            r.iface_label = 'nil'
+            r.set_option('stateless', True)
+            r.force_state_check = False
+            r.final = True
+            return r
+
+        if rule.action == PolicyAction.Reject and nft_comp.is_action_on_reject_tcp_rst(
+            rule
+        ):
+            # `reject with tcp reset` needs a TCP packet, and clearing the
+            # service element takes that match away.  Split the action the
+            # way `SplitRuleIfSrvAnyActionReject` does: TCP is reset,
+            # everything else gets the default ICMP unreachable.  The TCP
+            # rule has to come first, or the general one already caught the
+            # packet.
+            r_tcp = make_action_rule()
+            r_tcp.srv = [make_any_tcp_service()]
+            self.tmp_queue.append(r_tcp)
+
+            r_other = make_action_rule()
+            nft_comp.reset_action_on_reject(r_other)
+            self.tmp_queue.append(r_other)
+        else:
+            self.tmp_queue.append(make_action_rule())
+
+        return True
+
+
 class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
     """Give a negated service the protocols it does not name.
 
@@ -1389,7 +1566,19 @@ class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
         return True
 
     def _other_protocols(self, rule) -> list[str]:
-        """Return the protocols to exclude, or an empty list to do nothing."""
+        """Return the protocols to exclude, or an empty list to do nothing.
+
+        A processor upstream may already have split the element - the
+        reject block does, so a TCP reset only reaches TCP packets - and
+        then the element this rule carries is half of what the editor
+        wrote.  The full list travels on the rule from there, and the half
+        that must not write the companion says so.
+        """
+        if rule.get_option(NO_OTHER_PROTOCOLS_OPTION, False):
+            return []
+        recorded = rule.get_option(NEGATED_SRV_PROTOCOLS_OPTION, None)
+        if recorded:
+            return list(recorded)
         if not rule.get_neg('srv'):
             return []
         return other_protocols_for(rule.srv, self.compiler.ipv6_policy)
@@ -1690,6 +1879,15 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
     overlapping a firewall interface IP would be pulled out together
     with the firewall object, leaving the original rule with an empty
     src.
+
+    A negated element is left alone.  Its objects are a conjunction -
+    "none of these" - and one rule per object turns them into "not this
+    *or* not that", which any packet satisfies as soon as the objects
+    differ.  The C++ never meets the case because ``SrcNegation`` has
+    already moved the objects into a chain of their own by the time this
+    runs; here the negation is still on the element, so the split has to
+    ask.  Same guard as ``SplitIfSeveralSetsInRE`` and
+    ``SplitIfMacAndAddressInRE``.
     """
 
     def process_next(self) -> bool:
@@ -1699,7 +1897,7 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
-        if len(rule.src) <= 1:
+        if len(rule.src) <= 1 or rule.src_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
@@ -1726,7 +1924,8 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
     """Split rule if dst contains the firewall object.
 
     See :class:`SplitIfSrcMatchesFw` for the rationale behind the
-    ``len(remaining) > 1`` guard.
+    ``len(remaining) > 1`` guard and for why a negated element is left
+    whole.
     """
 
     def process_next(self) -> bool:
@@ -1736,7 +1935,7 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
 
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
-        if len(rule.dst) <= 1:
+        if len(rule.dst) <= 1 or rule.dst_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
@@ -2748,10 +2947,11 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        negated = bool(rule.get_neg('srv') or rule.srv_single_object_negation)
         chunks = [
             chunk
             for _proto, srvs in sorted(groups.items())
-            for chunk in self._printable_chunks(srvs)
+            for chunk in self._printable_chunks(srvs, negated)
         ]
 
         if len(chunks) == 1:
@@ -2767,7 +2967,7 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         return True
 
     @staticmethod
-    def _printable_chunks(srvs: list) -> list[list]:
+    def _printable_chunks(srvs: list, negated: bool = False) -> list[list]:
         """Split a same-protocol service list into per-rule chunks.
 
         The print rule renders several TCP/UDP services as one destination
@@ -2783,7 +2983,16 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         rule falls back to the bare ``meta l4proto`` match - the same split
         the iptables ``SeparatePortRanges`` performs, which reads all-zero
         bounds as the full range.
+
+        None of that holds for a **negated** element.  "None of these" is a
+        conjunction, so every service of it has to be excluded by the same
+        rule; a rule each says "not this *or* not that", which every packet
+        satisfies as soon as two of the services differ.  The services of
+        one protocol therefore stay together and
+        ``print_negated_services`` ANDs their matches.
         """
+        if negated:
+            return [list(srvs)]
         if all(isinstance(s, (TCPService, UDPService)) for s in srvs):
             any_port = [s for s in srvs if not _names_a_port(s)]
             with_port = [s for s in srvs if _names_a_port(s)]
@@ -2809,11 +3018,25 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         The merged form also carries exactly one destination port set, so
         the services have to fit into a single printable chunk; otherwise
         the split the non-merged path performs would be skipped.
+
+        And it carries nothing but the two protocols and the ports, so a
+        TCP service that inspects the flags cannot be in it: the ports of
+        such a service are the same as its UDP twin's, so the pair test
+        below says yes, and the merged rule then drops the flag match and
+        applies to every TCP packet on that port instead of the handshake
+        stage the service names.  `Optimize3` folds the two identical
+        halves into one afterwards, which is what made it read like a
+        single correct rule.
         """
         if set(groups.keys()) != {6, 17}:
             return False
 
         tcp_srvs = groups[6]
+        if any(
+            any((getattr(s, 'tcp_flags_masks', None) or {}).values()) for s in tcp_srvs
+        ):
+            return False
+
         udp_srvs = groups[17]
 
         def port_pairs(srvs: list) -> set[tuple[int, int, int, int]]:

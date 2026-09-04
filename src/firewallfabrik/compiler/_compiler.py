@@ -215,6 +215,26 @@ def _is_host_mask(mask: str, version: int) -> bool:
         return False
 
 
+def _address_table_entry(line: str) -> str:
+    """Return the address an address-table line names, or the empty string.
+
+    ``AddressTable::loadFromSource`` (libfwbuilder) takes what is left of
+    the first non-blank character up to the first character that is not an
+    address character, so a comment, a blank line and a trailing note all
+    come out empty.
+    """
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return ''
+    addr_str = ''
+    for ch in line:
+        if ch in '0123456789abcdef:/.':
+            addr_str += ch
+        else:
+            break
+    return addr_str
+
+
 class Compiler(BaseCompiler):
     """Base compiler. Manages the rule processor pipeline."""
 
@@ -250,9 +270,29 @@ class Compiler(BaseCompiler):
         self.source_dir: str = '.'
 
         self._multi_address_cache: dict = {}
+        #: Which families the file of a compile-time address table holds,
+        #: per object id.  Read once per compile, unlike the resolution
+        #: above, which answers for one family only.
+        self._address_table_families: dict = {}
+        #: Every DNS lookup this compile has made, per (name, family).  A
+        #: name is asked for the other family only when its own came back
+        #: empty, so a name that resolves costs one lookup, as before.
+        self._dns_lookup_cache: dict = {}
 
     def insert_upstream_chain(self, parent: str, child: str) -> None:
-        """Record that *parent* jumps into *child*."""
+        """Record that *parent* jumps into *child*.
+
+        A nameless parent is no parent: a processor may split a rule into
+        a jump and a temporary chain before anything has decided which
+        chain the jump itself goes into, and recording ``''`` as the
+        ancestor of the new chain hides the real one behind a node no
+        built-in chain can be reached through.  `set_chain` records the
+        edge again once the jump has its chain, which is where the answer
+        comes from (fwbuilder ``PolicyCompiler_ipt::insertUpstreamChain``
+        skips an empty name for the same reason).
+        """
+        if not parent:
+            return
         self.upstream_chains[parent].append(child)
 
     def is_chain_descendant_of(
@@ -561,6 +601,66 @@ class Compiler(BaseCompiler):
         result.sort(key=lambda o: getattr(o, 'name', ''))
         return result
 
+    def _dns_lookup(self, name: str, af: int) -> list[str]:
+        """Return the addresses *name* has in family *af*, cached.
+
+        An empty list is not the same answer as "the name does not
+        exist": a host with an A record and no AAAA resolves perfectly
+        well and has nothing to say in the IPv6 pass.  The callers tell
+        the two apart by asking for the other family too.
+        """
+        key = (name, af)
+        cached = self._dns_lookup_cache.get(key)
+        if cached is not None:
+            return list(cached)
+
+        try:
+            infos = socket.getaddrinfo(name, None, af, socket.SOCK_STREAM)
+        except socket.gaierror:
+            infos = []
+
+        seen: set[str] = set()
+        addresses: list[str] = []
+        for info in infos:
+            ip_str = str(info[4][0])
+            if ip_str in seen:
+                continue
+            seen.add(ip_str)
+            addresses.append(ip_str)
+
+        self._dns_lookup_cache[key] = addresses
+        return list(addresses)
+
+    def dns_name_families(self, obj: DNSName) -> tuple[bool, bool]:
+        """Say which families a compile-time DNS name resolves in.
+
+        ``(has an A record, has an AAAA record)``.  The counterpart of
+        :meth:`address_table_families`: a name is looked up per address
+        family, so an IPv4-only host contributes nothing to the IPv6 pass
+        - and that is not a failed lookup.
+        """
+        dnsrec = obj.get_source_name() or obj.name
+        if not dnsrec:
+            return (False, False)
+        return (
+            bool(self._dns_lookup(dnsrec, socket.AF_INET)),
+            bool(self._dns_lookup(dnsrec, socket.AF_INET6)),
+        )
+
+    def multi_address_families(self, obj) -> tuple[bool, bool]:
+        """Say which families a compile-time MultiAddress has members in.
+
+        ``(has IPv4, has IPv6)``, and ``(False, False)`` for an object
+        that cannot answer - which is the "nothing at all" case the empty
+        group report exists for.  One place for the two kinds whose
+        members are read per address family, so the next one has a home.
+        """
+        if isinstance(obj, AddressTable):
+            return self.address_table_families(obj)
+        if isinstance(obj, DNSName):
+            return self.dns_name_families(obj)
+        return (False, False)
+
     def _resolve_dns_name(self, obj: DNSName) -> list:
         """Resolve a compile-time DNSName via DNS lookup."""
         dnsrec = obj.get_source_name() or obj.name
@@ -568,23 +668,26 @@ class Compiler(BaseCompiler):
             return []
 
         af = socket.AF_INET6 if self.ipv6_policy else socket.AF_INET
-        try:
-            infos = socket.getaddrinfo(dnsrec, None, af, socket.SOCK_STREAM)
-        except socket.gaierror:
+        addresses = self._dns_lookup(dnsrec, af)
+        if not addresses:
+            other = socket.AF_INET if self.ipv6_policy else socket.AF_INET6
+            if self._dns_lookup(dnsrec, other):
+                # The name resolves, just not in the family being
+                # compiled.  A host with an A record and no AAAA has
+                # nothing to say in the IPv6 pass, the same way a table of
+                # IPv6 prefixes has nothing to say in the IPv4 one, and
+                # calling that a failed lookup makes every dual-stack rule
+                # set naming a single-stack host refuse to compile.
+                return []
             self.abort(
                 f'DNSName "{obj.name}" cannot resolve "{dnsrec}": DNS lookup failed'
             )
             return []
 
-        seen: set[str] = set()
         results: list[Address] = []
         addr_type = IPv6 if self.ipv6_policy else IPv4
         netmask = '128' if self.ipv6_policy else '255.255.255.255'
-        for info in infos:
-            ip_str = str(info[4][0])
-            if ip_str in seen:
-                continue
-            seen.add(ip_str)
+        for ip_str in addresses:
             addr = addr_type(
                 id=uuid.uuid4(),
                 type=addr_type.__mapper_args__['polymorphic_identity'],
@@ -654,37 +757,15 @@ class Compiler(BaseCompiler):
         File format: one address or network (CIDR) per line; lines starting
         with '#' or empty lines are ignored.
         """
-        filename = obj.get_source_name()
-        if not filename:
-            return []
-
-        # C++ AddressTable::getFilename() substitutes %DATADIR%
-        if '%DATADIR%' in filename:
-            filename = filename.replace('%DATADIR%', self.source_dir)
-
-        # Search: source_dir first, then CWD
-        path = Path(self.source_dir) / filename
-        if not path.is_file():
-            path = Path(filename)
-        if not path.is_file():
-            # C++ always throws here; Preprocessor catches and calls abort()
-            self.abort(f'AddressTable "{obj.name}": file not found ({filename})')
+        path = self._address_table_path(obj, report=True)
+        if path is None:
             return []
 
         results: list[Address] = []
         line_num = 0
         for line in path.read_text().splitlines():
             line_num += 1
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            # C++ keeps only valid address chars: 0-9 a-f : / .
-            addr_str = ''
-            for ch in line:
-                if ch in '0123456789abcdef:/.':
-                    addr_str += ch
-                else:
-                    break
+            addr_str = _address_table_entry(line)
             if not addr_str:
                 continue
 
@@ -731,6 +812,66 @@ class Compiler(BaseCompiler):
                 )
                 results.append(addr)
         return results
+
+    def _address_table_path(self, obj: AddressTable, report: bool = False):
+        """Return the file of an address table, or ``None``.
+
+        ``report`` is for the reader: the C++ throws when the file is
+        missing and the preprocessor turns that into an abort.  The family
+        probe asks the same question without saying anything twice.
+        """
+        filename = obj.get_source_name()
+        if not filename:
+            return None
+
+        # C++ AddressTable::getFilename() substitutes %DATADIR%
+        if '%DATADIR%' in filename:
+            filename = filename.replace('%DATADIR%', self.source_dir)
+
+        # Search: source_dir first, then CWD
+        path = Path(self.source_dir) / filename
+        if not path.is_file():
+            path = Path(filename)
+        if not path.is_file():
+            if report:
+                # C++ always throws here; Preprocessor catches and aborts.
+                self.abort(f'AddressTable "{obj.name}": file not found ({filename})')
+            return None
+        return path
+
+    def address_table_families(self, obj: AddressTable) -> tuple[bool, bool]:
+        """Say which families the file of a compile-time table holds.
+
+        ``(has IPv4, has IPv6)``.  Loading a table keeps only the addresses
+        of the family being compiled, the way
+        ``AddressTable::loadFromSource`` does, so a table of one family
+        resolves to nothing in the other family's pass.  That is not an
+        empty table, and the difference decides whether the rule naming it
+        is reported or simply left to the other pass.
+
+        A file that cannot be read answers ``(False, False)``: the reader
+        reports that separately, and here it is the genuinely empty case.
+        """
+        cached = self._address_table_families.get(obj.id)
+        if cached is not None:
+            return cached
+
+        path = self._address_table_path(obj)
+        answer = (False, False)
+        if path is not None:
+            has_v4 = has_v6 = False
+            for line in path.read_text(errors='replace').splitlines():
+                addr_str = _address_table_entry(line)
+                if not addr_str:
+                    continue
+                if '.' in addr_str:
+                    has_v4 = True
+                elif ':' in addr_str:
+                    has_v6 = True
+            answer = (has_v4, has_v6)
+
+        self._address_table_families[obj.id] = answer
+        return answer
 
     def expand_addr(self, comp_rule: CompRule, slot: str) -> None:
         """Expand hosts/firewalls in an element slot into their interface addresses.

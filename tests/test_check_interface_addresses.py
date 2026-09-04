@@ -33,11 +33,31 @@ class _FakeAddress:
 
 
 class _FakeInterface:
-    def __init__(self, name, addresses, regular=True, iface_id='iface-uuid-1'):
+    def __init__(
+        self,
+        name,
+        addresses,
+        regular=True,
+        iface_id='iface-uuid-1',
+        sub_interfaces=(),
+    ):
         self.name = name
         self.id = iface_id
         self.addresses = addresses
+        # The check walks the sub-interfaces too, the way
+        # `getByTypeDeep(Interface::TYPENAME)` reads them: a VLAN
+        # interface carries an address of its own.
+        self.sub_interfaces = list(sub_interfaces)
+        self.parent_interface = None
+        for child in self.sub_interfaces:
+            child.parent_interface = self
         self._regular = regular
+
+    def get_option(self, key, default=None):
+        return default
+
+    def get_failover_group(self):
+        return None
 
     def is_regular(self):
         return self._regular
@@ -201,9 +221,17 @@ class TestEmpty:
         assert _check([]) == ''
 
     def test_interface_with_no_addresses(self):
+        """A rule naming it compiles into an element that matches all.
+
+        Firewall Builder refuses the firewall for it ("Missing IP address
+        for interface"), and so does this: an error has to stop the
+        compile rather than end in a script that quietly accepts
+        everything.
+        """
         iface = _FakeInterface('eth0', [])
-        assert _check([iface]) == ''
+        assert 'eth0' in _check([iface])
 
     def test_interface_with_empty_address_string(self):
+        """An address child that carries no address is not an address."""
         iface = _FakeInterface('eth0', [_FakeAddress('', '')])
-        assert _check([iface]) == ''
+        assert 'eth0' in _check([iface])

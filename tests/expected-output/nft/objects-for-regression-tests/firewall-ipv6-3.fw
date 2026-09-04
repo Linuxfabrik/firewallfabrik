@@ -10,8 +10,6 @@
 #
 #  Simple policy that makes sense in ipv4 but translates into a few wide-matching rules in ipv6. Policy is configured as dual address family
 #
-# DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
-# DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
 # Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it, for service 'ping request'
 # Rule 'fw-ipv6-3 4 (global)' shadows rule 'fw-ipv6-3 6 (global)' below it

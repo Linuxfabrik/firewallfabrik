@@ -39,6 +39,7 @@ from firewallfabrik.gui.object_tree_data import (
     find_group_by_path,
     normalize_subfolders,
 )
+from firewallfabrik.gui.object_usage import find_referencing_firewalls
 
 
 def _stamp_parent_firewall(obj):
@@ -64,6 +65,13 @@ def _stamp_parent_firewall(obj):
         data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
         fw.data = data
     return fw
+
+
+def _stamp_firewalls(firewalls):
+    """Update ``lastModified`` on every firewall in *firewalls*."""
+    now = int(datetime.now(tz=UTC).timestamp())
+    for fw in firewalls:
+        fw.data = {**(fw.data or {}), 'lastModified': now}
 
 
 # All ORM classes that can own a ``library_id`` column.
@@ -272,6 +280,13 @@ class TreeOperations:
             _stamp_parent_firewall(obj)
 
             obj_ids, rule_ids = self._collect_all_ids(session, obj_id)
+            # The cleanup below takes the object out of every rule that
+            # names it, and disables the ones it leaves matching
+            # everything - in firewalls the deletion never touched
+            # otherwise.  They have to be offered for a recompile too,
+            # and the question has to be asked while the references are
+            # still there (#159).
+            _stamp_firewalls(find_referencing_firewalls(session, obj_ids))
             self._cleanup_references_and_delete(session, obj_ids, rule_ids)
 
             session.commit()

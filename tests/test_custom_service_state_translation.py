@@ -55,7 +55,15 @@ TRANSLATED = {
     ),
     # Whitespace around the code is what a text field collects.
     '  -m conntrack   --ctstate  ESTABLISHED  ': 'ct state established',
-    '-m conntrack ! --ctstate NEW': 'ct state != new',
+    # `!` and not `!=`.  On a bitmask the two are different operators:
+    # `!` compiles to `state & <bits> == 0`, which is what
+    # `! --ctstate NEW,RELATED` says, and `!=` to `state != <bits>`,
+    # which a packet carrying exactly one state bit always satisfies -
+    # so the second spelling matches every packet there is
+    # (netfilter nftables src/netlink_linearize.c, netlink_gen_flagcmp).
+    '-m conntrack ! --ctstate NEW': 'ct state ! new',
+    '-m conntrack ! --ctstate NEW,RELATED': 'ct state ! new,related',
+    '-m state ! --state ESTABLISHED,RELATED': 'ct state ! related,established',
     # A TCP flag inspection, alone and beside a state match.  `-m tcp`
     # carries no match of its own; its options do.
     '-m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW': (
@@ -236,23 +244,46 @@ def test_the_translation_is_recognised_as_matching_the_state():
     assert custom_service_matches_state(custom_service_code(srv, 'iptables'))
 
 
+def _translate(tool: str, code: str) -> str:
+    """Return what *tool* makes of *code*, or skip when it cannot say.
+
+    Two ways the tool declines, and both mean "this release cannot answer
+    for this match", not "the compiler is wrong".  It exits non-zero for a
+    match it does not know at all - and for one it knows but has no
+    translator for, it exits **zero** and writes the rule without that
+    match, which would otherwise read as the compiler inventing a
+    condition.  The empty translation is what tells the second case apart.
+    """
+    if shutil.which(tool) is None:
+        pytest.skip(f'{tool} not installed')
+
+    def run(extra: list[str]) -> subprocess.CompletedProcess:
+        argv = [tool, '-A', 'FORWARD', *extra, '-j', 'ACCEPT']
+        return subprocess.run(  # nosec B603 B607
+            argv, capture_output=True, text=True, check=False
+        )
+
+    result = run(code.split())
+    if result.returncode != 0:
+        pytest.skip(f'{tool} refuses this release: {result.stderr.strip()}')
+    bare = run([])
+    if bare.returncode == 0 and result.stdout == bare.stdout:
+        pytest.skip(f'{tool} of this release has no translation for "{code}"')
+    return result.stdout
+
+
 @pytest.mark.parametrize(('code', 'expected'), sorted(TRANSLATED.items()))
 def test_against_iptables_translate(code, expected):
     """The tool itself, where it is installed."""
-    if shutil.which('iptables-translate') is None:
-        pytest.skip('iptables-translate not installed')
-    argv = ['iptables-translate', '-A', 'FORWARD', *code.split(), '-j', 'ACCEPT']
-    result = subprocess.run(  # nosec B603 B607
-        argv, capture_output=True, text=True, check=False
-    )
-    if result.returncode != 0:
-        pytest.skip(f'iptables-translate refuses this release: {result.stderr.strip()}')
-    # Two spellings the tool writes short where nftables prints them back
-    # in full: a negation as `! new` rather than `!= new`, and the socket
-    # user as `skuid` rather than `meta skuid`.  Both parse either way, and
-    # fwf writes the one the rest of its output uses.
-    printed = result.stdout.replace('ct state ! ', 'ct state != ')
-    printed = printed.replace('skuid ', 'meta skuid ').replace('skgid ', 'meta skgid ')
+    stdout = _translate('iptables-translate', code)
+    # One spelling the tool writes short where nftables prints it back in
+    # full: the socket user as `skuid` rather than `meta skuid`.  Both
+    # parse and mean the same, and fwf writes the one the rest of its
+    # output uses.  The negation is *not* normalised: `!` and `!=` are
+    # different operators on a bitmask, so a difference there is a
+    # finding and not a spelling.
+    printed = stdout.replace('skuid ', 'meta skuid ')
+    printed = printed.replace('skgid ', 'meta skgid ')
     assert expected in printed
 
 
@@ -270,14 +301,4 @@ def _service(ipv6=False, **codes):
 @pytest.mark.parametrize(('code', 'expected'), sorted(TRANSLATED_V6.items()))
 def test_against_ip6tables_translate(code, expected):
     """The tool itself, where it is installed - `-m rt` is IPv6-only."""
-    if shutil.which('ip6tables-translate') is None:
-        pytest.skip('ip6tables-translate not installed')
-    argv = ['ip6tables-translate', '-A', 'FORWARD', *code.split(), '-j', 'ACCEPT']
-    result = subprocess.run(  # nosec B603 B607
-        argv, capture_output=True, text=True, check=False
-    )
-    if result.returncode != 0:
-        pytest.skip(
-            f'ip6tables-translate refuses this release: {result.stderr.strip()}'
-        )
-    assert expected in result.stdout
+    assert expected in _translate('ip6tables-translate', code)
