@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 import sqlalchemy.orm
 
+from firewallfabrik.core._options import option_is_true
+
 from ._base import Base
 from ._types import JSONEncodedSet
 
@@ -220,6 +222,18 @@ class MultiAddress(ObjectGroup):
         data[self.SOURCE_KEY] = value
         return data
 
+    def is_run_time(self) -> bool:
+        """Is this object resolved on the firewall rather than here?
+
+        Ports ``MultiAddress::isRunTime``, which reads the flag through
+        ``FWObject::getBool`` - so ``'False'`` written on a line of its
+        own is False, where a bare truthy test reads every non-empty
+        spelling as True and turns a compile-time table into a run-time
+        one.  Four compiler sites and three editor ones ask this
+        question; they used to ask it each for themselves.
+        """
+        return option_is_true((self.data or {}).get('run_time', False))
+
 
 class AddressTable(MultiAddress):
     """Addresses loaded from an external table/file."""
@@ -235,7 +249,7 @@ def is_run_time_address_table(obj) -> bool:
     A compile-time table is replaced by its addresses before the rule
     reaches a print rule; only a run-time one still carries the file.
     """
-    return isinstance(obj, AddressTable) and bool((obj.data or {}).get('run_time'))
+    return isinstance(obj, AddressTable) and obj.is_run_time()
 
 
 def get_address_table_source(at: AddressTable, fw=None) -> str:

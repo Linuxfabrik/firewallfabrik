@@ -70,7 +70,7 @@ from firewallfabrik.core.objects import (
 
 def _is_runtime(obj: MultiAddress) -> bool:
     """Return True if the MultiAddress is marked for run-time resolution."""
-    return bool((obj.data or {}).get('run_time', False))
+    return obj.is_run_time()
 
 
 def _get_group_members(session, group: Group) -> list:

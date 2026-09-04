@@ -529,7 +529,7 @@ class Compiler(BaseCompiler):
 
     def _expand_multi_address_member(self, obj: MultiAddress, emptied_by: list) -> list:
         """Return what one MultiAddress contributes to an expanded element."""
-        if (obj.data or {}).get('run_time'):
+        if obj.is_run_time():
             return [obj]
         resolved = self._resolve_multi_address(obj)
         if not resolved:

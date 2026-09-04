@@ -31,7 +31,7 @@ class AddressTableDialog(BaseObjectDialog):
         # Resolve mode: honour the preference for new objects (no
         # run_time key yet), otherwise use the stored value.
         if 'run_time' in data:
-            run_time = data['run_time']
+            run_time = self._obj.is_run_time()
         else:
             settings = QSettings()
             use_compile = settings.value(

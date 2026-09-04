@@ -314,7 +314,7 @@ class ValidateRoutingDestination(RoutingRuleProcessor):
             return False
 
         for obj in rule.rdst:
-            if isinstance(obj, MultiAddress) and (obj.data or {}).get('run_time'):
+            if isinstance(obj, MultiAddress) and obj.is_run_time():
                 self.compiler.error(
                     rule,
                     f'Object "{obj.name}" resolves only on the firewall, which '

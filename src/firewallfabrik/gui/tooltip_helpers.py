@@ -87,19 +87,17 @@ def obj_tooltip(obj):
         if mac:
             lines.append(mac)
 
-    elif type_str == 'DNSName':
-        source = getattr(obj, 'source_name', None) or ''
-        runtime = getattr(obj, 'run_time', None)
+    elif type_str in ('AddressTable', 'DNSName'):
+        # `source_name` is the spelling the editors wrote for a while and
+        # no reader keeps, and `run_time` is no attribute of these two at
+        # all - it lives in `data`, because a MultiAddress is a group.
+        # Reading them off the object therefore said "Compile-time" for
+        # every table and every DNS name and never named the source.
+        source = obj.get_source_name()
         if source:
-            lines.append(f'<b>DNS record:</b> {source}')
-        lines.append('Run-time' if runtime else 'Compile-time')
-
-    elif type_str == 'AddressTable':
-        source = getattr(obj, 'source_name', None) or ''
-        runtime = getattr(obj, 'run_time', None)
-        if source:
-            lines.append(f'<b>Table file:</b> {source}')
-        lines.append('Run-time' if runtime else 'Compile-time')
+            what = 'Table file' if type_str == 'AddressTable' else 'DNS record'
+            lines.append(f'<b>{what}:</b> {source}')
+        lines.append('Run-time' if obj.is_run_time() else 'Compile-time')
 
     # -- Devices --
     elif type_str in ('Cluster', 'Firewall'):

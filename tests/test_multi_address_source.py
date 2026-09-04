@@ -92,3 +92,53 @@ def test_the_editors_and_the_compilers_use_the_same_key():
         assert "data['source_name']" not in source
         assert 'get_source_name()' in source
         assert 'set_source_name(' in source
+
+
+@pytest.mark.parametrize('cls', [DNSName, AddressTable])
+@pytest.mark.parametrize(
+    ('stored', 'expected'),
+    [
+        (True, True),
+        (False, False),
+        ('True', True),
+        ('False', False),
+        ('\n True \n', True),
+        ('\n False \n', False),
+        ('1', True),
+        ('0', False),
+        (None, False),
+    ],
+)
+def test_the_resolve_mode_is_read_the_way_firewall_builder_reads_it(
+    cls, stored, expected
+):
+    """``MultiAddress::isRunTime`` goes through ``FWObject::getBool``.
+
+    A bare truthy test reads ``'False'`` as True and turns a
+    compile-time table into a run-time one - the rules then name a set
+    the script fills at activation instead of the addresses the table
+    holds, and a routing rule naming it is left out altogether.
+    """
+    assert _obj(cls, 'object name', {'run_time': stored}).is_run_time() is expected
+
+
+@pytest.mark.parametrize('cls', [DNSName, AddressTable])
+def test_an_object_with_no_resolve_mode_is_compile_time(cls):
+    assert _obj(cls, 'object name', {}).is_run_time() is False
+
+
+@pytest.mark.parametrize(
+    ('cls', 'key', 'label'),
+    [
+        (DNSName, 'dnsrec', 'DNS record'),
+        (AddressTable, 'filename', 'Table file'),
+    ],
+)
+def test_the_tooltip_names_the_source_and_the_resolve_mode(cls, key, label):
+    """It used to read both off attributes these two objects do not have."""
+    from firewallfabrik.gui.tooltip_helpers import obj_tooltip
+
+    made = _obj(cls, 'object name', {key: 'the source', 'run_time': True})
+    tip = obj_tooltip(made)
+    assert f'<b>{label}:</b> the source' in tip
+    assert 'Run-time' in tip
