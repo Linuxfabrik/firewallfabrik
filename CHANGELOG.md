@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.0.0] - 2026-09-04
+
 **Highlights:** Clusters are supported: compiling a cluster compiles each of its members, with the cluster's interfaces, addresses, rule sets and routes, and each member permits the failover protocol and the state sync link it needs, so a default-drop cluster no longer has both members thinking they are master. The nftables compiler catches up with the iptables one on what it was still missing: negated elements, Custom Services, custom actions, translating to a DHCP or PPP address, and "Use SNAT instead of MASQUERADE". A large group of fixes is about rules that quietly matched something other than what they say, most of them around negation, and about activations that stopped half-way with the firewall already at DROP while reporting success. Configurations that used to be compiled from unusable data are now refused. Recompile and review your rulesets after updating, and read the breaking changes first.
 
 ### Breaking Changes
@@ -477,7 +482,8 @@ Initial public beta pre-release.
 * Standard service library expanded with the Wikipedia multi-service ports.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...HEAD
+[v3.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...v3.0.0
 [v2.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...v2.0.0
 [v1.9.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.8.1...v1.9.0
 [v1.8.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.8.0...v1.8.1
