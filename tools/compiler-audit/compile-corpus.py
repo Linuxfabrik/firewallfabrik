@@ -283,7 +283,7 @@ def force_action(action: str) -> None:
         result = load(self, *args, **kwargs)
         session = self.create_session()
         for rule in session.execute(sqlalchemy.select(PolicyRule)).scalars():
-            rule.action = which
+            rule.policy_action = which
         session.commit()
         return result
 
