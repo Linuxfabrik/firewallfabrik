@@ -222,24 +222,29 @@ case "$cmd" in
     reload_address_table)
         check_tools
         reload_address_table "$2" "$3" "$4"
+        RETVAL=$?
         ;;
 
 ## Usage:  script.fw add_to_address_table <address_table_name> <file_name> <address>
     add_to_address_table)
         check_tools
         add_to_address_table "$2" "$3" "$4"
+        RETVAL=$?
         ;;
 
 ## Usage:  script.fw remove_from_address_table <address_table_name> <file_name> <address>
     remove_from_address_table)
         check_tools
         remove_from_address_table "$2" "$3" "$4"
+        RETVAL=$?
         ;;
 
 ## Usage:  script.fw test_address_table <address_table_name> <address>
+##         Answers with the exit code, so a monitoring check can ask.
     test_address_table)
         check_tools
         test_address_table "$2" "$3"
+        RETVAL=$?
         ;;
 {{endif}}
 

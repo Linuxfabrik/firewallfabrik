@@ -58,6 +58,20 @@ reload_address_table() {
         exit 1
     }
 
+##  Called as a command of its own the file has been checked by nobody:
+##  check_run_time_address_table_files runs in the start branch alone.  The
+##  nftables loader has asked since it was written.
+    test -r "$data_file" || {
+        echo "Can not find file $data_file referenced by address table object" \
+             "$addrtbl_name"
+        return 1
+    }
+
+##  Every step below is a step the address table needs, and the function
+##  used to answer with the status of the last one - an "ipset -X" of a
+##  temporary set, which succeeds whatever went wrong before it.
+    status=0
+
     if [ "$af" = "-6" ]; then
         set_family="family inet6"
         addr_filter="\$1 ~ /:/"
@@ -89,29 +103,46 @@ reload_address_table() {
     done
 
     # shellcheck disable=SC2086
-    "$IPSET" -N tmp_fwb_set:ip  iphash  $set_family maxelem $set_maxelem
+    "$IPSET" -N tmp_fwb_set:ip  iphash  $set_family maxelem $set_maxelem || status=1
     # shellcheck disable=SC2086
-    "$IPSET" -N tmp_fwb_set:net nethash $set_family maxelem $set_maxelem
+    "$IPSET" -N tmp_fwb_set:net nethash $set_family maxelem $set_maxelem || status=1
 
-    grep -Ev '^#|^;|^\s*$' "$data_file" | awk "$addr_filter" | while read -r L ; do
-        # shellcheck disable=SC2086
-        set -- $L
-        addr=$1
-        if echo "$addr" | grep -q "/"
-        then
-            "$IPSET" -A tmp_fwb_set:net "$addr"
-        else
-            "$IPSET" -A tmp_fwb_set:ip "$addr"
-        fi
-    done
+##  ipset refuses a line it cannot parse, and the loop went on without
+##  counting: a malformed address, a prefix length out of range and
+##  0.0.0.0/0, which hash:net has no room for, were all skipped while the
+##  rule naming the table was installed either way and the command reported
+##  success.  The count is kept inside the group the pipeline ends in,
+##  which is the one place a variable set there survives, and printed on
+##  its standard output.  Unlike nftables, where one bad line costs the
+##  whole element list, the addresses that parsed are still installed.
+    refused=$(grep -Ev '^#|^;|^\s*$' "$data_file" | awk "$addr_filter" | {
+        n=0
+        while read -r L ; do
+            # shellcheck disable=SC2086
+            set -- $L
+            addr=$1
+            if echo "$addr" | grep -q "/"
+            then
+                "$IPSET" -A tmp_fwb_set:net "$addr" >/dev/null || n=$((n + 1))
+            else
+                "$IPSET" -A tmp_fwb_set:ip "$addr" >/dev/null || n=$((n + 1))
+            fi
+        done
+        echo "$n"
+    })
+    test "$refused" -eq 0 || {
+        echo "$refused of the addresses in $data_file were refused by ipset and" \
+             "are not in address table $addrtbl_name"
+        status=1
+    }
 
     # shellcheck disable=SC2086
     "$IPSET" --list "${addrtbl_name}:ip" >/dev/null || "$IPSET" -N "${addrtbl_name}:ip" iphash $set_family
     # shellcheck disable=SC2086
     "$IPSET" --list "${addrtbl_name}:net" >/dev/null || "$IPSET" -N "${addrtbl_name}:net" nethash $set_family
 
-    "$IPSET" -W "${addrtbl_name}:ip" tmp_fwb_set:ip
-    "$IPSET" -W "${addrtbl_name}:net" tmp_fwb_set:net
+    "$IPSET" -W "${addrtbl_name}:ip" tmp_fwb_set:ip || status=1
+    "$IPSET" -W "${addrtbl_name}:net" tmp_fwb_set:net || status=1
 
     "$IPSET" --list "${addrtbl_name}" >/dev/null || {
         "$IPSET" -N "${addrtbl_name}" setlist
@@ -127,6 +158,8 @@ reload_address_table() {
 
     "$IPSET" -X tmp_fwb_set:ip
     "$IPSET" -X tmp_fwb_set:net
+
+    return "$status"
 }
 
 ## An ipset holds one address family, so an address table used by both
