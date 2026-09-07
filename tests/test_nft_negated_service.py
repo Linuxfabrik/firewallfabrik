@@ -661,11 +661,17 @@ def test_an_ip_service_is_renderable_unless_it_says_something_nftables_lacks():
     with_tos = IPService(
         id=uuid.uuid4(), name='tos', data={'protocol_num': '47', 'tos': '0x10'}
     )
+    # A value carrying a bit its mask does not cover matches no packet, and
+    # the `dscp` / `ecn` pair the printer splits it into cannot say that.
+    unmatchable_tos = IPService(
+        id=uuid.uuid4(), name='tos', data={'protocol_num': '47', 'tos': '0x20/0x03'}
+    )
     bad_dscp = IPService(
         id=uuid.uuid4(), name='dscp', data={'protocol_num': '47', 'dscp': 'AF4'}
     )
     assert _renderable([plain])
-    assert not _renderable([with_tos])
+    assert _renderable([with_tos])
+    assert not _renderable([unmatchable_tos])
     assert not _renderable([bad_dscp])
 
 

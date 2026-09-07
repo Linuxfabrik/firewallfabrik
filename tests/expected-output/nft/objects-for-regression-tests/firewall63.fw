@@ -12,7 +12,6 @@
 #
 #  testing TOS and DSCP matching
 #
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -278,6 +277,10 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 0 (global)
+        #
+        ip dscp 0x08 ip ecn 0x00 ct state new counter accept
+        #
         # Rule 1 (global)
         #
         ip dscp 0x20 ct state new counter accept
@@ -292,6 +295,10 @@ table ip fwf_filter {
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         ct state established,related counter accept
         #
+        # Rule 0 (global)
+        #
+        ip dscp 0x08 ip ecn 0x00 ct state new counter accept
+        #
         # Rule 1 (global)
         #
         ip dscp 0x20 ct state new counter accept
@@ -304,6 +311,10 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        ip dscp 0x08 ip ecn 0x00 ct state new counter accept
         #
         # Rule 1 (global)
         #

@@ -91,6 +91,7 @@ from ._services import (
     is_valid_tos,
     is_valid_user_id,
     packet_mark_clear_mask,
+    parse_tos,
 )
 from ._types import (
     Direction,
@@ -177,6 +178,7 @@ __all__ = [
     'netmask_prefix_length',
     'normalize_mac_address',
     'packet_mark_clear_mask',
+    'parse_tos',
     'range_to_cidr',
     'rule_elements',
 ]

@@ -10,7 +10,6 @@
 #
 # Compiled for nftables (any version)
 #
-# Rule 9 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 # Rule '7 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'All TCP'
 # Rule '1 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'http'
 # Rule '7 (global)' shadows rule '9 (global)' below it, for destination 'fw-services:eth1:ip' and service 'tos-and-dscp'
@@ -313,6 +312,11 @@ table ip fwf_filter {
         # Service names a whole protocol next to a single port
         ip saddr 192.168.1.0/24 meta l4proto tcp ct state new counter drop
         ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter drop
+        #
+        # Rule 9 (global)
+        #
+        # Service carries a ToS byte and a DiffServ code point at once
+        ip saddr 192.168.1.0/24 ip dscp 0x04 ip ecn 0x00 ct state new counter drop
         #
         # Rule 10 (global)
         #

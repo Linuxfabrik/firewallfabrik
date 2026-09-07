@@ -71,6 +71,7 @@ from firewallfabrik.core.objects import (
     netmask_prefix_length,
     normalize_mac_address,
     packet_mark_clear_mask,
+    parse_tos,
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -132,6 +133,59 @@ def print_fragment_match(ipv6: bool) -> str:
     return 'ip frag-off & 0x1fff != 0'
 
 
+def print_tos_matches(tos: str, ipv6: bool) -> list[str] | None:
+    """Return the nftables matches for iptables' ``-m tos --tos``.
+
+    The kernel matches ``(dsfield & mask) == value`` on the ToS byte of an
+    IPv4 header and on the traffic class of an IPv6 one
+    (net/netfilter/xt_dscp.c, ``tos_mt``).  nftables has no name for that
+    byte, which is why this used to be reported as something nftables
+    cannot do - but the byte is not gone, it is *split*: ``dscp`` is its
+    top six bits and ``ecn`` its bottom two (nftables ``src/proto.c``, and
+    ``XT_DSCP_SHIFT`` is the same 2).  So the pair is written as one match
+    per half, and the halves together say exactly what the one iptables
+    match says.
+
+    Writing it as a raw payload expression instead would be shorter and is
+    a trap: ``@nh,4,8 & 0xfc`` makes ``nft list ruleset`` abort with an
+    assertion in ``binop_adjust`` (nftables 1.1.7,
+    ``src/netlink_delinearize.c``) for every prefix-shaped mask, so an
+    administrator could no longer read back the ruleset that is running.
+
+    Three answers:
+
+    * a list of matches - the usual case;
+    * an empty list for a mask of zero, which matches every packet and is
+      what iptables does with it too;
+    * ``None`` for a value carrying a bit its mask does not cover.  Then
+      ``(dsfield & mask) == value`` is false for every packet there is,
+      and the two halves cannot say that: each of them compares only the
+      bits it owns, so splitting such a pair would turn a rule that never
+      fires into one that fires.  iptables takes the value and matches
+      nothing with it; leaving the rule out has the same effect and says
+      so.
+    """
+    parsed = parse_tos(tos)
+    if parsed is None:
+        return None
+    value, mask = parsed
+    if value & ~mask & 0xFF:
+        return None
+    family = 'ip6' if ipv6 else 'ip'
+    parts = []
+    dscp_mask, dscp_value = mask >> 2, value >> 2
+    if dscp_mask == 0x3F:
+        parts.append(f'{family} dscp 0x{dscp_value:02x}')
+    elif dscp_mask:
+        parts.append(f'{family} dscp & 0x{dscp_mask:02x} 0x{dscp_value:02x}')
+    ecn_mask, ecn_value = mask & 0x03, value & 0x03
+    if ecn_mask == 0x03:
+        parts.append(f'{family} ecn 0x{ecn_value:02x}')
+    elif ecn_mask:
+        parts.append(f'{family} ecn & 0x{ecn_mask:02x} 0x{ecn_value:02x}')
+    return parts
+
+
 # Targets that only write a log message and let the packet fall through to
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
@@ -172,7 +226,15 @@ def ip_service_condition_count(srv, ipv6: bool) -> int:
     count = 1 if srv.get_protocol_number() > 0 else 0
     if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
         count += 1
-    if data.get('tos') or data.get('dscp'):
+    tos = data.get('tos') or ''
+    if tos:
+        # A ToS byte is one match or two: the field it names was split into
+        # `dscp` and `ecn`, and a mask reaching into both halves needs one
+        # of each.  Asking the printer is what keeps the two in step.  A
+        # value the printer refuses counts as one, so the service is read
+        # as saying something - the rule is dropped either way.
+        count += len(print_tos_matches(tos, ipv6) or [''])
+    elif data.get('dscp'):
         count += 1
     if ipv6:
         count += 1 if has_ip_options(data) else 0
@@ -763,10 +825,11 @@ def negated_services_are_renderable(srvs: list, platform: str) -> bool:
             return False
         if isinstance(srv, IPService):
             data = srv.data or {}
-            # nftables has no ToS matcher, it refuses an unknown DiffServ
-            # class, and an IPv4 header option is gated on a release this
-            # function is not told about.
-            if data.get('tos', ''):
+            # nftables refuses a ToS value neither tool can read, it
+            # refuses an unknown DiffServ class, and an IPv4 header option
+            # is gated on a release this function is not told about.
+            tos = data.get('tos', '')
+            if tos and print_tos_matches(tos, False) is None:
                 return False
             dscp = data.get('dscp', '')
             if dscp and not is_valid_dscp(dscp):
@@ -1654,16 +1717,28 @@ class PrintRule_nft(PolicyRuleProcessor):
             # other way round here meant the same service matched the ToS
             # byte on one platform and the DiffServ field on the other.
             if tos:
-                # nftables has no ToS-byte matcher: the IPv4 ToS field was
-                # split into dscp + ecn, so iptables' `-m tos --tos` has no
-                # nftables equivalent. Fail loudly instead of emitting an
-                # `ip tos` expression that nft rejects.
-                self.compiler.error(
-                    rule,
-                    'IP service with a ToS value is not supported by nftables; '
-                    'use a DSCP value instead',
-                )
-                unrenderable = True
+                tos_matches = print_tos_matches(tos, self.compiler.ipv6_policy)
+                if tos_matches is None:
+                    # Either the text is none netfilter reads - iptables
+                    # answers that with "Symbolic name is unknown" or
+                    # "Illegal value" and stops the activation with every
+                    # chain already at DROP - or the value carries a bit
+                    # its mask does not cover, and then no packet can
+                    # match it.  Neither may go out without the match the
+                    # service names, which would widen the rule to every
+                    # traffic class.
+                    self.compiler.error(
+                        rule,
+                        f'IP service has a ToS value "{tos}" no packet can '
+                        'match; it takes a number from 0 to 255, optionally '
+                        'followed by "/" and a mask covering every bit the '
+                        'number sets, or one of Minimize-Delay, '
+                        'Maximize-Throughput, Maximize-Reliability, '
+                        'Minimize-Cost, Normal-Service. The rule is left out',
+                    )
+                    unrenderable = True
+                else:
+                    parts.extend(tos_matches)
             elif dscp:
                 if not is_valid_dscp(dscp):
                     # An unknown DiffServ class (e.g. "AF4") is rejected by

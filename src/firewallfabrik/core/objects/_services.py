@@ -401,17 +401,24 @@ def _strtoul(text: str) -> int | None:
 
 
 # The five names the ToS match takes instead of a number, spelled the way
-# netfilter spells them (extensions/tos_values.c, tos_symbol_names).  The
-# comparison is case insensitive there (strcasecmp in xtopt_parse_tosmask).
-VALID_TOS_NAMES = frozenset(
-    {
-        'maximize-reliability',
-        'maximize-throughput',
-        'minimize-cost',
-        'minimize-delay',
-        'normal-service',
-    }
-)
+# netfilter spells them (extensions/tos_values.c, tos_symbol_names), with
+# the byte each stands for (linux/ip.h, IPTOS_*).  The comparison is case
+# insensitive there (strcasecmp in xtopt_parse_tosmask).
+TOS_NAME_VALUES = {
+    'maximize-reliability': 0x04,
+    'maximize-throughput': 0x08,
+    'minimize-cost': 0x02,
+    'minimize-delay': 0x10,
+    'normal-service': 0x00,
+}
+
+VALID_TOS_NAMES = frozenset(TOS_NAME_VALUES)
+
+# The mask a symbolic name is matched under.  It is the `.max` of the
+# option entry, which revision 1 of the match sets to 0x3F
+# (extensions/libxt_tos.c, tos_mt_opts); a number carries 0xFF instead
+# unless it names a mask of its own.
+TOS_SYMBOLIC_MASK = 0x3F
 
 # The whole traffic class byte, which is what --tos reads: xtopt_parse_tosmask
 # hands the argument to tos_parse_numeric with UINT8_MAX as the ceiling.
@@ -436,19 +443,42 @@ def is_valid_tos(value: str) -> bool:
     every chain is already at DROP.  The rate-limit table name next door is
     guarded for exactly that reason.
     """
+    return parse_tos(value) is not None
+
+
+def parse_tos(value: str) -> tuple[int, int] | None:
+    """Return the ``(value, mask)`` pair ``--tos`` reads out of *value*.
+
+    ``None`` means netfilter would refuse the text; :func:`is_valid_tos`
+    is that question asked without the answer.
+
+    The pair is what the kernel compares with: it matches when
+    ``(dsfield & mask) == value``, reading the ToS byte of an IPv4 header
+    and the traffic class of an IPv6 one (net/netfilter/xt_dscp.c,
+    ``tos_mt``).  Where the two halves come from is the part worth
+    keeping: a number without a mask is matched under the *whole* byte
+    (``tos_parse_numeric`` fills the mask in from its ``max`` argument,
+    ``UINT8_MAX``), while a symbolic name is matched under 0x3F, the
+    ``.max`` of the option entry.  So ``--tos 0x10`` and ``--tos
+    Minimize-Delay`` name the same byte and are not the same match.
+    """
     if not value:
-        return False
+        return None
     normalized = value.strip().lower()
-    if normalized in VALID_TOS_NAMES:
-        return True
+    if normalized in TOS_NAME_VALUES:
+        return TOS_NAME_VALUES[normalized], TOS_SYMBOLIC_MASK
     parts = normalized.split('/')
     if len(parts) > 2:
-        return False
+        return None
+    numbers = []
     for part in parts:
         number = _strtoul(part)
         if number is None or number > MAX_TOS:
-            return False
-    return True
+            return None
+        numbers.append(number)
+    if len(numbers) == 1:
+        return numbers[0], MAX_TOS
+    return numbers[0], numbers[1]
 
 
 # A packet mark is a 32 bit word on both back ends: iptables bounds each
