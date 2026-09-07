@@ -964,6 +964,16 @@ guardian.fw reload_address_table bad_hosts /etc/bad_hosts
 
 where "guardian.fw" matches the name of your FirewallFabrik script file and "bad_hosts" is your address table object. This dynamically updates the list of addresses stored in memory for the bad_hosts set while iptables is running.
 
+A script compiled for nftables takes the same command, and the three that go with it, with the same arguments:
+
+``` bash
+guardian.fw add_to_address_table bad_hosts /etc/bad_hosts 198.51.100.7
+guardian.fw remove_from_address_table bad_hosts /etc/bad_hosts 198.51.100.7
+guardian.fw test_address_table bad_hosts 198.51.100.7
+```
+
+The first two edit the file as well as the running set, so the change survives the next activation. `test_address_table` answers with its exit code, so it can be used from a monitoring check; on nftables it also finds an address that one of the table's networks covers. There the addresses live in a named nftables set instead of an ipset, so no extra package is needed.
+
 > [!NOTE]
 > **Naming Convention for Address Table Objects and Sets**
 >

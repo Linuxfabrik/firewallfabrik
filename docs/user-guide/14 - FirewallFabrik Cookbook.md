@@ -1166,7 +1166,7 @@ This command should probably be put in a script which should run from cron once 
 /etc/fwf.sh reload_address_table blocklist /etc/blocklist_file.txt
 ```
 
-If the firewall does not support module ipset, you just need to re-run the firewall script to update the rules with new ip addresses.
+A script compiled for nftables takes the same command; there the addresses live in a named nftables set rather than in an ipset, so no extra package is needed. If the address table is resolved at compile time, or the firewall does not support module ipset, you just need to re-run the firewall script to update the rules with new ip addresses.
 
 # Examples of NAT Rules
 
