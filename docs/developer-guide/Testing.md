@@ -156,7 +156,13 @@ If you have pre-existing `.fw` files (e.g., from the C++ Firewall Builder compil
 
 This applies the same normalization (timestamp/version/chain-hash replacement, trailing whitespace stripping) that the test runner applies to compiler output, so the comparison will match.
 
-The script reports which files were modified and skips files that are already normalized.
+The script reports which files were modified and skips files that are
+already normalized, and normalizing a file twice changes nothing -
+`test_normalize_is_idempotent.py` asserts both, over every checked-in
+expected output file.  Without that the two writers disagree: a file
+`update_expected_output.py` has just produced is changed by the next
+`--normalize-only` run, and re-importing the Firewall Builder reference
+then moves it away from what the C++ compiler produced.
 
 ## C++ Firewall Builder Regression Suite
 

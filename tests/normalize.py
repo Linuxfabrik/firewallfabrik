@@ -146,10 +146,14 @@ def normalize_ipt(text: str) -> str:
     text = _sort_interfaces(text)
     # Collapse runs of multiple spaces into a single space
     text = re.sub(r'  +', ' ', text)
+    # Strip trailing whitespace per line.  This has to happen *before* the
+    # blank lines are collapsed: a line made of nothing but spaces is not a
+    # blank line yet, so it survives the collapse and becomes one right
+    # after it - leaving a run this function was supposed to have removed,
+    # which a second pass then removes.  See `_collapse_blank_lines`.
+    text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     # Collapse multiple consecutive blank lines into one
     text = re.sub(r'\n{3,}', '\n\n', text)
-    # Strip trailing whitespace per line
-    text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     # Ensure exactly one trailing newline (end-of-file-fixer compatibility)
     text = text.rstrip('\n') + '\n'
     return text
@@ -179,10 +183,11 @@ def normalize_nft(text: str) -> str:
     )
     # Sort interface lists in verify_interfaces() and configure_interfaces()
     text = _sort_interfaces(text)
+    # Strip trailing whitespace per line, before the blank lines are
+    # collapsed - see the same pair in `normalize_ipt`.
+    text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     # Collapse multiple consecutive blank lines into one
     text = re.sub(r'\n{3,}', '\n\n', text)
-    # Strip trailing whitespace per line
-    text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     # Ensure exactly one trailing newline (end-of-file-fixer compatibility)
     text = text.rstrip('\n') + '\n'
     return text
