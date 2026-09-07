@@ -129,6 +129,22 @@ reload_address_table() {
     "$IPSET" -X tmp_fwb_set:net
 }
 
+## An ipset holds one address family, so an address table used by both
+## rulesets has a set per family and the IPv6 one carries a "_v6" suffix -
+## the name its rules match against (normalize_set_name in
+## platforms/iptables/_utils.py).  The three commands below take an address
+## from the administrator, so the family is the address's own; without
+## asking it an IPv6 address went to the set of the other family, which
+## ipset answers with "resolving to IPv4 address failed", and the address
+## was neither added, removed nor tested.  A name that already carries the
+## suffix keeps it.
+address_table_set_for() {
+    case "$2" in
+    *:*) echo "${1%_v6}_v6" ;;
+    *) echo "$1" ;;
+    esac
+}
+
 add_to_address_table() {
     addrtbl_name=$1
     data_file=$2
@@ -141,11 +157,13 @@ add_to_address_table() {
 
     echo "$address" >> "$data_file"
 
+    set_name=$(address_table_set_for "$addrtbl_name" "$address")
+
     if echo "$address" | grep -q "/"
     then
-        "$IPSET" -A "${addrtbl_name}:net" "$address"
+        "$IPSET" -A "${set_name}:net" "$address"
     else
-        "$IPSET" -A "${addrtbl_name}:ip" "$address"
+        "$IPSET" -A "${set_name}:ip" "$address"
     fi
 }
 
@@ -163,11 +181,13 @@ remove_from_address_table() {
     escaped_addr=$(echo "$address" | sed 's!/!\\/!')
     sed -i "/^ *$escaped_addr *\$/d" "$data_file"
 
+    set_name=$(address_table_set_for "$addrtbl_name" "$address")
+
     if echo "$address" | grep -q "/"
     then
-        "$IPSET" -D "${addrtbl_name}:net" "$address"
+        "$IPSET" -D "${set_name}:net" "$address"
     else
-        "$IPSET" -D "${addrtbl_name}:ip" "$address"
+        "$IPSET" -D "${set_name}:ip" "$address"
     fi
 }
 
@@ -180,11 +200,13 @@ test_address_table() {
         exit 1
     }
 
+    set_name=$(address_table_set_for "$addrtbl_name" "$address")
+
     if echo "$address" | grep -q "/"
     then
-        "$IPSET" -T "${addrtbl_name}:net" "$address"
+        "$IPSET" -T "${set_name}:net" "$address"
     else
-        "$IPSET" -T "${addrtbl_name}:ip" "$address"
+        "$IPSET" -T "${set_name}:ip" "$address"
     fi
 }
 
