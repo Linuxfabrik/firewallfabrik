@@ -481,6 +481,43 @@ def parse_tos(value: str) -> tuple[int, int] | None:
     return numbers[0], numbers[1]
 
 
+def tos_problem(value: str) -> str:
+    """Return why *value* is no usable ToS match, or ``''``.
+
+    The one reader of that question, because the two compilers answer it
+    differently and must not disagree about *what* is wrong: iptables can
+    write the match and nftables has to split it into ``dscp`` and
+    ``ecn``, so only one of them can be told from the other's answer.
+
+    Two things can be wrong.  The text may be none netfilter reads, which
+    iptables answers with "Symbolic name is unknown" or "Illegal value" -
+    that stops the activation script with every built-in policy already
+    at DROP, and the value reaches the generated script unquoted, where a
+    space ends the argument and a dollar sign, a backtick or a semicolon
+    start something else entirely, as root.  Or the value may set a bit
+    its mask does not cover, and then ``(dsfield & mask) == value`` is
+    false for every packet there is: iptables takes such a pair without a
+    word (there is no ``;FAIL`` line for it in
+    ``extensions/libxt_tos.t``) and the rule sits in the ruleset matching
+    nothing, which is not what the administrator wrote it to do.
+    """
+    parsed = parse_tos(value)
+    if parsed is None:
+        return (
+            'is not a ToS value; it takes a number from 0 to 255, optionally '
+            'followed by "/" and a mask, or one of Minimize-Delay, '
+            'Maximize-Throughput, Maximize-Reliability, Minimize-Cost, '
+            'Normal-Service'
+        )
+    tos, mask = parsed
+    if tos & ~mask & MAX_TOS:
+        return (
+            f'sets a bit its mask does not cover, so no packet can match it: '
+            f'the match asks for (traffic class & 0x{mask:02x}) == 0x{tos:02x}'
+        )
+    return ''
+
+
 # A packet mark is a 32 bit word on both back ends: iptables bounds each
 # half of `value[/mask]` at UINT32_MAX (netfilter libxtables/xtables.c,
 # xtables_parse_val_mask) and nftables answers a larger one with "Value

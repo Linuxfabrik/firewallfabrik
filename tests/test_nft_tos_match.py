@@ -23,7 +23,11 @@ to be there or the rule says less than it was written to say.
 Where the mask comes from is the half that is easy to get wrong: a number
 without one is matched under the *whole* byte, a symbolic name under 0x3F
 (netfilter libxtables/xtoptions.c, ``tos_parse_numeric`` with ``UINT8_MAX``
-against the ``.max`` of ``tos_mt_opts``).
+against the ``.max`` of ``tos_mt_opts``).  netfilter's own regression
+table says the same thing in its normalisation column, which is the
+citation to trust over any reading of the parser -
+``extensions/libxt_tos.t`` lists ``--tos Minimize-Delay`` as
+``--tos 0x10/0x3f`` and ``--tos 0xff`` as ``--tos 0xff/0xff``.
 
 Every expected form below was loaded into nft 1.1.7 in a private network
 namespace and listed back; ``ip dscp & 0x0f 0x04 ip ecn 0x00`` linearises
@@ -33,7 +37,7 @@ which is ``(tos & 0x3f) == 0x10``.
 
 import pytest
 
-from firewallfabrik.core.objects import parse_tos
+from firewallfabrik.core.objects import parse_tos, tos_problem
 from firewallfabrik.platforms.nftables._print_rule import print_tos_matches
 
 
@@ -108,3 +112,52 @@ def test_print_tos_matches_refuses(value, why):
     """A value no packet can match is refused, not split."""
     assert print_tos_matches(value, False) is None, why
     assert print_tos_matches(value, True) is None, why
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        ('0x10', ''),
+        ('Minimize-Delay', ''),
+        ('0x0f/0x0f', ''),
+        ('0/0', ''),
+        ('bogus', 'is not a ToS value'),
+        ('300', 'is not a ToS value'),
+        ('0x20/0x03', 'sets a bit its mask does not cover'),
+        ('0xff/0x0f', 'sets a bit its mask does not cover'),
+    ],
+)
+def test_tos_problem(value, expected):
+    """The one reader both compilers ask.
+
+    They answer it differently - iptables writes the match, nftables
+    splits it - so only one of them could be told from the other's
+    answer, and a value neither can use has to read the same on both.
+    """
+    problem = tos_problem(value)
+    assert problem.startswith(expected)
+    if expected:
+        assert problem
+    else:
+        assert problem == ''
+
+
+def test_the_printer_and_the_reader_agree():
+    """Whatever the reader refuses, the printer refuses, and the reverse."""
+    for value in (
+        '0x10',
+        '0xb8',
+        'Minimize-Delay',
+        'Normal-Service',
+        '0x0f/0x0f',
+        '0/0',
+        'bogus',
+        '300',
+        '0x20/0x03',
+        '0xff/0x0f',
+        '1/2/3',
+        '',
+    ):
+        refused_by_reader = bool(tos_problem(value))
+        refused_by_printer = print_tos_matches(value, False) is None
+        assert refused_by_reader == refused_by_printer, value

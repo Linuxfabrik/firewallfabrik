@@ -73,6 +73,7 @@ from firewallfabrik.core.objects import (
     packet_mark_clear_mask,
     parse_tos,
     range_to_cidr,
+    tos_problem,
 )
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
@@ -165,12 +166,9 @@ def print_tos_matches(tos: str, ipv6: bool) -> list[str] | None:
       nothing with it; leaving the rule out has the same effect and says
       so.
     """
-    parsed = parse_tos(tos)
-    if parsed is None:
+    if tos_problem(tos):
         return None
-    value, mask = parsed
-    if value & ~mask & 0xFF:
-        return None
+    value, mask = parse_tos(tos)
     family = 'ip6' if ipv6 else 'ip'
     parts = []
     dscp_mask, dscp_value = mask >> 2, value >> 2
@@ -233,7 +231,8 @@ def ip_service_condition_count(srv, ipv6: bool) -> int:
         # of each.  Asking the printer is what keeps the two in step.  A
         # value the printer refuses counts as one, so the service is read
         # as saying something - the rule is dropped either way.
-        count += len(print_tos_matches(tos, ipv6) or [''])
+        tos_matches = print_tos_matches(tos, ipv6)
+        count += 1 if tos_matches is None else len(tos_matches)
     elif data.get('dscp'):
         count += 1
     if ipv6:
@@ -1717,8 +1716,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             # other way round here meant the same service matched the ToS
             # byte on one platform and the DiffServ field on the other.
             if tos:
+                problem = tos_problem(tos)
                 tos_matches = print_tos_matches(tos, self.compiler.ipv6_policy)
-                if tos_matches is None:
+                if problem:
                     # Either the text is none netfilter reads - iptables
                     # answers that with "Symbolic name is unknown" or
                     # "Illegal value" and stops the activation with every
@@ -1729,16 +1729,12 @@ class PrintRule_nft(PolicyRuleProcessor):
                     # traffic class.
                     self.compiler.error(
                         rule,
-                        f'IP service has a ToS value "{tos}" no packet can '
-                        'match; it takes a number from 0 to 255, optionally '
-                        'followed by "/" and a mask covering every bit the '
-                        'number sets, or one of Minimize-Delay, '
-                        'Maximize-Throughput, Maximize-Reliability, '
-                        'Minimize-Cost, Normal-Service. The rule is left out',
+                        f'IP service has a ToS value "{tos}" that {problem}. '
+                        'The rule is left out',
                     )
                     unrenderable = True
                 else:
-                    parts.extend(tos_matches)
+                    parts.extend(tos_matches or [])
             elif dscp:
                 if not is_valid_dscp(dscp):
                     # An unknown DiffServ class (e.g. "AF4") is rejected by

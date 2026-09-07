@@ -55,12 +55,12 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     is_valid_dscp,
     is_valid_packet_mark,
-    is_valid_tos,
     is_valid_user_id,
     max_prefix_length,
     netmask_prefix_length,
     normalize_mac_address,
     range_to_cidr,
+    tos_problem,
 )
 from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
@@ -1198,21 +1198,25 @@ class PrintRule(PolicyRuleProcessor):
             ):
                 return None
             if tos:
-                if not is_valid_tos(tos):
-                    # Two things at once.  iptables answers an unreadable
-                    # value with "Symbolic name is unknown" or "Illegal
-                    # value" and stops the activation script; and the value
-                    # is free text that reaches the generated script
-                    # unquoted, where a space ends the argument and a dollar
-                    # sign, a backtick or a semicolon start something else -
-                    # as root, at the moment every chain is already at DROP.
+                # `tos_problem` is the one reader of what is wrong with the
+                # value, so the two compilers cannot disagree about it.  It
+                # answers two things at once: a text netfilter does not read
+                # - iptables says "Symbolic name is unknown" or "Illegal
+                # value" and stops the activation script, and the value is
+                # free text that reaches the generated script unquoted,
+                # where a space ends the argument and a dollar sign, a
+                # backtick or a semicolon start something else, as root at
+                # the moment every chain is already at DROP - and a value
+                # setting a bit its mask does not cover, which iptables
+                # takes without a word and no packet can match.  Neither is
+                # a rule: the first cannot be installed, the second matches
+                # nothing wherever it sits.
+                problem = tos_problem(tos)
+                if problem:
                     self.compiler.error(
                         rule,
-                        f'IP service has an invalid ToS value "{tos}"; use a '
-                        'number from 0 to 255, optionally followed by "/" and '
-                        'a mask, or one of Minimize-Delay, '
-                        'Maximize-Throughput, Maximize-Reliability, '
-                        'Minimize-Cost, Normal-Service. The rule is left out',
+                        f'IP service has a ToS value "{tos}" that {problem}. '
+                        'The rule is left out',
                     )
                     return None
                 parts.append(f'-m tos --tos {tos}')

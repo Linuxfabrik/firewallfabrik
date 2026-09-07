@@ -92,6 +92,7 @@ from ._services import (
     is_valid_user_id,
     packet_mark_clear_mask,
     parse_tos,
+    tos_problem,
 )
 from ._types import (
     Direction,
@@ -181,4 +182,5 @@ __all__ = [
     'parse_tos',
     'range_to_cidr',
     'rule_elements',
+    'tos_problem',
 ]
