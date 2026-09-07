@@ -1,0 +1,51 @@
+name: 'Test: a negated Custom Service'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'CustomService'
+        name: 'established'
+        codes:
+          iptables: '-m conntrack --ctstate ESTABLISHED,RELATED'
+          nftables: 'ct state established,related'
+        protocol: 'any'
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: false
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                action: 'Deny'
+                direction: 'Both'
+                negations:
+                  srv: true
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/CustomService:established'
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.168.1.0'
+          netmask: '255.255.255.0'

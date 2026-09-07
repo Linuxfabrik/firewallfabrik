@@ -834,7 +834,18 @@ def _single_negated_service_needs_a_chain(srv, ipv6: bool) -> bool:
     disjunction and one rule cannot hold it; an IP service naming its
     protocol beside a fragment or a DiffServ code point says the same
     thing about a different pair of fields.
+
+    A Custom Service is the third, and it needs the chain whatever it
+    says: its code is opaque nftables text that nothing here can turn
+    into its own opposite - not even when it happens to be a single
+    comparison, because reading that out of the text is guesswork.  The
+    chain needs no such reading: the return rule carries the code as it
+    stands.  This is what the iptables compiler does for every negated
+    element, Custom Services included
+    (``PolicyCompiler_ipt::SrvNegation``).
     """
+    if isinstance(srv, CustomService):
+        return True
     if isinstance(srv, IPService):
         return ip_service_condition_count(srv, ipv6) > 1
     if not isinstance(srv, (TCPService, UDPService)):
