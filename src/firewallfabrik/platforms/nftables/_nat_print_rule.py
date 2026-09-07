@@ -69,6 +69,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_negated_services,
     print_pair_clause,
     tcp_flags_match_nft,
+    tos_dscp_matches,
 )
 from firewallfabrik.platforms.nftables._utils import (
     NFT_IP_OPTION_FIRST_RELEASE,
@@ -635,19 +636,13 @@ class NATPrintRule_nft(NATRuleProcessor):
             if p > 0:
                 ip_parts.append(f'meta l4proto {p}')
             data = srv.data or {}
-            # The policy printer reads the ToS and the DSCP of an IP
-            # service; neither NAT printer does, and neither does
-            # fwbuilder's (NATCompiler_PrintRule.cpp, _printIP).  A rule
-            # whose command leaves the field out translates traffic the
-            # editor does not show, so it is reported rather than passed on.
-            if data.get('tos', '') or data.get('dscp', ''):
-                self.compiler.error(
-                    rule,
-                    'the service of this NAT rule matches on the ToS or DSCP '
-                    'field, which a NAT rule cannot express; the rule is left '
-                    'out',
-                )
+            # A payload match is allowed in a nat hook like anywhere else,
+            # so the ToS byte and the DiffServ code point are written by the
+            # same shared helper the policy printer uses.
+            tos_parts = tos_dscp_matches(self.compiler, rule, data)
+            if tos_parts is None:
                 return None
+            ip_parts.extend(tos_parts)
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
             if not self.compiler.ipv6_policy:

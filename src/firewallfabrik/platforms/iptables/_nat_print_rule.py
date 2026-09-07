@@ -65,6 +65,7 @@ from firewallfabrik.platforms.iptables._utils import (
     ipv4_options_match,
     match_available,
     normalize_set_name,
+    tos_dscp_matches,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -1188,19 +1189,13 @@ class NATPrintRule(NATRuleProcessor):
         """
         data = srv.data or {}
         parts = []
-        # fwbuilder's NAT printer reads neither the ToS nor the DSCP of an
-        # IP service (NATCompiler_PrintRule.cpp, _printIP), and the policy
-        # printer reads both.  A NAT rule whose service names one and whose
-        # command does not carries a wider condition than the editor shows
-        # and translates traffic the rule was not written for, so it is
-        # reported rather than passed on.
-        if data.get('tos', '') or data.get('dscp', ''):
-            self.compiler.error(
-                rule,
-                'the service of this NAT rule matches on the ToS or DSCP '
-                'field, which a NAT rule cannot express; the rule is left out',
-            )
+        # The ToS byte and the DiffServ code point are matched in the nat
+        # table the same way they are in the filter one, and by the same
+        # shared helper the policy printer uses.
+        tos_parts = tos_dscp_matches(self.compiler, rule, self.version, data)
+        if tos_parts is None:
             return None
+        parts.extend(tos_parts)
         if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
             if self.compiler.ipv6_policy:
                 # ip6tables refuses -f outright and names the replacement

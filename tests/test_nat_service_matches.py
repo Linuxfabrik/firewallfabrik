@@ -13,13 +13,14 @@
 """What a NAT rule keeps of the service its Original Service names.
 
 The policy printers read the TCP flags and the ToS / DSCP of a service;
-the NAT printers read neither, and neither does fwbuilder's
-(NATCompiler_PrintRule.cpp, _printIP).  A NAT rule whose command is
-missing one of them translates every packet between the addresses it
-names, not the ones the service describes.
+fwbuilder's NAT printer reads neither (NATCompiler_PrintRule.cpp,
+_printIP).  A NAT rule whose command is missing one of them translates
+every packet between the addresses it names, not the ones the service
+describes.
 
-The flags are legal in a nat chain on both back ends, so they are written
-out; the ToS and the DSCP have no place in a NAT rule and are reported.
+All three are legal in a nat chain on both back ends - ``xt_dscp``
+registers with no ``.hooks`` and no table of its own, and an nftables
+payload match is allowed in a nat hook - so all three are written out.
 
 No `.fwb` or `.fwf` of the corpus puts such a service in a NAT rule, so
 the forms are asserted here rather than through a fixture.
@@ -32,6 +33,17 @@ import pytest
 from firewallfabrik.core.objects import IPService, NATAction, TCPService
 
 
+class _Firewall:
+    """A firewall that pins no release, so every gate is open."""
+
+    platform = 'nftables'
+    data: dict = {}  # noqa: RUF012
+
+    @staticmethod
+    def get_option(key, _platform=None):
+        raise KeyError(key)
+
+
 class _Compiler:
     """Just enough compiler for the two NAT service printers."""
 
@@ -39,6 +51,7 @@ class _Compiler:
 
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.fw = _Firewall()
 
     def warning(self, _rule, msg: str) -> None:
         self.messages.append(msg)
@@ -120,16 +133,48 @@ def test_a_nat_rule_keeps_the_tcp_flags_of_its_service_on_nftables():
     assert 'tcp dport 80' in out
 
 
+@pytest.mark.parametrize(
+    ('field', 'value', 'ipt', 'nft'),
+    [
+        ('tos', '0x10', '-m tos --tos 0x10', 'ip dscp 0x04 ip ecn 0x00'),
+        ('dscp', 'AF41', '-m dscp --dscp-class AF41', 'ip dscp af41'),
+        ('dscp', '0x10', '-m dscp --dscp 0x10', 'ip dscp 0x10'),
+    ],
+)
+def test_a_nat_rule_matches_the_tos_or_dscp_its_service_names(field, value, ipt, nft):
+    """``xt_dscp`` registers with no hook and no table of its own.
+
+    So ``-m tos`` and ``-m dscp`` work in the nat table, and an nftables
+    payload match works in a nat hook.  Both NAT printers used to report
+    "a NAT rule cannot express this" and leave the rule out, which is what
+    Firewall Builder's NAT printer does by never reading the field - not
+    what either tool refuses.
+    """
+    for printer, call, expected in (
+        (_ipt_printer(), lambda p, r, s: p._print_ip(r, s), ipt),
+        (_nft_printer(), lambda p, r, s: p._print_service(s, r), nft),
+    ):
+        srv = _ip_service(**{field: value})
+        rule = _rule(srv)
+        assert expected in call(printer, rule, srv)
+        assert printer.compiler.messages == []
+
+
 @pytest.mark.parametrize('field', ['tos', 'dscp'])
-def test_a_nat_rule_naming_a_tos_or_dscp_service_is_reported(field):
+def test_a_nat_rule_naming_a_tos_or_dscp_value_no_tool_reads_is_reported(field):
+    """A value neither tool accepts still costs the rule.
+
+    Without the match the rule would translate every traffic class, which
+    is the opposite of what it says.
+    """
     for printer, call in (
         (_ipt_printer(), lambda p, r, s: p._print_ip(r, s)),
         (_nft_printer(), lambda p, r, s: p._print_service(s, r)),
     ):
-        srv = _ip_service(**{field: '0x10'})
+        srv = _ip_service(**{field: 'AF4'})
         rule = _rule(srv)
         assert call(printer, rule, srv) is None
-        assert any('ToS or DSCP' in m for m in printer.compiler.messages)
+        assert printer.compiler.messages
 
 
 def _plain_service():

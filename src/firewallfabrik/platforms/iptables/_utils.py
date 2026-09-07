@@ -28,6 +28,8 @@ from firewallfabrik.core.objects import (
     TagService,
     UserService,
     is_run_time_address_table,
+    is_valid_dscp,
+    tos_problem,
 )
 from firewallfabrik.driver._interface_properties import (
     get_interface_var_name,
@@ -148,6 +150,76 @@ def match_available(compiler, rule, version: str, match: str) -> bool:
         f'{tool} before {first} has no "{match}" match; the rule is left out',
     )
     return False
+
+
+def tos_dscp_matches(compiler, rule, version: str, data: dict) -> list[str] | None:
+    """Build the ToS / DiffServ matches of an IPService, or report why not.
+
+    Both print rules emit this, and both used to have their own answer:
+    the policy one wrote the matches, the NAT one reported "a NAT rule
+    cannot express this" and left the rule out.  That claim is not true of
+    either tool.  ``xt_dscp`` registers its four matches with no ``.hooks``
+    and no table of its own (net/netfilter/xt_dscp.c), so ``-m tos`` and
+    ``-m dscp`` are as available in the nat table as in the filter one -
+    the reason Firewall Builder's NAT printer leaves the field out is that
+    ``NATCompiler_PrintRule::_printIP`` never reads it, not that iptables
+    refuses it.  Dropping a working rule is the worse of the two answers,
+    so both printers ask this now.
+
+    ``None`` means the rule has to go: either the version pinned has no
+    such match, or the value is one the tool refuses or no packet can
+    match.  Whoever calls this has already been told why.
+    """
+    tos = data.get('tos', '')
+    dscp = data.get('dscp', '')
+    if (tos and not match_available(compiler, rule, version, 'tos')) or (
+        dscp and not match_available(compiler, rule, version, 'dscp')
+    ):
+        return None
+    if tos:
+        # `tos_problem` is the one reader of what is wrong with the value,
+        # so the two compilers cannot disagree about it.  It answers two
+        # things at once: a text netfilter does not read - iptables says
+        # "Symbolic name is unknown" or "Illegal value" and stops the
+        # activation script, and the value is free text that reaches the
+        # generated script unquoted, where a space ends the argument and a
+        # dollar sign, a backtick or a semicolon start something else, as
+        # root at the moment every chain is already at DROP - and a value
+        # setting a bit its mask does not cover, which iptables takes
+        # without a word and no packet can match.  Neither is a rule: the
+        # first cannot be installed, the second matches nothing wherever
+        # it sits.
+        problem = tos_problem(tos)
+        if problem:
+            compiler.error(
+                rule,
+                f'IP service has a ToS value "{tos}" that {problem}. '
+                'The rule is left out',
+            )
+            return None
+        return [f'-m tos --tos {tos}']
+    if dscp:
+        if not is_valid_dscp(dscp):
+            # An unknown DiffServ class (e.g. "AF4"), or a number above
+            # XT_DSCP_MAX such as the whole TOS byte 184 that EF is often
+            # written as, is refused by iptables at load time (netfilter
+            # extensions/libxt_dscp.c, .max = XT_DSCP_MAX).  The rule has
+            # to go with it: keeping it without the match leaves an "accept
+            # only AF41" rule accepting every traffic class, which is the
+            # opposite of what it says.
+            compiler.error(
+                rule,
+                f'IP service has an invalid DSCP value "{dscp}"; '
+                'use a DiffServ class (for example AF41) or a numeric '
+                'code point. The rule is left out',
+            )
+            return None
+        # Symbolic DiffServ class names use --dscp-class
+        # (matches fwbuilder PolicyCompiler_PrintRule::_printIP).
+        if dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
+            return [f'-m dscp --dscp-class {dscp}']
+        return [f'-m dscp --dscp {dscp}']
+    return []
 
 
 # The same question for the targets the compiler writes, derived the same

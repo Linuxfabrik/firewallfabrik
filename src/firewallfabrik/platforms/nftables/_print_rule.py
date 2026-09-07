@@ -184,6 +184,68 @@ def print_tos_matches(tos: str, ipv6: bool) -> list[str] | None:
     return parts
 
 
+def tos_dscp_matches(compiler, rule, data: dict) -> list[str] | None:
+    """Build the ToS / DiffServ matches of an IPService, or report why not.
+
+    Both print rules emit this, and both used to have their own answer:
+    the policy one wrote the matches, the NAT one reported "a NAT rule
+    cannot express this" and left the rule out.  A payload match is
+    allowed in every chain nftables has, nat hooks included, so the claim
+    was wrong on this platform too - it came from Firewall Builder's NAT
+    printer, whose ``_printIP`` simply never reads the field.  Dropping a
+    working rule is the worse of the two answers.
+
+    An IP service can hold a ToS byte and a DiffServ code point at once,
+    and only one of them can become a match.  The ToS byte wins, because
+    that is the order Firewall Builder uses
+    (``PolicyCompiler_PrintRule.cpp:953``: ``if (!tos.empty()) ... else if
+    (!dscp.empty())``).  Deciding it the other way round here meant the
+    same service matched the ToS byte on one platform and the DiffServ
+    field on the other.
+
+    ``None`` means the rule has to go, and whoever calls this has already
+    been told why.
+    """
+    af = 'ip6' if getattr(compiler, 'ipv6_policy', False) else 'ip'
+    tos = data.get('tos', '')
+    dscp = data.get('dscp', '')
+    if tos:
+        problem = tos_problem(tos)
+        if problem:
+            # Either the text is none netfilter reads - iptables answers
+            # that with "Symbolic name is unknown" or "Illegal value" and
+            # stops the activation with every chain already at DROP - or
+            # the value carries a bit its mask does not cover, and then no
+            # packet can match it.  Neither may go out without the match
+            # the service names, which would widen the rule to every
+            # traffic class.
+            compiler.error(
+                rule,
+                f'IP service has a ToS value "{tos}" that {problem}. '
+                'The rule is left out',
+            )
+            return None
+        return print_tos_matches(tos, af == 'ip6') or []
+    if dscp:
+        if not is_valid_dscp(dscp):
+            # An unknown DiffServ class (e.g. "AF4") is rejected by
+            # nftables; report it instead of emitting a rule that fails to
+            # load.
+            compiler.error(
+                rule,
+                f'IP service has an invalid DSCP value "{dscp}"; '
+                'use a DiffServ class (for example af41) or a numeric '
+                'code point',
+            )
+            return None
+        # nftables' dscp symbols (cs0, af11, be, ef, ...) are lowercase and
+        # resolved case-sensitively; the DiffServ class names fwbuilder
+        # stores are uppercase (BE, CS0, AF11).  Numeric values (0x20) are
+        # unaffected by lower().
+        return [f'{af} dscp {dscp.lower()}']
+    return []
+
+
 # Targets that only write a log message and let the packet fall through to
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
@@ -1701,59 +1763,16 @@ class PrintRule_nft(PolicyRuleProcessor):
             if proto > 0:
                 parts.append(f'meta l4proto {proto}')
             data = srv.data or {}
-            tos = data.get('tos', '')
-            dscp = data.get('dscp', '')
-            af = 'ip6' if self.compiler.ipv6_policy else 'ip'
             # A condition of the service that cannot be rendered widens the
             # rule to traffic the user did not name, so the rule is dropped.
             unrenderable = False
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 parts.append(print_fragment_match(self.compiler.ipv6_policy))
-            # An IP service can hold a ToS byte and a DiffServ code point at
-            # once, and only one of them can become a match. The ToS byte
-            # wins, because that is the order the iptables print rule and
-            # fwbuilder use (PolicyCompiler_PrintRule.cpp:953: `if
-            # (!tos.empty()) ... else if (!dscp.empty())`). Deciding it the
-            # other way round here meant the same service matched the ToS
-            # byte on one platform and the DiffServ field on the other.
-            if tos:
-                problem = tos_problem(tos)
-                tos_matches = print_tos_matches(tos, self.compiler.ipv6_policy)
-                if problem:
-                    # Either the text is none netfilter reads - iptables
-                    # answers that with "Symbolic name is unknown" or
-                    # "Illegal value" and stops the activation with every
-                    # chain already at DROP - or the value carries a bit
-                    # its mask does not cover, and then no packet can
-                    # match it.  Neither may go out without the match the
-                    # service names, which would widen the rule to every
-                    # traffic class.
-                    self.compiler.error(
-                        rule,
-                        f'IP service has a ToS value "{tos}" that {problem}. '
-                        'The rule is left out',
-                    )
-                    unrenderable = True
-                else:
-                    parts.extend(tos_matches or [])
-            elif dscp:
-                if not is_valid_dscp(dscp):
-                    # An unknown DiffServ class (e.g. "AF4") is rejected by
-                    # nftables; report it instead of emitting a rule that
-                    # fails to load.
-                    self.compiler.error(
-                        rule,
-                        f'IP service has an invalid DSCP value "{dscp}"; '
-                        'use a DiffServ class (for example af41) or a numeric '
-                        'code point',
-                    )
-                    unrenderable = True
-                else:
-                    # nftables' dscp symbols (cs0, af11, be, ef, ...) are
-                    # lowercase and resolved case-sensitively; the DiffServ
-                    # class names fwbuilder stores are uppercase (BE, CS0,
-                    # AF11). Numeric values (0x20) are unaffected by lower().
-                    parts.append(f'{af} dscp {dscp.lower()}')
+            tos_parts = tos_dscp_matches(self.compiler, rule, data)
+            if tos_parts is None:
+                unrenderable = True
+            else:
+                parts.extend(tos_parts)
             if not self.compiler.ipv6_policy:
                 # IP options are an IPv4 header feature; the iptables compiler
                 # also emits `-m ipv4options` for IPv4 policies only.

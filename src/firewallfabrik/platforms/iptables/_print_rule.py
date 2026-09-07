@@ -53,14 +53,12 @@ from firewallfabrik.core.objects import (
     UserService,
     get_address_table_source,
     is_run_time_address_table,
-    is_valid_dscp,
     is_valid_packet_mark,
     is_valid_user_id,
     max_prefix_length,
     netmask_prefix_length,
     normalize_mac_address,
     range_to_cidr,
-    tos_problem,
 )
 from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
@@ -75,6 +73,7 @@ from firewallfabrik.platforms.iptables._utils import (
     ipv4_options_match,
     match_available,
     normalize_set_name,
+    tos_dscp_matches,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -1191,59 +1190,10 @@ class PrintRule(PolicyRuleProcessor):
                 else:
                     parts.append('-f')
             # TOS / DSCP
-            tos = data.get('tos', '')
-            dscp = data.get('dscp', '')
-            if (tos and not self._match_available(rule, 'tos')) or (
-                dscp and not self._match_available(rule, 'dscp')
-            ):
+            tos_parts = tos_dscp_matches(self.compiler, rule, self.version, data)
+            if tos_parts is None:
                 return None
-            if tos:
-                # `tos_problem` is the one reader of what is wrong with the
-                # value, so the two compilers cannot disagree about it.  It
-                # answers two things at once: a text netfilter does not read
-                # - iptables says "Symbolic name is unknown" or "Illegal
-                # value" and stops the activation script, and the value is
-                # free text that reaches the generated script unquoted,
-                # where a space ends the argument and a dollar sign, a
-                # backtick or a semicolon start something else, as root at
-                # the moment every chain is already at DROP - and a value
-                # setting a bit its mask does not cover, which iptables
-                # takes without a word and no packet can match.  Neither is
-                # a rule: the first cannot be installed, the second matches
-                # nothing wherever it sits.
-                problem = tos_problem(tos)
-                if problem:
-                    self.compiler.error(
-                        rule,
-                        f'IP service has a ToS value "{tos}" that {problem}. '
-                        'The rule is left out',
-                    )
-                    return None
-                parts.append(f'-m tos --tos {tos}')
-            elif dscp:
-                if not is_valid_dscp(dscp):
-                    # An unknown DiffServ class (e.g. "AF4"), or a number
-                    # above XT_DSCP_MAX such as the whole TOS byte 184 that
-                    # EF is often written as, is refused by iptables at load
-                    # time (netfilter extensions/libxt_dscp.c, .max =
-                    # XT_DSCP_MAX).  The rule has to go with it: keeping it
-                    # without the match leaves an "accept only AF41" rule
-                    # accepting every traffic class, which is the opposite of
-                    # what it says.  The nftables printer already answers the
-                    # same input this way.
-                    self.compiler.error(
-                        rule,
-                        f'IP service has an invalid DSCP value "{dscp}"; '
-                        'use a DiffServ class (for example AF41) or a numeric '
-                        'code point. The rule is left out',
-                    )
-                    return None
-                # Symbolic DiffServ class names use --dscp-class
-                # (matches fwbuilder PolicyCompiler_PrintRule::_printIP)
-                elif dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
-                    parts.append(f'-m dscp --dscp-class {dscp}')
-                else:
-                    parts.append(f'-m dscp --dscp {dscp}')
+            parts.extend(tos_parts)
             # IP options (IPv4 only)
             if not self.compiler.ipv6_policy:
                 ip_opts, problem = ipv4_options_match(data, self.version)
