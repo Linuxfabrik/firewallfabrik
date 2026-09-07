@@ -488,6 +488,17 @@ script_body() {
  $IPTABLES -w 5 -t nat -A fwf_POSTROUTING -o eth0 -s 192.168.1.0/24 -j fwf_CHAIN
  $IPTABLES -w 5 -t nat -A fwf_CHAIN -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
  $IPTABLES -w 5 -t nat -A fwf_CHAIN -j SNAT --to-source 203.0.113.1
+ #
+ # Rule 1 (NAT)
+ #
+ echo "Rule 1 (NAT)"
+ #
+ # A rule that translates nothing reaches both hooks, so the chain is jumped to from each of them
+ $IPTABLES -w 5 -t nat -N fwf_CHAIN
+ $IPTABLES -w 5 -t nat -A fwf_POSTROUTING -s 192.168.1.0/24 -j fwf_CHAIN
+ $IPTABLES -w 5 -t nat -A fwf_PREROUTING -s 192.168.1.0/24 -j fwf_CHAIN
+ $IPTABLES -w 5 -t nat -A fwf_CHAIN -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+ $IPTABLES -w 5 -t nat -A fwf_CHAIN -j ACCEPT
  IPTABLES="$fwf_tool_v4"
  IP6TABLES="$fwf_tool_v6"
  test "$fwf_failed_commands" -eq 0

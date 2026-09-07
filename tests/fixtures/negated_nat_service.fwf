@@ -51,6 +51,17 @@ libraries:
                   - 'Library:Test Objects/CustomService:established'
                 tsrc:
                   - 'Library:Test Objects/Firewall:fw-test/Interface:eth0/IPv4:eth0-addr'
+              - type: 'NATRule'
+                position: 1
+                comment: 'A rule that translates nothing reaches both hooks, so the
+                  chain is jumped to from each of them'
+                action: 'Translate'
+                negations:
+                  osrv: true
+                osrc:
+                  - 'Library:Test Objects/Network:internal-net'
+                osrv:
+                  - 'Library:Test Objects/CustomService:established'
       - type: 'Network'
         name: 'internal-net'
         inet_addr_mask:

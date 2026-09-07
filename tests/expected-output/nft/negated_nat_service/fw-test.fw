@@ -89,6 +89,11 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 1 (NAT)
+        #
+        # A rule that translates nothing reaches both hooks, so the chain is jumped to from each of them
+        ip saddr 192.168.1.0/24 counter jump C7911f64e8445.0
     }
 
     chain postrouting {
@@ -97,6 +102,11 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter jump C21a6ab7262fc.0
+        #
+        # Rule 1 (NAT)
+        #
+        # A rule that translates nothing reaches both hooks, so the chain is jumped to from each of them
+        ip saddr 192.168.1.0/24 counter jump C7911f64e8445.0
     }
 
     chain C21a6ab7262fc.0 {
@@ -105,6 +115,15 @@ table ip fwf_nat {
         #
         ct state established,related counter return
         oifname "eth0" counter snat to 203.0.113.1
+    }
+
+    chain C7911f64e8445.0 {
+        #
+        # Rule 1 (NAT)
+        #
+        # A rule that translates nothing reaches both hooks, so the chain is jumped to from each of them
+        ct state established,related counter return
+        counter accept
     }
 }
 
