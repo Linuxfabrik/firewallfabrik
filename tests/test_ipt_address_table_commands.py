@@ -65,11 +65,22 @@ def _script(tmp_path, fw_name='firewall41-1'):
 
 
 def test_the_commands_ask_which_family_the_address_has(tmp_path):
-    """The static half, so the reason survives without the tools."""
+    """The static half, so the reason survives without the tools.
+
+    The assertion is about the property and not about the command text:
+    each of the three works out the set from the address it was given and
+    names no other one, whatever options the ipset call grows.
+    """
     script = _script(tmp_path)
     assert 'address_table_set_for() {' in script
-    for command in ('-A', '-D', '-T'):
-        assert f'"$IPSET" {command} "${{set_name}}:net" "$address"' in script
+    for command in (
+        'add_to_address_table',
+        'remove_from_address_table',
+        'test_address_table',
+    ):
+        body = script.split(f'{command}() {{\n', 1)[1].split('\n}\n', 1)[0]
+        assert 'address_table_set_for' in body, command
+        assert '${addrtbl_name}:' not in body, command
 
 
 @pytest.mark.skipif(not CAN_ASK_IPSET, reason=SKIP_REASON_IPSET)
