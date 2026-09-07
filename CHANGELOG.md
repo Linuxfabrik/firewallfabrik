@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a rule whose service element is negated and names an IP service that matches a DiffServ code point or a fragment excludes it together with the rest of the element, in the temporary chain the iptables compiler builds for the same rule. Such a service says nothing about the protocol, so the rule it used to get for itself matched packets the element excludes.
 * Compiler (nftables): a rule whose service element is negated and names an IP service that matches its protocol and a second condition at once compiles instead of being reported, and no longer leaves the rest of the element standing as a rule of its own.
 * Compiler (nftables): a rule whose service element is negated and names a whole protocol - "All TCP", an ICMP service with no type, or an IP service naming nothing but its protocol number - excludes it together with the rest of the element. Such a service used to get a rule of its own that matched every packet of every other protocol, so a Deny rule written for "anything but IPsec" dropped everything and an Accept rule let everything through.
+* Compiler (nftables): an address table with more than about eleven thousand addresses fills the set the rules match against. Such a table used to leave the set empty, so a Deny rule built on a large block list blocked nothing.
 
 
 ## [v3.0.0] - 2026-09-04

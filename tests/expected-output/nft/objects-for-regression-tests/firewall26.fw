@@ -274,6 +274,16 @@ configure_interfaces() {
     update_addresses_of_interface "eth2 192.168.2.1/24" ""
 }
 
+# nft is handed the element list on standard input and not on its command
+# line.  execve caps a single argument at MAX_ARG_STRLEN, 32 pages
+# (include/uapi/linux/binfmts.h), so an address table of more than about
+# eleven thousand addresses could not be passed over at all: the shell
+# answered "Argument list too long", the set stayed empty, and a Deny rule
+# built on it blocked nothing.
+add_set_elements() {
+    printf 'add element %s %s %s { %s }\n' "$1" "$2" "$3" "$4" | $NFT -f -
+}
+
 # An address table keeps its addresses in a file on this machine, so the set
 # the rules match against is filled in here and not by the ruleset itself.
 # Comments start with "#" or ";", and an address of the other family is
@@ -300,7 +310,7 @@ load_address_table() {
     addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
 
     test -n "$addrs" || return 0
-    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+    add_set_elements "$family" "$table" "$setname" "$addrs"
 }
 
 # A DNS name is resolved on this machine, and nft refuses a hostname that
@@ -325,7 +335,7 @@ load_dns_name() {
         echo "Can not resolve $host referenced by DNS name object $setname"
         return 0
     }
-    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+    add_set_elements "$family" "$table" "$setname" "$addrs"
 }
 
 # The address of a dynamic interface is only known here, so the rules match
@@ -358,7 +368,7 @@ load_interface_address() {
              "so the rules using set $setname match nothing"
         return 0
     }
-    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+    add_set_elements "$family" "$table" "$setname" "$addrs"
 }
 
 # A set that stays empty is a set no packet is in, so a Deny rule built on
