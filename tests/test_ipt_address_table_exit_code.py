@@ -99,6 +99,9 @@ def test_a_reload_says_what_it_could_not_load(tmp_path):
         IPSET=ipset
         {functions.group(0)}
         reload_address_table blk {good} -4 > /dev/null || exit 1
+        # An address one of the table's networks covers is in the table:
+        # 203.0.113.0/24 is in the file and this host is inside it.
+        test_address_table blk 203.0.113.7 > /dev/null || exit 1
         reload_address_table blk /nonexistent.tbl -4 > /dev/null && exit 1
         reload_address_table blk {mixed} -4 > {tmp_path}/said.txt && exit 1
         test_address_table blk 198.51.100.1 > /dev/null || exit 1

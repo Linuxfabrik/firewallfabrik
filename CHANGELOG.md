@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Compiler (iptables): the four commands that maintain a run-time address table answer with an exit code, and an address listed twice or added twice is not an error. `test_address_table` used to say the same thing for an address in the table and one that is not, a reload from a file that is not there reported success, and an address ipset refused was skipped without a word.
+* Compiler (iptables): the four commands that maintain a run-time address table answer with an exit code, `test_address_table` finds an address that one of the table's networks covers, and an address listed twice or added twice is not an error. `test_address_table` used to say the same thing for an address in the table and one that is not, a reload from a file that is not there reported success, and an address ipset refused was skipped without a word.
 * Compiler (iptables): a dual-stack firewall looks for `ip6tables` before it installs a rule. A wrong path or a machine without the tool used to be found only after the IPv4 rules were in place, leaving IPv4 filtered and IPv6 open with no rules at all.
 * Compiler (iptables): adding, removing or testing an IPv6 address of a run-time address table from the command line works. The three commands used to hand every address to the set of the other family, which ipset refuses, so the address was neither added, removed nor tested while the data file said otherwise.
 * Compiler (iptables): an address table with more than 65536 addresses fills the set the rules match against. The set used to take the first 65536 and refuse the rest, so a Deny rule built on a large block list blocked only part of it while the activation reported success.

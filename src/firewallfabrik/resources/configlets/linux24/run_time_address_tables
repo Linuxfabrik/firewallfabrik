@@ -242,12 +242,29 @@ test_address_table() {
 
     set_name=$(address_table_set_for "$addrtbl_name" "$address")
 
-    if echo "$address" | grep -q "/"
-    then
-        "$IPSET" -T "${set_name}:net" "$address"
-    else
-        "$IPSET" -T "${set_name}:ip" "$address"
-    fi
+##  A plain address may be in the table as itself or covered by one of its
+##  networks, and the two live in different sets: hash:ip holds the single
+##  addresses, hash:net answers a longest-prefix lookup, and an address
+##  inside 203.0.113.0/24 is found only by asking the second one.  Choosing
+##  the set by the shape of the argument alone therefore answered "not in
+##  set" for an address the firewall does block, and now that the command
+##  answers with an exit code it would tell a monitoring check so.  The
+##  nftables `nft get element` answers with the element that covers the
+##  address and needs no such loop.
+    case "$address" in
+    */*) at_sets="${set_name}:net" ;;
+    *) at_sets="${set_name}:ip ${set_name}:net" ;;
+    esac
+
+    for at_set in $at_sets; do
+        if "$IPSET" -T "$at_set" "$address" > /dev/null 2>&1; then
+            echo "$address is in address table $addrtbl_name"
+            return 0
+        fi
+    done
+
+    echo "$address is not in address table $addrtbl_name"
+    return 1
 }
 
 
