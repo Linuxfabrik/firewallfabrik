@@ -86,8 +86,10 @@ def test_a_reload_says_what_it_could_not_load(tmp_path):
     functions = _FUNCTIONS_RE.search(script)
     assert functions, 'the address table commands are no longer where the test looks'
 
+    # A block list stitched together from several feeds lists an address
+    # twice, which is not a line ipset could not read.
     good = tmp_path / 'good.tbl'
-    good.write_text('198.51.100.1\n203.0.113.0/24\n')
+    good.write_text('198.51.100.1\n203.0.113.0/24\n198.51.100.1\n')
     # Three lines ipset refuses: a prefix hash:net has no room for, a
     # length out of range and text that is no address at all.
     mixed = tmp_path / 'mixed.tbl'
@@ -101,6 +103,7 @@ def test_a_reload_says_what_it_could_not_load(tmp_path):
         reload_address_table blk {mixed} -4 > {tmp_path}/said.txt && exit 1
         test_address_table blk 198.51.100.1 > /dev/null || exit 1
         test_address_table blk 203.0.113.99 > /dev/null && exit 1
+        add_to_address_table blk {good} 198.51.100.1 > /dev/null || exit 1
         echo ANSWERED
     """
     proc = subprocess.run(  # nosec B603 B607

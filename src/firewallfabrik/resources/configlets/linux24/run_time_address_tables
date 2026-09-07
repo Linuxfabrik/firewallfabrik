@@ -107,6 +107,13 @@ reload_address_table() {
     # shellcheck disable=SC2086
     "$IPSET" -N tmp_fwb_set:net nethash $set_family maxelem $set_maxelem || status=1
 
+##  "-exist" is what makes the count mean "ipset could not parse this".
+##  Without it an address listed twice - the ordinary shape of a block list
+##  stitched together from several feeds - answers "Element cannot be added
+##  to the set: it's already added" and would be reported as refused, and
+##  adding an address that is already blocked would answer non-zero where
+##  the nftables set takes it silently.
+##
 ##  ipset refuses a line it cannot parse, and the loop went on without
 ##  counting: a malformed address, a prefix length out of range and
 ##  0.0.0.0/0, which hash:net has no room for, were all skipped while the
@@ -123,9 +130,9 @@ reload_address_table() {
             addr=$1
             if echo "$addr" | grep -q "/"
             then
-                "$IPSET" -A tmp_fwb_set:net "$addr" >/dev/null || n=$((n + 1))
+                "$IPSET" -A -exist tmp_fwb_set:net "$addr" >/dev/null || n=$((n + 1))
             else
-                "$IPSET" -A tmp_fwb_set:ip "$addr" >/dev/null || n=$((n + 1))
+                "$IPSET" -A -exist tmp_fwb_set:ip "$addr" >/dev/null || n=$((n + 1))
             fi
         done
         echo "$n"
@@ -194,9 +201,9 @@ add_to_address_table() {
 
     if echo "$address" | grep -q "/"
     then
-        "$IPSET" -A "${set_name}:net" "$address"
+        "$IPSET" -A -exist "${set_name}:net" "$address"
     else
-        "$IPSET" -A "${set_name}:ip" "$address"
+        "$IPSET" -A -exist "${set_name}:ip" "$address"
     fi
 }
 
