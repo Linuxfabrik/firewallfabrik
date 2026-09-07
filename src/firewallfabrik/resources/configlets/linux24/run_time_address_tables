@@ -69,13 +69,29 @@ reload_address_table() {
     "$IPSET" -X tmp_fwb_set:ip -q
     "$IPSET" -X tmp_fwb_set:net -q
 
-    # shellcheck disable=SC2086
-    "$IPSET" -N tmp_fwb_set:ip  iphash  $set_family
-    # shellcheck disable=SC2086
-    "$IPSET" -N tmp_fwb_set:net nethash $set_family
-
-    DATAFILE_SIZE=$(wc -l "$data_file" | cut -d" " -f 1)
+    DATAFILE_SIZE=$(wc -l < "$data_file")
     echo "Processing $DATAFILE_SIZE items in file: $data_file"
+
+##  A hash set takes IPSET_DEFAULT_MAXELEM elements, which is 65536, and
+##  answers every address after that with -IPSET_ERR_HASH_FULL, "Hash is
+##  full, cannot add more elements" (ipset
+##  kernel/include/linux/netfilter/ipset/ip_set_hash.h and
+##  ip_set_hash_gen.h).  A block list longer than that therefore blocked
+##  its first 65536 addresses and none of the rest, while the activation
+##  reported success.  So the set is made large enough for the file it is
+##  filled from, with room to grow through add_to_address_table; maxelem is
+##  a ceiling and costs no memory of its own.  The swap below carries the
+##  size over to the set the rules match against, whichever release created
+##  that one.
+    set_maxelem=65536
+    while test "$set_maxelem" -le "$DATAFILE_SIZE"; do
+        set_maxelem=$((set_maxelem * 2))
+    done
+
+    # shellcheck disable=SC2086
+    "$IPSET" -N tmp_fwb_set:ip  iphash  $set_family maxelem $set_maxelem
+    # shellcheck disable=SC2086
+    "$IPSET" -N tmp_fwb_set:net nethash $set_family maxelem $set_maxelem
 
     grep -Ev '^#|^;|^\s*$' "$data_file" | awk "$addr_filter" | while read -r L ; do
         # shellcheck disable=SC2086

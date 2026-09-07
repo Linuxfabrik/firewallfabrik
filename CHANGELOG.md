@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables): an address table with more than 65536 addresses fills the set the rules match against. The set used to take the first 65536 and refuse the rest, so a Deny rule built on a large block list blocked only part of it while the activation reported success.
 * Compiler (iptables): the generated script says it was compiled for iptables even when the firewall object names the other platform; the header used to name a packet filter the script does not use.
 * Compiler (iptables, nftables): a rule with the Branch action jumps into the rule set it points at even after that rule set has been renamed. The jump used to go to the old name: iptables created an empty chain of that name and jumped into it, so the branch did nothing in a script that activated cleanly, and nftables left the rule out.
 * Compiler (iptables, nftables): a NAT rule the compiler cannot classify is named in the message that reports it, instead of leaving the administrator with "Unsupported NAT rule" and no rule number.

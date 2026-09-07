@@ -64,3 +64,9 @@ CAN_ASK_NFT = not SKIP_REASON
 
 SKIP_REASON_IPTABLES = _run(['unshare', '-rn', 'iptables', '-N', 'fwf_probe_chain'])
 CAN_ASK_IPTABLES = not SKIP_REASON_IPTABLES
+
+# A set of the type the address-table code creates, which ipset has to accept.
+SKIP_REASON_IPSET = _run(
+    ['unshare', '-rn', 'ipset', '-N', 'fwf_probe_set', 'iphash', 'family', 'inet']
+)
+CAN_ASK_IPSET = not SKIP_REASON_IPSET
