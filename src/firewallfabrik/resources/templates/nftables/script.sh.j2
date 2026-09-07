@@ -270,9 +270,9 @@ address_table_set_for() {
     esac
 }
 
-# Read a block list again without recompiling the firewall.  The three
-# commands below take the same arguments as the iptables script's, so one
-# runbook works on either packet filter.
+# Read a block list again without recompiling the firewall.  This command
+# and the three below it take the same arguments as their counterparts in
+# the iptables script, so one runbook works on either packet filter.
 reload_address_table() {
     test -n "$1" && test -n "$2" || {
         echo "Usage: reload_address_table address_table_object_name file_name [-4|-6]"
