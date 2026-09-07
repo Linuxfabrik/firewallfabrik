@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables): the "stop" command of the generated script touches only the address families the firewall has rules for. On a firewall with no IPv6 rules it used to set the IPv6 policies to ACCEPT - opening a family this script never closed - and to exit non-zero on a host without `ip6tables`, so an init system read a successful stop as a failure.
 * Compiler (iptables): the four commands that maintain a run-time address table answer with an exit code, `test_address_table` finds an address that one of the table's networks covers, and an address listed twice or added twice is not an error. `test_address_table` used to say the same thing for an address in the table and one that is not, a reload from a file that is not there reported success, and an address ipset refused was skipped without a word.
 * Compiler (iptables): a firewall pinned below ip6tables 1.2.8 leaves out the IPv6 neighbour discovery rules, whose hop limit match that release has not got. The activation used to stop there with every built-in policy already set to DROP, so the firewall came up with no rules at all.
 * Compiler (iptables): a dual-stack firewall looks for `ip6tables` before it installs a rule. A wrong path or a machine without the tool used to be found only after the IPv4 rules were in place, leaving IPv4 filtered and IPv6 open with no rules at all.

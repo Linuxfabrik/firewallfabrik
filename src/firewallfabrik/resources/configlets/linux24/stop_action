@@ -17,16 +17,26 @@
 ## responding (matching fwbuilder behaviour).  In coexistence mode this
 ## also allows other tools' rules (Docker, CrowdSec, fail2ban) to keep
 ## working.
+##
+## Each family is asked on its own, the way fwbuilder's own configlet
+## asks it and the way `reset_all`, `check_tools` and `status_action`
+## already do here: a script that installs no IPv6 ruleset never set the
+## IPv6 policies to DROP, so it must not set them to ACCEPT either, and
+## the host it runs on need not have ip6tables at all.
 
 stop_action() {
     reset_all
 
+{{if have_ipv4}}
     $IPTABLES {{$opt_wait}} -P OUTPUT  ACCEPT
     $IPTABLES {{$opt_wait}} -P INPUT   ACCEPT
     $IPTABLES {{$opt_wait}} -P FORWARD ACCEPT
+{{endif}}
+{{if have_ipv6}}
     $IP6TABLES {{$opt_wait}} -P OUTPUT  ACCEPT
     $IP6TABLES {{$opt_wait}} -P INPUT   ACCEPT
     $IP6TABLES {{$opt_wait}} -P FORWARD ACCEPT
+{{endif}}
 
 {{if mgmt_access}}
     # backup ssh access

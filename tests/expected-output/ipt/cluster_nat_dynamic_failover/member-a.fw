@@ -7,7 +7,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-interfaces.fw /etc/fwf.sh
+# files: * member-a.fw /etc/fwf.sh
 #
 # Compiled for iptables (any version)
 #
@@ -118,7 +118,6 @@ find_program() {
 check_tools() {
  find_program command
  find_program "$IPTABLES"
- find_program "$MODPROBE"
  find_program "$IP"
 }
 # The tables to clear. /proc/net/ip_tables_names, which used to be
@@ -411,30 +410,12 @@ check_run_time_address_table_files() {
 
 load_modules() {
  :
- OPTS=$1
- MODULES_DIR="/lib/modules/$(uname -r)/kernel/net/"
- MODULES=$(find "$MODULES_DIR" -name '*conntrack*' \! -name '*ipv6*' | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')
- echo "$OPTS" | grep -q nat && {
- MODULES="$MODULES $(find "$MODULES_DIR" -name '*nat*' | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
- }
- echo "$OPTS" | grep -q ipv6 && {
- MODULES="$MODULES $(find "$MODULES_DIR" -name nf_conntrack_ipv6 | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
- }
- for module in $MODULES; do
- if "$LSMOD" | grep "$module" >/dev/null; then continue; fi
- "$MODPROBE" "$module" || exit 1
- done
+
 }
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 eth1 lo"
- for i in eth0 eth1 lo ; do
- $IP link show "$i" > /dev/null 2>&1 || {
- log "Interface $i does not exist"
- exit 1
- }
- done
+
 }
 
 prolog_commands() {
@@ -455,9 +436,10 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth0 198.51.100.1/24" ""
- update_addresses_of_interface "eth1 192.168.1.1/24" ""
- update_addresses_of_interface "lo 127.0.0.1/8" ""
+ getaddr eth0 i_eth0
+ getaddr6 eth0 i_eth0_v6
+ getnet eth0 i_eth0_network
+ getnet6 eth0 i_eth0_v6_network
 }
 
 # The shell form of the policy is hundreds of separate commands, and the
@@ -498,57 +480,7 @@ script_body() {
  fwf_tool_v6="$IP6TABLES"
  IPTABLES=fwf_run_iptables
  IP6TABLES=fwf_run_ip6tables
- # ================ IPv4
 
- # ================ Table 'filter', automatic rules
- # accept established sessions
- $IPTABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-
- # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (eth1)
- #
- echo "Rule 0 (eth1)"
- #
- $IPTABLES -w 5 -A INPUT -i eth1 -p tcp -m tcp --dport 22 -m conntrack --ctstate NEW -j ACCEPT
- #
- # Rule 1 (eth0)
- #
- echo "Rule 1 (eth0)"
- #
- $IPTABLES -w 5 -A OUTPUT -o eth0 -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -m conntrack --ctstate NEW -j ACCEPT
- $IPTABLES -w 5 -A FORWARD -o eth0 -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -m conntrack --ctstate NEW -j ACCEPT
- #
- # Rule 2 (global)
- #
- echo "Rule 2 (global)"
- #
- $IPTABLES -w 5 -A OUTPUT -p udp -m udp --dport 53 -m conntrack --ctstate NEW -j ACCEPT
- #
- # Rule 3 (global)
- #
- echo "Rule 3 (global)"
- #
- $IPTABLES -w 5 -A OUTPUT -p tcp -m tcp -d 203.0.113.42 --dport 80 -m conntrack --ctstate NEW -j ACCEPT
- #
- # Rule 4 (eth0)
- #
- echo "Rule 4 (eth0)"
- #
- $IPTABLES -w 5 -A INPUT -i eth0 -j DROP
- #
- # Rule 5 (global)
- #
- echo "Rule 5 (global)"
- #
- $IPTABLES -w 5 -N RULE_5 2>/dev/null
- $IPTABLES -w 5 -A OUTPUT -j RULE_5
- $IPTABLES -w 5 -A INPUT -j RULE_5
- $IPTABLES -w 5 -A FORWARD -j RULE_5
- $IPTABLES -w 5 -A RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
- $IPTABLES -w 5 -A RULE_5 -j DROP
  IPTABLES="$fwf_tool_v4"
  IP6TABLES="$fwf_tool_v6"
  test "$fwf_failed_commands" -eq 0
@@ -556,13 +488,12 @@ script_body() {
 
 ip_forward() {
  :
- echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 reset_all() {
  :
- command -v nft >/dev/null 2>&1 && nft flush ruleset
- reset_iptables_v4
+
 }
 
 block_action() {
@@ -571,21 +502,9 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -w 5 -P OUTPUT ACCEPT
- $IPTABLES -w 5 -P INPUT ACCEPT
- $IPTABLES -w 5 -P FORWARD ACCEPT
 }
 
 status_action() {
- # Full-flush mode: the script owns the filter table, so any rule or
- # chain in it is one this script put there. Counting user-defined
- # chains alone would call an active firewall inactive: a policy
- # without logging, negation or a branch needs no chain of its own,
- # which is the ordinary case rather than a rare one.
- $IPTABLES -w 5 -S 2>/dev/null | grep -qE '^-(A|N) ' && {
- echo "Firewall is active"
- return 0
- }
  echo "Firewall is not configured"
  exit 3
 }

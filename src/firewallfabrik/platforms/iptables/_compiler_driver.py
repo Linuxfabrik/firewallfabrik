@@ -843,10 +843,10 @@ class CompilerDriver_ipt(CompilerDriver):
                 block_action.set_variable('state_module_option', mgmt_state_option)
                 script_skeleton.set_variable('block_action', block_action.expand())
 
-                # Stop action configlet — in full-flush mode policies
-                # stay at DROP (server stays protected); in coexistence
-                # mode policies are restored to ACCEPT so other tools'
-                # rules keep working.
+                # Stop action configlet — the policies of the families
+                # this script installs a ruleset for go back to ACCEPT so
+                # the machine keeps responding, and the other family is
+                # left alone: the script never set it to DROP.
                 stop_action = Configlet('linux24', 'stop_action')
                 stop_action.set_variable('opt_wait', opt_wait)
                 stop_action.collapse_empty_strings(True)
@@ -857,14 +857,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
                 stop_action.set_variable('mgmt_tool', mgmt_tool)
                 stop_action.set_variable('state_module_option', mgmt_state_option)
-                stop_action.set_variable(
-                    'coexistence_v4',
-                    1 if (not flush_ruleset and have_ipv4) else 0,
-                )
-                stop_action.set_variable(
-                    'coexistence_v6',
-                    1 if (not flush_ruleset and have_ipv6) else 0,
-                )
+                stop_action.set_variable('have_ipv4', 1 if have_ipv4 else 0)
+                stop_action.set_variable('have_ipv6', 1 if have_ipv6 else 0)
                 script_skeleton.set_variable('stop_action', stop_action.expand())
 
                 # Status action configlet — in coexistence mode checks
