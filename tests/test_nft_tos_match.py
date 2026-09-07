@@ -30,9 +30,17 @@ citation to trust over any reading of the parser -
 ``--tos 0x10/0x3f`` and ``--tos 0xff`` as ``--tos 0xff/0xff``.
 
 Every expected form below was loaded into nft 1.1.7 in a private network
-namespace and listed back; ``ip dscp & 0x0f 0x04 ip ecn 0x00`` linearises
-to ``((tos & 0xfc) >> 2) & 0x0f == 0x04`` and ``(tos & 0x03) == 0x00``,
-which is ``(tos & 0x3f) == 0x10``.
+namespace and its bytecode read; ``ip dscp & 0x0f 0x04 ip ecn 0x00``
+linearises to ``((tos & 0xfc) >> 2) & 0x0f == 0x04`` and ``(tos & 0x03)
+== 0x00``, which is ``(tos & 0x3f) == 0x10``.
+
+Read the *bytecode* and not the listing, because nft's own printer is
+lossy for a masked ``dscp``: it lists ``ip dscp & 0x03 0x03`` back as
+``ip ecn ce``, having recognised a two-bit field at that offset and named
+the wrong one.  The rule on the wire is right - the same shape whose
+prefix-mask cousin makes ``nft list ruleset`` abort outright when the
+match is written as a raw payload instead, which is why these are named
+fields.
 """
 
 import pytest
@@ -83,6 +91,9 @@ def test_parse_tos(value, expected):
         ('Minimize-Cost', True, ['ip6 dscp & 0x0f 0x00', 'ip6 ecn 0x02']),
         # A mask reaching into both halves needs one match of each.
         ('0x10/0x1e', False, ['ip dscp & 0x07 0x04', 'ip ecn & 0x02 0x00']),
+        # The one masked case netfilter's own table lists, which it prints
+        # back unchanged (`libxt_tos.t`: `--tos 0x0f/0x0f;=;OK`).
+        ('0x0f/0x0f', False, ['ip dscp & 0x03 0x03', 'ip ecn 0x03']),
         # A mask of zero matches every packet, which is what iptables does
         # with it too, so it is no match at all.
         ('0/0', False, []),
