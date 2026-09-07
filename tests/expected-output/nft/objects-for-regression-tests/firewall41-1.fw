@@ -273,8 +273,19 @@ configure_interfaces() {
 # eleven thousand addresses could not be passed over at all: the shell
 # answered "Argument list too long", the set stayed empty, and a Deny rule
 # built on it blocked nothing.
+#
+# With "replace" as the fifth argument the set is emptied first, and both
+# commands go into one file so nft applies them as one transaction: a
+# reload whose new list nft refuses then leaves the addresses that were
+# there.  Emptying the set in a command of its own would leave a block list
+# that blocks nothing behind every failed reload.
 add_set_elements() {
-    printf 'add element %s %s %s { %s }\n' "$1" "$2" "$3" "$4" | $NFT -f -
+    if [ "$5" = replace ]; then
+        printf 'flush set %s %s %s\nadd element %s %s %s { %s }\n' \
+            "$1" "$2" "$3" "$1" "$2" "$3" "$4" | $NFT -f -
+    else
+        printf 'add element %s %s %s { %s }\n' "$1" "$2" "$3" "$4" | $NFT -f -
+    fi
 }
 
 # An address table keeps its addresses in a file on this machine, so the set
@@ -287,6 +298,7 @@ load_address_table() {
     setname=$3
     file=$4
     af=$5
+    mode=$6
 
     test -r "$file" || {
         echo "Can not find file $file referenced by address table object $setname"
@@ -302,8 +314,15 @@ load_address_table() {
     fi
     addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
 
-    test -n "$addrs" || return 0
-    add_set_elements "$family" "$table" "$setname" "$addrs"
+    test -n "$addrs" || {
+        # A file that has lost every address of this family still has to
+        # empty the set, or a reload leaves the addresses it removed.
+        if [ "$mode" = replace ]; then
+            $NFT flush set "$family" "$table" "$setname" || return 1
+        fi
+        return 0
+    }
+    add_set_elements "$family" "$table" "$setname" "$addrs" "$mode"
 }
 
 # A DNS name is resolved on this machine, and nft refuses a hostname that
@@ -430,9 +449,8 @@ reload_address_table() {
     while read -r at_family at_table at_set; do
         test "$at_set" = "$1" || continue
         at_found=1
-        $NFT flush set "$at_family" "$at_table" "$at_set" || at_status=1
-        load_address_table "$at_family" "$at_table" "$at_set" "$2" "$at_af" ||
-            at_status=1
+        load_address_table "$at_family" "$at_table" "$at_set" "$2" "$at_af" \
+            replace || at_status=1
     done <<FWF_EOF
 $(address_table_sets)
 FWF_EOF

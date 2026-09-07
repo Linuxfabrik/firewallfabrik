@@ -90,6 +90,46 @@ def test_the_index_names_every_set_a_table_is_kept_in(tmp_path):
 
 
 @pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
+def test_a_reload_that_fails_leaves_the_addresses_that_were_there(tmp_path):
+    """Emptying the set and filling it are one nft transaction.
+
+    In two commands a reload whose new list nft refuses leaves the set
+    empty, and a set no packet is in is a block list that blocks nothing.
+    """
+    script = _script(tmp_path)
+    ruleset = _RULES_RE.search(script)
+    functions = _FUNCTIONS_RE.search(script)
+    assert ruleset and functions
+
+    ruleset_file = tmp_path / 'ruleset.nft'
+    ruleset_file.write_text(ruleset.group(1) + '\n')
+    data_file = tmp_path / 'block-hosts.tbl'
+    data_file.write_text('198.51.100.1\n')
+
+    broken = tmp_path / 'broken.tbl'
+    broken.write_text('203.0.113.1\n198.51.100.999\n')
+
+    harness = f"""
+        NFT=nft
+        {functions.group(0)}
+        nft -f {ruleset_file} || exit 1
+        reload_address_table block_these {data_file} -4 || exit 1
+        reload_address_table block_these {broken} -4 && exit 1
+        test_address_table block_these 198.51.100.1 > /dev/null || exit 1
+        echo KEPT
+    """
+    proc = subprocess.run(  # nosec B603 B607
+        ['unshare', '-rn', 'sh', '-c', harness],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert 'KEPT' in proc.stdout, proc.stdout
+
+
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
 def test_the_commands_reach_the_running_set(tmp_path):
     script = _script(tmp_path)
     ruleset = _RULES_RE.search(script)
