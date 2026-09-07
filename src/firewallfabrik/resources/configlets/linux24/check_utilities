@@ -13,6 +13,13 @@
 ##
 ## Known variables:
 ##
+## need_ip6tables      : set to true if the script installs an IPv6 ruleset.
+##                     Without it a wrong ip6tables path is found only once
+##                     the IPv4 rules are installed, and the machine is left
+##                     with IPv4 filtered and IPv6 at policy ACCEPT with no
+##                     rules - the very half-configured state check_tools
+##                     exists to prevent, and which it does prevent for the
+##                     IPv4 tool.  Firewall Builder checks neither.
 ## need_iptables_restore
 ## need_ip6tables_restore
 ## need_modprobe     : set to true if "load modules" option is on, or
@@ -39,6 +46,7 @@ find_program() {
 check_tools() {
   find_program command
   find_program "$IPTABLES"
+  {{if need_ip6tables}}find_program "$IP6TABLES"{{endif}}
   {{if need_iptables_restore}}find_program "$IPTABLES_RESTORE"{{endif}}
   {{if need_ip6tables_restore}}find_program "$IP6TABLES_RESTORE"{{endif}}
   {{if need_modprobe}}find_program "$MODPROBE"{{endif}}

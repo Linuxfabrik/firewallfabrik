@@ -123,6 +123,7 @@ find_program() {
 check_tools() {
  find_program command
  find_program "$IPTABLES"
+ find_program "$IP6TABLES"
  find_program "$MODPROBE"
  find_program "$IP"
 }

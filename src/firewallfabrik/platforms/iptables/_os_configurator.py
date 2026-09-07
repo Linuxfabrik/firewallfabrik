@@ -287,6 +287,13 @@ class OSConfigurator_linux24(OSConfigurator):
         check_utils.set_variable('load_modules', load_modules)
         check_utils.set_variable('need_modprobe', load_modules)
 
+        # The script runs $IP6TABLES exactly when the IPv6 pass produced
+        # output, which is the same question `reset_iptables_v6` is gated
+        # on.  Without the check a wrong ip6tables path is found only once
+        # the IPv4 rules are installed: the machine is left with IPv4
+        # filtered and IPv6 at policy ACCEPT with no rules at all.
+        check_utils.set_variable('need_ip6tables', have_ipv6)
+
         use_iptables_restore = bool(self.fw.get_option('use_iptables_restore'))
         check_utils.set_variable('need_iptables_restore', use_iptables_restore)
         check_utils.set_variable(
