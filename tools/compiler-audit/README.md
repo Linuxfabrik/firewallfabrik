@@ -19,6 +19,7 @@ not.
 | `load-nft.sh` | and does a real kernel take it? | what `--check` never evaluates: a statement in a hook that forbids it, a jump cycle - and nft loads atomically, so the whole ruleset goes |
 | `fill-nft-sets.sh` | and do the sets the script fills after the load actually fill? | a named set that stays empty, which is a set no packet is in: a Deny rule that blocks nothing, an Accept rule that lets nothing through |
 | `replay-nft-actions.sh` | do the "block" and "stop" actions of an nftables script do what they say? | a block that leaves an address family open or a hook unhooked - the code paths an administrator reaches once something has already gone wrong |
+| `replay-ipt-actions.sh` | and the same two of an iptables script? | a block that leaves a policy open, a stop that answers non-zero having done its work, and either of them reaching for a family the script has no rules for |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
 | `replay-address-tables.sh` | are the ipsets an address table needs there by the time the rules that name them are installed? | a `-m set` rule the tool refuses, and a set list left empty - which is a set no packet is in |
 | `replay-status.sh` | after a real activation, does the script agree that it is up? | a firewall that answers "status" with "not configured" while its rules are loaded, which an init system and a monitoring check read as dead |
@@ -45,6 +46,7 @@ tools/compiler-audit/check-nft.sh /tmp/audit
 tools/compiler-audit/load-nft.sh /tmp/audit
 tools/compiler-audit/fill-nft-sets.sh /tmp/audit
 tools/compiler-audit/replay-nft-actions.sh /tmp/audit
+tools/compiler-audit/replay-ipt-actions.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
 tools/compiler-audit/replay-address-tables.sh /tmp/audit
 tools/compiler-audit/replay-status.sh /tmp/audit
@@ -79,7 +81,8 @@ it at a ruleset with an invented user *and* a bad address and only the
 address comes back.
 
 `check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
-`replay-iptables.sh`, `replay-address-tables.sh`, `replay-interfaces.sh`,
+`replay-ipt-actions.sh`, `replay-iptables.sh`, `replay-address-tables.sh`,
+`replay-interfaces.sh`,
 `replay-routes.sh`, `replay-status.sh`, `replay-twice.sh` and
 `check-iptables-restore.sh` need `unshare`, `nft` and `iptables`
 (`replay-address-tables.sh` also needs `ipset`). They run everything in an unprivileged
