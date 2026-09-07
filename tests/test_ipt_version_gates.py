@@ -44,12 +44,15 @@ from firewallfabrik.platforms.iptables._utils import (
 #
 # A match that exists for one family only names no file for the other, and
 # its gate says '0' there: the IPv4 fragment test is the built-in `-f`, not
-# an extension, so `frag` has nothing to derive on that side.
+# an extension, and the IPv4 hop count is `ttl`, a match of its own that
+# this compiler does not emit, so neither `frag` nor `hl` has anything to
+# derive on that side.
 _EXTENSION_FILES = {
     'connlimit': ('libipt_connlimit.c', 'libxt_connlimit.c'),
     'dscp': ('libipt_dscp.c', 'libxt_dscp.c'),
     'frag': (None, 'libip6t_frag.c'),
     'hashlimit': ('libipt_hashlimit.c', 'libip6t_hashlimit.c'),
+    'hl': (None, 'libip6t_hl.c'),
     'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
     'time': ('libipt_time.c', 'libxt_time.c'),

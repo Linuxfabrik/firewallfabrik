@@ -90,6 +90,11 @@ MATCH_FIRST_RELEASE = {
     # which is as old as iptables - so the first column has nothing to say.
     'frag': ('0', '1.2.7'),
     'hashlimit': ('1.3.0', '1.3.7'),
+    # `hl` is IPv6 only - the IPv4 hop count is `ttl`, a different match
+    # this compiler does not emit - so the first column has nothing to
+    # say.  The automatic rules for IPv6 neighbour discovery are the only
+    # thing that asks for it.
+    'hl': ('0', '1.2.8'),
     'iprange': ('1.2.9', '1.4.1'),
     'set': ('1.3.0', '1.4.9'),
     'time': ('0', '1.4.0'),

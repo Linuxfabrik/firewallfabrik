@@ -1044,11 +1044,32 @@ class PolicyCompiler_ipt(PolicyCompiler):
             if (stateful and not self.fw.get_option('accept_new_tcp_with_no_syn'))
             else 0,
         )
+        # Every one of the neighbour discovery rules matches the hop
+        # limit, and `libip6t_hl.c` first ships in 1.2.8; before that
+        # ip6tables answers "Couldn't load match `hl'", which stops the
+        # activation script with the built-in policies already at DROP.
+        # `-m icmp6` beside it is older than any release the editor
+        # offers (it registers itself as "icmp6" as far back as 1.2.5),
+        # so the hop limit is the one that decides.  Firewall Builder
+        # emits the rules whatever the release - its own configlet holds
+        # the same lines with no gate around them - so this is a
+        # deliberate divergence: without the rules IPv6 neighbour
+        # discovery is not permitted, with them nothing is.
+        hop_limit_match = not (
+            ipv6 and version_compare(version, MATCH_FIRST_RELEASE['hl'][1]) < 0
+        )
+        want_nd_rules = ipv6 and self.fw.get_option(
+            'add_rules_for_ipv6_neighbor_discovery'
+        )
+        if want_nd_rules and not hop_limit_match:
+            self.warning(
+                f'ip6tables before {MATCH_FIRST_RELEASE["hl"][1]} has no "hl" '
+                'match, so the rules that permit IPv6 neighbour discovery are '
+                'left out'
+            )
         conf.set_variable(
             'add_rules_for_ipv6_neighbor_discovery',
-            1
-            if (ipv6 and self.fw.get_option('add_rules_for_ipv6_neighbor_discovery'))
-            else 0,
+            1 if (want_nd_rules and hop_limit_match) else 0,
         )
 
         drop_invalid = stateful and self.fw.get_option('drop_invalid')
