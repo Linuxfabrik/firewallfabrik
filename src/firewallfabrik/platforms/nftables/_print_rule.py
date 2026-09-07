@@ -211,8 +211,9 @@ def ip_service_condition_count(srv, ipv6: bool) -> int:
 
     The mirror of what ``PrintRule_nft._print_service`` builds for an
     ``IPService`` and it has to stay in step with it: the protocol
-    number, a fragment match, a ToS byte or a DiffServ code point, and
-    one match per IPv4 header option.
+    number, a fragment match, a DiffServ code point or a ToS byte - which
+    is one match or two, because nftables names its two halves and not
+    the byte - and one match per IPv4 header option.
 
     What the count answers is the negation.  One condition inverts where
     it stands, with ``!=``; two are a conjunction of their own, and the
