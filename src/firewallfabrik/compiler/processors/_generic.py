@@ -1667,6 +1667,38 @@ class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
         return True
 
 
+class DynamicInterfaceInODst(NATRuleProcessor):
+    """Name the member's own interface where the rule names the cluster's.
+
+    Ports ``NATCompiler_ipt::dynamicInterfaceInODst``
+    (NATCompiler_ipt.cpp:1269).  A dynamic cluster interface has no
+    address at compile time and none at run time either - it exists on no
+    machine - so the generated script would look up a device that is not
+    there and translate to nothing.  The interface the member firewall
+    actually has is what the failover group names.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if not rule.odst:
+            return True
+
+        odst = rule.odst[0]
+        if (
+            isinstance(odst, Interface)
+            and odst.is_dynamic()
+            and odst.is_failover_interface()
+        ):
+            rule.odst = [self.compiler.correct_for_cluster(odst), *rule.odst[1:]]
+
+        return True
+
+
 class AddVirtualAddress(NATRuleProcessor):
     """Register virtual addresses needed for NAT with the OS configurator.
 

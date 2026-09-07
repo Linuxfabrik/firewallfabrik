@@ -30,6 +30,7 @@ from firewallfabrik.compiler.processors._generic import (
     Begin,
     DropIPv4Rules,
     DropIPv6Rules,
+    DynamicInterfaceInODst,
     EmptyGroupsInRE,
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
@@ -370,6 +371,7 @@ class NATCompiler_nft(NATCompiler):
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AddVirtualAddress('add virtual addresses'))
         self.add(AssignInterface('assign rules to interfaces'))
+        self.add(DynamicInterfaceInODst('split if dynamic interface in ODst'))
         self.add(
             DynamicInterfaceInTSrc('masquerade if TSrc has no compile-time address')
         )
@@ -1837,11 +1839,20 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
             return True
 
         tsrc = rule.tsrc[0]
-        if (
-            isinstance(tsrc, Interface)
-            and not tsrc.is_regular()
-            and not rule.get_option('ipt_use_snat_instead_of_masq', False)
-        ):
+        if not isinstance(tsrc, Interface) or tsrc.is_regular():
+            return True
+
+        if tsrc.is_failover_interface():
+            # The cluster's interface exists on no machine, so the script
+            # would read the address of a device that is not there - and
+            # with "use SNAT instead of MASQUERADE" the translation then
+            # names nothing and the packets leave with their own source
+            # address.  The interface the member firewall actually has is
+            # what the failover group names
+            # (C++ ``NATCompiler_ipt::dynamicInterfaceInTSrc``).
+            rule.tsrc = [self.compiler.correct_for_cluster(tsrc), *rule.tsrc[1:]]
+
+        if not rule.get_option('ipt_use_snat_instead_of_masq', False):
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 

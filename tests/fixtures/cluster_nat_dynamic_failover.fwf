@@ -1,0 +1,150 @@
+name: 'Test: NAT translating to a dynamic cluster interface'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.168.1.0'
+          netmask: '255.255.255.0'
+      - type: 'IPv4'
+        name: 'internal-server'
+        inet_addr_mask:
+          address: '192.168.1.100'
+          netmask: '255.255.255.255'
+      - type: 'Firewall'
+        name: 'member-a'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            data:
+              dyn: true
+              label: 'outside'
+          - name: 'eth1'
+            addresses:
+              - type: 'IPv4'
+                name: 'a-eth1-addr'
+                inet_addr_mask:
+                  address: '192.168.1.1'
+                  netmask: '255.255.255.0'
+          - name: 'lo'
+            addresses:
+              - type: 'IPv4'
+                name: 'a-lo-addr'
+                inet_addr_mask:
+                  address: '127.0.0.1'
+                  netmask: '255.0.0.0'
+      - type: 'Firewall'
+        name: 'member-b'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth1'
+            addresses:
+              - type: 'IPv4'
+                name: 'b-eth1-addr'
+                inet_addr_mask:
+                  address: '192.168.1.2'
+                  netmask: '255.255.255.0'
+          - name: 'lo'
+            addresses:
+              - type: 'IPv4'
+                name: 'b-lo-addr'
+                inet_addr_mask:
+                  address: '127.0.0.1'
+                  netmask: '255.0.0.0'
+          - name: 'ppp0'
+            data:
+              dyn: true
+              label: 'outside'
+      - type: 'Cluster'
+        name: 'nat-cluster'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'inside'
+            addresses:
+              - type: 'IPv4'
+                name: 'cluster-inside-addr'
+                inet_addr_mask:
+                  address: '192.168.1.254'
+                  netmask: '255.255.255.0'
+            children:
+              - type: 'FailoverClusterGroup'
+                name: 'inside:members'
+                data:
+                  type: 'heartbeat'
+                members:
+                  - 'Library:Test Objects/Firewall:member-a/Interface:eth1'
+                  - 'Library:Test Objects/Firewall:member-b/Interface:eth1'
+          - name: 'uplink'
+            data:
+              dyn: true
+              label: 'outside'
+            children:
+              - type: 'FailoverClusterGroup'
+                name: 'uplink:members'
+                data:
+                  type: 'heartbeat'
+                members:
+                  - 'Library:Test Objects/Firewall:member-a/Interface:eth0'
+                  - 'Library:Test Objects/Firewall:member-b/Interface:ppp0'
+        rule_sets:
+          - type: 'NAT'
+            name: 'NAT'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'NATRule'
+                comment: 'SNAT to the cluster uplink, which each member owns under
+                  a name of its own'
+                options:
+                  ipt_use_snat_instead_of_masq: true
+                action: 'Translate'
+                osrc:
+                  - 'Library:Test Objects/Network:internal-net'
+                tsrc:
+                  - 'Library:Test Objects/Cluster:nat-cluster/Interface:uplink'
+              - type: 'NATRule'
+                position: 1
+                comment: 'DNAT of whatever arrives on the cluster uplink'
+                action: 'Translate'
+                odst:
+                  - 'Library:Test Objects/Cluster:nat-cluster/Interface:uplink'
+                tdst:
+                  - 'Library:Test Objects/IPv4:internal-server'
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'

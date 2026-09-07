@@ -1,0 +1,673 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * nat-cluster_member-b.fw /etc/fwf.sh
+#
+# Compiled for nftables (any version)
+#
+
+FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="nft"
+IP="ip"
+LOGGER="logger"
+
+log() {
+    echo "$1"
+    command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+}
+
+getInterfaceVarName() {
+    echo "$1" | sed 's/\./_/'
+}
+
+getaddr_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getnet_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getaddr() {
+    getaddr_internal "$1" "$2" "-4"
+}
+
+getaddr6() {
+    getaddr_internal "$1" "$2" "-6"
+}
+
+getnet() {
+    getnet_internal "$1" "$2" "-4"
+}
+
+getnet6() {
+    getnet_internal "$1" "$2" "-6"
+}
+
+# function getinterfaces is used to process wildcard interfaces
+getinterfaces() {
+    NAME=$1
+    "$IP" link show | grep ": $NAME" | while read -r L; do
+        OIFS=$IFS
+        IFS=" :"
+        # shellcheck disable=SC2086
+        set -- $L
+        IFS=$OIFS
+        echo "$2"
+    done
+}
+
+diff_intf() {
+    func=$1
+    list1=$2
+    list2=$3
+    cmd=$4
+    for intf in $list1
+    do
+        echo "$list2" | grep -q "$intf" || {
+        # $intf is absent in list 2
+            "$func" "$intf" "$cmd"
+        }
+    done
+}
+
+P2P_INTERFACE_WARNING=""
+
+missing_address() {
+    address=$1
+    cmd=$2
+
+    oldIFS=$IFS
+    IFS="@"
+    # shellcheck disable=SC2086
+    set -- $address
+    addr=$1
+    interface=$2
+    IFS=$oldIFS
+
+    "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
+        test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+        P2P_INTERFACE_WARNING="yes"
+        return
+    }
+
+    test "$cmd" = "add" && {
+      echo "# Adding ip address: $interface $addr"
+      if echo "$addr" | grep -q ':'; then
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+      else
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+      fi
+    }
+
+    test "$cmd" = "del" && {
+      echo "# Removing ip address: $interface $addr"
+      $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
+    }
+
+    $FWBDEBUG "$IP" link set "$interface" up
+}
+
+list_addresses_by_scope() {
+    interface=$1
+    scope=$2
+    ignore_list=$3
+    "$IP" addr ls dev "$interface" | \
+      awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+        'BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+         }
+         (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+        while read -r addr; do
+          echo "${addr}@$interface"
+	done | sort
+}
+
+update_addresses_of_interface() {
+    ignore_list=$2
+    # shellcheck disable=SC2086
+    set -- $1
+    interface=$1
+    shift
+
+    FWB_ADDRS=$(
+      for addr in "$@"; do
+        echo "${addr}@$interface"
+      done | sort
+    )
+
+    CURRENT_ADDRS_ALL_SCOPES=""
+    CURRENT_ADDRS_GLOBAL_SCOPE=""
+
+    if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+    else
+      echo "# Interface $interface does not exist"
+      # Stop the script if we are not in test mode
+      test -z "$FWBDEBUG" && exit 1
+    fi
+
+    diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+    diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+}
+
+clear_addresses_except_known_interfaces() {
+    "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
+        'function known(name,   i, prefix) {
+           if (name in ignored_dict) return 1;
+           for (i in wildcard_arr) {
+             prefix = wildcard_arr[i];
+             if (substr(name, 1, length(prefix)) == prefix) return 1;
+           }
+           return 0;
+         }
+         BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {
+             ignored_dict[ignored_arr[a]]=1;
+             if (ignored_arr[a] ~ /[*+]$/)
+               wildcard_arr[a]=substr(ignored_arr[a],1,length(ignored_arr[a])-1);
+           }
+         }
+         (/state/ && $3 !~ /LOOPBACK/ && !known($2)) {print $2;}' | \
+         while read -r intf; do
+            echo "# Removing addresses not configured in fwbuilder from interface $intf"
+            $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+            $FWBDEBUG "$IP" link set "$intf" down
+         done
+}
+
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
+        exit 1
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+    # $IP fills the sets a rule matching a dynamic interface address or an
+    # address table points at, and installs the routing rules.  Without it
+    # those sets stay empty - a set no packet is in - and the activation
+    # still reports success.
+    find_program "$IP"
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+# nft is handed the element list on standard input and not on its command
+# line.  execve caps a single argument at MAX_ARG_STRLEN, 32 pages
+# (include/uapi/linux/binfmts.h), so an address table of more than about
+# eleven thousand addresses could not be passed over at all: the shell
+# answered "Argument list too long", the set stayed empty, and a Deny rule
+# built on it blocked nothing.
+#
+# With "replace" as the fifth argument the set is emptied first, and both
+# commands go into one file so nft applies them as one transaction: a
+# reload whose new list nft refuses then leaves the addresses that were
+# there.  Emptying the set in a command of its own would leave a block list
+# that blocks nothing behind every failed reload.
+add_set_elements() {
+    if [ "$5" = replace ]; then
+        printf 'flush set %s %s %s\nadd element %s %s %s { %s }\n' \
+            "$1" "$2" "$3" "$1" "$2" "$3" "$4" | $NFT -f -
+    else
+        printf 'add element %s %s %s { %s }\n' "$1" "$2" "$3" "$4" | $NFT -f -
+    fi
+}
+
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+    mode=$6
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        return 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || {
+        # A file that has lost every address of this family still has to
+        # empty the set, or a reload leaves the addresses it removed.
+        if [ "$mode" = replace ]; then
+            $NFT flush set "$family" "$table" "$setname" || return 1
+        fi
+        return 0
+    }
+    add_set_elements "$family" "$table" "$setname" "$addrs" "$mode"
+}
+
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    add_set_elements "$family" "$table" "$setname" "$addrs"
+}
+
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    add_set_elements "$family" "$table" "$setname" "$addrs"
+}
+
+# A set that stays empty is a set no packet is in, so a Deny rule built on
+# it blocks nothing and an Accept rule lets nothing through.  Every loader
+# says so, and the function answers for all of them together rather than
+# handing its caller the status of whichever ran last.
+load_address_tables() {
+    fwf_set_failures=0
+    load_interface_address "ip" "fwf_nat" "i_ppp0" "ppp0" "-4" || fwf_set_failures=1
+    test "$fwf_set_failures" -eq 0
+}
+
+# A NAT rule can translate to the address of an interface that gets it from
+# DHCP or PPP, and the ruleset cannot name one: `nft -f` reads it in one
+# piece, a translation target takes no set reference the way a match does,
+# and the interface may carry several addresses or none.  So the hooked
+# chain jumps into a regular chain the ruleset leaves empty, and one rule
+# per address goes in here - the same rules the iptables script writes in
+# its loop over `$i_<iface>_list`.  An interface without an address leaves
+# the chain empty and the packet returns to the hooked chain, which is what
+# the `test -n` guard does on that side.
+load_interface_nat_rule() {
+    family=$1
+    table=$2
+    chain=$3
+    pattern=$4
+    af=$5
+    statement=$6
+
+    found=0
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        for a in $($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!'); do
+            found=1
+            # Unquoted on purpose: the statement is a list of nft tokens and
+            # has to reach the tool as one argument each.
+            $NFT add rule "$family" "$table" "$chain" \
+                $(printf '%s' "$statement" | sed "s|@ADDR@|$a|") || return 1
+        done
+    done
+
+    test "$found" -eq 1 || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules translating to it are not installed"
+    }
+    return 0
+}
+
+# A chain that stays empty translates nothing, so the rules that jump into
+# it fall through and the traffic they name is left untranslated.  The
+# function answers for all of them together rather than handing its caller
+# the status of whichever ran last.
+load_runtime_nat_rules() {
+    fwf_nat_failures=0
+    load_interface_nat_rule "ip" "fwf_nat" "rt_snat_NAT_0" "ppp0" "-4" "counter snat to @ADDR@" || fwf_nat_failures=1
+    test "$fwf_nat_failures" -eq 0
+}
+
+nft_ruleset() {
+    cat <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule -3 heartbeat (automatic)
+        #
+        iifname "ppp0" ip daddr 224.0.10.100 udp dport 694 counter accept
+        #
+        # Rule -1 heartbeat (automatic)
+        #
+        iifname "eth1" ip saddr 192.168.1.1 ip daddr 224.0.10.100 udp dport 694 counter accept
+        #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule -4 heartbeat (automatic)
+        #
+        oifname "ppp0" ip daddr 224.0.10.100 udp dport 694 counter accept
+        #
+        # Rule -2 heartbeat (automatic)
+        #
+        oifname "eth1" ip daddr 224.0.10.100 udp dport 694 counter accept
+        #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+}
+
+table ip fwf_nat {
+    set i_ppp0 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 1 (NAT)
+        #
+        # DNAT of whatever arrives on the cluster uplink
+        ip daddr @i_ppp0 counter dnat to 192.168.1.100
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # SNAT to the cluster uplink, which each member owns under a name of its own
+        oifname "ppp0" ip saddr 192.168.1.0/24 counter jump rt_snat_NAT_0
+    }
+
+    chain rt_snat_NAT_0 {
+    }
+}
+
+NFT_RULES
+}
+
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+script_body() {
+    # Without the "|| return 1" the function answers with the status of
+    # the last set it filled, and a set that is empty on purpose answers
+    # 0 - so a ruleset the kernel refused would be reported as installed.
+    nft_ruleset | $NFT -f /dev/stdin || return 1
+    load_runtime_nat_rules || return 1
+    load_address_tables
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
+}
+
+# The tables this ruleset installs, in the form "nft list tables" prints.
+FWF_OWN_TABLES='table ip fwf_filter
+table ip fwf_nat'
+
+# Everything else, removed once the new ruleset is in place.
+#
+# nft loads a ruleset atomically and the one above deletes and recreates
+# each of its own tables in that same transaction, so their rules are
+# never missing for an instant.  Removing the old rules first undoes
+# exactly that: a table that is gone hooks nothing and every packet goes
+# through, and the machine has no firewall at all until the load
+# finishes.  The iptables side has no such gap - its reset sets the three
+# built-in policies to DROP before it flushes anything - and this is what
+# gives nftables the same guarantee.
+#
+# The deletes go into one batch of their own, so a name that has to be
+# quoted survives the round trip through "nft list tables" untouched.
+remove_other_tables() {
+    $NFT list tables 2>/dev/null |
+        while read -r line; do
+            printf '%s\n' "$FWF_OWN_TABLES" | grep -qxF "$line" && continue
+            # Coexistence: another tool's table is left alone, and
+            # only a table of ours this ruleset no longer installs goes.
+            case $line in
+            "table inet fwf_filter" | "table ip fwf_filter" \
+            | "table ip6 fwf_filter" \
+            | "table inet fwf_mangle" | "table ip fwf_mangle" \
+            | "table ip6 fwf_mangle" \
+            | "table inet fwf_nat" | "table ip fwf_nat" \
+            | "table ip6 fwf_nat") ;;
+            *) continue ;;
+            esac
+            printf 'delete %s\n' "$line"
+        done |
+        $NFT -f - 2>/dev/null
+    return 0
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_tools
+        prolog_commands
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
+        script_body || run_epilog_and_exit 1
+        remove_other_tables
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        ;;
+
+    stop)
+        check_tools
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        check_tools
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        check_tools
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        RETVAL=1
+        ;;
+
+esac
+
+exit "$RETVAL"
