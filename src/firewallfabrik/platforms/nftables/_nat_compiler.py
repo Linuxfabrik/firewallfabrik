@@ -21,6 +21,7 @@ Unlike iptables, nftables NAT is simpler:
 
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._nat_compiler import NATCompiler
@@ -90,6 +91,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
+    from firewallfabrik.compiler._comp_rule import CompRule
     from firewallfabrik.compiler._os_configurator import OSConfigurator
 
 
@@ -163,6 +165,38 @@ class NATCompiler_nft(NATCompiler):
         # The branch jumps that close a cycle, by rule set name, set by the
         # driver: only it sees every rule set of the script.
         self.branch_loop_edges: set[tuple[str, str]] = set()
+
+        # The regular chains a negated element is excluded in, and the
+        # counter their names are made unique with.  See
+        # `get_new_tmp_chain_name`.
+        self.temp_chains: set[str] = set()
+        self.tmp_chain_counters: dict[str, int] = {}
+
+    def get_new_tmp_chain_name(self, rule: CompRule) -> str:
+        """Name a regular chain for *rule* and declare it.
+
+        The same shape as ``PolicyCompiler_nft.get_new_tmp_chain_name``,
+        and the name is built the way ``NATCompiler_ipt`` builds it - out
+        of the rule set, the position and the subrule suffix - so a second
+        compile of the same rule set produces the same script.  A chain
+        nothing declares costs nftables the whole ruleset, so the name goes
+        into ``chain_rules`` here rather than where the first rule happens
+        to be printed, and into ``temp_chains`` so the print rule knows the
+        target is a jump and not a translation.
+        """
+        stable_key = f'{self.rule_set_key()}:{rule.position}:{rule.subrule_suffix}'
+        chain_id = hashlib.md5(  # nosec B324
+            stable_key.encode(),
+            usedforsecurity=False,
+        ).hexdigest()[:12]
+        n = self.tmp_chain_counters.get(chain_id, 0)
+        name = f'C{chain_id}.{n}'
+        self.tmp_chain_counters[chain_id] = n + 1
+        self.temp_chains.add(name)
+        self.chain_rules.setdefault(name, [])
+        if rule.ipt_chain:
+            self.insert_upstream_chain(rule.ipt_chain, name)
+        return name
 
     def my_platform_name(self) -> str:
         return 'nftables'
@@ -1017,48 +1051,108 @@ class AddOtherProtocolsForNegatedServiceInNAT(NATRuleProcessor):
 
 
 class NftNegationOSrv(NATRuleProcessor):
-    """Convert OSrv negation to single_object_negation (nftables native !=).
+    """Exclude an Original Service element nftables cannot exclude in place.
 
-    nftables supports native '!=' matching, so multi-object negation in
-    OSrv can be converted to inline negation without temporary chains.
+    Most negated elements are said where they stand: nftables inverts a
+    match with ``!=`` and a whole element with a set, and the companion
+    :class:`AddOtherProtocolsForNegatedServiceInNAT` covers the protocols
+    it does not name.
 
-    An element that needs more than one rule to be excluded has nowhere to
-    go here: the policy compiler answers that with a chain of its own
-    (``SrvNegation``) and this compiler has no chain to build - a nat hook
-    reaches its chains through the translation, not through a jump the
-    negation could hang off.  Such a rule is reported and left out, and
-    the whole rule at that: the protocol split would leave the groups that
-    do render standing on their own, each of them matching packets the
-    element excludes, so the rule would translate exactly the traffic it
-    was written to leave alone.
+    The rest get the three-rule expansion
+    ``NATCompiler_ipt::doOSrvNegation`` uses for every negated Original
+    Service, which excludes the services instead of inverting them:
+
+    1. a jump rule carrying the rest of the match into a new chain,
+    2. a return rule per service, so traffic the element names leaves
+       again untranslated,
+    3. the translation, which everything that did not return reaches.
+
+    A nat hook does reach a regular chain: the chain a rule jumps to is
+    validated against the hook it is reached from, so a ``dnat`` in it is
+    as legal as in the base chain - measured by loading exactly this shape
+    into a kernel.  This compiler already jumps that way for a translation
+    to an address only the running firewall knows.
+
+    A chain missing one of its return rules would translate all traffic,
+    so an element naming a service the print rule may not be able to
+    render is reported and the whole rule left out, unless it names that
+    one service alone, where dropping the rule is what the printer does
+    anyway.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if not rule.get_neg('osrv'):
+        if not rule.get_neg('osrv') or not rule.osrv:
             self.tmp_queue.append(rule)
             return True
 
-        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-        if len(rule.osrv) > 1 and (
-            negated_services_need_a_chain(rule.osrv, ipv6)
-            or not negated_services_are_renderable(
-                rule.osrv, self.compiler.my_platform_name()
-            )
+        if not negated_services_are_renderable(
+            rule.osrv, self.compiler.my_platform_name()
         ):
+            if len(rule.osrv) == 1:
+                # One service is one rule, and a print rule that cannot
+                # render it drops that rule - which is the whole rule, so
+                # nothing is left translating what the element excludes.
+                self.tmp_queue.append(rule)
+                return True
             self.compiler.error(
                 rule,
-                'this rule excludes several services the nftables compiler '
-                'cannot exclude in one rule, and a NAT rule has no chain to '
-                'put them in; split it into one service per rule',
+                'this rule excludes several services and the nftables '
+                'compiler cannot match one of them, so it cannot exclude '
+                'them together; the rule is left out',
             )
             return True
 
-        rule.osrv_single_object_negation = True
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        if not negated_services_need_a_chain(rule.osrv, ipv6):
+            rule.osrv_single_object_negation = True
+            rule.set_neg('osrv', False)
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_nft', self.compiler)
         rule.set_neg('osrv', False)
-        self.tmp_queue.append(rule)
+        new_chain = nat_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: everything except the service, which is checked in
+        # the chain.  It keeps its rule type, so the chain decision puts
+        # the jump into the hook the translation belongs to.
+        r_jump = rule.clone()
+        r_jump.osrv = []
+        r_jump.ipt_target = new_chain
+        r_jump.set_option('rule_added_for_osrv_neg', True)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: the services, no longer negated, so the ordinary
+        # splitting downstream gives each of them the match it needs.
+        r_return = rule.clone()
+        r_return.osrc = []
+        r_return.odst = []
+        r_return.tsrc = []
+        r_return.tdst = []
+        r_return.itf_inb = []
+        r_return.itf_outb = []
+        r_return.set_neg('osrc', False)
+        r_return.set_neg('odst', False)
+        r_return.nat_rule_type = NATRuleType.Return
+        r_return.ipt_target = 'return'
+        r_return.ipt_chain = new_chain
+        r_return.set_option('rule_added_for_osrv_neg', True)
+        self.tmp_queue.append(r_return)
+
+        # The translation, for everything that did not return.  The
+        # original elements are cleared: the jump rule carries them, and
+        # anything left here would narrow the translation a second time.
+        r_action = rule.clone()
+        r_action.osrc = []
+        r_action.odst = []
+        r_action.osrv = []
+        r_action.set_neg('osrc', False)
+        r_action.set_neg('odst', False)
+        r_action.ipt_chain = new_chain
+        self.tmp_queue.append(r_action)
         return True
 
 

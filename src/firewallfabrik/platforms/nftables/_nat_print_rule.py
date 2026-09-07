@@ -932,6 +932,12 @@ class NATPrintRule_nft(NATRuleProcessor):
         """Print the NAT action (snat/dnat/masquerade/redirect)."""
         rt = rule.nat_rule_type
         nft_comp = cast('NATCompiler_nft', self.compiler)
+
+        if rule.ipt_target and rule.ipt_target in nft_comp.temp_chains:
+            # The jump rule of a negated Original Service: the translation
+            # itself sits in that chain, behind the return rules that let
+            # the excluded services out (`NftNegationOSrv`).
+            return f'jump {rule.ipt_target}'
         tsrc = nft_comp.get_first_tsrc(rule)
         tdst = nft_comp.get_first_tdst(rule)
         tsrv = nft_comp.get_first_tsrv(rule)

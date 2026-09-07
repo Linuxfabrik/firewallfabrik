@@ -733,6 +733,8 @@ class _DroppingNATCompiler(_NATCompiler):
     def __init__(self) -> None:
         super().__init__()
         self.errors: list[str] = []
+        self.temp_chains: set[str] = set()
+        self.chains_made = 0
 
     def error(self, _rule, message: str) -> None:
         self.errors.append(message)
@@ -740,6 +742,12 @@ class _DroppingNATCompiler(_NATCompiler):
     @staticmethod
     def my_platform_name() -> str:
         return 'nftables'
+
+    def get_new_tmp_chain_name(self, _rule) -> str:
+        name = f'C0.{self.chains_made}'
+        self.chains_made += 1
+        self.temp_chains.add(name)
+        return name
 
 
 def _nft_negation_osrv(rule) -> tuple[list, list[str]]:
@@ -752,17 +760,39 @@ def _nft_negation_osrv(rule) -> tuple[list, list[str]]:
     return list(processor.tmp_queue), processor.compiler.errors
 
 
-def test_a_nat_element_that_needs_a_chain_leaves_no_rule():
-    """A nat hook reaches its chains through the translation, not a jump.
+def test_a_nat_element_that_needs_a_chain_gets_one():
+    """A nat hook does reach a regular chain, so the element is excluded in one.
 
-    So the policy compiler's answer is not available here, and leaving the
-    groups that do render behind would translate exactly the traffic the
-    element excludes.
+    The same three-rule shape ``NATCompiler_ipt::doOSrvNegation`` builds:
+    a jump carrying the rest of the match, a return per service, and the
+    translation behind them.
     """
     from firewallfabrik.core.objects import TagService
 
     tag = TagService(id=uuid.uuid4(), name='one', data={'tagcode': '1'})
-    rule = _nat_rule([tag, _tcp('http', 80)])
+    http = _tcp('http', 80)
+    rule = _nat_rule([tag, http])
+    out, errors = _nft_negation_osrv(rule)
+    assert errors == []
+    assert len(out) == 3
+    r_jump, r_return, r_action = out
+    assert r_jump.osrv == []
+    assert r_jump.ipt_target == 'C0.0'
+    assert r_return.osrv == [tag, http]
+    assert r_return.ipt_chain == 'C0.0'
+    assert r_return.get_neg('osrv') is False
+    assert r_action.osrv == []
+    assert r_action.ipt_chain == 'C0.0'
+
+
+def test_a_nat_element_naming_a_service_that_may_not_render_is_reported():
+    """A return rule the printer drops leaves the chain translating everything."""
+    from firewallfabrik.core.objects import CustomService
+
+    without = CustomService(
+        id=uuid.uuid4(), name='recent', codes={'iptables': '-m recent --update'}
+    )
+    rule = _nat_rule([without, _tcp('http', 80)])
     out, errors = _nft_negation_osrv(rule)
     assert out == []
     assert len(errors) == 1
