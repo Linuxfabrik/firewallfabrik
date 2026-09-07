@@ -390,6 +390,126 @@ check_address_table_files() {
     check_address_table_file "block_these" "block-hosts.tbl"
 }
 
+# Where every run-time address table is kept: one line per set, as
+# "<family> <table> <set>".  A table used by both the filter and the NAT
+# rules has a set in each, and one used by both address families has a set
+# per family, because a set is typed - so a command that maintains a table
+# has to find all of them.
+address_table_sets() {
+    cat <<'FWF_ADDRESS_TABLE_SETS'
+inet fwf_filter addr-table-1_a
+inet fwf_filter block_these
+ip fwf_nat block_these
+FWF_ADDRESS_TABLE_SETS
+}
+
+# The set an address named on the command line belongs in.  The IPv6 set
+# carries a "_v6" suffix, which is the name its rules match against; a name
+# that already has it keeps it.
+address_table_set_for() {
+    case "$2" in
+    *:*) echo "${1%_v6}_v6" ;;
+    *) echo "$1" ;;
+    esac
+}
+
+# Read a block list again without recompiling the firewall.  The three
+# commands below take the same arguments as the iptables script's, so one
+# runbook works on either packet filter.
+reload_address_table() {
+    test -n "$1" && test -n "$2" || {
+        echo "Usage: reload_address_table address_table_object_name file_name [-4|-6]"
+        return 1
+    }
+    at_af=${3:--4}
+    at_found=0
+    at_status=0
+    while read -r at_family at_table at_set; do
+        test "$at_set" = "$1" || continue
+        at_found=1
+        $NFT flush set "$at_family" "$at_table" "$at_set" || at_status=1
+        load_address_table "$at_family" "$at_table" "$at_set" "$2" "$at_af" ||
+            at_status=1
+    done <<FWF_EOF
+$(address_table_sets)
+FWF_EOF
+    test "$at_found" = 1 || {
+        echo "This ruleset has no address table set named $1"
+        return 1
+    }
+    return "$at_status"
+}
+
+add_to_address_table() {
+    test -n "$1" && test -n "$2" && test -n "$3" || {
+        echo "Usage: add_to_address_table address_table_object_name file_name address"
+        return 1
+    }
+    at_want=$(address_table_set_for "$1" "$3")
+    at_found=0
+    at_status=0
+    echo "$3" >> "$2" || return 1
+    while read -r at_family at_table at_set; do
+        test "$at_set" = "$at_want" || continue
+        at_found=1
+        add_set_elements "$at_family" "$at_table" "$at_set" "$3" || at_status=1
+    done <<FWF_EOF
+$(address_table_sets)
+FWF_EOF
+    test "$at_found" = 1 || {
+        echo "This ruleset has no address table set named $at_want"
+        return 1
+    }
+    return "$at_status"
+}
+
+remove_from_address_table() {
+    test -n "$1" && test -n "$2" && test -n "$3" || {
+        echo "Usage: remove_from_address_table address_table_object_name file_name address"
+        return 1
+    }
+    at_want=$(address_table_set_for "$1" "$3")
+    at_found=0
+    at_status=0
+##  The address may hold a "/", which sed would read as the end of its
+##  address expression.
+    at_escaped=$(echo "$3" | sed 's!/!\\/!')
+    sed -i "/^ *$at_escaped *\$/d" "$2" || return 1
+    while read -r at_family at_table at_set; do
+        test "$at_set" = "$at_want" || continue
+        at_found=1
+        $NFT delete element "$at_family" "$at_table" "$at_set" "{ $3 }" ||
+            at_status=1
+    done <<FWF_EOF
+$(address_table_sets)
+FWF_EOF
+    test "$at_found" = 1 || {
+        echo "This ruleset has no address table set named $at_want"
+        return 1
+    }
+    return "$at_status"
+}
+
+# `nft get element` answers with the element that covers the address, so a
+# host inside one of the table's networks is found as well.  It is in
+# nftables since v0.9.0, which is the oldest release a firewall can name.
+test_address_table() {
+    test -n "$1" && test -n "$2" || {
+        echo "Usage: test_address_table address_table_object_name address"
+        return 1
+    }
+    at_want=$(address_table_set_for "$1" "$2")
+    while read -r at_family at_table at_set; do
+        test "$at_set" = "$at_want" || continue
+        $NFT get element "$at_family" "$at_table" "$at_set" "{ $2 }"
+        return $?
+    done <<FWF_EOF
+$(address_table_sets)
+FWF_EOF
+    echo "This ruleset has no address table set named $at_want"
+    return 1
+}
+
 nft_ruleset() {
     cat <<'NFT_RULES'
 table inet fwf_filter {}
@@ -834,8 +954,32 @@ case "$cmd" in
         RETVAL=$?
         ;;
 
+    reload_address_table)
+        check_tools
+        reload_address_table "$2" "$3" "$4"
+        RETVAL=$?
+        ;;
+
+    add_to_address_table)
+        check_tools
+        add_to_address_table "$2" "$3" "$4"
+        RETVAL=$?
+        ;;
+
+    remove_from_address_table)
+        check_tools
+        remove_from_address_table "$2" "$3" "$4"
+        RETVAL=$?
+        ;;
+
+    test_address_table)
+        check_tools
+        test_address_table "$2" "$3"
+        RETVAL=$?
+        ;;
+
     *)
-        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces|reload_address_table|add_to_address_table|remove_from_address_table|test_address_table]"
         RETVAL=1
         ;;
 

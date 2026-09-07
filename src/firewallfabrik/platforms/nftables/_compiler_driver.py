@@ -1410,6 +1410,9 @@ class CompilerDriver_nft(CompilerDriver):
             'address_table_code': self._address_table_load_commands(
                 filter_family, filter_table, mangle_table, nat_table
             ),
+            'address_table_index': self._address_table_index(
+                filter_family, filter_table, mangle_table, nat_table
+            ),
             'runtime_nat_code': self._runtime_nat_load_commands(nat_table),
         }
 
@@ -1470,6 +1473,44 @@ class CompilerDriver_nft(CompilerDriver):
                     f'    {loader} "{fam}" "{nat_table}" "{name}" '
                     f'"{source}" "{af}" || fwf_set_failures=1'
                 )
+        return '\n'.join(lines)
+
+    def _address_table_index(
+        self,
+        filter_family: str,
+        filter_table: str,
+        mangle_table: str,
+        nat_table: str,
+    ) -> str:
+        """Return where every run-time address table is kept, one set a line.
+
+        The generated iptables script has offered ``reload_address_table``,
+        ``add_to_address_table``, ``remove_from_address_table`` and
+        ``test_address_table`` since Firewall Builder wrote them, so a block
+        list can be kept up to date without recompiling the firewall.  On
+        nftables the addresses live in a named set rather than in an ipset,
+        and a command that maintains one has to find every set that stands
+        for the table: a table used by both the filter and the NAT rules has
+        a set in each, and one used by both address families has a set per
+        family, because a set is typed.
+
+        Only a table backed by a file is listed.  A DNS name is resolved and
+        a dynamic interface is read from the running system, so there is
+        nothing for an administrator to edit and nothing the next activation
+        would not do again.
+        """
+        lines: list[str] = []
+        for table, tables in (
+            (filter_table, self.filter_address_tables),
+            (mangle_table, self.mangle_address_tables),
+        ):
+            for name, (_source, _ipv6, kind) in sorted(tables.items()):
+                if kind == 'file':
+                    lines.append(f'{filter_family} {table} {name}')
+        for fam, tables in sorted(self.nat_address_tables.items()):
+            for name, (_source, _ipv6, kind) in sorted(tables.items()):
+                if kind == 'file':
+                    lines.append(f'{fam} {nat_table} {name}')
         return '\n'.join(lines)
 
     def _address_table_file_checks(self) -> str:
