@@ -50,6 +50,7 @@ from firewallfabrik.core.objects import (
     Cluster,
     Direction,
     Firewall,
+    PolicyAction,
     PolicyRule,
     Rule,
 )
@@ -262,6 +263,33 @@ def force_direction(direction: str) -> None:
     firewallfabrik.core.DatabaseManager.load = load_and_force
 
 
+def force_action(action: str) -> None:
+    """Compile every policy rule as if it carried this action.
+
+    The corpus is written by administrators, so it is nearly all Accept and
+    Deny: Accounting, Pipe, Return and Continue are between them named by a
+    handful of rules, and each takes its own branch through the chain
+    decisions, the target printer and the mangle pass.  Forcing one reaches
+    those branches over every rule of every firewall.
+
+    A Branch rule needs a target rule set and a Custom one needs the text to
+    write, so neither can be forced onto a rule that does not carry it;
+    Scrub, Skip and Modify belong to platforms this compiler does not have.
+    """
+    which = int(getattr(PolicyAction, action))
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_force(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for rule in session.execute(sqlalchemy.select(PolicyRule)).scalars():
+            rule.action = which
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_force
+
+
 def corpus_files(corpus: Path) -> list[Path]:
     """Return the data files of *corpus*, which may be a file or a directory.
 
@@ -322,6 +350,20 @@ def main() -> int:
         'corpus carries almost no negation',
     )
     parser.add_argument(
+        '--action',
+        choices=[
+            'Accept',
+            'Reject',
+            'Deny',
+            'Return',
+            'Continue',
+            'Accounting',
+            'Pipe',
+        ],
+        help='compile every policy rule as if it carried this action, which '
+        'reaches the branches the corpus barely names',
+    )
+    parser.add_argument(
         '--direction',
         choices=('Inbound', 'Outbound', 'Both'),
         help='compile every policy rule as if it named this direction, which '
@@ -331,6 +373,8 @@ def main() -> int:
 
     if args.negate:
         force_negation(args.negate)
+    if args.action:
+        force_action(args.action)
     if args.direction:
         force_direction(args.direction)
     if args.address_family:

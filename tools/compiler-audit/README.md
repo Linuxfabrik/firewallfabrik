@@ -114,6 +114,7 @@ can force the value that reaches them:
 | Flag | Reaches |
 |---|---|
 | `--negate <element>` | the negation handling, which the corpus barely uses. One element per run (`src dst srv itf when osrc odst osrv`) |
+| `--action <Accept\|Reject\|Deny\|Return\|Continue\|Accounting\|Pipe>` | the target printer, the chain decisions and the mangle pass for the actions the corpus barely names |
 | `--direction <Inbound\|Outbound\|Both>` | the chain decisions the corpus leaves at "Both" |
 | `--iptables-version <release>` | the version-gated matches; forced to a release current iptables still speaks it also takes the old-spelling noise out of the replay |
 | `--nftables-version <release>` | the nftables release gates, which no corpus firewall can reach: every `.fwb` names the iptables platform |
