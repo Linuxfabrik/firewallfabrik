@@ -54,7 +54,7 @@ while IFS= read -r script; do
     total=$((total + 1))
 
     funcs=$(mktemp)
-    awk '/^(load_address_table|load_dns_name|load_interface_address|load_address_tables|load_interface_nat_rule|load_runtime_nat_rules)\(\) \{/{f=1}
+    awk '/^(add_set_elements|load_address_table|load_dns_name|load_interface_address|load_address_tables|load_interface_nat_rule|load_runtime_nat_rules)\(\) \{/{f=1}
          f{print}
          f&&/^\}$/{f=0}' "$script" >"$funcs"
 

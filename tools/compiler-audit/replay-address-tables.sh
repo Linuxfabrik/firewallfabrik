@@ -109,7 +109,12 @@ EOF
         echo "$err"
         failed=$((failed + 1))
     fi
-done < <(find "$OUT" -name '*.fw' | sort)
+# The iptables tree alone: this asks about ipsets, and the nftables script
+# has a `reload_address_table` of its own since the four maintenance
+# commands landed there.  Without the restriction every nftables script
+# with an address table was picked up, answered nothing, and counted as a
+# clean run - the oracle reading green for scripts it cannot ask about.
+done < <(find "$OUT/ipt" -name '*.fw' | sort)
 
 echo "---"
 echo "$total scripts with a run-time address table replayed, $failed produced a finding"
