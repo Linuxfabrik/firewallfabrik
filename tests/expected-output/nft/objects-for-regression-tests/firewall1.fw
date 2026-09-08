@@ -293,10 +293,8 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
         #
         # Rule 1 (eth0)
         #
@@ -386,7 +384,7 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
-        ip saddr { 222.222.222.40, 222.222.222.40, 222.222.222.41, 222.222.222.41 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
+        ip saddr { 222.222.222.40, 222.222.222.41 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
         #
         # Rule 23 (global)
         #
@@ -412,10 +410,8 @@ table ip fwf_filter {
         #
         # Rule 34 (global)
         #
-        ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 counter log level debug drop
-        ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 counter log level debug drop
-        ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 counter log level debug drop
-        ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 counter log level debug drop
+        ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 counter log level debug drop
+        ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 counter log level debug drop
         #
         # Rule 35 (global)
         #
@@ -455,10 +451,8 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 22.22.22.22 meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 22.22.22.22 meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 192.168.1.1 meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        iifname "eth0" ip saddr 192.168.1.1 meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
         #
         # Rule 1 (eth0)
         #
@@ -548,7 +542,7 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
-        ip saddr { 222.222.222.40, 222.222.222.40, 222.222.222.41, 222.222.222.41 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
+        ip saddr { 222.222.222.40, 222.222.222.41 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
         #
         # Rule 23 (global)
         #
@@ -634,10 +628,8 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
-        oifname "eth0" ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        oifname "eth0" ip saddr 22.22.22.22 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        oifname "eth0" ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
-        oifname "eth0" ip saddr 192.168.1.1 ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        oifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        oifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
         #
         # Rule 3 (eth1)
         #
@@ -766,10 +758,8 @@ table ip fwf_filter {
         #
         # Rule 34 (global)
         #
-        ip saddr 22.22.22.22 meta l4proto 1 counter log level debug drop
-        ip saddr 22.22.22.22 meta l4proto 50 counter log level debug drop
-        ip saddr 192.168.1.1 meta l4proto 1 counter log level debug drop
-        ip saddr 192.168.1.1 meta l4proto 50 counter log level debug drop
+        ip saddr { 22.22.22.22, 192.168.1.1 } meta l4proto 1 counter log level debug drop
+        ip saddr { 22.22.22.22, 192.168.1.1 } meta l4proto 50 counter log level debug drop
         #
         # Rule 35 (global)
         #

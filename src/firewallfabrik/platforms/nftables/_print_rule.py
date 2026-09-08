@@ -3391,77 +3391,149 @@ def _build_addr_value(addrs: list[str]) -> str:
     return '{ ' + ', '.join(addrs) + ' }'
 
 
+#: The comment line that says a new original firewall rule starts here.
+#: `_print_rule_label` writes it, and it is the only comment that means a
+#: boundary: a warning or an error belongs to the rule it sits on, and an
+#: informational note ("using module iprange if") belongs to it too.
+RULE_LABEL_COMMENT = re.compile(r'^\s*# Rule \S')
+
+
 def optimize_chain_rules(chain_rules: dict[str, list[str]]) -> None:
-    """Merge consecutive rules that differ only in source or destination address.
+    """Merge the rules of one firewall rule that differ only in an address.
 
     Operates in-place on the per-chain rule lists produced by
-    :class:`PrintRule_nft`.  Two adjacent entries are merged when their
-    rule lines are structurally identical except for the ``ip saddr`` or
-    ``ip daddr`` value.  The merged rule uses nftables anonymous set
-    syntax: ``ip saddr { addr1, addr2 } ...``.
+    :class:`PrintRule_nft`.  Two entries are merged when their rule lines
+    are structurally identical except for the ``ip saddr`` or ``ip daddr``
+    value.  The merged rule uses nftables anonymous set syntax:
+    ``ip saddr { addr1, addr2 } ...``.
 
-    Rules are never merged across different comment blocks (i.e. across
-    different original firewall rules).  Only entries whose rule lines
-    share the same "signature" (everything except the address value) are
-    candidates.
+    For a positive element this is cosmetic - one rule per address is the
+    same "any of these".  For a **negated** one it is the whole meaning:
+    "none of these" is a conjunction, and two rules each excluding one
+    address are an "or" that every packet satisfies, so a Deny built on it
+    blocks nothing and an Accept lets everything through.  The elements a
+    chain decision hands out one address at a time are put back together
+    here and nowhere else, which is why the merge does not stop at the
+    first entry it cannot merge: a log rule between two of them used to
+    leave exactly that "or" standing (`check-negations.py`).
+
+    Rules are never merged across original firewall rules; the label
+    comment `_print_rule_label` writes is what marks one.
     """
     for chain, entries in chain_rules.items():
         chain_rules[chain] = _optimize_entries(entries)
 
 
+def _starts_a_rule(comments: str) -> bool:
+    """Whether these comment lines open a new original firewall rule."""
+    return any(RULE_LABEL_COMMENT.match(line) for line in comments.splitlines())
+
+
+def _items(entries: list[str]) -> list[tuple[str, str]]:
+    """Flatten the entries of a chain into one `(comments, rule line)` list.
+
+    An entry is not one rule.  A rule that logs before it acts comes out
+    of the printer as one string holding two rule lines, and a reported
+    rule carries its message as comment lines in front of its own.  So
+    each comment line is attached to the rule line that follows it and
+    everything is compared line by line, which is the level the merge is
+    about.
+    """
+    items: list[tuple[str, str]] = []
+    pending: list[str] = []
+    for entry in entries:
+        for line in entry.split('\n'):
+            if not line.strip():
+                continue
+            if line.lstrip().startswith('#'):
+                pending.append(line)
+                continue
+            items.append(('\n'.join(pending) + '\n' if pending else '', line))
+            pending = []
+    if pending:
+        # Comment lines with no rule behind them: kept as they are.
+        items.append(('\n'.join(pending) + '\n', ''))
+    return items
+
+
+def _merge_comments(blocks: list[str]) -> str:
+    """The comment blocks of the merged rules, in order and without repeats.
+
+    Each rule of one original rule carries the same warning, and the label
+    block sits on the first of them; keeping only the first one's comments
+    would drop a message that belongs to a rule that is still there.
+    Whole blocks are compared and not single lines: a label block is three
+    lines of which two are a bare `#`, and dropping the second as a repeat
+    of the first takes the frame off every reported rule.
+    """
+    seen: set[str] = set()
+    kept: list[str] = []
+    for block in blocks:
+        if block and block not in seen:
+            seen.add(block)
+            kept.append(block)
+    return ''.join(kept)
+
+
 def _optimize_entries(entries: list[str]) -> list[str]:
-    """Merge consecutive entries that differ only in one address field."""
+    """Merge the rules of each original rule that differ in one address."""
     if len(entries) <= 1:
         return entries
 
     result: list[str] = []
-    i = 0
+    block: list[tuple[str, str]] = []
 
-    while i < len(entries):
-        comments_i, rule_i = _split_entry(entries[i])
-        parsed_i = _parse_addr(rule_i) if rule_i else None
+    def flush() -> None:
+        result.extend(_merge_block(block))
+        block.clear()
 
-        if parsed_i is None:
-            # Not a mergeable rule — emit as-is.
-            result.append(entries[i])
-            i += 1
+    for comments, rule in _items(entries):
+        if block and _starts_a_rule(comments):
+            flush()
+        block.append((comments, rule))
+    flush()
+    return result
+
+
+def _merge_block(items: list[tuple[str, str]]) -> list[str]:
+    """Merge the rules of one original rule, keeping their order.
+
+    A group is emitted where its first member sat, so a rule that cannot
+    be merged keeps its place among the others.  Every rule of one block
+    comes out of one firewall rule and carries that rule's one action, so
+    collecting a later address into an earlier rule cannot change what
+    happens to a packet: the log rule in front of the action logs the
+    same packets either way.
+    """
+    groups: dict[tuple[str, str, str], list[tuple[str, str]]] = {}
+    order: list[tuple[str, str, str] | int] = []
+    plain: dict[int, str] = {}
+
+    for index, (comments, rule) in enumerate(items):
+        parsed = _parse_addr(rule) if rule else None
+        if parsed is None:
+            plain[index] = comments + rule + '\n' if rule else comments
+            order.append(index)
             continue
+        prefix, addr, suffix, field = parsed
+        signature = (prefix, suffix, field)
+        if signature not in groups:
+            groups[signature] = []
+            order.append(signature)
+        groups[signature].append((comments, addr))
 
-        prefix_i, addr_i, suffix_i, field_i = parsed_i
-        signature = (prefix_i, suffix_i, field_i)
-        merged_addrs = list(_addrs_from_value(addr_i))
-        merged_comments = comments_i
-
-        # Look ahead for consecutive entries with the same signature.
-        # Stop at comment boundaries — a non-empty comment block marks
-        # a new original firewall rule and must not be merged.
-        j = i + 1
-        while j < len(entries):
-            comments_j, rule_j = _split_entry(entries[j])
-            if not rule_j:
-                break
-
-            # A comment block signals a different original rule.
-            if comments_j:
-                break
-
-            parsed_j = _parse_addr(rule_j)
-            if parsed_j is None:
-                break
-
-            prefix_j, addr_j, suffix_j, field_j = parsed_j
-            if (prefix_j, suffix_j, field_j) != signature:
-                break
-
-            # Same signature, same original rule — collect addresses.
-            merged_addrs.extend(_addrs_from_value(addr_j))
-            j += 1
-
-        # Build the merged entry.
-        addr_value = _build_addr_value(merged_addrs)
-        merged_rule = f'{prefix_i}{addr_value}{suffix_i}'
-        merged_text = merged_comments + merged_rule + '\n'
-        result.append(merged_text)
-        i = j
-
+    result: list[str] = []
+    for key in order:
+        if isinstance(key, int):
+            result.append(plain[key])
+            continue
+        prefix, suffix, _field = key
+        members = groups[key]
+        addrs: list[str] = []
+        for _comments, addr in members:
+            for one in _addrs_from_value(addr):
+                if one not in addrs:
+                    addrs.append(one)
+        comments = _merge_comments([comment for comment, _addr in members])
+        result.append(f'{comments}{prefix}{_build_addr_value(addrs)}{suffix}\n')
     return result

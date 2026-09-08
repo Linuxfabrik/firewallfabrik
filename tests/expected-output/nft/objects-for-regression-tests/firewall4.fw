@@ -431,9 +431,8 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222, 192.168.1.0/24 } counter log level debug drop
         iifname "eth1" ip saddr @i_eth1 counter log level debug drop
-        iifname "eth1" ip saddr 192.168.1.0/24 counter log level debug drop
         #
         # Rule 2 (eth1)
         #
@@ -508,9 +507,8 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222 } counter log level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 192.168.2.1, 222.222.222.222, 192.168.1.0/24 } counter log level debug drop
         iifname "eth1" ip saddr @i_eth1 counter log level debug drop
-        iifname "eth1" ip saddr 192.168.1.0/24 counter log level debug drop
         #
         # Rule 1 (eth1)
         #
