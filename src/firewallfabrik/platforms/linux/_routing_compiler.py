@@ -698,11 +698,27 @@ def _route_command_key(rule: CompRule) -> tuple:
     ``ip route add`` then answers "RTNETLINK answers: File exists" and
     returns non-zero, which since the routing rollback puts the previous
     routing table back and stops the activation.
+
+    The address family is part of the command and therefore part of the
+    key.  ``route_address`` answers ``default`` for ``0.0.0.0/0`` and for
+    ``::/0`` alike - which is what ``ip route add`` wants written there -
+    so a default route in each family out of one device, the ordinary
+    shape on a point-to-point link, gave two rules one key and the second
+    was dropped as a duplicate of the first.  They are two routes in two
+    tables and the script writes ``ip route add`` for one and
+    ``ip -6 route add`` for the other.
     """
     destination = route_address(rule.rdst[0]) if rule.rdst else 'default'
     gateway = route_address(rule.rgtw[0]) if rule.rgtw else ''
     interface = getattr(rule.ritf[0], 'name', '') if rule.ritf else ''
-    return (_route_table(rule), destination, _metric(rule), gateway, interface)
+    return (
+        _route_table(rule),
+        is_ipv6_route(rule),
+        destination,
+        _metric(rule),
+        gateway,
+        interface,
+    )
 
 
 # `ip route add ... metric N` carries a 32-bit number: iproute2 reads it

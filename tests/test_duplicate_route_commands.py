@@ -211,3 +211,42 @@ def test_two_interface_objects_of_one_name_install_one_route(
     routes = _routes(dm, fw_id, tmp_path)
 
     assert len(routes) == 1, routes
+
+
+def test_a_default_route_in_each_family_is_two_routes(tmp_path):
+    """ "default" is what both `0.0.0.0/0` and `::/0` are written as.
+
+    That is what `ip route add` wants there, and the family comes from
+    the command instead - `ip route add` for one, `ip -6 route add` for
+    the other.  Comparing the text alone therefore gave the two rules one
+    key, and the second was dropped as a duplicate of the first with a
+    warning saying they install the same route.  They install a route
+    each, in a table each, and a default route in both families out of
+    one device is the ordinary shape on a point-to-point link.
+    """
+    dm = firewallfabrik.core.DatabaseManager()
+    dm.load(str(FIXTURES / 'routing_default_route_per_family.fwf'))
+    with dm.session() as session:
+        fw_id = str(
+            session.execute(
+                sqlalchemy.select(Firewall).where(Firewall.name == 'fw-test'),
+            )
+            .scalar_one()
+            .id
+        )
+
+    driver = CompilerDriver_ipt(dm)
+    driver.wdir = str(tmp_path)
+    driver.file_name_setting = 'fw-test.fw'
+    driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+    script = (tmp_path / 'fw-test.fw').read_text()
+
+    routes = [
+        line.strip()
+        for line in script.splitlines()
+        if line.strip().startswith('$IP ') and ' route add default' in line
+    ]
+    assert len(routes) == 2, routes
+    assert any(line.startswith('$IP route add default') for line in routes)
+    assert any(line.startswith('$IP -6 route add default') for line in routes)
+    assert 'install the same route' not in script

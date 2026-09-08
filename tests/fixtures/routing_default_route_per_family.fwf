@@ -1,0 +1,69 @@
+name: 'Test: default route in both families out of one interface'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'Network'
+        name: 'any4'
+        inet_addr_mask:
+          address: '0.0.0.0'
+          netmask: '0.0.0.0'
+      - type: 'NetworkIPv6'
+        name: 'any6'
+        inet_addr_mask:
+          address: '::'
+          netmask: '0'
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: false
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'tun0'
+            data:
+              label: 'uplink'
+            addresses:
+              - type: 'IPv4'
+                name: 'tun0-addr'
+                inet_addr_mask:
+                  address: '192.0.2.1'
+                  netmask: '255.255.255.255'
+              - type: 'IPv6'
+                name: 'tun0-addr6'
+                inet_addr_mask:
+                  address: '2001:db8::1'
+                  netmask: '128'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            ipv6: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                action: 'Deny'
+                direction: 'Both'
+          - type: 'Routing'
+            name: 'Routing'
+            top: true
+            rules:
+              - type: 'RoutingRule'
+                comment: 'IPv4 default route out of the tunnel'
+                rdst:
+                  - 'Library:Test Objects/Network:any4'
+                ritf:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:tun0'
+              - type: 'RoutingRule'
+                position: 1
+                comment: 'IPv6 default route out of the same tunnel'
+                rdst:
+                  - 'Library:Test Objects/NetworkIPv6:any6'
+                ritf:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:tun0'

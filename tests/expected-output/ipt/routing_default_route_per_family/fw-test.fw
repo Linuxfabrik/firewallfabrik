@@ -1,0 +1,706 @@
+#!/bin/sh
+# shellcheck disable=SC2034,SC2329
+#
+# MANAGED_HEADER
+#
+# TOOL VERSION
+#
+# Generated TIMESTAMP
+#
+# files: * fw-test.fw /etc/fwf.sh
+#
+# Compiled for iptables (any version)
+#
+
+FWBDEBUG=""
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+LSMOD="lsmod"
+MODPROBE="modprobe"
+IPTABLES="iptables"
+IP6TABLES="ip6tables"
+IPTABLES_RESTORE="iptables-restore"
+IP6TABLES_RESTORE="ip6tables-restore"
+IP="ip"
+IFCONFIG="ifconfig"
+VCONFIG="vconfig"
+BRCTL="brctl"
+IFENSLAVE="ifenslave"
+IPSET="ipset"
+LOGGER="logger"
+
+log() {
+ echo "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+}
+
+getInterfaceVarName() {
+ echo "$1" | sed 's/\./_/'
+}
+
+getaddr_internal() {
+ dev=$1
+ name=$2
+ af=$3
+ L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
+}
+
+getnet_internal() {
+ dev=$1
+ name=$2
+ af=$3
+ L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
+}
+
+getaddr() {
+ getaddr_internal "$1" "$2" "-4"
+}
+
+getaddr6() {
+ getaddr_internal "$1" "$2" "-6"
+}
+
+getnet() {
+ getnet_internal "$1" "$2" "-4"
+}
+
+getnet6() {
+ getnet_internal "$1" "$2" "-6"
+}
+
+# function getinterfaces is used to process wildcard interfaces
+getinterfaces() {
+ NAME=$1
+ "$IP" link show | grep ": $NAME" | while read -r L; do
+ OIFS=$IFS
+ IFS=" :"
+ # shellcheck disable=SC2086
+ set -- $L
+ IFS=$OIFS
+ echo "$2"
+ done
+}
+
+diff_intf() {
+ func=$1
+ list1=$2
+ list2=$3
+ cmd=$4
+ for intf in $list1
+ do
+ echo "$list2" | grep -q "$intf" || {
+ # $intf is absent in list 2
+ "$func" "$intf" "$cmd"
+ }
+ done
+}
+
+find_program() {
+ PGM=$1
+ command -v "$PGM" >/dev/null 2>&1 || {
+ echo "\"$PGM\" not found"
+ exit 1
+ }
+}
+check_tools() {
+ find_program command
+ find_program "$IPTABLES"
+ find_program "$IP6TABLES"
+ find_program "$IP"
+}
+# The tables to clear. /proc/net/ip_tables_names, which used to be
+# read here, only exists while the legacy ip_tables module is loaded;
+# with the iptables-nft backend that every current distribution ships it
+# is absent, the loop over it ran zero times and nothing was cleared at
+# all, while the policies below were already set to DROP. Naming the
+# tables works with either backend: flushing one that does not exist is
+# a no-op and leaves no table behind.
+FWF_TABLES="filter mangle nat raw security"
+
+reset_iptables_v4() {
+ $IPTABLES -w 5 -P OUTPUT DROP
+ $IPTABLES -w 5 -P INPUT DROP
+ $IPTABLES -w 5 -P FORWARD DROP
+
+ for table in $FWF_TABLES; do
+ list=$($IPTABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
+ printf "%s" "$list" | while read -r c chain rest; do
+ if test "$c" = "Chain" ; then
+ $IPTABLES -w 5 -t "$table" -F "$chain"
+ fi
+ done
+ $IPTABLES -w 5 -t "$table" -X
+ done
+}
+
+reset_iptables_v6() {
+ $IP6TABLES -w 5 -P OUTPUT DROP
+ $IP6TABLES -w 5 -P INPUT DROP
+ $IP6TABLES -w 5 -P FORWARD DROP
+
+ for table in $FWF_TABLES; do
+ list=$($IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
+ printf "%s" "$list" | while read -r c chain rest; do
+ if test "$c" = "Chain" ; then
+ $IP6TABLES -w 5 -t "$table" -F "$chain"
+ fi
+ done
+ $IP6TABLES -w 5 -t "$table" -X
+ done
+}
+
+P2P_INTERFACE_WARNING=""
+
+missing_address() {
+ address=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ # shellcheck disable=SC2086
+ set -- $address
+ addr=$1
+ interface=$2
+ IFS=$oldIFS
+
+ "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
+ test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+ P2P_INTERFACE_WARNING="yes"
+ return
+ }
+
+ test "$cmd" = "add" && {
+ echo "# Adding ip address: $interface $addr"
+ if echo "$addr" | grep -q ':'; then
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+ else
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+ fi
+ }
+
+ test "$cmd" = "del" && {
+ echo "# Removing ip address: $interface $addr"
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
+ }
+
+ $FWBDEBUG "$IP" link set "$interface" up
+}
+
+list_addresses_by_scope() {
+ interface=$1
+ scope=$2
+ ignore_list=$3
+ "$IP" addr ls dev "$interface" | \
+ awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+ while read -r addr; do
+ echo "${addr}@$interface"
+	done | sort
+}
+
+update_addresses_of_interface() {
+ ignore_list=$2
+ # shellcheck disable=SC2086
+ set -- $1
+ interface=$1
+ shift
+
+ FWB_ADDRS=$(
+ for addr in "$@"; do
+ echo "${addr}@$interface"
+ done | sort
+ )
+
+ CURRENT_ADDRS_ALL_SCOPES=""
+ CURRENT_ADDRS_GLOBAL_SCOPE=""
+
+ if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+ CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+ CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+ else
+ echo "# Interface $interface does not exist"
+ # Stop the script if we are not in test mode
+ test -z "$FWBDEBUG" && exit 1
+ fi
+
+ diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+ diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+}
+
+clear_addresses_except_known_interfaces() {
+ "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
+ 'function known(name, i, prefix) {
+ if (name in ignored_dict) return 1;
+ for (i in wildcard_arr) {
+ prefix = wildcard_arr[i];
+ if (substr(name, 1, length(prefix)) == prefix) return 1;
+ }
+ return 0;
+ }
+ BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {
+ ignored_dict[ignored_arr[a]]=1;
+ if (ignored_arr[a] ~ /[*+]$/)
+ wildcard_arr[a]=substr(ignored_arr[a],1,length(ignored_arr[a])-1);
+ }
+ }
+ (/state/ && $3 !~ /LOOPBACK/ && !known($2)) {print $2;}' | \
+ while read -r intf; do
+ echo "# Removing addresses not configured in fwbuilder from interface $intf"
+ $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+ $FWBDEBUG "$IP" link set "$intf" down
+ done
+}
+
+reset_fwf_chains_v4() {
+ prefix="$1"
+
+ # For each table, remove FWF jump rules from built-in chains (in
+ # reverse order to keep line numbers stable), then flush and delete
+ # FWF's own chains. We do not check /proc/net/ip_tables_names
+ # because it is absent on systems using the iptables-nft backend;
+ # instead we query iptables directly and suppress errors.
+ for table in filter nat mangle; do
+ # Remove jump rules targeting our prefixed chains from built-in chains.
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IPTABLES -w 5 -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read -r rulenum; do
+ $IPTABLES -w 5 -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ # Flush all our prefixed chains first, then delete them in a
+ # second pass. A single pass fails when sub-chains (e.g.
+ # fwf_C...) sort alphabetically before their parent chains
+ # (fwf_INPUT) -- the delete would fail because the parent still
+ # references the sub-chain.
+ $IPTABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IPTABLES -w 5 -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IPTABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IPTABLES -w 5 -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+reset_fwf_chains_v6() {
+ prefix="$1"
+
+ for table in filter nat mangle; do
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IP6TABLES -w 5 -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read -r rulenum; do
+ $IP6TABLES -w 5 -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ $IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IP6TABLES -w 5 -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IP6TABLES -w 5 -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+setup_fwf_jumps_v4() {
+ prefix="$1"
+
+ # Set built-in chain policies to DROP for security.
+ $IPTABLES -w 5 -P INPUT DROP
+ $IPTABLES -w 5 -P FORWARD DROP
+ $IPTABLES -w 5 -P OUTPUT DROP
+
+ # Create our prefixed chains (ignore error if they already exist).
+ $IPTABLES -w 5 -N "${prefix}_INPUT" 2>/dev/null
+ $IPTABLES -w 5 -N "${prefix}_FORWARD" 2>/dev/null
+ $IPTABLES -w 5 -N "${prefix}_OUTPUT" 2>/dev/null
+
+ # Insert jump rules at position 1 (top of chain).
+ # Tools that start later (Docker, CrowdSec, fail2ban) will insert
+ # their own rules at position 1, pushing ours down. Control the
+ # evaluation order via systemd unit ordering.
+ $IPTABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
+ $IPTABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IPTABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat and mangle tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IPTABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IPTABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IPTABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IPTABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
+}
+
+setup_fwf_jumps_v6() {
+ prefix="$1"
+
+ $IP6TABLES -w 5 -P INPUT DROP
+ $IP6TABLES -w 5 -P FORWARD DROP
+ $IP6TABLES -w 5 -P OUTPUT DROP
+
+ $IP6TABLES -w 5 -N "${prefix}_INPUT" 2>/dev/null
+ $IP6TABLES -w 5 -N "${prefix}_FORWARD" 2>/dev/null
+ $IP6TABLES -w 5 -N "${prefix}_OUTPUT" 2>/dev/null
+
+ $IP6TABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
+ $IP6TABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IP6TABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat and mangle tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IP6TABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IP6TABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IP6TABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IP6TABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
+}
+
+check_file() {
+ test -r "$2" || {
+ echo "Can not find file $2 referenced by address table object $1"
+ exit 1
+ }
+}
+
+check_run_time_address_table_files() {
+ :
+
+}
+
+load_modules() {
+ :
+
+}
+
+verify_interfaces() {
+ :
+
+}
+
+prolog_commands() {
+ echo "Running prolog script"
+
+}
+
+epilog_commands() {
+ echo "Running epilog script"
+
+}
+
+run_epilog_and_exit() {
+ epilog_commands
+ exit "$1"
+}
+
+configure_interfaces() {
+ :
+ # Configure interfaces
+}
+
+# The shell form of the policy is hundreds of separate commands, and the
+# status of the function that runs them is the status of the last one - so
+# a rule iptables refused in the middle left the ruleset incomplete while
+# the script reported a clean activation. script_body therefore points
+# $IPTABLES and $IP6TABLES at these two for as long as it runs, which
+# leaves every generated command line exactly as it was, and counts what
+# was refused. "set -e" is not an alternative: the first thing script_body
+# does is write kernel variables, which fail in a container and on a
+# read-only /proc, and a rule guarded by 'test -n "$i_eth0" &&' is false
+# whenever the interface has no address.
+fwf_run_tool() {
+ fwf_tool=$1
+ shift
+ "$fwf_tool" "$@" && return 0
+ fwf_status=$?
+ case " $* " in
+ *" -N "*) return "$fwf_status" ;;
+ esac
+ fwf_failed_commands=$((fwf_failed_commands + 1))
+ echo "Error: \"$fwf_tool $*\" failed" >&2
+ return "$fwf_status"
+}
+
+fwf_run_iptables() {
+ fwf_run_tool "$fwf_tool_v4" "$@"
+}
+
+fwf_run_ip6tables() {
+ fwf_run_tool "$fwf_tool_v6" "$@"
+}
+
+script_body() {
+ :
+ fwf_failed_commands=0
+ fwf_tool_v4="$IPTABLES"
+ fwf_tool_v6="$IP6TABLES"
+ IPTABLES=fwf_run_iptables
+ IP6TABLES=fwf_run_ip6tables
+ # ================ IPv4
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IPTABLES -w 5 -A fwf_OUTPUT -m conntrack --ctstate NEW -j DROP
+ $IPTABLES -w 5 -A fwf_INPUT -m conntrack --ctstate NEW -j DROP
+ $IPTABLES -w 5 -A fwf_FORWARD -m conntrack --ctstate NEW -j DROP
+
+ # ================ IPv6
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IP6TABLES -w 5 -A fwf_OUTPUT -m conntrack --ctstate NEW -j DROP
+ $IP6TABLES -w 5 -A fwf_INPUT -m conntrack --ctstate NEW -j DROP
+ $IP6TABLES -w 5 -A fwf_FORWARD -m conntrack --ctstate NEW -j DROP
+
+ # ============== ROUTING RULES ==============
+
+ HAVE_MKTEMP=$(command -v mktemp)
+
+ test -n "$HAVE_MKTEMP" && {
+ TMPDIRNAME=$(mktemp -d)
+ test -z "$TMPDIRNAME" && exit 1
+ }
+
+ test -z "$HAVE_MKTEMP" && {
+ TMPDIRNAME="/tmp/.fwbuilder.tempdir.$$"
+ (umask 077 && mkdir "$TMPDIRNAME") || exit 1
+ }
+
+ TMPFILENAME="$TMPDIRNAME/.fwbuilder.out"
+ OLD_ROUTES="$TMPDIRNAME/.old_routes"
+
+ #
+ # This function stops stdout redirection
+ # and sends previously saved output to terminal
+ restore_script_output()
+ {
+ exec 1>&3 2>&1
+ cat "$TMPFILENAME"
+ rm -rf "$TMPDIRNAME"
+ }
+
+ # if any routing rule fails we do our best to prevent freezing the firewall
+ route_command_error()
+ {
+ echo "Error: Routing rule $1 couldn't be activated"
+ echo "Recovering previous routing configuration..."
+ # delete current routing rules
+ # A route is several arguments, so the expansion is split on purpose.
+ # shellcheck disable=SC2086
+ "$IP" -o route show | tr -d '\134' | while read -r route ; do "$IP" route del $route ; done
+ # shellcheck disable=SC2086
+ "$IP" -o -6 route show | tr -d '\134' | while read -r route ; do "$IP" -6 route del $route ; done
+ # restore old routing rules
+ sh "$OLD_ROUTES"
+ echo "...done"
+ restore_script_output
+ epilog_commands
+ exit 1
+ }
+
+ # redirect output to prevent ssh session from stalling
+ exec 3>&1
+ exec 1> "$TMPFILENAME"
+ exec 2>&1
+
+ # store previous routing configuration (sort: 'via' GW has to be
+ # inserted after device routes). "-o" puts a route with several next
+ # hops on one line, where "ip route show" spreads it over one line per
+ # hop: read line by line, "default" and "nexthop via ..." are three
+ # commands, and the two the loops below would build out of the tail are
+ # not routes at all. The separator "-o" writes in their place is a
+ # backslash, which is not part of any route and is spelled in octal
+ # because shellcheck reads a doubled one inside single quotes as an
+ # attempt at escaping the quote (SC1003).
+
+ "$IP" -o route show | tr -d '\134' | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
+ # "ip route" is the IPv4 table and nothing else, and this script installs
+ # an IPv6 route as well, so the other table is saved, cleared and put back
+ # beside it - or the route is still there on the next activation and
+ # "ip -6 route add" answers "File exists", which stops the script.
+ "$IP" -o -6 route show | tr -d '\134' | sort -k 2 | awk '{printf "ip -6 route add %s\n",$0;}' >> "$OLD_ROUTES"
+
+ echo "Deleting routing rules previously set by user space processes..."
+ # A route is several arguments, so the expansion is split on purpose.
+ # shellcheck disable=SC2086
+ "$IP" -o route show | tr -d '\134' | grep -v 'proto kernel' | \
+ while read -r route ; do "$IP" route del $route ; done
+ # shellcheck disable=SC2086
+ "$IP" -o -6 route show | tr -d '\134' | grep -v 'proto kernel' | \
+ while read -r route ; do "$IP" -6 route del $route ; done
+
+ echo "Activating non-ecmp routing rules..."
+ $IP route add default dev tun0 \
+ || route_command_error "0 (main)"
+ $IP -6 route add default dev tun0 \
+ || route_command_error "1 (main)"
+
+ restore_script_output
+ echo "...done."
+ IPTABLES="$fwf_tool_v4"
+ IP6TABLES="$fwf_tool_v6"
+ test "$fwf_failed_commands" -eq 0
+}
+
+ip_forward() {
+ :
+
+}
+
+reset_all() {
+ :
+ reset_fwf_chains_v4 "fwf"
+ reset_fwf_chains_v6 "fwf"
+}
+
+block_action() {
+ reset_all
+}
+
+stop_action() {
+ reset_all
+ $IPTABLES -w 5 -P OUTPUT ACCEPT
+ $IPTABLES -w 5 -P INPUT ACCEPT
+ $IPTABLES -w 5 -P FORWARD ACCEPT
+ $IP6TABLES -w 5 -P OUTPUT ACCEPT
+ $IP6TABLES -w 5 -P INPUT ACCEPT
+ $IP6TABLES -w 5 -P FORWARD ACCEPT
+}
+
+status_action() {
+ # Coexistence mode: check for FirewallFabrik's own prefixed chains.
+ # Counting all chains would give false positives when Docker,
+ # CrowdSec or fail2ban create their own chains.
+ $IPTABLES -w 5 -S 2>/dev/null | grep -q -- "^-N fwf_" && {
+ echo "Firewall is active"
+ return 0
+ }
+ $IP6TABLES -w 5 -S 2>/dev/null | grep -q -- "^-N fwf_" && {
+ echo "Firewall is active"
+ return 0
+ }
+ echo "Firewall is not configured"
+ exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+ cmd="start"
+}
+
+case "$cmd" in
+ start)
+ log "Activating firewall script generated TIMESTAMP"
+ check_tools
+ prolog_commands
+ check_run_time_address_table_files
+
+ load_modules " ipv6"
+ configure_interfaces
+ verify_interfaces
+
+ reset_all
+ setup_fwf_jumps_v4 "fwf"
+ setup_fwf_jumps_v6 "fwf"
+
+ script_body || run_epilog_and_exit 1
+ ip_forward
+ epilog_commands
+ ;;
+
+ stop)
+ check_tools
+ stop_action
+ RETVAL=$?
+ ;;
+
+ status)
+ check_tools
+ status_action
+ RETVAL=$?
+ ;;
+
+ block)
+ check_tools
+ block_action
+ RETVAL=$?
+ ;;
+
+ reload)
+ $0 start
+ RETVAL=$?
+ ;;
+
+ interfaces)
+ check_tools
+ configure_interfaces
+ RETVAL=$?
+ ;;
+
+ test_interfaces)
+ check_tools
+ FWBDEBUG="echo"
+ configure_interfaces
+ RETVAL=$?
+ ;;
+
+ *)
+ echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+ RETVAL=1
+ ;;
+
+esac
+
+exit $RETVAL
