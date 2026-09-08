@@ -82,7 +82,9 @@ def test_the_iptables_list_is_the_one_firewall_builder_offers():
 
 def test_the_nftables_list_names_the_releases_the_output_changes_at():
     values = [value for value, _label in get_versions_for_platform('nftables')]
-    assert '0.9.1' in values  # the flags dynamic set of a connection limit
+    # The `flags dynamic` set of a connection limit, and the name of a
+    # standard chain priority.
+    assert '0.9.1' in values
     assert '0.9.2' in values  # ip option <name> exists
     assert '0.9.3' in values  # meta hour / meta day / meta time
     assert '0.9.5' in values  # snat prefix to / dnat prefix to

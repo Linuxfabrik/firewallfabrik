@@ -163,7 +163,9 @@ The list the editor offers is `PLATFORM_VERSIONS` in
 `gui/platform_settings.py`: Firewall Builder's own list for iptables,
 value for value, and for nftables the releases at which this compiler's
 output changes - 0.9.1 for the `flags dynamic` set a per-source
-connection limit counts in, 0.9.2 for `ip option <name> exists`, 0.9.3 for
+connection limit counts in *and* for the name of a standard chain priority
+(`priority filter` rather than `priority 0`, which is the first line of
+every base chain), 0.9.2 for `ip option <name> exists`, 0.9.3 for
 `meta hour` / `meta day` / `meta time` and 0.9.5 for `snat prefix to` /
 `dnat prefix to`.  Everything else the nftables compiler emits is 0.9.0
 or older, and `ct count`, `auto-merge` and `log flags` are the three that
