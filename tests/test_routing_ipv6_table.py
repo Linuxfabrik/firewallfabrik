@@ -43,9 +43,9 @@ FIXTURES = Path(__file__).parent / 'fixtures'
 
 #: The three commands that have to name the family, one per step.
 IPV6_STEPS = (
-    '"$IP" -6 route show | sort -k 2 |',
-    '"$IP" -6 route show | grep -v ',
-    '"$IP" -6 route show | while read -r route ;',
+    '| sort -k 2 | awk \'{printf "ip -6 route add',
+    '| grep -v ',
+    '| while read -r route ; do "$IP" -6 route del',
 )
 
 
@@ -77,8 +77,13 @@ def test_a_script_installing_an_ipv6_route_clears_the_ipv6_table_first(
     script = _compile(tmp_path, 'firewall36', driver_class)
 
     assert '$IP -6 route add ' in script
+    ipv6_readers = [
+        line for line in script.splitlines() if '"$IP" -o -6 route show' in line
+    ]
+    # One per step: save, delete in front of the rules, delete on rollback.
+    assert len(ipv6_readers) == 3
     for step in IPV6_STEPS:
-        assert step in script, step
+        assert any(step in line for line in ipv6_readers), (step, ipv6_readers)
     # The table is saved before the first route command touches anything,
     # and it is appended to the same file the IPv4 half is restored from.
     assert 'ip -6 route add %s' in script
@@ -95,5 +100,4 @@ def test_a_script_with_no_ipv6_route_leaves_the_ipv6_table_alone(
 
     assert '$IP route add ' in script
     assert '$IP -6 route add ' not in script
-    for step in IPV6_STEPS:
-        assert step not in script, step
+    assert '-6 route show' not in script

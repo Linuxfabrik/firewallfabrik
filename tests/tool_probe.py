@@ -70,3 +70,10 @@ SKIP_REASON_IPSET = _run(
     ['unshare', '-rn', 'ipset', '-N', 'fwf_probe_set', 'iphash', 'family', 'inet']
 )
 CAN_ASK_IPSET = not SKIP_REASON_IPSET
+
+# A dummy interface, which iproute2 has to accept in a namespace of its
+# own.  Reading the routing table needs no privilege; changing it does.
+SKIP_REASON_IPROUTE2 = _run(
+    ['unshare', '-rn', 'ip', 'link', 'add', 'fwfprobe0', 'type', 'dummy']
+)
+CAN_ASK_IPROUTE2 = not SKIP_REASON_IPROUTE2

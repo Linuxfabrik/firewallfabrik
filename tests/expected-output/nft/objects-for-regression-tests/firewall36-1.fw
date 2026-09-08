@@ -344,7 +344,7 @@ route_command_error()
   # delete current routing rules
   # A route is several arguments, so the expansion is split on purpose.
   # shellcheck disable=SC2086
-  "$IP" route show | while read -r route ; do "$IP" route del $route ; done
+  "$IP" -o route show | tr -d '\134' | while read -r route ; do "$IP" route del $route ; done
   # restore old routing rules
   sh "$OLD_ROUTES"
   echo "...done"
@@ -359,14 +359,21 @@ exec 1> "$TMPFILENAME"
 exec 2>&1
 
 # store previous routing configuration (sort: 'via' GW has to be
-# inserted after device routes)
+# inserted after device routes).  "-o" puts a route with several next
+# hops on one line, where "ip route show" spreads it over one line per
+# hop: read line by line, "default" and "nexthop via ..." are three
+# commands, and the two the loops below would build out of the tail are
+# not routes at all.  The separator "-o" writes in their place is a
+# backslash, which is not part of any route and is spelled in octal
+# because shellcheck reads a doubled one inside single quotes as an
+# attempt at escaping the quote (SC1003).
 
-"$IP" route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
+"$IP" -o route show | tr -d '\134' | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
 
 echo "Deleting routing rules previously set by user space processes..."
 # A route is several arguments, so the expansion is split on purpose.
 # shellcheck disable=SC2086
-"$IP" route show | grep -v '\( proto kernel \)\|\(default via \)' | \
+"$IP" -o route show | tr -d '\134' | grep -v '\( proto kernel \)\|\(default via \)' | \
     while read -r route ; do "$IP" route del $route ; done
 
 echo "Activating non-ecmp routing rules..."
