@@ -442,13 +442,23 @@ class YamlReader:
                 f'{parent_path}/{type_name}:{escape_obj_name(rs.name)}', rs.id
             )
 
-        # Rules
-        for rule_data in data.get('rules', []):
-            self._parse_rule(rule_data, rs)
+        # Rules.  A rule that names no position takes the one its place in
+        # the file gives it.  The writer omits a position of 0 the way it
+        # omits every other default, so the first rule of every rule set it
+        # writes arrives without one and this changes nothing for a file
+        # this application produced.  A hand-written one - the shape the
+        # developer guide asks for when a fixture is added, and the only
+        # way to edit a data file outside the editor until #146 lands -
+        # used to give every rule position 0: the rules still compiled in
+        # the order they were written, but each of them was labelled
+        # "0 (global)", the messages named the wrong rule and the shadowing
+        # pass reported a rule as shadowing itself.
+        for index, rule_data in enumerate(data.get('rules', [])):
+            self._parse_rule(rule_data, rs, index)
 
         return rs
 
-    def _parse_rule(self, data, rule_set):
+    def _parse_rule(self, data, rule_set, index=0):
         # Historical note: this method used to take a third `rs_type` argument
         # carrying the enclosing rule-set type, but it was shadowed by the
         # local `type_name` below and never read. If rule-type resolution ever
@@ -464,7 +474,7 @@ class YamlReader:
         rule.label = data.get('label', '')
         rule.rule_unique_id = data.get('rule_unique_id', '')
         rule.compiler_message = data.get('compiler_message', '')
-        rule.position = data.get('position', 0)
+        rule.position = data.get('position', index)
         rule.fallback = data.get('fallback', False)
         rule.hidden = data.get('hidden', False)
         rule.options = data.get('options', {})

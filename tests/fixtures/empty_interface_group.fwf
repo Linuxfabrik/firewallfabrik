@@ -46,6 +46,7 @@ libraries:
                 itf:
                   - 'Library:Test Objects/ObjectGroup:no-interfaces'
               - type: 'PolicyRule'
+                position: 1
                 comment: 'Names a real interface, so it stays'
                 action: 'Accept'
                 direction: 'Inbound'

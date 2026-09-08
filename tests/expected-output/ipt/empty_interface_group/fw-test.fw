@@ -483,9 +483,9 @@ script_body() {
 
  # ================ Table 'filter', rule set Policy
  #
- # Rule 0 (eth1)
+ # Rule 1 (eth1)
  #
- echo "Rule 0 (eth1)"
+ echo "Rule 1 (eth1)"
  #
  # Names a real interface, so it stays
  $IPTABLES -w 5 -A fwf_INPUT -i eth1 -m conntrack --ctstate NEW -j ACCEPT
