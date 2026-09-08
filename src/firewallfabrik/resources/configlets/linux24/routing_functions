@@ -92,7 +92,7 @@ echo "Deleting routing rules previously set by user space processes..."
 "$IP" -o route show | tr -d '\134' | grep -v {{$proto_filter}} | \
     while read -r route ; do "$IP" route del $route ; done{{if have_ipv6_routes}}
 # shellcheck disable=SC2086
-"$IP" -o -6 route show | tr -d '\134' | grep -v {{$proto_filter}} | \
+"$IP" -o -6 route show | tr -d '\134' | grep -v {{$proto_filter6}} | \
     while read -r route ; do "$IP" -6 route del $route ; done{{endif}}
 
 echo "Activating non-ecmp routing rules..."

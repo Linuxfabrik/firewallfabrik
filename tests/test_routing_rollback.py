@@ -42,9 +42,14 @@ from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nf
 FIXTURES = Path(__file__).parent / 'fixtures'
 
 
-def _compile(tmp_path, fw_name, driver_class=CompilerDriver_ipt):
+def _compile(
+    tmp_path,
+    fw_name,
+    driver_class=CompilerDriver_ipt,
+    fixture='objects-for-regression-tests.fwb',
+):
     db = DatabaseManager()
-    db.load(str(FIXTURES / 'objects-for-regression-tests.fwb'))
+    db.load(str(FIXTURES / fixture))
     with db.session() as session:
         fw_id = str(
             session.execute(
@@ -94,6 +99,39 @@ def test_a_firewall_with_a_default_route_may_drop_the_one_that_is_there(tmp_path
 
     assert "grep -v 'proto kernel'" in with_default
     assert r"grep -v '\( proto kernel \)\|\(default via \)'" in without_default
+
+
+def _delete_loop(script: str, reader: str) -> str:
+    """The line that deletes what a user-space process left in one table."""
+    return next(
+        line for line in script.splitlines() if reader in line and 'grep -v' in line
+    )
+
+
+def test_each_address_family_answers_the_default_route_question_for_itself(
+    tmp_path,
+):
+    """A default route in one table says nothing about the other.
+
+    `proto_filter` decides whether the script may delete the default
+    route the box came up with, and one flag for both families meant a
+    script installing an IPv6 default route deleted the IPv4 one as well
+    - on a successful activation nothing puts it back, so the box lost
+    its IPv4 way out.  Firewall Builder asks once because it compiles no
+    IPv6 route at all.
+    """
+    keep = r"grep -v '\( proto kernel \)\|\(default via \)'"
+    drop = "grep -v 'proto kernel'"
+
+    # Installs an IPv4 default route and a plain IPv6 route.
+    both = _compile(tmp_path, 'firewall36')
+    assert drop in _delete_loop(both, '"$IP" -o route show | tr')
+    assert keep in _delete_loop(both, '"$IP" -o -6 route show | tr')
+
+    # And the other way round: an IPv6 default route and no IPv4 route.
+    only6 = _compile(tmp_path, 'fw-test', fixture='routing_ipv6_default_route.fwf')
+    assert keep in _delete_loop(only6, '"$IP" -o route show | tr')
+    assert drop in _delete_loop(only6, '"$IP" -o -6 route show | tr')
 
 
 def test_a_firewall_without_routing_rules_defines_none_of_it(tmp_path):

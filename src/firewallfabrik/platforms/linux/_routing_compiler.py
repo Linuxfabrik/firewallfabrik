@@ -64,10 +64,16 @@ class RoutingCompilerLinux(RoutingCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.ecmp_rules_buffer: dict[str, str] = {}
         self.ecmp_comments_buffer: dict[str, str] = {}
-        # Whether any rule installs a default route.  It decides which
-        # routes the script deletes before it installs its own, see
-        # `RoutingPrintRule._write_routing_functions`.
+        # Whether any rule installs a default route, asked once per
+        # address family.  It decides which of the routes already on the
+        # box the script deletes before it installs its own, see
+        # `RoutingPrintRule._write_routing_functions`, and the two tables
+        # have to answer for themselves: a script that installs an IPv6
+        # default route and no IPv4 one has no business deleting the IPv4
+        # default route the box came up with, and nothing would put it
+        # back.
         self.have_default_route = False
+        self.have_default_route6 = False
         # Whether any rule installs an IPv6 route.  The block that saves,
         # deletes and restores the routing table works on one address
         # family at a time, and a family it is not told about is one whose
@@ -755,14 +761,26 @@ def is_ipv6_route(rule: CompRule) -> bool:
 
 
 class FindDefaultRoute(RoutingRuleProcessor):
-    """Note whether any rule installs a default route.
+    """Note whether any rule installs a default route, per address family.
 
     Ports ``RoutingCompiler_ipt::FindDefaultRoute``.  The answer decides
     which routes the generated script deletes before it installs its own:
     with a default route of its own to put back it may drop the one that is
     there, and without one it has to keep it, or the box loses its way out
     the moment the script runs.
+
+    Firewall Builder asks it once, because it compiles no IPv6 route at
+    all.  Here the question belongs to a table: a script that installs an
+    IPv6 default route and no IPv4 one used to delete the IPv4 default
+    route the box came up with - the rollback is not run on a successful
+    activation, so nothing put it back and the box lost its IPv4 way out.
     """
+
+    def _note(self, ipv6: bool) -> None:
+        if ipv6:
+            self.compiler.have_default_route6 = True
+        else:
+            self.compiler.have_default_route = True
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -771,10 +789,14 @@ class FindDefaultRoute(RoutingRuleProcessor):
 
         if not rule.rdst:
             # An empty destination element is "any", which is what a
-            # default route says; `_print_rdst` writes "default" for it.
-            self.compiler.have_default_route = True
-        elif any(route_address(obj) == 'default' for obj in rule.rdst):
-            self.compiler.have_default_route = True
+            # default route says; `_print_rdst` writes "default" for it,
+            # and the family then comes from the gateway the way
+            # `is_ipv6_route` reads it.
+            self._note(is_ipv6_route(rule))
+        else:
+            for obj in rule.rdst:
+                if route_address(obj) == 'default':
+                    self._note(bool(getattr(obj, 'is_v6', None) and obj.is_v6()))
 
         self.tmp_queue.append(rule)
         return True
@@ -1070,7 +1092,9 @@ class RoutingPrintRule(RoutingRuleProcessor):
         deletes before installing its own.  With a default route of its
         own to put back it may drop the one that is there; without one it
         has to keep it, or the box loses its way out the moment the script
-        runs.
+        runs.  It is asked once per address family, because a script that
+        installs a default route in one of them says nothing about the
+        other.
 
         ``have_ipv6_routes`` says whether the same three steps - save,
         delete, restore - have to be taken in the IPv6 table as well.
@@ -1078,14 +1102,19 @@ class RoutingPrintRule(RoutingRuleProcessor):
         route at all; see `NoteIPv6Routes`.
         """
 
-        if self.compiler.have_default_route:
-            proto_filter = "'proto kernel'"
-        else:
-            proto_filter = "'\\( proto kernel \\)\\|\\(default via \\)'"
+        def proto_filter(have_default: bool) -> str:
+            if have_default:
+                return "'proto kernel'"
+            return "'\\( proto kernel \\)\\|\\(default via \\)'"
 
         configlet = Configlet('linux24', 'routing_functions')
         configlet.remove_comments()
-        configlet.set_variable('proto_filter', proto_filter)
+        configlet.set_variable(
+            'proto_filter', proto_filter(self.compiler.have_default_route)
+        )
+        configlet.set_variable(
+            'proto_filter6', proto_filter(self.compiler.have_default_route6)
+        )
         configlet.set_variable('have_ipv6_routes', self.compiler.have_ipv6_route)
         self.compiler.output.write(configlet.expand())
         self.compiler.output.write('\n')
