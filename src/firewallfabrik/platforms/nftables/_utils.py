@@ -13,11 +13,15 @@
 """The nftables release a firewall is compiled for, and what needs which.
 
 Almost everything this compiler writes is older than any nftables a
-supported distribution ships.  Two constructs are not, and both are
+supported distribution ships.  A few constructs are not, and they are
 reached by an ordinary rule rather than by an exotic option - which is
 what makes the release worth asking about at all.  nftables loads a
 ruleset in one transaction, so a construct the target cannot parse costs
 the *whole* ruleset and the firewall keeps the rules it had.
+
+One of them is not reached by a rule at all: the name of a standard chain
+priority sits on the first line of every base chain, so a release that
+cannot read it refuses every ruleset this compiler writes.
 """
 
 from __future__ import annotations
@@ -29,8 +33,11 @@ __all__ = [
     'NFT_DYNAMIC_SET_FIRST_RELEASE',
     'NFT_IP_OPTION_FIRST_RELEASE',
     'NFT_NETMAP_FIRST_RELEASE',
+    'NFT_STANDARD_PRIORITIES',
+    'NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE',
     'NFT_TIME_FIRST_RELEASE',
     'get_nftables_version',
+    'nft_chain_priority',
     'nft_feature_available',
     'version_compare',
 ]
@@ -63,6 +70,26 @@ NFT_IP_OPTION_FIRST_RELEASE = '0.9.2'
 # nftables in v0.9.3 (`NFT_META_TIME_HOUR` in src/meta.c, 2019-08-29).
 NFT_TIME_FIRST_RELEASE = '0.9.3'
 
+# The name of a standard chain priority - `priority filter` rather than
+# `priority 0`.  nftables v0.9.1 ("src: Set/print standard chain prios
+# with textual names", c8a0e8c9, 2018-08-03); before it the grammar reads
+# a priority as `NUM | DASH NUM` and nothing else (src/parser_bison.y,
+# `prio_spec`), so the name is a syntax error on the very first line of
+# every base chain.
+NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE = '0.9.1'
+
+# What each of those names stands for, taken from nftables' own table
+# (`std_prios` in src/rule.c) and the kernel constants behind it
+# (`NF_IP_PRI_*` in include/uapi/linux/netfilter_ipv4.h).  The ip, ip6
+# and inet families share these numbers; the bridge family does not, and
+# this compiler writes no bridge table.
+NFT_STANDARD_PRIORITIES = {
+    'dstnat': -100,
+    'filter': 0,
+    'mangle': -150,
+    'srcnat': 100,
+}
+
 # `snat prefix to` / `dnat prefix to`, the 1:1 network translation the
 # iptables NETMAP target does.  A plain `snat to <prefix>` is a different
 # rule - it lets the kernel pick any address out of the range - so there
@@ -91,3 +118,20 @@ def get_nftables_version(fw) -> str:
 def nft_feature_available(compiler, first_release: str) -> bool:
     """Whether the release the firewall names can parse a construct."""
     return version_compare(get_nftables_version(compiler.fw), first_release) >= 0
+
+
+def nft_chain_priority(fw, name: str) -> str:
+    """Spell a standard chain priority the way the target release reads it.
+
+    The name is the readable form and what every current nftables prints
+    back, so it is kept wherever the release understands it.  Older ones
+    take the number, and there is no third answer: a ruleset loads in one
+    transaction, so a base chain the target cannot parse costs the whole
+    ruleset and the firewall keeps the rules it had.
+    """
+    if (
+        version_compare(get_nftables_version(fw), NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE)
+        >= 0
+    ):
+        return name
+    return str(NFT_STANDARD_PRIORITIES[name])

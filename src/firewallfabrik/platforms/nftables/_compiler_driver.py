@@ -55,6 +55,7 @@ from firewallfabrik.platforms.linux._netfilter import (
 )
 from firewallfabrik.platforms.nftables import __compiler_version__
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
+from firewallfabrik.platforms.nftables._utils import nft_chain_priority
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -879,6 +880,15 @@ class CompilerDriver_nft(CompilerDriver):
         mangle_table = f'{table_name}_mangle'
         mangle_chains = mangle_chains or {}
 
+        # A standard priority is written by name where the target release
+        # reads one, and as its number everywhere else: the name sits on
+        # the first line of every base chain, so getting it wrong costs the
+        # whole ruleset rather than one rule.
+        dstnat_priority = nft_chain_priority(fw, 'dstnat')
+        filter_priority = nft_chain_priority(fw, 'filter')
+        mangle_priority = nft_chain_priority(fw, 'mangle')
+        srcnat_priority = nft_chain_priority(fw, 'srcnat')
+
         out = io.StringIO()
 
         # Determine address family
@@ -1015,8 +1025,8 @@ class CompilerDriver_nft(CompilerDriver):
                     out.write('\n')
                 out.write(f'    chain {chain} {{\n')
                 out.write(
-                    f'        type filter hook {chain} priority mangle;'
-                    ' policy accept;\n'
+                    f'        type filter hook {chain} '
+                    f'priority {mangle_priority}; policy accept;\n'
                 )
                 out.write(rules)
                 out.write('    }\n')
@@ -1039,7 +1049,8 @@ class CompilerDriver_nft(CompilerDriver):
             # Input chain
             out.write('    chain input {\n')
             out.write(
-                f'        type filter hook input priority filter; policy {input_policy};\n'
+                f'        type filter hook input '
+                f'priority {filter_priority}; policy {input_policy};\n'
             )
             if auto_rules['input']:
                 out.write(auto_rules['input'])
@@ -1051,7 +1062,8 @@ class CompilerDriver_nft(CompilerDriver):
             # Forward chain
             out.write('    chain forward {\n')
             out.write(
-                f'        type filter hook forward priority filter; policy {forward_policy};\n'
+                f'        type filter hook forward '
+                f'priority {filter_priority}; policy {forward_policy};\n'
             )
             # TCPMSS clamping on forwarded traffic — nft equivalent of
             # the iptables "-t mangle -A FORWARD -p tcp --tcp-flags
@@ -1098,7 +1110,8 @@ class CompilerDriver_nft(CompilerDriver):
             # Output chain
             out.write('    chain output {\n')
             out.write(
-                f'        type filter hook output priority filter; policy {output_policy};\n'
+                f'        type filter hook output '
+                f'priority {filter_priority}; policy {output_policy};\n'
             )
             if auto_rules['output']:
                 out.write(auto_rules['output'])
@@ -1131,7 +1144,7 @@ class CompilerDriver_nft(CompilerDriver):
 
             # Prerouting chain (DNAT)
             out.write('    chain prerouting {\n')
-            out.write('        type nat hook prerouting priority dstnat;\n')
+            out.write(f'        type nat hook prerouting priority {dstnat_priority};\n')
             if prerouting_rules.strip():
                 out.write(prerouting_rules)
             out.write('    }\n')
@@ -1140,7 +1153,7 @@ class CompilerDriver_nft(CompilerDriver):
             if output_nat_rules.strip():
                 out.write('\n')
                 out.write('    chain output {\n')
-                out.write('        type nat hook output priority dstnat;\n')
+                out.write(f'        type nat hook output priority {dstnat_priority};\n')
                 out.write(output_nat_rules)
                 out.write('    }\n')
 
@@ -1148,7 +1161,9 @@ class CompilerDriver_nft(CompilerDriver):
 
             # Postrouting chain (SNAT/masquerade)
             out.write('    chain postrouting {\n')
-            out.write('        type nat hook postrouting priority srcnat;\n')
+            out.write(
+                f'        type nat hook postrouting priority {srcnat_priority};\n'
+            )
             if postrouting_rules.strip():
                 out.write(postrouting_rules)
             out.write('    }\n')
