@@ -306,6 +306,15 @@ add_set_elements() {
 # the rules match against is filled in here and not by the ruleset itself.
 # Comments start with "#" or ";", and an address of the other family is
 # skipped: the set is typed and would refuse it.
+#
+# Only the first field of a line is the address.  The compile-time reader
+# takes what is left of the first non-address character and the iptables
+# script takes "$1" of the line, so a line carrying a note behind the
+# address - the ordinary shape of a block list stitched together from
+# several feeds - is an address on both of those.  nft is handed the whole
+# element list in one command and answers a token it cannot parse by
+# refusing all of it, so without the field the note used to leave the set
+# empty: a Deny rule built on that block list stopped nothing.
 load_address_table() {
     family=$1
     table=$2
@@ -319,8 +328,7 @@ load_address_table() {
         return 1
     }
 
-    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
-        | grep -v '^$')
+    cleaned=$(sed -e 's/[#;].*//' "$file" | awk '{print $1}' | grep -v '^$')
     if [ "$af" = "-6" ]; then
         addrs=$(printf '%s\n' "$cleaned" | grep ':')
     else
