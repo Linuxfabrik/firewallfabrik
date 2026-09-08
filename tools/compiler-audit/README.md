@@ -103,6 +103,16 @@ out of the comparison and a set lookup compares equal to a range.  That
 is the blind spot - an element lost inside a set does not show up here,
 which is what `fill-nft-sets.sh` reads.
 
+The one class the fold does not reach is the same merge going one step
+further: a set whose elements cover one another - `{ 192.168.1.0/24,
+192.168.1.1 }`, which a negated element produces - collapses to a single
+prefix, and nft then lists a plain comparison where a set lookup went in.
+That reads as a difference and is none; two rulesets of the corpus
+compiled with `--negate src` say so.  It is not folded away because the
+fold would have to treat a comparison against a shorter payload as equal
+to one against a longer, which is exactly the shape of a real prefix-length
+bug.
+
 `check-nft.sh` and `load-nft.sh` give the namespace a passwd file of its
 own, holding every user and group a `meta skuid` / `meta skgid` in the
 ruleset names. nft looks the name up with `getpwnam` while it parses the
@@ -154,6 +164,7 @@ can force the value that reaches them:
 | `--negate <element>` | the negation handling, which the corpus barely uses. One element per run (`src dst srv itf when osrc odst osrv`) |
 | `--action <Accept\|Reject\|Deny\|Return\|Continue\|Accounting\|Pipe>` | the target printer, the chain decisions and the mangle pass for the actions the corpus barely names |
 | `--direction <Inbound\|Outbound\|Both>` | the chain decisions the corpus leaves at "Both" |
+| `--firewall-option KEY=VALUE` | the branches no corpus firewall switches on; repeatable, so several can be on at once |
 | `--iptables-version <release>` | the version-gated matches; forced to a release current iptables still speaks it also takes the old-spelling noise out of the replay |
 | `--nftables-version <release>` | the nftables release gates, which no corpus firewall can reach: every `.fwb` names the iptables platform |
 | `--address-family <4\|6>` | one family alone, the way the compiler's own `-4` / `-6` does |
@@ -163,6 +174,16 @@ motivated the run.  `--negate srv` was answered by `check-negations.py`
 with 208 findings where the unforced corpus answers 0, and the two bugs
 behind them were invisible to every other check: both rulesets parse,
 both load, and `compare-reference.sh` counts lines.
+
+```bash
+# The NFLOG half of the logging code, which no corpus firewall reaches.
+python tools/compiler-audit/compile-corpus.py /tmp/nflog \
+    --firewall-option log_all=true \
+    --firewall-option use_NFLOG=true \
+    --firewall-option ulog_nlgroup=5 \
+    --firewall-option ulog_cprange=256 \
+    --firewall-option ulog_qthreshold=10
+```
 
 ## Comparing against Firewall Builder
 

@@ -212,6 +212,49 @@ def force_nftables_version(version: str) -> None:
     firewallfabrik.core.DatabaseManager.load = load_and_pin
 
 
+def force_firewall_options(settings: list[str]) -> None:
+    """Set a firewall option on every firewall of the corpus.
+
+    A corpus is a collection of firewalls somebody actually wrote, and the
+    options nobody switched on are compiled by nothing: about a fifth of
+    each print rule is never reached by the reference corpus as it stands.
+    Forcing one on reaches its branch over every firewall at once, and
+    that is where two of the twenty-ninth round's four fixes came from -
+    "Log all rules" for the iptables replay, thirteen options at once for
+    `nft --check`.
+
+    ``KEY=VALUE``, repeatable.  The value is read the way a data file
+    writes one: `true` / `false` become booleans, a number becomes an
+    integer, everything else stays a string, because `get_option` hands
+    the compiler what the JSON column holds.
+
+    The override goes on `DatabaseManager.load` for the same reason
+    `force_iptables_version` puts it there: a `.fwb` is re-read per
+    firewall and assigns fresh ids each time.
+    """
+    values: dict[str, object] = {}
+    for setting in settings:
+        key, _, raw = setting.partition('=')
+        if raw.lower() in ('true', 'false'):
+            values[key] = raw.lower() == 'true'
+        elif raw.lstrip('-').isdigit():
+            values[key] = int(raw)
+        else:
+            values[key] = raw
+
+    load = firewallfabrik.core.DatabaseManager.load
+
+    def load_and_set(self, *args, **kwargs):
+        result = load(self, *args, **kwargs)
+        session = self.create_session()
+        for fw in session.execute(sqlalchemy.select(Firewall)).scalars():
+            fw.options = {**(fw.options or {}), **values}
+        session.commit()
+        return result
+
+    firewallfabrik.core.DatabaseManager.load = load_and_set
+
+
 def force_negation(slot: str) -> None:
     """Compile every firewall with one rule element negated everywhere.
 
@@ -343,6 +386,14 @@ def main() -> int:
         '0.9.0); meant with `--platform nft`',
     )
     parser.add_argument(
+        '--firewall-option',
+        action='append',
+        metavar='KEY=VALUE',
+        help='set this option on every firewall, so the branches no corpus '
+        'firewall switches on are compiled at all (for example '
+        'logging=true); repeatable',
+    )
+    parser.add_argument(
         '--negate',
         choices=('src', 'dst', 'srv', 'itf', 'when', 'osrc', 'odst', 'osrv'),
         help='compile every firewall with this rule element negated on every '
@@ -371,6 +422,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.firewall_option:
+        force_firewall_options(args.firewall_option)
     if args.negate:
         force_negation(args.negate)
     if args.action:
