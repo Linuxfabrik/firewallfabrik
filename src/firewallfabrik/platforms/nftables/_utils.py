@@ -26,6 +26,7 @@ from firewallfabrik.platforms.iptables._utils import version_compare
 
 __all__ = [
     'DEFAULT_NFTABLES_VERSION',
+    'NFT_DYNAMIC_SET_FIRST_RELEASE',
     'NFT_IP_OPTION_FIRST_RELEASE',
     'NFT_NETMAP_FIRST_RELEASE',
     'NFT_TIME_FIRST_RELEASE',
@@ -39,6 +40,14 @@ __all__ = [
 # nftables the machine runs, and assuming the oldest known release would
 # take away constructs every current distribution can parse.
 DEFAULT_NFTABLES_VERSION = '1.1'
+
+# `flags dynamic` on a set declaration, which a rule limiting concurrent
+# connections per source needs: the set holds one element per address and
+# the rule creates them as it sees them, and the flag is what tells the
+# kernel to pick a set backend that allows that.  nftables v0.9.1
+# ("src: add dynamic flag and use it", 2018-06-11); the token does not
+# exist in v0.9.0's scanner, so the ruleset does not parse there at all.
+NFT_DYNAMIC_SET_FIRST_RELEASE = '0.9.1'
 
 # `ip option <name> exists`, which an IP Service matching a source-route,
 # record-route or router-alert option compiles to.  Matching an IPv4 header

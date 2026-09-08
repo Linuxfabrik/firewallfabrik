@@ -98,6 +98,7 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_set_reference_name,
 )
 from firewallfabrik.platforms.nftables._utils import (
+    NFT_DYNAMIC_SET_FIRST_RELEASE,
     NFT_IP_OPTION_FIRST_RELEASE,
     NFT_TIME_FIRST_RELEASE,
     nft_feature_available,
@@ -2166,6 +2167,19 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
         if limit <= 0:
             return ''
+
+        if not nft_feature_available(self.compiler, NFT_DYNAMIC_SET_FIRST_RELEASE):
+            # The set the counts live in has to be declared `flags dynamic`,
+            # and that keyword is not in the grammar of an older release.  A
+            # ruleset is loaded in one transaction, so the rule would not
+            # only lose its limit, it would take every other rule with it.
+            self.compiler.error(
+                rule,
+                f'nftables before {NFT_DYNAMIC_SET_FIRST_RELEASE} cannot count '
+                'connections per source, which needs a set the rule adds to; '
+                'the rule is left out',
+            )
+            return None
 
         ipv6 = bool(self.compiler.ipv6_policy)
         keyword = 'ip6 saddr' if ipv6 else 'ip saddr'

@@ -41,12 +41,20 @@ class _Rule:
         return self._options.get(key, default)
 
 
+class _Firewall:
+    """A firewall that pins no release, so no version gate holds a rule back."""
+
+    platform = 'nftables'
+    version = ''
+
+
 class _Compiler:
     """The bit of PolicyCompiler_nft the rate printer reaches for."""
 
     def __init__(self):
         self.errors = []
         self.warnings = []
+        self.fw = _Firewall()
 
     def error(self, rule, message):
         self.errors.append(message)
