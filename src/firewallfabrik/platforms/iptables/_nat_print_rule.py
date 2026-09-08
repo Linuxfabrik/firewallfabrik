@@ -590,6 +590,8 @@ class NATPrintRule(NATRuleProcessor):
             parts = ['--to-source']
             addr_part = ''
             if tsrc:
+                if self._translation_target_is_a_name(rule, tsrc):
+                    return None
                 addr_part = self._print_addr(
                     tsrc, print_mask=False, print_range=True
                 ).strip()
@@ -610,6 +612,8 @@ class NATPrintRule(NATRuleProcessor):
             parts = ['--to-destination']
             addr_part = ''
             if tdst:
+                if self._translation_target_is_a_name(rule, tdst):
+                    return None
                 addr_part = self._print_addr(
                     tdst, print_mask=False, print_range=True
                 ).strip()
@@ -628,6 +632,10 @@ class NATPrintRule(NATRuleProcessor):
 
         if target == 'NETMAP' and rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):
             netmap_to = tsrc if rt == NATRuleType.SNetnat else tdst
+            if netmap_to is not None and self._translation_target_is_a_name(
+                rule, netmap_to
+            ):
+                return None
             addr_part = self._print_addr(netmap_to).strip() if netmap_to else ''
             if addr_part:
                 return f'--to {addr_part}'
@@ -1232,6 +1240,37 @@ class NATPrintRule(NATRuleProcessor):
             )
             return None
         return ' '.join(parts)
+
+    def _translation_target_is_a_name(self, rule: CompRule, obj) -> bool:
+        """Whether *obj* is a name the NAT target options cannot read.
+
+        ``-s`` and ``-d`` resolve a host name - that is what a run-time
+        DNS Name is for, and the resolution happens on the firewall when
+        the script runs.  The NAT target options do not: ``parse_to`` in
+        netfilter's ``extensions/libxt_NAT.c`` reads the address with
+        ``inet_pton`` and answers anything else with ``Bad IP address``,
+        and it has been that way in every release Firewall Builder can
+        pin - ``dotted_to_addr`` up to 1.4.0 and
+        ``xtables_numeric_to_ipaddr`` after it.
+
+        Firewall Builder writes the name out all the same
+        (``NATCompiler_ipt::PrintRule::_printAddr``), so the command is
+        refused at activation time: iptables exits 2 and the script stops
+        there, with every built-in policy already set to DROP.  The
+        nftables compiler already reports such a rule, for a reason of its
+        own, and the two platforms have to give one and the same object
+        the same answer.
+        """
+        if not isinstance(obj, DNSName):
+            return False
+        self.compiler.error(
+            rule,
+            f'DNS name "{obj.name}" cannot be a NAT translation target: '
+            'iptables reads the address of --to-source, --to-destination '
+            'and --to as a number and answers a name with "Bad IP '
+            'address"; use an address object instead. The rule is left out',
+        )
+        return True
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:
         """Print an address object in iptables format."""
