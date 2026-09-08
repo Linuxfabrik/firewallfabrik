@@ -80,7 +80,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
     check_interface_name,
-    custom_action_is_iptables_syntax,
+    custom_action_statement,
     custom_service_code,
     get_log_copy_range,
     get_log_netlink_group,
@@ -2013,27 +2013,34 @@ class PrintRule(PolicyRuleProcessor):
         if target:
             if target == '.CUSTOM':
                 # The rule carries the target verbatim, e.g. `-j TCPMSS
-                # --clamp-mss-to-pmtu`.
-                custom_str = rule.get_option('custom_str', '')
+                # --clamp-mss-to-pmtu`.  Which of the rule's two statements
+                # that is, `custom_action_statement` answers: the iptables
+                # one, or the platform-less field a data file written by
+                # Firewall Builder carries when it holds an iptables
+                # target.
+                custom_str = custom_action_statement(rule, 'iptables')
                 if not custom_str:
-                    self.compiler.error(
-                        rule,
-                        'rule with a custom action has no target to run; '
-                        'the rule is left out',
-                    )
-                    return None
-                if not custom_action_is_iptables_syntax(custom_str):
-                    # An nftables statement here is a firewall that was
-                    # switched to nftables and back, or one written for the
-                    # other platform.  iptables answers it with "unknown
-                    # option" and the activation stops with every policy
-                    # already at DROP.
-                    self.compiler.error(
-                        rule,
-                        f'the custom action "{custom_str}" is not an iptables '
-                        'target; an iptables target starts with "-", as in '
-                        '"-j TCPMSS --set-mss 1400". The rule is left out',
-                    )
+                    legacy = str(rule.get_option('custom_str', '') or '')
+                    if legacy.strip():
+                        # An nftables statement in the platform-less field
+                        # is a firewall that was switched over without the
+                        # action being rewritten.  iptables answers it with
+                        # "unknown option" and the activation stops with
+                        # every policy already at DROP.
+                        self.compiler.error(
+                            rule,
+                            f'the custom action "{legacy}" is not an iptables '
+                            'target; an iptables target starts with "-", as '
+                            'in "-j TCPMSS --set-mss 1400". Write it under '
+                            '"iptables" in the action panel. The rule is '
+                            'left out',
+                        )
+                    else:
+                        self.compiler.error(
+                            rule,
+                            'rule with a custom action has no target to run; '
+                            'the rule is left out',
+                        )
                     return None
                 return f' {custom_str}'
             if target.startswith('.'):

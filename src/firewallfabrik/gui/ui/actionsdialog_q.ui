@@ -234,6 +234,26 @@ allowed.</string>
            <number>12</number>
           </property>
           <item>
+           <widget class="QLabel" name="customPlatformLabel">
+            <property name="text">
+             <string>Platform:</string>
+            </property>
+            <property name="wordWrap">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="custom_str_platform">
+            <property name="toolTip">
+             <string>A custom action carries one statement per packet filter, the way a
+Custom Service carries one code per platform.  A firewall switched
+from iptables to nftables keeps both, and each compiler reads its
+own.</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLabel" name="textLabel1_2">
             <property name="text">
              <string>Custom string:</string>
@@ -246,10 +266,10 @@ allowed.</string>
           <item>
            <widget class="QLineEdit" name="custom_str">
             <property name="toolTip">
-             <string>Command appended verbatim to the generated rule.  It is written in
-the syntax of the platform this firewall compiles for: an iptables
-target such as &quot;-j TCPMSS --set-mss 1400&quot;, or an nftables statement
-such as &quot;tcp option maxseg size set 1400&quot;.</string>
+             <string>Command appended verbatim to the generated rule, in the syntax of
+the platform selected above: an iptables target such as
+&quot;-j TCPMSS --set-mss 1400&quot;, or an nftables statement such as
+&quot;tcp option maxseg size set 1400&quot;.</string>
             </property>
            </widget>
           </item>

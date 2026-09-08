@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Editor, Compiler (iptables, nftables): a rule with the Custom action carries one statement per packet filter, the way a Custom Service carries one code per platform. A firewall switched from iptables to nftables keeps both and each compiler reads its own; it used to keep the one statement it had, which the other packet filter refuses ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161)).
 * Compiler (nftables): a rule whose service matches the ToS byte compiles instead of being left out.
 * Compiler (nftables): the generated script offers `reload_address_table`, `add_to_address_table`, `remove_from_address_table` and `test_address_table`, with the same arguments and the same answers as the iptables script, so a block list can be kept up to date without recompiling the firewall.
 * Compiler (nftables): the generated script says which nftables release it was compiled for, the way the iptables script has always said its own.

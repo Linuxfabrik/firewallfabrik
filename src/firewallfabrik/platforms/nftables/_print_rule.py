@@ -78,7 +78,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
-    custom_action_is_iptables_syntax,
+    custom_action_statement,
     custom_service_code,
     get_log_copy_range,
     get_log_netlink_group,
@@ -3146,27 +3146,29 @@ class PrintRule_nft(PolicyRuleProcessor):
                 # a Custom Service.  A statement nft does not know costs
                 # the ruleset, which `check_ruleset` catches before the
                 # running one is flushed.
-                custom_str = rule.get_option('custom_str', '')
+                custom_str = custom_action_statement(rule, 'nftables')
                 if not custom_str:
-                    self.compiler.error(
-                        rule,
-                        'rule with a custom action has no statement to run; '
-                        'the rule is left out',
-                    )
-                    return None
-                if custom_action_is_iptables_syntax(custom_str):
-                    # `DecideOnTarget` has already refused a firewall whose
-                    # platform is not nftables; this is one that says
-                    # nftables and carries text nobody rewrote when it was
-                    # switched over.  nft answers the `-` with a syntax
-                    # error and refuses the whole ruleset over it.
-                    self.compiler.error(
-                        rule,
-                        f'the custom action "{custom_str}" is an iptables '
-                        'target, not an nftables statement; an nftables '
-                        'statement starts with a keyword, as in "tcp option '
-                        'maxseg size set 1400". The rule is left out',
-                    )
+                    legacy = str(rule.get_option('custom_str', '') or '')
+                    if legacy.strip():
+                        # A rule imported from Firewall Builder carries one
+                        # statement and it is an iptables target: that file
+                        # format has no second Linux platform to write.  nft
+                        # answers the `-` with a syntax error and refuses
+                        # the whole ruleset over it.
+                        self.compiler.error(
+                            rule,
+                            f'the custom action "{legacy}" is an iptables '
+                            'target, not an nftables statement; write the '
+                            'nftables statement under "nftables" in the '
+                            'action panel, as in "tcp option maxseg size '
+                            'set 1400". The rule is left out',
+                        )
+                    else:
+                        self.compiler.error(
+                            rule,
+                            'rule with a custom action has no statement to '
+                            'run; the rule is left out',
+                        )
                     return None
                 return custom_str
             if target.startswith('.'):
