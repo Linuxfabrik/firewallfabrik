@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2034,SC2329
 #
 #  This file is managed by FirewallFabrik - do not edit
 #
@@ -376,6 +377,10 @@ load_interface_address() {
 
     addrs=""
     for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        # The pattern is an interface wildcard such as "ppp*", so the
+        # expansion is a glob on purpose; quoting it would only ever match
+        # an interface literally called "ppp*".
+        # shellcheck disable=SC2254
         case "$dev" in
         $pattern) ;;
         *) continue ;;

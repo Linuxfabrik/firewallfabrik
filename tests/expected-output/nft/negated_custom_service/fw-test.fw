@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2034,SC2329
 #
 #  This file is managed by FirewallFabrik - do not edit
 #

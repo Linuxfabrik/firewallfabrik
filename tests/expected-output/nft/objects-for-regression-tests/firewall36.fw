@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2034,SC2329
 #
 #  This file is managed by FirewallFabrik - do not edit
 #
@@ -344,6 +345,8 @@ route_command_error()
   echo "Error: Routing rule $1 couldn't be activated"
   echo "Recovering previous routing configuration..."
   # delete current routing rules
+  # A route is several arguments, so the expansion is split on purpose.
+  # shellcheck disable=SC2086
   "$IP" route show | while read -r route ; do "$IP" route del $route ; done
   # restore old routing rules
   sh "$OLD_ROUTES"
@@ -364,6 +367,8 @@ exec 2>&1
 "$IP" route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
 
 echo "Deleting routing rules previously set by user space processes..."
+# A route is several arguments, so the expansion is split on purpose.
+# shellcheck disable=SC2086
 "$IP" route show | grep -v 'proto kernel' | \
     while read -r route ; do "$IP" route del $route ; done
 
