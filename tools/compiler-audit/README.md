@@ -104,14 +104,14 @@ is the blind spot - an element lost inside a set does not show up here,
 which is what `fill-nft-sets.sh` reads.
 
 The one class the fold does not reach is the same merge going one step
-further: a set whose elements cover one another - `{ 192.168.1.0/24,
-192.168.1.1 }`, which a negated element produces - collapses to a single
-prefix, and nft then lists a plain comparison where a set lookup went in.
-That reads as a difference and is none; two rulesets of the corpus
-compiled with `--negate src` say so.  It is not folded away because the
-fold would have to treat a comparison against a shorter payload as equal
-to one against a longer, which is exactly the shape of a real prefix-length
-bug.
+further: a set whose elements cover one another - `{ 192.168.1.1,
+192.168.1.0/24 }`, which is what a rule element naming a host and the
+network it sits in comes out as - collapses to a single prefix, and nft
+then lists a plain comparison where a set lookup went in.  That reads as
+a difference and is none; two rulesets of the reference corpus say so.
+It is not folded away because the fold would have to treat a comparison
+against a shorter payload as equal to one against a longer, which is
+exactly the shape of a real prefix-length bug.
 
 `check-nft.sh` and `load-nft.sh` give the namespace a passwd file of its
 own, holding every user and group a `meta skuid` / `meta skgid` in the
