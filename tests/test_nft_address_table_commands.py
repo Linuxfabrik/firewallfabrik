@@ -170,3 +170,46 @@ def test_the_commands_reach_the_running_set(tmp_path):
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert proc.stdout.strip().endswith('1'), proc.stdout
+
+
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
+def test_the_answer_reads_the_same_as_the_iptables_one(tmp_path):
+    """One sentence, and nothing on standard error.
+
+    `nft get element` prints the whole set declaration when it finds the
+    address and "Could not process rule: No such file or directory" when it
+    does not, which reads as the data file being gone.  The iptables
+    command has answered in one sentence since Firewall Builder wrote it,
+    and a runbook written for one packet filter is run against the other
+    after a migration.
+    """
+    script = _script(tmp_path)
+    ruleset = _RULES_RE.search(script)
+    functions = _FUNCTIONS_RE.search(script)
+    assert ruleset and functions
+
+    ruleset_file = tmp_path / 'ruleset.nft'
+    ruleset_file.write_text(ruleset.group(1) + '\n')
+    data_file = tmp_path / 'block-hosts.tbl'
+    data_file.write_text('198.51.100.1\n')
+
+    harness = f"""
+        NFT=nft
+        {functions.group(0)}
+        nft -f {ruleset_file} || exit 1
+        reload_address_table block_these {data_file} -4 > /dev/null || exit 1
+        test_address_table block_these 198.51.100.1 || exit 1
+        test_address_table block_these 192.0.2.1 && exit 1
+        exit 0
+    """
+    proc = subprocess.run(  # nosec B603 B607
+        ['unshare', '-rn', 'sh', '-c', harness],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert '198.51.100.1 is in address table block_these' in proc.stdout
+    assert '192.0.2.1 is not in address table block_these' in proc.stdout
+    assert 'No such file or directory' not in proc.stdout + proc.stderr

@@ -519,6 +519,13 @@ FWF_EOF
 # `nft get element` answers with the element that covers the address, so a
 # host inside one of the table's networks is found as well.  It is in
 # nftables since v0.9.0, which is the oldest release a firewall can name.
+#
+# Its own output is not the answer to the question.  Found, it prints the
+# whole set declaration; not found, it writes "Could not process rule: No
+# such file or directory" to standard error, which reads as the data file
+# being gone.  The iptables command answers this in one sentence, and the
+# two have to agree: a runbook or a monitoring check written for one
+# packet filter is run against the other after a migration.
 test_address_table() {
     test -n "$1" && test -n "$2" || {
         echo "Usage: test_address_table address_table_object_name address"
@@ -527,8 +534,14 @@ test_address_table() {
     at_want=$(address_table_set_for "$1" "$2")
     while read -r at_family at_table at_set; do
         test "$at_set" = "$at_want" || continue
-        $NFT get element "$at_family" "$at_table" "$at_set" "{ $2 }"
-        return $?
+        if $NFT get element "$at_family" "$at_table" "$at_set" "{ $2 }" \
+            >/dev/null 2>&1
+        then
+            echo "$2 is in address table $1"
+            return 0
+        fi
+        echo "$2 is not in address table $1"
+        return 1
     done <<FWF_EOF
 $(address_table_sets)
 FWF_EOF
