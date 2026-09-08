@@ -290,11 +290,11 @@ table inet fwf_filter {
         #
         # Rule 0 (eth0)
         #
-        meta nfproto ipv4 iifname "eth0" tcp dport 22 counter accept
+        iifname "eth0" tcp dport 22 meta nfproto ipv4 counter accept
         #
         # Rule Policy_v6 0 (eth0)
         #
-        meta nfproto ipv6 iifname "eth0" tcp dport 22 counter accept
+        iifname "eth0" tcp dport 22 meta nfproto ipv6 counter accept
     }
 
     chain forward {

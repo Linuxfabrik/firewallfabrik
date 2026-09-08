@@ -1185,9 +1185,25 @@ class PrintRule_nft(PolicyRuleProcessor):
         # Everything collected so far matches on the packet; what follows
         # only acts on it.  The address family has to be pinned down here,
         # while `parts` still holds the match half and nothing else.
+        #
+        # At the *end* of the match half, not in front of it.  nft reads a
+        # `meta nfproto` comparison as a protocol dependency and drops it
+        # from the listing as soon as a protocol expression follows it
+        # (`meta_match_postprocess` stores it, `payload_dependency_kill`
+        # releases it; netfilter nftables src/netlink_delinearize.c).  The
+        # rule in the kernel keeps both comparisons either way - but
+        # `meta nfproto ipv4 meta l4proto icmp` lists back as
+        # `meta l4proto icmp`, which is not the same rule: `meta l4proto`
+        # carries no family, so the listed form matches an IPv6 packet
+        # whose last next-header is 1 as well.  An administrator saving the
+        # machine's ruleset (`nft list ruleset > /etc/nftables.conf`, which
+        # is what nftables.service restores from) would then reload a
+        # policy that applies every such IPv4 rule to IPv6 traffic and the
+        # other way round.  Nothing follows the qualifier here, so nothing
+        # can release it.
         if self._needs_family_qualifier(parts):
             family = 'ipv6' if self.compiler.ipv6_policy else 'ipv4'
-            parts.insert(0, f'meta nfproto {family}')
+            parts.append(f'meta nfproto {family}')
 
         # Logging, mangle statements and verdict
         log_match = self._print_log(rule)
@@ -1254,7 +1270,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         nothing about it.  A rule matching only ports, connection state,
         interfaces, marks or time therefore applies to both families, so an
         IPv4-only rule acts on IPv6 traffic and the other way round.
-        Prefixing it with ``meta nfproto`` puts it back where it belongs.
+        A ``meta nfproto`` clause puts it back where it belongs; the caller
+        writes it at the end of the match half and says why.
 
         A table of a single family needs no qualifier: everything reaching
         an ``ip`` table is IPv4 already.

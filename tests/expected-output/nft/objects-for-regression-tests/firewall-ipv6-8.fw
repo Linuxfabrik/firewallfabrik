@@ -313,11 +313,11 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
+        meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter jump Policy_OSPF
+        iifname "eth0" meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
     }
 
     chain forward {
@@ -351,12 +351,12 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
+        meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter jump Policy_OSPF
-        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter jump Policy_OSPF
+        iifname "eth0" meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
+        oifname "eth0" meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
     }
 
     chain output {
@@ -408,11 +408,11 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
+        meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter jump Policy_OSPF
+        oifname "eth0" meta l4proto 89 meta nfproto ipv6 counter jump Policy_OSPF
     }
 
     chain Policy_OSPF {

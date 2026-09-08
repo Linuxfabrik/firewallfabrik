@@ -291,11 +291,11 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv4 ct state new counter accept
+        ct state new meta nfproto ipv4 counter accept
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter accept
+        ct state new meta nfproto ipv6 counter accept
     }
 
     chain forward {
@@ -305,11 +305,11 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv4 ct state new counter accept
+        ct state new meta nfproto ipv4 counter accept
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter accept
+        ct state new meta nfproto ipv6 counter accept
     }
 
     chain output {

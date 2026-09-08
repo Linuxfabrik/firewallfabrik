@@ -447,11 +447,11 @@ table inet fwf_filter {
         #
         # Rule 2 (ppp*)
         #
-        meta nfproto ipv6 iifname "ppp*" counter log drop
+        iifname "ppp*" meta nfproto ipv6 counter log drop
         #
         # Rule 8 (global)
         #
-        meta nfproto ipv6 tcp dport 22 ct state new counter accept
+        tcp dport 22 ct state new meta nfproto ipv6 counter accept
         #
         # Rule 9 (global)
         #
@@ -459,7 +459,7 @@ table inet fwf_filter {
         #
         # Rule 18 (global)
         #
-        meta nfproto ipv6 rt type 0 counter log drop
+        rt type 0 meta nfproto ipv6 counter log drop
         #
         # Rule 19 (global)
         #
@@ -472,7 +472,7 @@ table inet fwf_filter {
         #
         # Rule 18 (global)
         #
-        meta nfproto ipv6 rt type 0 counter log drop
+        rt type 0 meta nfproto ipv6 counter log drop
         #
         # Rule 19 (global)
         #
@@ -494,7 +494,7 @@ table inet fwf_filter {
         #
         # Rule 18 (global)
         #
-        meta nfproto ipv6 rt type 0 counter log drop
+        rt type 0 meta nfproto ipv6 counter log drop
         #
         # Rule 19 (global)
         #

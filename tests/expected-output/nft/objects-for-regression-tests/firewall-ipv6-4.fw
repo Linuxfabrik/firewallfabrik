@@ -461,7 +461,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv4 ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
+        ct state new meta nfproto ipv4 counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 1 (global)
         #
@@ -469,7 +469,7 @@ table inet fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 3 (global)
         #
@@ -496,7 +496,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
+        ct state new meta nfproto ipv6 counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
@@ -510,7 +510,7 @@ table inet fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 3 (global)
         #
@@ -565,7 +565,7 @@ table inet fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 3 (global)
         #
@@ -584,7 +584,7 @@ table inet fwf_filter {
         # Rule 6 (global)
         #
         # for bug 2047082
-        meta nfproto ipv4 ct state new counter accept
+        ct state new meta nfproto ipv4 counter accept
         #
         # Rule 7 (global)
         #
@@ -612,7 +612,7 @@ table inet fwf_filter {
         # Rule 6 (global)
         #
         # for bug 2047082
-        meta nfproto ipv6 ct state new counter accept
+        ct state new meta nfproto ipv6 counter accept
         #
         # Rule 7 (global)
         #

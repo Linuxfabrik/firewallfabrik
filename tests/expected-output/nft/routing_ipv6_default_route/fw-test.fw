@@ -265,7 +265,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter drop
+        ct state new meta nfproto ipv6 counter drop
     }
 
     chain forward {
@@ -273,7 +273,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter drop
+        ct state new meta nfproto ipv6 counter drop
     }
 
     chain output {
@@ -281,7 +281,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 ct state new counter drop
+        ct state new meta nfproto ipv6 counter drop
     }
 }
 

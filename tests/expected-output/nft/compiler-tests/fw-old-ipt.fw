@@ -299,13 +299,13 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv4 tcp dport 22 ct state new counter accept
+        tcp dport 22 ct state new meta nfproto ipv4 counter accept
         #
         # Rule 1 (global)
         #
         # Reject type this release does not know yet
         # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
-        meta nfproto ipv4 tcp dport 80 ct state new counter reject
+        tcp dport 80 ct state new meta nfproto ipv4 counter reject
         #
         # Rule 2 (global)
         #
@@ -314,12 +314,12 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta nfproto ipv6 tcp dport 22 ct state new counter accept
+        tcp dport 22 ct state new meta nfproto ipv6 counter accept
         #
         # Rule 1 (global)
         #
         # Reject type this release does not know yet
-        meta nfproto ipv6 tcp dport 80 ct state new counter reject with icmpv6 reject-route
+        tcp dport 80 ct state new meta nfproto ipv6 counter reject with icmpv6 reject-route
     }
 
     chain forward {

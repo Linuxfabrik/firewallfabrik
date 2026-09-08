@@ -497,7 +497,7 @@ table inet fwf_filter {
         #
         # Rule 7 (global)
         #
-        meta nfproto ipv4 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        ct state new meta nfproto ipv4 counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 12 (global)
         #
@@ -509,7 +509,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 17 (global)
         #
@@ -571,7 +571,7 @@ table inet fwf_filter {
         #
         # Rule 7 (global)
         #
-        meta nfproto ipv6 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        ct state new meta nfproto ipv6 counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 10 (global)
         #
@@ -588,7 +588,7 @@ table inet fwf_filter {
         # Rule 16 (global)
         #
         # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 18 (global)
         #
@@ -613,17 +613,17 @@ table inet fwf_filter {
         # Rule 27 (global)
         #
         # firewall-ipv6-2:Policy:27: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 28 (global)
         #
         # firewall-ipv6-2:Policy:28: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 29 (global)
         #
         # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 31 (global)
         #
@@ -631,7 +631,7 @@ table inet fwf_filter {
         # "custom services should have IPv4/v6 setting"
         # rule should compile for ipv6 b/c custom service
         # object "ipv6 source route" is configured as "ipv6"
-        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
+        rt type 0 meta nfproto ipv6 counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #
@@ -657,7 +657,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 17 (global)
         #
@@ -718,7 +718,7 @@ table inet fwf_filter {
         # Rule 16 (global)
         #
         # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 18 (global)
         #
@@ -748,7 +748,7 @@ table inet fwf_filter {
         # Rule 29 (global)
         #
         # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 31 (global)
         #
@@ -756,7 +756,7 @@ table inet fwf_filter {
         # "custom services should have IPv4/v6 setting"
         # rule should compile for ipv6 b/c custom service
         # object "ipv6 source route" is configured as "ipv6"
-        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
+        rt type 0 meta nfproto ipv6 counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #
@@ -783,7 +783,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
+        meta l4proto icmp ct state new meta nfproto ipv4 counter accept
         #
         # Rule 17 (global)
         #
@@ -806,7 +806,7 @@ table inet fwf_filter {
         # Rule 22 (global)
         #
         # for bug 2047082
-        meta nfproto ipv4 ct state new counter accept
+        ct state new meta nfproto ipv4 counter accept
         #
         # Rule 23 (global)
         #
@@ -850,7 +850,7 @@ table inet fwf_filter {
         # Rule 16 (global)
         #
         # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 18 (global)
         #
@@ -865,7 +865,7 @@ table inet fwf_filter {
         # Rule 22 (global)
         #
         # for bug 2047082
-        meta nfproto ipv6 ct state new counter accept
+        ct state new meta nfproto ipv6 counter accept
         #
         # Rule 23 (global)
         #
@@ -890,7 +890,7 @@ table inet fwf_filter {
         # Rule 29 (global)
         #
         # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
-        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
+        meta l4proto ipv6-icmp meta nfproto ipv6 counter accept
         #
         # Rule 30 (global)
         #
@@ -902,7 +902,7 @@ table inet fwf_filter {
         # "custom services should have IPv4/v6 setting"
         # rule should compile for ipv6 b/c custom service
         # object "ipv6 source route" is configured as "ipv6"
-        meta nfproto ipv6 rt type 0 counter log prefix "RULE 31 -- DENY " level info drop
+        rt type 0 meta nfproto ipv6 counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #
