@@ -55,7 +55,10 @@ from firewallfabrik.platforms.linux._netfilter import (
 )
 from firewallfabrik.platforms.nftables import __compiler_version__
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
-from firewallfabrik.platforms.nftables._utils import nft_chain_priority
+from firewallfabrik.platforms.nftables._utils import (
+    nft_chain_priority,
+    nft_mangle_chain_type,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -1023,9 +1026,10 @@ class CompilerDriver_nft(CompilerDriver):
             for index, (chain, rules) in enumerate(mangle_by_chain):
                 if index:
                     out.write('\n')
+                chain_type = nft_mangle_chain_type(fw, family, chain)
                 out.write(f'    chain {chain} {{\n')
                 out.write(
-                    f'        type filter hook {chain} '
+                    f'        type {chain_type} hook {chain} '
                     f'priority {mangle_priority}; policy accept;\n'
                 )
                 out.write(rules)

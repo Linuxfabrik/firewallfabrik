@@ -31,6 +31,7 @@ from firewallfabrik.platforms.iptables._utils import version_compare
 __all__ = [
     'DEFAULT_NFTABLES_VERSION',
     'NFT_DYNAMIC_SET_FIRST_RELEASE',
+    'NFT_INET_ROUTE_CHAIN_FIRST_RELEASE',
     'NFT_IP_OPTION_FIRST_RELEASE',
     'NFT_NETMAP_FIRST_RELEASE',
     'NFT_STANDARD_PRIORITIES',
@@ -39,6 +40,7 @@ __all__ = [
     'get_nftables_version',
     'nft_chain_priority',
     'nft_feature_available',
+    'nft_mangle_chain_type',
     'version_compare',
 ]
 
@@ -90,6 +92,17 @@ NFT_STANDARD_PRIORITIES = {
     'srcnat': 100,
 }
 
+# A `type route` chain in an `inet` table.  The chain type itself is as
+# old as nftables - the ip and ip6 families have had it since the kernel
+# gained nf_tables - but the inet family got it only in Linux 5.2
+# ("netfilter: nf_tables: merge route type into core", c1deb065cf3b), and
+# an older kernel answers the chain with EOPNOTSUPP, which costs the whole
+# ruleset rather than the chain.  The release named here is the first
+# nftables after that kernel (v0.9.2, 2019-08-27; Linux 5.2 is
+# 2019-07-07), the same proxy `NFT_IP_OPTION_FIRST_RELEASE` and
+# `NFT_TIME_FIRST_RELEASE` use for a kernel feature.
+NFT_INET_ROUTE_CHAIN_FIRST_RELEASE = '0.9.2'
+
 # `snat prefix to` / `dnat prefix to`, the 1:1 network translation the
 # iptables NETMAP target does.  A plain `snat to <prefix>` is a different
 # rule - it lets the kernel pick any address out of the range - so there
@@ -118,6 +131,38 @@ def get_nftables_version(fw) -> str:
 def nft_feature_available(compiler, first_release: str) -> bool:
     """Whether the release the firewall names can parse a construct."""
     return version_compare(get_nftables_version(compiler.fw), first_release) >= 0
+
+
+def nft_mangle_chain_type(fw, family: str, chain: str) -> str:
+    """The chain type the mangle table's *chain* has to be declared with.
+
+    Only the output hook has an answer other than "filter", and it is the
+    one thing an iptables mangle table does that a plain filter chain does
+    not: `ipt_mangle_out` remembers the source, the destination, the ToS
+    byte and the packet mark, and asks `ip_route_me_harder` for a new
+    route whenever the chain changed one of them
+    (linux/net/ipv4/netfilter/iptable_mangle.c).  That is what makes a Tag
+    rule in the output chain steer locally generated traffic at all.
+
+    nftables says it with the chain *type*: `nf_route_table_hook4` does
+    exactly the same comparison and reroute
+    (linux/net/netfilter/nft_chain_route.c), and `type filter` does none
+    of it - the mark is set, the packet takes the route it already had,
+    and nothing anywhere says so.
+
+    The inet family is the exception, and only for a release old enough
+    to name a kernel that has no inet route chain: there the mangle output
+    chain stays a filter chain, because a chain type the kernel refuses
+    costs the whole ruleset and not the reroute.
+    """
+    if chain != 'output':
+        return 'filter'
+    if family == 'inet' and not (
+        version_compare(get_nftables_version(fw), NFT_INET_ROUTE_CHAIN_FIRST_RELEASE)
+        >= 0
+    ):
+        return 'filter'
+    return 'route'
 
 
 def nft_chain_priority(fw, name: str) -> str:

@@ -299,7 +299,7 @@ table ip fwf_mangle {
     }
 
     chain output {
-        type filter hook output priority mangle; policy accept;
+        type route hook output priority mangle; policy accept;
         #
         # Rule 0 (global)
         #

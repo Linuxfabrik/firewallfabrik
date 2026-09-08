@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): an address table whose data file carries a note behind an address fills the set the rules match against. One such line used to leave the whole table out, so a Deny rule built on that block list stopped nothing.
 * Compiler (nftables): an address table with more than about eleven thousand addresses fills the set the rules match against. Such a table used to leave the set empty, so a Deny rule built on a large block list blocked nothing.
 * Compiler (nftables): a dual-stack firewall names the address family of a rule where the machine keeps showing it. `nft list ruleset` used to drop it from rules that match on a protocol number, so a saved and reloaded ruleset applied every such IPv4 rule to IPv6 traffic and the other way round.
+* Compiler (nftables): a Tag, Classify or connection-mark rule in the output chain of the mangle table makes the kernel route the packet again with the new mark, the way the iptables mangle table has always done. The chain used to be an ordinary filter chain, so the mark was set and the packet took the route it already had - policy routing for traffic the firewall itself sends did nothing, without a word anywhere.
 
 
 ## [v3.0.0] - 2026-09-04
