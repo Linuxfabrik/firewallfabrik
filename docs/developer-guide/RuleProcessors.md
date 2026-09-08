@@ -1542,7 +1542,7 @@ ValidateRoutingDestination → ReachableGateway →
 GatewayOnRoutingInterface → ExpandAddressRangesInRDst →
 EliminateDuplicatesInRDst → FindDefaultRoute → CompetingRoutingRules →
 ConvertToAtomicForRDst → ClassifyRoutingRules →
-EliminateDuplicateRoutingRules → RoutingPrintRule
+EliminateDuplicateRoutingRules → NoteIPv6Routes → RoutingPrintRule
 ```
 
 Two things about that pass are worth knowing before touching it.  Every
@@ -1573,13 +1573,40 @@ the script may delete the one that is there, without one it has to keep
 it.  None of this is emitted in single-rule compile mode, where there are
 no shell functions to call.
 
+**The block is written per address family, and that is where this pass
+differs from the C++ one.**  `ip route` means the IPv4 table and nothing
+else, and Firewall Builder never had to say so because it compiles no
+IPv6 route at all.  Here three questions have an answer per table:
+
+* `NoteIPv6Routes` says whether the script installs an IPv6 route, and
+  only then does the block save, clear and restore that table beside the
+  IPv4 one.  Without it the route survived into the next activation and
+  `ip -6 route add` answered "File exists", which stops the script.  It
+  sits behind the last processor that can still drop a rule and slurps,
+  so it sees the rules the print rule will get and no others - a family
+  the script installs no route in must not be touched.
+* `FindDefaultRoute` answers `proto_filter` and `proto_filter6`
+  separately, or a script installing an IPv6 default route deletes the
+  IPv4 default route the box came up with and nothing puts it back.
+* `_route_command_key` carries the family, because `route_address`
+  writes both `0.0.0.0/0` and `::/0` as `default` - which is what
+  `ip route add` wants there - and two default routes out of one device
+  are otherwise one key and the second is dropped as a duplicate.
+
+Both readers of the routing table use `ip -o route show`, which puts a
+route with several next hops on one line.  Read line by line, `default`
+and its indented `nexthop ...` lines are three entries, and the two the
+loops build out of the tail are no routes at all: the rollback lost an
+equal-cost default route entirely and the delete loop answered each
+fragment with an iproute2 usage dump.
+
 Not ported from the C++ pass, and what it costs:
 
 | C++ processor | Consequence |
 |---|---|
 | `createSortedDstIdsLabel` | Ported as the `_destination_key` helper the two rules below share, not as a processor |
 | `checkForObjectsWithErrors` | An object a rule names that failed to load is reported by the policy and NAT passes but not by this one |
-| `DropIPv6RulesWithWarning` | Deliberate: fwf compiles an IPv6 route as `$IP -6 route add`, which fwbuilder cannot |
+| `DropIPv6RulesWithWarning` | Deliberate: fwf compiles an IPv6 route as `$IP -6 route add`, which fwbuilder cannot.  Everything the paragraph above says about the block being written per address family follows from that |
 
 ---
 
