@@ -341,6 +341,13 @@ round's four fixes came out of exactly that - one from the iptables replay
 of a corpus compiled with "Log all rules" on, the other from `nft --check`
 on one with thirteen options on.
 
+It also compares three compiles of the same corpus against each other:
+the IPv4 rules of a firewall compiled with `-4` have to be the IPv4 rules
+the ordinary run produces, and the same for `-6`.  That switch is meant to
+be a filter and not a different compile, and nothing else here can see it
+being one - both halves parse, both load, and every set-comparing tool is
+handed one tree at a time.
+
 It also runs the block every activation runs first and no other
 oracle touches - `configure_interfaces` - against real iproute2 in a
 namespace, and asks the three questions that block can fail: does

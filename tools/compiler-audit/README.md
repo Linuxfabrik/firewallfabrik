@@ -33,6 +33,7 @@ not.
 | `compare-order.py` | do the two platforms put one base chain's rules in one order? | a Deny that lands after the Accept it was written above, which no other check can see - first match wins and every other oracle compares sets |
 | `parity.py` | do our nftables rules check what `iptables-translate` says they should? | a condition one platform checks and the other does not |
 | `parity.py --values` | and do they check it against the same value? | a wrong port, a wrong mask, an inverted operator |
+| `compare-address-families.py` | is compiling one address family alone the same as half a dual-stack run? | state carried from one address-family pass into the other, or a decision taken on the wrong family |
 | `compare-output.py` | which firewalls does this change actually affect? | the blast radius of a fix, before a release |
 
 ## Running them
@@ -58,6 +59,22 @@ tools/compiler-audit/replay-interfaces.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 python tools/compiler-audit/check-negations.py /tmp/audit
 ```
+
+`compare-address-families.py` needs two more trees beside the ordinary
+one, because the question it asks is about three compiles of the same
+corpus:
+
+```bash
+python tools/compiler-audit/compile-corpus.py --address-family 4 /tmp/af4
+python tools/compiler-audit/compile-corpus.py --address-family 6 /tmp/af6
+python tools/compiler-audit/compare-address-families.py \
+    /tmp/audit /tmp/af4 /tmp/af6
+```
+
+It reads the iptables output alone.  A dual-stack nftables firewall writes
+one `inet` table where `-4` writes an `ip` one, so there the two are not
+the same text by design; the iptables output names its family in the tool
+it calls, which makes the split exact.
 
 `replay-iptables.sh` calls `script_body` and nothing above it, so the
 block that creates the ipsets of a run-time address table never runs and
