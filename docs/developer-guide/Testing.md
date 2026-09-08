@@ -329,7 +329,12 @@ on purpose:
 `nft --check` stops after parsing and evaluating, so everything the kernel
 decides - which statements a hook allows, whether the jumps between the
 chains form a cycle - is invisible to it, and a ruleset it accepts can still
-be refused whole. It also compares the iptables output against
+be refused whole.  A third oracle sits behind the load and asks what the
+machine says afterwards: `nft list ruleset` is what an audit reads and what
+`nft list ruleset > /etc/nftables.conf` reloads at the next boot, so a rule
+the listing renders weaker than the rule that was installed becomes that
+weaker rule, with every other check here still green.  It also compares the
+iptables output against
 the Firewall Builder reference and measures which firewalls a change actually
 affects, which is what a release note needs.
 

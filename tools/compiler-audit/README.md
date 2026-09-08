@@ -18,6 +18,7 @@ not.
 | `check-nft.sh` | does `nft --check` accept this ruleset? | a ruleset that refuses to load, so the firewall keeps its old rules |
 | `load-nft.sh` | and does a real kernel take it? | what `--check` never evaluates: a statement in a hook that forbids it, a jump cycle - and nft loads atomically, so the whole ruleset goes |
 | `fill-nft-sets.sh` | and do the sets the script fills after the load actually fill? | a named set that stays empty, which is a set no packet is in: a Deny rule that blocks nothing, an Accept rule that lets nothing through |
+| `compare-readback.py` | and is the ruleset the machine lists back the one that was installed? | a rule the listing renders weaker than the rule that was loaded - which is what an audit reads and what `nft list ruleset > /etc/nftables.conf` reloads at the next boot |
 | `replay-nft-actions.sh` | do the "block" and "stop" actions of an nftables script do what they say? | a block that leaves an address family open or a hook unhooked - the code paths an administrator reaches once something has already gone wrong |
 | `replay-ipt-actions.sh` | and the same two of an iptables script? | a block that leaves a policy open, a stop that answers non-zero having done its work, and either of them reaching for a family the script has no rules for |
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
@@ -47,6 +48,7 @@ tools/compiler-audit/check-shell-syntax.sh /tmp/audit
 tools/compiler-audit/check-nft.sh /tmp/audit
 tools/compiler-audit/load-nft.sh /tmp/audit
 tools/compiler-audit/fill-nft-sets.sh /tmp/audit
+python tools/compiler-audit/compare-readback.py /tmp/audit
 tools/compiler-audit/replay-nft-actions.sh /tmp/audit
 tools/compiler-audit/replay-ipt-actions.sh /tmp/audit
 tools/compiler-audit/replay-iptables.sh /tmp/audit
@@ -89,6 +91,18 @@ exist here, and then every command fails for a reason that has nothing to do
 with the rule - one firewall of the reference corpus hid 393 commands that
 way, two of which were real findings.
 
+`compare-readback.py` loads the ruleset, lists it back and hands *both*
+texts to `nft --debug=netlink`, comparing the expression lists rather
+than the two texts.  nft prints a rule in its own spelling - a protocol
+number as its name, a mark in hex, a set sorted and merged, a rate limit
+with the burst the parser fills in - and none of that is a finding, while
+a comparison of expression lists sees through all of it.  Two folds are
+applied on top and are named in the script: an anonymous set is stored
+sorted and with its adjacent intervals merged, so its declaration is left
+out of the comparison and a set lookup compares equal to a range.  That
+is the blind spot - an element lost inside a set does not show up here,
+which is what `fill-nft-sets.sh` reads.
+
 `check-nft.sh` and `load-nft.sh` give the namespace a passwd file of its
 own, holding every user and group a `meta skuid` / `meta skgid` in the
 ruleset names. nft looks the name up with `getpwnam` while it parses the
@@ -99,7 +113,8 @@ property of the host it runs on. It still reports everything else: point
 it at a ruleset with an invented user *and* a bad address and only the
 address comes back.
 
-`check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
+`check-nft.sh`, `load-nft.sh`, `compare-readback.py`, `fill-nft-sets.sh`,
+`replay-nft-actions.sh`,
 `replay-ipt-actions.sh`, `replay-iptables.sh`, `replay-address-tables.sh`,
 `replay-interfaces.sh`,
 `replay-routes.sh`, `replay-routes-twice.sh`, `replay-status.sh`,
