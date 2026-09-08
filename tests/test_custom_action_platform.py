@@ -21,6 +21,9 @@ per platform, and each compiler reads its own.
 The platform-less field is still read, for the platform whose syntax it is
 in - an iptables target begins with a `-` - so every rule imported from a
 `.fwb` file goes on compiling for the packet filter it was written for.
+And where such a target has an nftables statement, the nftables compiler
+writes that one rather than leaving the rule out; the targets that have
+none are still reported.  See `test_custom_action_translation.py`.
 """
 
 import uuid
@@ -38,6 +41,10 @@ from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nf
 
 IPT_STATEMENT = '-j TCPMSS --set-mss 1400'
 NFT_STATEMENT = 'tcp option maxseg size set 1400'
+
+#: An iptables target with no nftables statement anywhere: TARPIT never
+#: was in mainline netfilter, so nothing translates it.
+UNTRANSLATABLE_IPT_STATEMENT = '-j TARPIT'
 
 DATA_FILE = """\
 name: 'Test: a custom action per packet filter'
@@ -137,7 +144,7 @@ def test_a_platform_with_no_statement_gets_nothing():
 
 @pytest.mark.parametrize(
     ('statement', 'platform'),
-    [(IPT_STATEMENT, 'iptables'), (NFT_STATEMENT, 'nftables')],
+    [(UNTRANSLATABLE_IPT_STATEMENT, 'iptables'), (NFT_STATEMENT, 'nftables')],
 )
 def test_the_platform_less_field_is_read_for_the_syntax_it_is_in(statement, platform):
     """Every rule imported from a `.fwb` file carries only that one."""
@@ -195,18 +202,36 @@ def test_a_rule_imported_from_firewall_builder_still_compiles_for_iptables(tmp_p
     assert IPT_STATEMENT in script
 
 
-def test_the_same_rule_is_reported_on_nftables_and_says_where_to_write_it(tmp_path):
+def test_a_rule_imported_from_firewall_builder_compiles_for_nftables_too(tmp_path):
+    """The target has a translation, so the rule is written, not dropped."""
     script = _compile(
         tmp_path, CompilerDriver_nft, 'nftables', custom_str=IPT_STATEMENT
     )
+    assert NFT_STATEMENT in script
+    assert IPT_STATEMENT not in script
 
-    # The message names the nftables spelling as an example, so the rules
-    # are what has to be read: no statement of the ruleset carries it.
+
+def test_the_firewall_platform_does_not_decide_whether_the_rule_compiles(tmp_path):
+    """A `.fwb` firewall says iptables whatever it is compiled with."""
+    script = _compile(
+        tmp_path, CompilerDriver_nft, 'iptables', custom_str=IPT_STATEMENT
+    )
+    assert NFT_STATEMENT in script
+
+
+def test_the_same_rule_is_reported_on_nftables_when_nothing_translates_it(tmp_path):
+    script = _compile(
+        tmp_path,
+        CompilerDriver_nft,
+        'nftables',
+        custom_str=UNTRANSLATABLE_IPT_STATEMENT,
+    )
+
     rules = [
         line
         for line in script.splitlines()
-        if NFT_STATEMENT in line and not line.lstrip().startswith('#')
+        if UNTRANSLATABLE_IPT_STATEMENT in line and not line.lstrip().startswith('#')
     ]
     assert not rules, rules
-    assert 'is an iptables target' in script
+    assert 'no nftables statement' in script
     assert 'under "nftables" in the action panel' in script

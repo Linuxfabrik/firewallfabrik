@@ -1343,6 +1343,224 @@ CUSTOM_ACTION_OPTION = 'custom_str_{platform}'
 CUSTOM_ACTION_LEGACY_OPTION = 'custom_str'
 
 
+#: The whole of a 32-bit packet mark, which is what a mark option without
+#: a mask means (`xtables_parse_val_mask`, netfilter
+#: iptables/libxtables/xtoptions.c).
+MARK_MASK_ALL = 0xFFFFFFFF
+
+
+def _parse_number(text: str, ceiling: int) -> int | None:
+    """A number the way xtables reads one: base 0, so `0x40` and `64`."""
+    try:
+        value = int(text, 0)
+    except (TypeError, ValueError):
+        return None
+    return value if 0 <= value <= ceiling else None
+
+
+def _parse_val_mask(text: str) -> tuple[int, int] | None:
+    """A `value[/mask]` argument; the mask defaults to the whole word."""
+    value, _, mask = text.partition('/')
+    number = _parse_number(value, MARK_MASK_ALL)
+    if number is None:
+        return None
+    if not mask:
+        return number, MARK_MASK_ALL
+    limit = _parse_number(mask, MARK_MASK_ALL)
+    return None if limit is None else (number, limit)
+
+
+def _mark_expression(base: str, mark: int, mask: int) -> str:
+    """What `(old & ~mask) ^ mark` is written as, over *base*.
+
+    That is what both mark targets do to the value they are given
+    (`mark_tg`, linux/net/netfilter/xt_MARK.c), and these are the five
+    shapes `mark_tg_xlate` writes it in, in its own order (netfilter
+    iptables/extensions/libxt_MARK.c).
+    """
+    if mask == MARK_MASK_ALL:
+        return f'{mark:#x}'
+    if mark == 0:
+        return f'{base} and {~mask & MARK_MASK_ALL:#x}'
+    if mark == mask:
+        return f'{base} or {mark:#x}'
+    if mask == 0:
+        return f'{base} xor {mark:#x}'
+    return f'{base} and {~mask & MARK_MASK_ALL:#x} xor {mark:#x}'
+
+
+def _mark_target(tokens: list[str], statement: str, base: str) -> str | None:
+    """`-j MARK` / `-j CONNMARK`, whose options are the same five."""
+    modes = {
+        '--set-xmark': lambda pair: pair,
+        '--set-mark': lambda pair: (pair[0], pair[0] | pair[1]),
+        '--and-mark': None,
+        '--or-mark': None,
+        '--xor-mark': None,
+    }
+    if len(tokens) != 2 or tokens[0] not in modes:
+        return None
+    option, argument = tokens
+    if option in ('--set-xmark', '--set-mark'):
+        pair = _parse_val_mask(argument)
+        if pair is None:
+            return None
+        mark, mask = modes[option](pair)
+    else:
+        number = _parse_number(argument, MARK_MASK_ALL)
+        if number is None:
+            return None
+        # The three shorthands, as `mark_tg_parse` fills them in.
+        mark, mask = {
+            '--and-mark': (0, ~number & MARK_MASK_ALL),
+            '--or-mark': (number, number),
+            '--xor-mark': (number, 0),
+        }[option]
+    return f'{statement} {_mark_expression(base, mark, mask)}'
+
+
+def _tcpmss_target(tokens: list[str]) -> str | None:
+    """`-j TCPMSS`, which sets the MSS option of a TCP header."""
+    if tokens == ['--clamp-mss-to-pmtu']:
+        return 'tcp option maxseg size set rt mtu'
+    if len(tokens) != 2 or tokens[0] != '--set-mss':
+        return None
+    mss = _parse_number(tokens[1], 0xFFFF)
+    if mss is None:
+        return None
+    # 0xffff is what `--clamp-mss-to-pmtu` stores, so the target reads a
+    # `--set-mss 65535` as the clamp and so does its translation
+    # (`XT_TCPMSS_CLAMP_PMTU`, netfilter iptables/extensions/libxt_TCPMSS.c).
+    if mss == 0xFFFF:
+        return 'tcp option maxseg size set rt mtu'
+    return f'tcp option maxseg size set {mss}'
+
+
+def _classify_target(tokens: list[str]) -> str | None:
+    """`-j CLASSIFY`, which sets the traffic class of the packet.
+
+    Both halves of the handle are read as hexadecimal on either side -
+    `CLASSIFY_string_to_priority` scans `%x:%x` and nft's
+    `tchandle_type_parse` does the same - so the value goes through
+    unchanged apart from the two names a handle of its own
+    (`TC_H_UNSPEC` and `TC_H_ROOT`).
+    """
+    if len(tokens) != 2 or tokens[0] != '--set-class':
+        return None
+    major, sep, minor = tokens[1].partition(':')
+    if not sep:
+        return None
+    try:
+        high = int(major, 16)
+        low = int(minor, 16)
+    except ValueError:
+        return None
+    if not (0 <= high <= 0xFFFF and 0 <= low <= 0xFFFF):
+        return None
+    if (high, low) == (0, 0):
+        return 'meta priority set none'
+    if (high, low) == (0xFFFF, 0xFFFF):
+        return 'meta priority set root'
+    return f'meta priority set {high:x}:{low:x}'
+
+
+def _nfqueue_target(tokens: list[str]) -> str | None:
+    """`-j NFQUEUE`, which hands the packet to a userspace queue."""
+    first = 0
+    last = 0
+    flags = []
+    index = 0
+    while index < len(tokens):
+        option = tokens[index]
+        index += 1
+        if option in ('--queue-bypass', '--queue-cpu-fanout'):
+            flags.append('bypass' if option == '--queue-bypass' else 'fanout')
+            continue
+        if index >= len(tokens):
+            return None
+        argument = tokens[index]
+        index += 1
+        if option == '--queue-num':
+            number = _parse_number(argument, 0xFFFF)
+            if number is None:
+                return None
+            first = number
+            last = max(last, number)
+        elif option == '--queue-balance':
+            low, sep, high = argument.partition(':')
+            if not sep:
+                return None
+            start = _parse_number(low, 0xFFFF)
+            end = _parse_number(high, 0xFFFF)
+            if start is None or end is None or end < start:
+                return None
+            first, last = start, end
+        else:
+            return None
+    queue = f'{first}-{last}' if last > first else f'{first}'
+    return ' '.join(['queue num', queue, ','.join(flags)]).strip()
+
+
+#: The targets a Custom action can be written with that have an nftables
+#: statement, and how they are built.  What is here is what netfilter's
+#: own translator translates and nothing else, because a Custom action is
+#: platform text and guessing at it is how a rule ends up doing something
+#: the administrator did not write.
+_CUSTOM_ACTION_TARGETS = {
+    'CLASSIFY': _classify_target,
+    'CONNMARK': lambda tokens: (
+        'ct mark set mark'
+        if tokens == ['--save-mark']
+        else 'meta mark set ct mark'
+        if tokens == ['--restore-mark']
+        else _mark_target(tokens, 'ct mark set', 'ct mark')
+    ),
+    'MARK': lambda tokens: _mark_target(tokens, 'meta mark set', 'mark'),
+    'NFQUEUE': _nfqueue_target,
+    'NOTRACK': lambda tokens: 'notrack' if not tokens else None,
+    'TCPMSS': _tcpmss_target,
+    'TRACE': lambda tokens: 'nftrace set 1' if not tokens else None,
+}
+
+
+def custom_action_nftables_statement(iptables_target: str) -> str | None:
+    """The nftables spelling of a Custom action's iptables target.
+
+    Firewall Builder had one field for the Custom action and no second
+    Linux platform to need another, so every rule imported from a `.fwb`
+    file carries an iptables target and nothing else.  The nftables
+    compiler has to leave such a rule out - an iptables target is a syntax
+    error to nft, which refuses the whole ruleset over it - and the rule
+    is then gone from a policy the iptables compiler still writes in full.
+
+    So the target is translated where netfilter's own translator has a
+    translation, and the spelling is taken from there: the `xlate`
+    function of each extension, checked against its `.txlate` gold output
+    (netfilter iptables/extensions/).  Everything else - a target with no
+    nftables equivalent (`TARPIT`, `ULOG`), one whose translation
+    netfilter itself declines (`TEE` on IPv4), one that needs to know the
+    address family (`DSCP`, `TOS`), anything that is not a plain `-j` -
+    is refused, and the caller reports the rule.
+
+    One divergence, and it is deliberate.  `connmark_tg_xlate` writes the
+    masked form as `ct mark set ct mark xor <value> and <~mask>`, and nft
+    applies the two in the order they are written: measured with
+    `nft --debug=netlink`, that expression is
+    `( mark & 0xffffffff ) ^ 0x0` - a statement that changes nothing.
+    The operand order `mark_tg_xlate` uses for the same arithmetic is the
+    one that means `(old & ~mask) ^ mark`, so both targets get it.
+
+    Returns ``None`` when the target has no translation here.
+    """
+    tokens = (iptables_target or '').split()
+    if len(tokens) < 2 or tokens[0] not in ('-j', '--jump'):
+        return None
+    build = _CUSTOM_ACTION_TARGETS.get(tokens[1])
+    if build is None:
+        return None
+    return build(tokens[2:])
+
+
 def custom_action_statement(rule, platform: str) -> str:
     """The Custom action statement *rule* carries for *platform*.
 
@@ -1361,6 +1579,16 @@ def custom_action_statement(rule, platform: str) -> str:
     script with every policy already at DROP, and nftables answers an
     iptables target with a syntax error and refuses the **whole** ruleset.
 
+    What is left is a rule that has an iptables target and no nftables
+    statement, which is every Custom action a `.fwb` file brings along.
+    The iptables compiler writes it and the nftables one used to leave the
+    rule out, so switching a firewall from one packet filter to the other
+    quietly dropped rules.  So the target is translated where netfilter's
+    own translator has a translation
+    (:func:`custom_action_nftables_statement`); the administrator's own
+    nftables statement always wins, and nothing is written back into the
+    data file.
+
     Returns the empty string when the rule has nothing for this platform;
     the printer reports that and leaves the rule out.
     """
@@ -1368,10 +1596,17 @@ def custom_action_statement(rule, platform: str) -> str:
     if own.strip():
         return own
     legacy = str(rule.get_option(CUSTOM_ACTION_LEGACY_OPTION, '') or '')
-    if not legacy.strip():
-        return ''
-    if custom_action_is_iptables_syntax(legacy) == (platform == 'iptables'):
+    if legacy.strip() and custom_action_is_iptables_syntax(legacy) == (
+        platform == 'iptables'
+    ):
         return legacy
+    if platform == 'nftables':
+        target = str(
+            rule.get_option(CUSTOM_ACTION_OPTION.format(platform='iptables'), '') or ''
+        )
+        if not target.strip() and custom_action_is_iptables_syntax(legacy):
+            target = legacy
+        return custom_action_nftables_statement(target) or ''
     return ''
 
 

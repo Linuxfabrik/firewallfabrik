@@ -37,6 +37,14 @@ IPTABLES_TARGETS = [
     '  -j ROUTE --gw 192.0.2.1',
 ]
 
+#: Of those, the ones netfilter's own translator has no nftables
+#: statement for, so the nftables compiler still leaves the rule out
+#: (`test_custom_action_translation.py` holds the ones it translates).
+UNTRANSLATABLE_TARGETS = [
+    '-j TARPIT',
+    '  -j ROUTE --gw 192.0.2.1',
+]
+
 NFTABLES_STATEMENTS = [
     'tcp option maxseg size set 1400',
     'meta mark set 0x10',
@@ -122,8 +130,8 @@ def test_nftables_writes_its_own_statement(text):
     assert not printer.compiler.messages
 
 
-@pytest.mark.parametrize('text', IPTABLES_TARGETS)
-def test_nftables_leaves_out_an_iptables_target(text):
+@pytest.mark.parametrize('text', UNTRANSLATABLE_TARGETS)
+def test_nftables_leaves_out_an_iptables_target_it_cannot_translate(text):
     """Writing it out would cost the whole ruleset, not the one rule."""
     printer, result = _nft(text)
     assert result is None

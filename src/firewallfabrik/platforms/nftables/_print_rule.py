@@ -3165,17 +3165,19 @@ class PrintRule_nft(PolicyRuleProcessor):
                 # running one is flushed.
                 custom_str = custom_action_statement(rule, 'nftables')
                 if not custom_str:
-                    legacy = str(rule.get_option('custom_str', '') or '')
-                    if legacy.strip():
+                    other = custom_action_statement(rule, 'iptables')
+                    if other.strip():
                         # A rule imported from Firewall Builder carries one
                         # statement and it is an iptables target: that file
-                        # format has no second Linux platform to write.  nft
+                        # format has no second Linux platform to write.  The
+                        # ones netfilter's own translator translates are
+                        # translated; this is one of the rest, and nft
                         # answers the `-` with a syntax error and refuses
                         # the whole ruleset over it.
                         self.compiler.error(
                             rule,
-                            f'the custom action "{legacy}" is an iptables '
-                            'target, not an nftables statement; write the '
+                            f'the custom action "{other}" is an iptables '
+                            'target with no nftables statement; write the '
                             'nftables statement under "nftables" in the '
                             'action panel, as in "tcp option maxseg size '
                             'set 1400". The rule is left out',

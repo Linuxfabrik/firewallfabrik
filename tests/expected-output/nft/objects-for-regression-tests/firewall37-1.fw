@@ -15,7 +15,6 @@
 
 #  same as firewall37 except rules are made to be terminating
 #
-# Rule 23 (global): Custom action holds a command written for "iptables"; set the firewall's platform to nftables and write the statement in nftables syntax. The rule is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -640,6 +639,10 @@ table ip fwf_filter {
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
         #
+        # Rule 23 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
+        #
         # Rule 24 (global)
         #
         counter log prefix "RULE 24 -- DENY " level info drop
@@ -796,6 +799,10 @@ table ip fwf_filter {
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
         #
+        # Rule 23 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
+        #
         # Rule 24 (global)
         #
         counter log prefix "RULE 24 -- DENY " level info drop
@@ -933,6 +940,10 @@ table ip fwf_filter {
         # should generate branching code
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
+        #
+        # Rule 23 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
         #
         # Rule 24 (global)
         #

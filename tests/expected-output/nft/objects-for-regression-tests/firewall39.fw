@@ -16,8 +16,7 @@
 #  normal script mode (not using  iptables-restore)
 #
 # Rule rule6_branch 0 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule 15 (global): Custom action holds a command written for "iptables"; set the firewall's platform to nftables and write the statement in nftables syntax. The rule is left out
-# Rule 16 (global): Custom action holds a command written for "iptables"; set the firewall's platform to nftables and write the statement in nftables syntax. The rule is left out
+# Rule 16 (global): the custom action "-j TARPIT" is an iptables target with no nftables statement; write the nftables statement under "nftables" in the action panel, as in "tcp option maxseg size set 1400". The rule is left out
 # firewall39: rule 14 of rule set "Policy" branches to rule set "rule6_branch", which branches back to it, creating a loop
 # firewall39: rule 0 of rule set "rule6_branch" branches to rule set "Policy", which branches back to it, creating a loop
 
@@ -470,6 +469,10 @@ table ip fwf_filter {
         # testing loop in branching rules
         ip saddr 192.168.1.0/24 counter jump rule6_branch
         #
+        # Rule 15 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
+        #
         # Rule 17 (global)
         #
         counter log prefix "RULE 17 -- DENY " level info drop
@@ -552,6 +555,10 @@ table ip fwf_filter {
         # testing loop in branching rules
         ip saddr 192.168.1.0/24 counter jump rule6_branch
         #
+        # Rule 15 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
+        #
         # Rule 17 (global)
         #
         counter log prefix "RULE 17 -- DENY " level info drop
@@ -623,6 +630,10 @@ table ip fwf_filter {
         #
         # testing loop in branching rules
         ip saddr 192.168.1.0/24 counter jump rule6_branch
+        #
+        # Rule 15 (global)
+        #
+        ip saddr 192.168.1.0/24 counter tcp option maxseg size set 1400
         #
         # Rule 17 (global)
         #
