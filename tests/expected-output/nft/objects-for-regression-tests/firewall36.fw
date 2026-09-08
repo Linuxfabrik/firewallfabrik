@@ -348,6 +348,8 @@ route_command_error()
   # A route is several arguments, so the expansion is split on purpose.
   # shellcheck disable=SC2086
   "$IP" route show | while read -r route ; do "$IP" route del $route ; done
+  # shellcheck disable=SC2086
+  "$IP" -6 route show | while read -r route ; do "$IP" -6 route del $route ; done
   # restore old routing rules
   sh "$OLD_ROUTES"
   echo "...done"
@@ -365,12 +367,20 @@ exec 2>&1
 # inserted after device routes)
 
 "$IP" route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
+# "ip route" is the IPv4 table and nothing else, and this script installs
+# an IPv6 route as well, so the other table is saved, cleared and put back
+# beside it - or the route is still there on the next activation and
+# "ip -6 route add" answers "File exists", which stops the script.
+"$IP" -6 route show | sort -k 2 | awk '{printf "ip -6 route add %s\n",$0;}' >> "$OLD_ROUTES"
 
 echo "Deleting routing rules previously set by user space processes..."
 # A route is several arguments, so the expansion is split on purpose.
 # shellcheck disable=SC2086
 "$IP" route show | grep -v 'proto kernel' | \
     while read -r route ; do "$IP" route del $route ; done
+# shellcheck disable=SC2086
+"$IP" -6 route show | grep -v 'proto kernel' | \
+    while read -r route ; do "$IP" -6 route del $route ; done
 
 echo "Activating non-ecmp routing rules..."
 $IP route add 192.168.2.0/24 via 192.168.1.254 dev eth1 \

@@ -68,6 +68,11 @@ class RoutingCompilerLinux(RoutingCompiler):
         # routes the script deletes before it installs its own, see
         # `RoutingPrintRule._write_routing_functions`.
         self.have_default_route = False
+        # Whether any rule installs an IPv6 route.  The block that saves,
+        # deletes and restores the routing table works on one address
+        # family at a time, and a family it is not told about is one whose
+        # routes survive into the next activation, see `NoteIPv6Routes`.
+        self.have_ipv6_route = False
         # Whether `routing_functions` was written, and with it the two
         # shell functions the rules behind it call.  A firewall whose
         # routing rules were all dropped never gets them, and then nothing
@@ -105,6 +110,7 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(ConvertToAtomicForRDst('convert to atomic rules by destination'))
         self.add(ClassifyRoutingRules('classify single path and multi path rules'))
         self.add(EliminateDuplicateRoutingRules('eliminate duplicate rules'))
+        self.add(NoteIPv6Routes('note whether an IPv6 route is installed'))
 
         self.add(RoutingPrintRule('generate ip route commands'))
         self.run_rule_processors()
@@ -689,6 +695,27 @@ def _metric(rule: CompRule) -> str:
     return str(number if number is not None else 0)
 
 
+def is_ipv6_route(rule: CompRule) -> bool:
+    """Return whether this route belongs to the IPv6 routing table.
+
+    iproute2 takes the family from the destination or the gateway and only
+    falls back to IPv4 when it can read it from neither, which is exactly
+    the case of a route to "default" out of an interface.  Such a rule
+    would install an IPv4 default route, so the family is stated rather
+    than inferred.
+
+    A module function for the same reason `route_address` is one: the
+    print rule writes the family into the command and `NoteIPv6Routes`
+    decides on the strength of it which table the script saves and
+    restores, and two answers to "is this an IPv6 route?" is one too many.
+    """
+    for slot in ('rdst', 'rgtw'):
+        for obj in getattr(rule, slot, None) or []:
+            if getattr(obj, 'is_v6', None) and obj.is_v6():
+                return True
+    return False
+
+
 class FindDefaultRoute(RoutingRuleProcessor):
     """Note whether any rule installs a default route.
 
@@ -926,6 +953,44 @@ def _is_valid_network(obj) -> bool:
     return str(net.network_address) == addr
 
 
+class NoteIPv6Routes(RoutingRuleProcessor):
+    """Note whether the script installs a route in the IPv6 table.
+
+    The rollback machinery the `routing_functions` configlet brings works
+    on one address family: ``ip route show`` lists the IPv4 table and
+    nothing else, so that is what gets saved before the rules run, deleted
+    in front of them and put back when one of them fails.  Firewall
+    Builder never compiled an IPv6 route - its routing pipeline drops such
+    a rule with a warning (``DropIPv6RulesWithWarning``) - so the block
+    never had to say which family it meant.
+
+    This compiler does compile them, and writes ``ip -6 route add``.  The
+    first activation works.  On the second the route is still there,
+    because nothing deleted it, and ``ip -6 route add`` answers "RTNETLINK
+    answers: File exists" - a failure, so ``route_command_error`` puts the
+    IPv4 table back and stops the script with a non-zero status, the
+    packet filter already installed and the epilog never run.  Every
+    activation after the first fails that way.
+
+    The answer has to be exact in both directions: a family this script
+    installs no route in is one whose routes belong to whatever else runs
+    on the box, and flushing those is the mistake #34 was about.  So it is
+    asked here rather than in `FindDefaultRoute`, which runs ahead of the
+    processors that drop a rule again; this one sits behind the last of
+    them and slurps, so it sees the rules the print rule will get and no
+    others.
+    """
+
+    def process_next(self) -> bool:
+        self.slurp()
+        if not self.tmp_queue:
+            return False
+
+        if any(is_ipv6_route(rule) for rule in self.tmp_queue):
+            self.compiler.have_ipv6_route = True
+        return True
+
+
 class RoutingPrintRule(RoutingRuleProcessor):
     """Generates 'ip route' commands from routing CompRules."""
 
@@ -968,6 +1033,11 @@ class RoutingPrintRule(RoutingRuleProcessor):
         own to put back it may drop the one that is there; without one it
         has to keep it, or the box loses its way out the moment the script
         runs.
+
+        ``have_ipv6_routes`` says whether the same three steps - save,
+        delete, restore - have to be taken in the IPv6 table as well.
+        Firewall Builder never had to ask, because it compiles no IPv6
+        route at all; see `NoteIPv6Routes`.
         """
         if self.compiler.have_default_route:
             proto_filter = "'proto kernel'"
@@ -977,6 +1047,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         configlet = Configlet('linux24', 'routing_functions')
         configlet.remove_comments()
         configlet.set_variable('proto_filter', proto_filter)
+        configlet.set_variable('have_ipv6_routes', self.compiler.have_ipv6_route)
         self.compiler.output.write(configlet.expand())
         self.compiler.output.write('\n')
         self.compiler.defined_restore_script_output = True
@@ -1029,7 +1100,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         comments = self.compiler.ecmp_comments_buffer
 
         if key not in rules:
-            family = ' -6' if self._is_ipv6_route(rule) else ''
+            family = ' -6' if is_ipv6_route(rule) else ''
             head = f'$IP{family} route add {dst}'
             if metric != '0':
                 head += f' metric {metric}'
@@ -1050,22 +1121,6 @@ class RoutingPrintRule(RoutingRuleProcessor):
             next_hop += f' dev {itf}'
         rules[key] += next_hop
 
-    @staticmethod
-    def _is_ipv6_route(rule: CompRule) -> bool:
-        """Return whether this route belongs to the IPv6 routing table.
-
-        iproute2 takes the family from the destination or the gateway and
-        only falls back to IPv4 when it can read it from neither, which is
-        exactly the case of a route to "default" out of an interface.  Such
-        a rule would install an IPv4 default route, so the family is stated
-        rather than inferred.
-        """
-        for slot in ('rdst', 'rgtw'):
-            for obj in getattr(rule, slot, None) or []:
-                if getattr(obj, 'is_v6', None) and obj.is_v6():
-                    return True
-        return False
-
     def _routing_rule_to_string(self, rule: CompRule) -> str:
         """Convert a routing CompRule to an 'ip route' command string.
 
@@ -1079,7 +1134,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         # The script defines IP from the firewall's "path to ip" setting,
         # the same way it defines IPTABLES; writing the bare name here ran
         # whatever the PATH happened to find instead.
-        family = ' -6' if self._is_ipv6_route(rule) else ''
+        family = ' -6' if is_ipv6_route(rule) else ''
         parts = [f'$IP{family} route add']
 
         dst = self._print_rdst(rule)
