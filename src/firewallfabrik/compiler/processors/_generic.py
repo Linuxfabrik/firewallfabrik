@@ -1709,6 +1709,25 @@ class AddVirtualAddress(NATRuleProcessor):
     For SNAT rules, registers TSrc as a virtual address if it is not
     an address on the firewall. For DNAT rules, registers ODst.
     For SNetnat/DNetnat, registers the network object.
+
+    An Original Destination the rule *excludes* by naming several
+    addresses is not an address this firewall has to answer for, and
+    ``doODstNegation`` has moved those objects into a temporary chain
+    before this processor sees the rule - so on iptables the element is
+    empty here and nothing is registered.  The nftables pipeline writes
+    the same exclusion as an inline ``!=`` and leaves the objects in
+    place, which made it register every one of them: an excluded address
+    that *is* on one of the firewall's networks was configured as an
+    interface alias, so the firewall answered ARP for, and accepted
+    traffic to, an address the rule was written to leave alone.
+    ``odst_inline_negation`` is what tells the two apart.
+
+    A *single* excluded address stays in the element on both platforms
+    (``singleObjectNegationODst``, which is what ``! -d`` is), and it is
+    registered on both - the transparent-proxy shape "everything on port
+    80 that is not already going to the proxy" names the proxy's own
+    address there, and the firewall does have to carry it.  Firewall
+    Builder registers it too (firewall2 of its regression suite).
     """
 
     def process_next(self) -> bool:
@@ -1719,6 +1738,12 @@ class AddVirtualAddress(NATRuleProcessor):
         self.tmp_queue.append(rule)
 
         nat_comp = self.compiler
+
+        if rule.nat_rule_type in (
+            NATRuleType.DNAT,
+            NATRuleType.DNetnat,
+        ) and getattr(rule, 'odst_inline_negation', False):
+            return True
 
         if rule.nat_rule_type in (NATRuleType.SNAT, NATRuleType.DNAT):
             if rule.nat_rule_type == NATRuleType.SNAT:

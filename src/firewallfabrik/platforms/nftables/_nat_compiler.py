@@ -71,6 +71,7 @@ from firewallfabrik.core.objects import (
     TCPUDPService,
     UserService,
 )
+from firewallfabrik.platforms.iptables._utils import single_negation_qualifies
 from firewallfabrik.platforms.linux._netfilter import (
     branch_closes_a_loop,
     build_interface_groups,
@@ -475,24 +476,29 @@ class SingleObjectNegationItfOutb(NATRuleProcessor):
 class SingleObjectNegationOSrc(NATRuleProcessor):
     """Handle single-object negation for OSrc in NAT rules.
 
-    If OSrc has negation and contains exactly one address object with
-    a single IP that doesn't match the firewall, convert to inline
-    '!' negation.
+    If OSrc has negation and contains exactly one object that can be
+    excluded with one ``!``, say so and clear the negation flag.
 
-    Corresponds to C++ NATCompiler::singleObjectNegationOSrc.
+    Corresponds to C++ NATCompiler::singleObjectNegationOSrc, and asks
+    :func:`single_negation_qualifies` - the same question the iptables
+    pipelines ask.  Asking ``isinstance(obj, Address)`` instead answers
+    by class where the C++ asks the object
+    (``countInetAddresses(true) == 1``), and fwbuilder's Host derives
+    from Address while this model's does not, so a host with one address
+    never qualified here.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.get_neg('osrc') and len(rule.osrc) == 1:
-            obj = rule.osrc[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.osrc_single_object_negation = True
-                rule.set_neg('osrc', False)
+        if (
+            rule.get_neg('osrc')
+            and len(rule.osrc) == 1
+            and single_negation_qualifies(self.compiler, rule.osrc[0])
+        ):
+            rule.osrc_single_object_negation = True
+            rule.set_neg('osrc', False)
         self.tmp_queue.append(rule)
         return True
 
@@ -500,24 +506,23 @@ class SingleObjectNegationOSrc(NATRuleProcessor):
 class SingleObjectNegationODst(NATRuleProcessor):
     """Handle single-object negation for ODst in NAT rules.
 
-    If ODst has negation and contains exactly one address object with
-    a single IP that doesn't match the firewall, convert to inline
-    '!' negation.
-
-    Corresponds to C++ NATCompiler::singleObjectNegationODst.
+    The ODst twin of :class:`SingleObjectNegationOSrc`, and it decides
+    more than how the exclusion is written: the address a destination
+    translation names is the one the firewall has to answer for, and
+    ``AddVirtualAddress`` reads it out of this element.
     """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.get_neg('odst') and len(rule.odst) == 1:
-            obj = rule.odst[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.odst_single_object_negation = True
-                rule.set_neg('odst', False)
+        if (
+            rule.get_neg('odst')
+            and len(rule.odst) == 1
+            and single_negation_qualifies(self.compiler, rule.odst[0])
+        ):
+            rule.odst_single_object_negation = True
+            rule.set_neg('odst', False)
         self.tmp_queue.append(rule)
         return True
 
@@ -937,6 +942,12 @@ class NftNegationODst(NATRuleProcessor):
             return False
         if rule.get_neg('odst'):
             rule.odst_single_object_negation = True
+            # Which mechanism excluded the addresses matters downstream:
+            # iptables moves them into a temporary chain and the element
+            # is empty from here on, so `AddVirtualAddress` never sees
+            # them.  Here they stay, and an address the rule excludes is
+            # not one the firewall has to answer for.
+            rule.odst_inline_negation = True
             rule.set_neg('odst', False)
         self.tmp_queue.append(rule)
         return True
