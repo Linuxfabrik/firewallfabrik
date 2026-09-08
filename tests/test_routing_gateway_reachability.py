@@ -199,3 +199,55 @@ def test_an_interface_the_firewall_does_not_own_is_checked_too(fw):
     assert out == []
     assert len(compiler.errors) == 1
     assert 'eth1' in compiler.errors[0]
+
+
+def test_an_ipv6_link_local_gateway_is_reachable_through_the_named_interface(fw):
+    """The ordinary shape of an IPv6 route, and it used to be refused.
+
+    A router advertisement carries the next hop as a link-local address,
+    so `fe80::/10` is what almost every IPv6 route on a LAN goes through.
+    It is on-link on every interface and therefore on none of the networks
+    the firewall object lists, so the check found it unreachable and left
+    the rule out - while iproute2 installs the route without a word, as
+    long as the command names the interface.
+    """
+    gw = _address(IPv6, 'fe80::1', '128')
+    rule = _rule(gw, ritf=fw.interfaces[2])
+    compiler, out = _run(ReachableGateway(), fw, [rule])
+
+    assert len(out) == 1
+    assert compiler.errors == []
+
+
+def test_a_link_local_gateway_without_an_interface_is_reported(fw):
+    """iproute2 answers "Egress device not specified" and installs nothing."""
+    gw = _address(IPv6, 'fe80::1', '128')
+    compiler, out = _run(ReachableGateway(), fw, [_rule(gw)])
+
+    assert out == []
+    assert len(compiler.errors) == 1
+    assert 'Egress device not specified' in compiler.errors[0]
+
+
+def test_a_link_local_gateway_contradicts_no_interface(fw):
+    """It is on the link of whatever interface the rule names."""
+    gw = _address(IPv6, 'fe80::1', '128')
+    rule = _rule(gw, ritf=fw.interfaces[0])
+    compiler, out = _run(GatewayOnRoutingInterface(), fw, [rule])
+
+    assert len(out) == 1
+    assert compiler.errors == []
+
+
+def test_the_ipv4_link_local_range_is_not_special(fw):
+    """`via 169.254.1.1 dev eth0` is "Nexthop has invalid gateway" too.
+
+    Measured against iproute2 in a network namespace; only IPv6 has an
+    on-link next hop.
+    """
+    gw = _address(IPv4, '169.254.1.1', '255.255.255.255')
+    compiler, out = _run(ReachableGateway(), fw, [_rule(gw, ritf=fw.interfaces[0])])
+
+    assert out == []
+    assert len(compiler.errors) == 1
+    assert 'none of the local networks' in compiler.errors[0]

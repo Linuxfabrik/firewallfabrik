@@ -413,6 +413,25 @@ def _gateway_address(obj):
     return None
 
 
+def gateway_is_on_link(gateway) -> bool:
+    """Whether *gateway* is reachable through whatever interface names it.
+
+    An IPv6 next hop is normally a link-local address: that is what a
+    router advertisement carries and what every IPv6 default route on a
+    LAN goes through.  ``fe80::/10`` is on-link on every interface by
+    definition, so it is on no network the firewall object lists and no
+    check of the configured addresses can find it - while the kernel
+    installs the route without a word, as long as the command says which
+    interface.  Measured against iproute2 in a network namespace:
+    ``ip -6 route add 2001:db8:1::/64 via fe80::1 dev eth0`` is accepted,
+    the same command without ``dev`` answers "Egress device not
+    specified", and the IPv4 link-local range is not special at all -
+    ``via 169.254.1.1 dev eth0`` is "Nexthop has invalid gateway" like any
+    other unreachable address.
+    """
+    return gateway.version == 6 and gateway.is_link_local
+
+
 class ReachableGateway(RoutingRuleProcessor):
     """Report a gateway that is on none of the firewall's own networks.
 
@@ -423,6 +442,10 @@ class ReachableGateway(RoutingRuleProcessor):
     only at activation time, as one line of stderr in the middle of the
     routing block, and the route the rule was written for is simply not
     there.  Corresponds to ``RoutingCompiler::reachableAddressInRGtw``.
+
+    An IPv6 link-local next hop is the exception and `gateway_is_on_link`
+    is what says so.  Firewall Builder needs no such exception because it
+    compiles no IPv6 route at all.
     """
 
     def __init__(self, name: str = 'check that the gateway is reachable') -> None:
@@ -437,6 +460,18 @@ class ReachableGateway(RoutingRuleProcessor):
             gateway = _gateway_address(obj)
             if gateway is None:
                 continue
+            if gateway_is_on_link(gateway):
+                if rule.ritf:
+                    continue
+                self.compiler.error(
+                    rule,
+                    f'Object "{obj.name}" is used as the gateway, and a '
+                    f'link-local address such as {gateway} says nothing about '
+                    f'which link it is on; iproute2 answers "Egress device '
+                    f'not specified". Name the interface in the rule. The '
+                    f'rule is left out',
+                )
+                return True
             networks = _interface_networks(self.compiler.fw, gateway.version == 6)
             if any(gateway in network for _iface, network in networks):
                 continue
@@ -462,6 +497,9 @@ class GatewayOnRoutingInterface(RoutingRuleProcessor):
     refuses an unreachable one.  Corresponds to
     ``RoutingCompiler::contradictionRGtwAndRItf``, including its early
     exit for a rule that names no interface.
+
+    A link-local next hop is on the link of whatever interface the rule
+    names, so there is nothing to contradict; see `gateway_is_on_link`.
     """
 
     def __init__(self, name: str = 'check the gateway against RItf') -> None:
@@ -483,7 +521,7 @@ class GatewayOnRoutingInterface(RoutingRuleProcessor):
 
         for obj in rule.rgtw:
             gateway = _gateway_address(obj)
-            if gateway is None:
+            if gateway is None or gateway_is_on_link(gateway):
                 continue
             networks = _networks_of_interface(iface, gateway.version == 6)
             if not networks or any(gateway in network for network in networks):
@@ -1039,6 +1077,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         Firewall Builder never had to ask, because it compiles no IPv6
         route at all; see `NoteIPv6Routes`.
         """
+
         if self.compiler.have_default_route:
             proto_filter = "'proto kernel'"
         else:
