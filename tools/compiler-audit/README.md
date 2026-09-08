@@ -26,6 +26,7 @@ not.
 | `replay-twice.sh` | does the second activation leave the same ruleset as the first? | a rule the reset does not recognise as ours, appended again on every activation - one more copy per boot, per change, per reload |
 | `replay-interfaces.sh` | does `configure_interfaces` run, run twice, and leave the bridges it named? | an interface block that stops the activation before a rule is installed, or a bridge with ports missing from it |
 | `replay-routes.sh` | does iproute2 accept every route? | a route command that fails, which since the routing rollback puts the previous routing table back and stops the activation |
+| `replay-routes-twice.sh` | and does the second activation still install them? | a route the block in front of the rules does not delete, which the second run finds already there - `ip route add` answers "File exists" and the rollback puts the old table back and stops the script |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
 | `check-negations.py` | is a negated element still one rule? | "not this *or* not that", which every packet satisfies - a Deny that blocks nothing, an Accept that lets nothing through |
@@ -52,6 +53,7 @@ tools/compiler-audit/replay-address-tables.sh /tmp/audit
 tools/compiler-audit/replay-status.sh /tmp/audit
 tools/compiler-audit/replay-twice.sh /tmp/audit
 tools/compiler-audit/replay-routes.sh /tmp/audit
+tools/compiler-audit/replay-routes-twice.sh /tmp/audit
 tools/compiler-audit/replay-interfaces.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 python tools/compiler-audit/check-negations.py /tmp/audit
@@ -83,7 +85,8 @@ address comes back.
 `check-nft.sh`, `load-nft.sh`, `fill-nft-sets.sh`, `replay-nft-actions.sh`,
 `replay-ipt-actions.sh`, `replay-iptables.sh`, `replay-address-tables.sh`,
 `replay-interfaces.sh`,
-`replay-routes.sh`, `replay-status.sh`, `replay-twice.sh` and
+`replay-routes.sh`, `replay-routes-twice.sh`, `replay-status.sh`,
+`replay-twice.sh` and
 `check-iptables-restore.sh` need `unshare`, `nft` and `iptables`
 (`replay-address-tables.sh` also needs `ipset`). They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
@@ -157,7 +160,13 @@ and is not comparable.**
 
 `compare-reference.sh` counts `$IPTABLES` lines and a route installs none,
 so the routing block is invisible to it; `replay-routes.sh` is what reads
-that half.
+that half, and `replay-routes-twice.sh` reads the part of it no single run
+reaches.  A firewall script is run again on every change, and the block in
+front of the route commands exists so that the second run starts from the
+table the first one found.  It compares the second run against the first
+rather than against an empty list, because a route to a network the script
+has just configured an address on answers "File exists" the first time as
+well - which is what the Firewall Builder reference does too.
 
 Only `script_body()` is compared, because that is the function both compilers
 install the policy from. The reset helpers, the coexistence jump setup,
