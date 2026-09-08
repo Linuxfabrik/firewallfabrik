@@ -15,7 +15,7 @@ libraries:
           version: ''
         options:
           accept_established: false
-          configure_interfaces: false
+          configure_interfaces: true
           flush_ruleset: false
           load_modules: false
           manage_virtual_addr: false

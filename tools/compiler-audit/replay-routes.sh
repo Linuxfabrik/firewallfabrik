@@ -26,6 +26,15 @@
 # configures on it, then the commands.  Nothing touches the machine's own
 # routing table.
 #
+# Its blind spot follows from that middle step: the addresses come out of
+# the script, so a firewall with "Configure interfaces" off gives the
+# namespace none, and a route through a gateway with a global address is
+# then answered "No route to host" - the kernel installs such a route only
+# once the device carries an address on the gateway's network.  That is
+# this oracle reporting a machine the script would never run on, not a
+# rule the compiler got wrong; the compiler has already checked the
+# gateway against the interface address the firewall object carries.
+#
 # Usage: replay-routes.sh <output-directory>
 
 set -u

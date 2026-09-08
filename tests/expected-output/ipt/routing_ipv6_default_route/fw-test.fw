@@ -437,6 +437,7 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
+ update_addresses_of_interface "eth0 2001:db8::1/64" ""
 }
 
 # The shell form of the policy is hundreds of separate commands, and the
