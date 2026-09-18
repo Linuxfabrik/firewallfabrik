@@ -608,7 +608,11 @@ class CompilerDriver_nft(CompilerDriver):
                     try:
                         out_p = Path(output_path)
                         out_p.parent.mkdir(parents=True, exist_ok=True)
-                        out_p.write_text(script, encoding='utf-8')
+                        # The script runs on a Linux host whatever OS compiled
+                        # it. Without newline='\n' Python writes os.linesep,
+                        # which on Windows is CRLF, and the shebang line then
+                        # names '/bin/sh\r' (#175).
+                        out_p.write_text(script, encoding='utf-8', newline='\n')
                         out_p.chmod(0o755)
                         if self.all_errors:
                             self.info(' Compiled with errors')
