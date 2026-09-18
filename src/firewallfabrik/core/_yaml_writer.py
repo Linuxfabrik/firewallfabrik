@@ -644,7 +644,9 @@ class YamlWriter:
         """Write the provided data as YAML atomically to the file."""
         path = pathlib.Path(path)
         tmp_path = path.with_suffix(path.suffix + '.tmp')
-        with pathlib.Path.open(tmp_path, 'w', encoding='utf-8') as f:
+        # LF on every OS, so a data file kept in Git does not change as a whole
+        # when somebody saves it on Windows.
+        with pathlib.Path.open(tmp_path, 'w', encoding='utf-8', newline='\n') as f:
             yaml.dump(
                 data,
                 f,

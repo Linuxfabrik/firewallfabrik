@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Data file: a rule of a hand-written `.fwf` file that names no position is numbered by its place in the file. Every rule of such a rule set used to be rule 0, so the generated script named the wrong rule in every message and the shadowing check reported a rule as shadowing itself.
+* Data file: a `.fwf` file saved on Windows keeps Unix line endings.
 * Compiler (iptables): the "stop" command of the generated script touches only the address families the firewall has rules for. On a firewall with no IPv6 rules it used to set the IPv6 policies to ACCEPT - opening a family this script never closed - and to exit non-zero on a host without `ip6tables`, so an init system read a successful stop as a failure.
 * Compiler (iptables): the four commands that maintain a run-time address table answer with an exit code, `test_address_table` finds an address that one of the table's networks covers, and an address listed twice or added twice is not an error. `test_address_table` used to say the same thing for an address in the table and one that is not, a reload from a file that is not there reported success, and an address ipset refused was skipped without a word.
 * Compiler (iptables): a firewall pinned below ip6tables 1.2.8 leaves out the IPv6 neighbour discovery rules, whose hop limit match that release has not got. The activation used to stop there with every built-in policy already set to DROP, so the firewall came up with no rules at all.
