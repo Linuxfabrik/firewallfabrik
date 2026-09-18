@@ -136,6 +136,8 @@ def test_an_object_with_no_resolve_mode_is_compile_time(cls):
 )
 def test_the_tooltip_names_the_source_and_the_resolve_mode(cls, key, label):
     """It used to read both off attributes these two objects do not have."""
+    # The GUI package imports PySide6, which the CI runner does not install.
+    pytest.importorskip('PySide6')
     from firewallfabrik.gui.tooltip_helpers import obj_tooltip
 
     made = _obj(cls, 'object name', {key: 'the source', 'run_time': True})
