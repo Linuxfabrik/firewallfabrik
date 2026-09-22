@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Highlights:** Packets that belong to no known connection are now dropped and logged by default as "INVALID state -- DENY", at no more than 10 messages per second, so fail2ban no longer mistakes them for connection attempts. Block lists work at any size, and nftables can update them at run time. Negated services on nftables compile to what the rule says. IPv6 routing works on dual-stack firewalls, and a script compiled on Windows runs on Linux.
+
 ### Added
 
 * Editor, Compiler (iptables, nftables): a rule with the Custom action carries one statement per packet filter, the way a Custom Service carries one code per platform. A firewall switched from iptables to nftables keeps both and each compiler reads its own; it used to keep the one statement it had, which the other packet filter refuses ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161)).
