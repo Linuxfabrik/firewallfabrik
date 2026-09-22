@@ -8,64 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.1.0] - 2026-09-22
+
 **Highlights:** Packets that belong to no known connection are now dropped and logged by default as "INVALID state -- DENY", at no more than 10 messages per second, so fail2ban no longer mistakes them for connection attempts. Block lists work at any size, and nftables can update them at run time. Negated services on nftables compile to what the rule says. IPv6 routing works on dual-stack firewalls, and a script compiled on Windows runs on Linux.
 
 ### Added
 
-* Editor, Compiler (iptables, nftables): a rule with the Custom action carries one statement per packet filter, the way a Custom Service carries one code per platform. A firewall switched from iptables to nftables keeps both and each compiler reads its own; it used to keep the one statement it had, which the other packet filter refuses ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161)).
-* Compiler (nftables): a rule whose Custom action names one of the iptables targets nftables has a statement for - TCPMSS, MARK, CONNMARK, CLASSIFY, NFQUEUE, NOTRACK, TRACE - is compiled instead of being left out, so a firewall imported from Firewall Builder keeps those rules when it is compiled for nftables.
-* Compiler (nftables): a rule whose service matches the ToS byte compiles instead of being left out.
-* Compiler (nftables): the generated script offers `reload_address_table`, `add_to_address_table`, `remove_from_address_table` and `test_address_table`, with the same arguments and the same answers as the iptables script, so a block list can be kept up to date without recompiling the firewall.
-* Compiler (nftables): the generated script says which nftables release it was compiled for, the way the iptables script has always said its own.
+* Compiler (nftables): Custom actions with TCPMSS, MARK, CONNMARK, CLASSIFY, NFQUEUE, NOTRACK or TRACE are compiled instead of left out.
+* Compiler (nftables): rules that match the ToS byte are compiled instead of left out.
+* Compiler (nftables): the generated script can reload, add to, remove from and test address tables at run time, like the iptables script.
+* Editor, Compiler (iptables, nftables): a Custom action keeps one statement per packet filter, so switching a firewall between iptables and nftables no longer breaks it ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161)).
 
 ### Changed
 
-* A firewall that does not set "Drop packets that are associated with no known connection" drops and logs such packets (conntrack state INVALID) with the prefix "INVALID state -- DENY", instead of letting them reach the catch-all rule and show up as its policy hit. A stateless rule no longer accepts them. This covers firewalls imported from Firewall Builder that never saved these settings; uncheck both options to keep the old behaviour.
-* A firewall that does not set a logging limit logs at no more than 10 messages per second, for rules that log and for packets in state INVALID. Set the limit to 0 to log without one.
+* Compiler (iptables, nftables): packets in conntrack state INVALID are dropped and logged as "INVALID state -- DENY" by default, also on firewalls that never saved this setting. Stateless rules no longer accept them.
+* Compiler (iptables, nftables): the logging limit defaults to 10 messages per second on firewalls that never saved it. Set it to 0 to log without a limit.
 
 ### Fixed
 
-* Data file: a rule of a hand-written `.fwf` file that names no position is numbered by its place in the file. Every rule of such a rule set used to be rule 0, so the generated script named the wrong rule in every message and the shadowing check reported a rule as shadowing itself.
-* Data file: a `.fwf` file saved on Windows keeps Unix line endings.
-* Compiler (iptables): the "stop" command of the generated script touches only the address families the firewall has rules for. On a firewall with no IPv6 rules it used to set the IPv6 policies to ACCEPT - opening a family this script never closed - and to exit non-zero on a host without `ip6tables`, so an init system read a successful stop as a failure.
-* Compiler (iptables): the four commands that maintain a run-time address table answer with an exit code, `test_address_table` finds an address that one of the table's networks covers, and an address listed twice or added twice is not an error. `test_address_table` used to say the same thing for an address in the table and one that is not, a reload from a file that is not there reported success, and an address ipset refused was skipped without a word.
-* Compiler (iptables): a firewall pinned below ip6tables 1.2.8 leaves out the IPv6 neighbour discovery rules, whose hop limit match that release has not got. The activation used to stop there with every built-in policy already set to DROP, so the firewall came up with no rules at all.
-* Compiler (iptables): a dual-stack firewall looks for `ip6tables` before it installs a rule. A wrong path or a machine without the tool used to be found only after the IPv4 rules were in place, leaving IPv4 filtered and IPv6 open with no rules at all.
-* Compiler (iptables): adding, removing or testing an IPv6 address of a run-time address table from the command line works. The three commands used to hand every address to the set of the other family, which ipset refuses, so the address was neither added, removed nor tested while the data file said otherwise.
-* Compiler (iptables): an address table with more than 65536 addresses fills the set the rules match against. The set used to take the first 65536 and refuse the rest, so a Deny rule built on a large block list blocked only part of it while the activation reported success.
-* Compiler (iptables): the generated script says it was compiled for iptables even when the firewall object names the other platform; the header used to name a packet filter the script does not use.
-* Compiler (iptables): a NAT rule that translates to a DNS name resolved on the firewall is reported and left out instead of stopping the activation; iptables never read a name there, so the script used to abort at that command with every policy already set to DROP.
-* Compiler (iptables, nftables): a firewall that routes both address families out of one interface installs a default route in each; the IPv6 one used to be dropped as a duplicate of the IPv4 one.
-* Compiler (iptables, nftables): a firewall that installs a default route in one address family keeps the one the machine came up with in the other; the IPv4 default route used to be deleted by a script that installs only an IPv6 one, and nothing put it back.
-* Compiler (iptables, nftables): a routing rule whose gateway is an IPv6 link-local address installs its route instead of being reported and left out; that is the address a router advertisement carries, so it is the ordinary form of an IPv6 route.
+* Compiler (iptables): a dual-stack firewall checks for `ip6tables` before it installs rules, so a missing tool no longer leaves IPv6 open.
+* Compiler (iptables): a firewall pinned below ip6tables 1.2.8 no longer comes up without any rules.
+* Compiler (iptables): a NAT rule that translates to a DNS name resolved on the firewall is reported instead of aborting the activation with every policy at DROP.
+* Compiler (iptables): adding, removing and testing IPv6 addresses of a run-time address table works.
+* Compiler (iptables): address tables with more than 65536 addresses are loaded completely.
+* Compiler (iptables): the "stop" command no longer opens IPv6 or reports a failure on a firewall without IPv6 rules.
+* Compiler (iptables): the run-time address table commands report errors in their exit code, and `test_address_table` gives the right answer.
+* Compiler (iptables, nftables): a Branch rule still works after its target rule set has been renamed.
+* Compiler (iptables, nftables): a failed activation also restores routes with several next hops.
+* Compiler (iptables, nftables): a firewall that installs a default route for one address family keeps the existing default route of the other.
+* Compiler (iptables, nftables): a firewall that routes both address families out of one interface gets an IPv6 default route too.
+* Compiler (iptables, nftables): a firewall with an IPv6 route can be activated more than once.
+* Compiler (iptables, nftables): a routing rule with an IPv6 link-local gateway is installed instead of left out.
+* Compiler (iptables, nftables): a rule whose ToS value no packet can match is reported instead of installed as a rule that never matches.
 * Compiler (iptables, nftables): a script compiled on Windows runs on the Linux host ([#175](https://github.com/Linuxfabrik/firewallfabrik/issues/175)).
-* Compiler (iptables, nftables): a firewall that fails to activate gets its routing table back even when it holds a route with several next hops; such a route used to be saved in pieces and was gone after the rollback.
-* Compiler (iptables, nftables): a firewall that installs an IPv6 route can be activated more than once; every activation after the first used to stop at that route, put the previous routing table back and report failure.
-* Compiler (iptables, nftables): a rule whose service names a ToS value no packet can match is reported and left out. iptables used to install it without a word, where it sat in the ruleset matching nothing.
-* Compiler (iptables, nftables): a NAT rule whose Original Service matches the ToS byte or a DiffServ code point is compiled instead of being left out. Both packet filters match that field in a NAT chain like anywhere else.
-* Compiler (iptables, nftables): a rule with the Branch action jumps into the rule set it points at even after that rule set has been renamed. The jump used to go to the old name: iptables created an empty chain of that name and jumped into it, so the branch did nothing in a script that activated cleanly, and nftables left the rule out.
-* Compiler (iptables, nftables): a NAT rule the compiler cannot classify is named in the message that reports it, instead of leaving the administrator with "Unsupported NAT rule" and no rule number.
-* Compiler (iptables, nftables): a message about an interface without a usable address names the interface by its place in the object tree instead of by an internal id, so it can be found in the editor and reads the same on every compile.
-* Compiler (iptables, nftables): whether an Address Table or a DNS Name is resolved on the firewall or at compile time is read the way Firewall Builder reads it, so a data file that spells the flag out as text no longer turns a compile-time object into a run-time one.
-* Editor: the tooltip of an Address Table and of a DNS Name names the file or the DNS record it resolves from and says whether it is resolved on the firewall; it used to say "Compile-time" for every one of them and never name the source.
-* Editor: the firewall panel offers nftables 0.9.1 as a release to compile for. Its oldest entry used to cover 0.9.0 and 0.9.1 together, although the two differ in what they can parse.
-* Compiler (nftables): a NAT rule of a cluster that translates to, or matches on, a cluster interface without a fixed address uses the interface the member firewall actually has. The generated script used to read the address of the cluster's own interface name, which exists on no machine, so the source translation left the packets with their original address and the destination translation never matched.
-* Compiler (nftables): a reload of an address table that nft refuses leaves the addresses that were in the set. Emptying the set and filling it again are one transaction, so a failed reload no longer leaves a block list that blocks nothing.
-* Compiler (nftables): a NAT rule whose Original Service element is negated and cannot be excluded by one match compiles instead of being left out, in the same chain the iptables compiler builds for it.
-* Compiler (nftables): a rule whose service element is negated and names a Custom Service compiles instead of being left out, in the same chain the iptables compiler builds for it. A Deny rule written as "anything but this" used to be dropped, so it blocked nothing.
-* Compiler (nftables): a rule whose service element is negated and names an IP service that matches a DiffServ code point or a fragment excludes it together with the rest of the element, in the temporary chain the iptables compiler builds for the same rule. Such a service says nothing about the protocol, so the rule it used to get for itself matched packets the element excludes.
-* Compiler (nftables): a rule whose service element is negated and names an IP service that matches its protocol and a second condition at once compiles instead of being reported, and no longer leaves the rest of the element standing as a rule of its own.
-* Compiler (nftables): a rule whose service element is negated and names a whole protocol - "All TCP", an ICMP service with no type, or an IP service naming nothing but its protocol number - excludes it together with the rest of the element. Such a service used to get a rule of its own that matched every packet of every other protocol, so a Deny rule written for "anything but IPsec" dropped everything and an Accept rule let everything through.
-* Compiler (iptables, nftables): the generated script passes `shellcheck` again, on both packet filters. The nftables script had never been checked at all, and a routing firewall's script could not be read by the tool.
-* Compiler (nftables): a NAT rule that translates for everything except a list of addresses no longer puts those addresses on an interface of the firewall. The generated script used to configure them, so the firewall answered for addresses the rule was written to leave alone.
-* Compiler (nftables): a firewall that drops invalid packets drops them after the IPv6 neighbour discovery rules, in the same order as on iptables.
-* Compiler (nftables): a firewall pinned to nftables 0.9.0 gets a ruleset that release can read. Every chain named its priority in words, which 0.9.0 cannot parse, so the whole ruleset was refused and the firewall kept the rules it had.
-* Compiler (nftables): a rule that limits concurrent connections per source is reported and left out on a firewall pinned to nftables 0.9.0, which cannot parse the set it counts in. Such a rule used to cost the whole ruleset, so the firewall kept the rules it had.
-* Compiler (nftables): an address table whose data file carries a note behind an address fills the set the rules match against. One such line used to leave the whole table out, so a Deny rule built on that block list stopped nothing.
-* Compiler (nftables): an address table with more than about eleven thousand addresses fills the set the rules match against. Such a table used to leave the set empty, so a Deny rule built on a large block list blocked nothing.
-* Compiler (nftables): a dual-stack firewall names the address family of a rule where the machine keeps showing it. `nft list ruleset` used to drop it from rules that match on a protocol number, so a saved and reloaded ruleset applied every such IPv4 rule to IPv6 traffic and the other way round.
-* Compiler (nftables): a Tag, Classify or connection-mark rule in the output chain of the mangle table makes the kernel route the packet again with the new mark, the way the iptables mangle table has always done. The chain used to be an ordinary filter chain, so the mark was set and the packet took the route it already had - policy routing for traffic the firewall itself sends did nothing, without a word anywhere.
-* Compiler (nftables): the addresses of one negated rule element end up in one rule even when the rule also logs. With "Log all rules" on they used to be spread over one rule each, and "not this or not that" is true for every packet - a Deny written that way blocked nothing and an Accept let everything through. A rule set is also a little shorter now, because two rules that differ only in an address are folded together wherever they sit.
+* Compiler (iptables, nftables): an Address Table or DNS Name set to compile time is no longer resolved on the firewall, whichever way the data file spells the setting.
+* Compiler (iptables, nftables): NAT rules that match the ToS byte or a DiffServ code point are compiled instead of left out.
+* Compiler (nftables): a failed reload of an address table keeps the addresses that were loaded.
+* Compiler (nftables): a firewall pinned to nftables 0.9.0 gets a ruleset that release can load; connection-limit rules are reported there instead.
+* Compiler (nftables): a NAT rule of a cluster on an interface without a fixed address translates with the member's interface instead of doing nothing.
+* Compiler (nftables): a NAT rule that excludes a list of addresses no longer adds those addresses to a firewall interface.
+* Compiler (nftables): a rule with a negated address element no longer matches every packet when it logs.
+* Compiler (nftables): address tables with more than about 11,000 addresses, or with a note behind an address, are loaded instead of left empty.
+* Compiler (nftables): negated service elements compile to what the rule says, in policy and NAT rules, instead of being left out or matching every packet.
+* Compiler (nftables): on a dual-stack firewall, a saved and reloaded ruleset no longer applies IPv4 rules to IPv6 traffic and the other way round.
+* Compiler (nftables): Tag, Classify and connection-mark rules for traffic the firewall sends itself trigger policy routing, as on iptables.
+* Data file: a `.fwf` file saved on Windows keeps Unix line endings.
+* Data file: rules of a hand-written `.fwf` file without positions are numbered in file order instead of all being rule 0.
 
 
 ## [v3.0.0] - 2026-09-04
@@ -539,7 +530,8 @@ Initial public beta pre-release.
 * Standard service library expanded with the Wikipedia multi-service ports.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.1.0...HEAD
+[v3.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...v3.1.0
 [v3.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...v3.0.0
 [v2.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...v2.0.0
 [v1.9.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.8.1...v1.9.0
