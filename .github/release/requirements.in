@@ -1,0 +1,4 @@
+build==1.6.1
+# setup.py compiles the Qt resource file with pyside6-rcc, which is part of PySide6.
+PySide6==6.11.2
+setuptools==84.0.0

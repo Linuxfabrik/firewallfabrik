@@ -43,3 +43,11 @@ updates:
       day: 'friday'
       time: '05:00'
       timezone: 'Etc/UTC'
+
+  - package-ecosystem: 'pip'
+    directory: '/.github/release'
+    schedule:
+      interval: 'weekly'
+      day: 'friday'
+      time: '05:00'
+      timezone: 'Etc/UTC'

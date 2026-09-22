@@ -37,15 +37,11 @@ jobs:
         with:
           python-version: '${{ matrix.python-version }}'
 
-      - name: 'Install pytest'
+      # pytest and the runtime dependencies, all hash-pinned. The package itself
+      # is not installed: pytest imports it from `src` (see pyproject.toml), so
+      # neither the build nor PySide6 for its Qt resource file is needed here.
+      - name: 'Install pytest and the runtime dependencies'
         run: 'pip install --require-hashes --requirement .github/pytest/requirements.txt'
-
-      # No test imports PySide6, but setup.py compiles the Qt resource file
-      # with pyside6-rcc, so the build environment pulls it in regardless.
-      # That is why this installs the package without the 'gui' extra and
-      # still takes a while on a cold runner.
-      - name: 'Install FirewallFabrik'
-        run: 'pip install --editable .'
 
       - name: 'Run the test suite'
         run: 'pytest'

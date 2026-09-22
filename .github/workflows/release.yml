@@ -23,10 +23,13 @@ jobs:
           allow-prereleases: true
 
       - name: 'Install build tools'
-        run: 'pip install build==1.4.2'
+        run: 'pip install --require-hashes --requirement .github/release/requirements.txt'
 
+      # Without isolation, so the package is built by the hash-pinned setuptools
+      # and the PySide6 whose pyside6-rcc compiles the Qt resource file, both
+      # installed above, instead of by whatever an isolated build would fetch.
       - name: 'Build package'
-        run: 'python -m build'
+        run: 'python -m build --no-isolation'
 
       - name: 'Upload build artifacts'
         uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' # v7.0.1
