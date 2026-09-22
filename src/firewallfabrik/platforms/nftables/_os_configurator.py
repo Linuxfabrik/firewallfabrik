@@ -173,17 +173,6 @@ class OSConfigurator_nft(OSConfigurator):
         forwards = not forwarding_is_off(self.fw, have_ipv6)
         in_forward = chain == 'forward'
 
-        # Drop invalid packets
-        drop_invalid = self.fw.get_option('drop_invalid')
-        log_invalid = self.fw.get_option('log_invalid')
-        if drop_invalid and (forwards or not in_forward):
-            if log_invalid:
-                rules.append(
-                    f'        ct state invalid counter {self._invalid_log()} drop'
-                )
-            else:
-                rules.append('        ct state invalid counter drop')
-
         # Drop new TCP without SYN. Only the SYN, RST and ACK bits decide
         # whether a segment opens a connection, so the match has to name that
         # mask: a bare `tcp flags != syn` compares the whole flags byte and
@@ -216,6 +205,23 @@ class OSConfigurator_nft(OSConfigurator):
             rules.append(
                 f'        icmpv6 type {{ {types} }} ip6 hoplimit 255 counter accept'
             )
+
+        # Drop invalid packets, last of the automatic rules, where the
+        # iptables configlet puts them. The rules above rarely see an
+        # INVALID packet: the no-SYN rule matches `ct state new`, and
+        # conntrack files a discovery message as UNTRACKED (linux
+        # net/netfilter/nf_conntrack_proto_icmpv6.c, noct_valid_new). Only a
+        # truncated one, or one with a bad checksum in prerouting, is
+        # INVALID, and the discovery rule accepts it first, as on iptables.
+        drop_invalid = self.fw.get_option('drop_invalid')
+        log_invalid = self.fw.get_option('log_invalid')
+        if drop_invalid and (forwards or not in_forward):
+            if log_invalid:
+                rules.append(
+                    f'        ct state invalid counter {self._invalid_log()} drop'
+                )
+            else:
+                rules.append('        ct state invalid counter drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
 

@@ -294,8 +294,8 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         tcp dport 22 ip6 saddr 2001:db8:1::9 ct state new,established counter accept
-        ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
+        ct state invalid counter drop
         #
         # Rule 0 (global)
         #
@@ -325,16 +325,16 @@ table inet fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
+        ct state invalid counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         tcp sport 22 ip6 daddr 2001:db8:1::9 ct state established,related counter accept
-        ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
+        ct state invalid counter drop
     }
 }
 
