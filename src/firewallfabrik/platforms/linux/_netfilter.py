@@ -912,6 +912,36 @@ def _log_number(compiler, rule, key: str, ceiling: int, what: str, unset: int) -
     return unset
 
 
+def get_invalid_log_limit(compiler) -> tuple[int, str] | None:
+    """Return the rate the INVALID-state packets are logged at, or ``None``.
+
+    The rule is the firewall's logging limit (``limit_value`` and
+    ``limit_suffix``), the setting fwbuilder applies to every log rule
+    (PolicyCompiler_PrintRule.cpp:271).  fwbuilder writes the invalid-state
+    log rule without it (configlets/linux24/automatic_rules); FirewallFabrik
+    logs INVALID packets by default, and a flood of them - asymmetric
+    routing, a cluster without conntrack sync - must not fill the kernel log.
+    ``None`` means unlimited: the limit is 0, or it cannot be read, which is
+    reported.
+    """
+    try:
+        rate = int(compiler.fw.get_option('limit_value'))
+    except (TypeError, ValueError):
+        rate = 0
+    if rate <= 0:
+        return None
+    suffix = str(compiler.fw.get_option('limit_suffix') or '')
+    unit = normalize_rate_unit(suffix)
+    if unit is None:
+        compiler.warning(
+            f'The logging limit unit "{suffix.strip()}" is not a unit a rate '
+            'can be given in, so packets in state INVALID are logged without '
+            'a limit'
+        )
+        return None
+    return rate, unit
+
+
 def get_log_copy_range(compiler, rule=None) -> int:
     """Return how many bytes of a packet NFLOG copies, 0 for "all of it"."""
     return _log_number(

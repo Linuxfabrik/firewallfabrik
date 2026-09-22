@@ -483,6 +483,13 @@ script_body() {
  $IPTABLES -A fwf_INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A fwf_OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A fwf_FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ # drop packets that do not match any valid state and log them
+ $IPTABLES -N fwf_drop_invalid 2>/dev/null
+ $IPTABLES -A fwf_OUTPUT -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_INPUT -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_FORWARD -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_drop_invalid -m limit --limit 10/second -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A fwf_drop_invalid -j DROP
 
  # ================ Table 'nat', rule set NAT
  #

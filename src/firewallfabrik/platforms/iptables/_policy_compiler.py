@@ -111,6 +111,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     custom_service_code,
     custom_service_matches_state,
     forwarding_is_off,
+    get_invalid_log_limit,
     get_log_copy_range,
     get_log_netlink_group,
     get_log_queue_threshold,
@@ -1079,6 +1080,33 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         conf.set_variable(
             'drop_invalid_and_log', 1 if (drop_invalid and log_invalid) else 0
+        )
+        invalid_log_limit = ''
+        limit = get_invalid_log_limit(self) if (drop_invalid and log_invalid) else None
+        if limit:
+            from firewallfabrik.platforms.iptables._print_rule import (
+                LIMIT_UNIT_SECONDS,
+                XT_LIMIT_SCALE,
+            )
+
+            rate, unit = limit
+            ceiling = XT_LIMIT_SCALE * LIMIT_UNIT_SECONDS[unit]
+            if rate > ceiling:
+                self.warning(
+                    f'The logging limit {rate}/{unit} is faster than the '
+                    f'iptables limit match can express ({ceiling}/{unit}), '
+                    'so packets in state INVALID are logged without a limit'
+                )
+            else:
+                invalid_log_limit = f'{rate}/{unit}'
+        # One variable for the chain and the match: the configlet strips the
+        # blanks around an inline {{if}}, so a conditional match in the line
+        # would either glue to its neighbour or leave a double blank.
+        conf.set_variable(
+            'drop_invalid_log_match',
+            f'{drop_inv} -m limit --limit {invalid_log_limit}'
+            if invalid_log_limit
+            else drop_inv,
         )
 
         use_nflog = self.fw.get_option('use_NFLOG')

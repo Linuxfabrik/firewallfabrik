@@ -479,6 +479,15 @@ script_body() {
  IP6TABLES=fwf_run_ip6tables
  # ================ IPv6
 
+ # ================ Table 'filter', automatic rules
+ # drop packets that do not match any valid state and log them
+ $IP6TABLES -N fwf_drop_invalid 2>/dev/null
+ $IP6TABLES -A fwf_OUTPUT -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IP6TABLES -A fwf_INPUT -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IP6TABLES -A fwf_FORWARD -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IP6TABLES -A fwf_drop_invalid -m limit --limit 10/second -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IP6TABLES -A fwf_drop_invalid -j DROP
+
  # ================ Table 'filter', rule set Policy
  #
  # Rule 0 (global)

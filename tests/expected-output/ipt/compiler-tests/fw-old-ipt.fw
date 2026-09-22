@@ -527,9 +527,12 @@ script_body() {
  # drop TCP sessions opened prior firewall restart
  $IPTABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IPTABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- # drop packets that do not match any valid state
- $IPTABLES -A OUTPUT -m state --state INVALID -j DROP
- $IPTABLES -A INPUT -m state --state INVALID -j DROP
+ # drop packets that do not match any valid state and log them
+ $IPTABLES -N drop_invalid 2>/dev/null
+ $IPTABLES -A OUTPUT -m state --state INVALID -j drop_invalid
+ $IPTABLES -A INPUT -m state --state INVALID -j drop_invalid
+ $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy
  #
@@ -560,10 +563,13 @@ script_body() {
  $IP6TABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IP6TABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IP6TABLES -A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- # drop packets that do not match any valid state
- $IP6TABLES -A OUTPUT -m state --state INVALID -j DROP
- $IP6TABLES -A INPUT -m state --state INVALID -j DROP
- $IP6TABLES -A FORWARD -m state --state INVALID -j DROP
+ # drop packets that do not match any valid state and log them
+ $IP6TABLES -N drop_invalid 2>/dev/null
+ $IP6TABLES -A OUTPUT -m state --state INVALID -j drop_invalid
+ $IP6TABLES -A INPUT -m state --state INVALID -j drop_invalid
+ $IP6TABLES -A FORWARD -m state --state INVALID -j drop_invalid
+ $IP6TABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IP6TABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy
  #

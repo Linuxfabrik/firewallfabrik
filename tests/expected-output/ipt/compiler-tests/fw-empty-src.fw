@@ -507,6 +507,13 @@ script_body() {
  $IPTABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ # drop packets that do not match any valid state and log them
+ $IPTABLES -N drop_invalid 2>/dev/null
+ $IPTABLES -A OUTPUT -m conntrack --ctstate INVALID -j drop_invalid
+ $IPTABLES -A INPUT -m conntrack --ctstate INVALID -j drop_invalid
+ $IPTABLES -A FORWARD -m conntrack --ctstate INVALID -j drop_invalid
+ $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy
  #

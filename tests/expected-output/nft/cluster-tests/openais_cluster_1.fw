@@ -278,6 +278,8 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 0 (eth0)
         #
@@ -286,7 +288,8 @@ table ip fwf_filter {
         # Rule 1 (eth0)
         #
         # anti spoofing rule
-        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new counter log prefix "RULE 1 -- DENY " level info drop
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new limit rate 10/second counter log prefix "RULE 1 -- DENY " level info
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new counter drop
         #
         # Rule 2 (lo)
         #
@@ -304,7 +307,8 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        counter log prefix "RULE 7 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 7 -- DENY " level info
+        counter drop
         #
         # Rule 8 (global)
         #
@@ -312,21 +316,26 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        ct state new counter log prefix "RULE 9 -- DENY " level info drop
+        ct state new limit rate 10/second counter log prefix "RULE 9 -- DENY " level info
+        ct state new counter drop
         #
         # Rule 10 (global)
         #
-        counter log prefix "RULE 10 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 10 -- DENY " level info
+        counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 1 (eth0)
         #
         # anti spoofing rule
-        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new counter log prefix "RULE 1 -- DENY " level info drop
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new limit rate 10/second counter log prefix "RULE 1 -- DENY " level info
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new counter drop
         #
         # Rule 4 (global)
         #
@@ -340,16 +349,20 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        ct state new counter log prefix "RULE 9 -- DENY " level info drop
+        ct state new limit rate 10/second counter log prefix "RULE 9 -- DENY " level info
+        ct state new counter drop
         #
         # Rule 10 (global)
         #
-        counter log prefix "RULE 10 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 10 -- DENY " level info
+        counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 0 (eth0)
         #
@@ -369,7 +382,8 @@ table ip fwf_filter {
         #
         # Firewall uses one of the machines
         # on internal network for DNS
-        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new limit rate 10/second counter log prefix "RULE 5 -- ACCEPT " level info
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter accept
         #
         # Rule 6 (global)
         #
@@ -377,7 +391,8 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        ip daddr { 172.24.0.1, 192.168.1.1 } counter log prefix "RULE 7 -- DENY " level info drop
+        ip daddr { 172.24.0.1, 192.168.1.1 } limit rate 10/second counter log prefix "RULE 7 -- DENY " level info
+        ip daddr { 172.24.0.1, 192.168.1.1 } counter drop
         #
         # Rule 8 (global)
         #
@@ -385,11 +400,13 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        ct state new counter log prefix "RULE 9 -- DENY " level info drop
+        ct state new limit rate 10/second counter log prefix "RULE 9 -- DENY " level info
+        ct state new counter drop
         #
         # Rule 10 (global)
         #
-        counter log prefix "RULE 10 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 10 -- DENY " level info
+        counter drop
     }
 }
 

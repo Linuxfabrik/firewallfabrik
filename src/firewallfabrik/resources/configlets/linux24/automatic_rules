@@ -26,6 +26,8 @@
 ## $nlgroup                   (NFLOG --nflog-group)
 ## $qthreshold                (NFLOG --nflog-threshold)
 ## $invalid_match_log_prefix  (LOG --log-prefix)
+## $drop_invalid_log_match    the drop_invalid chain, plus the limit match when
+##                            the logging limit is on
 ##
 ## Conditional statements use the following variables:
 ##
@@ -119,17 +121,17 @@
 {{endif}}
 
 {{if use_nflog}}
-{{$begin_rule}} {{$prefix_drop_invalid}} -j NFLOG --nflog-group {{$nlgroup}} --nflog-prefix {{$invalid_match_log_prefix}} {{if use_cprange}}--nflog-size {{$cprange}}{{endif}} {{if use_qthreshold}}--nflog-threshold {{$qthreshold}}{{endif}}{{$end_rule}}
+{{$begin_rule}} {{$drop_invalid_log_match}} -j NFLOG --nflog-group {{$nlgroup}} --nflog-prefix {{$invalid_match_log_prefix}} {{if use_cprange}}--nflog-size {{$cprange}}{{endif}} {{if use_qthreshold}}--nflog-threshold {{$qthreshold}}{{endif}}{{$end_rule}}
 {{endif}}
 
 {{if not_use_nflog}}
 
 {{if use_ulog}}
-{{$begin_rule}} {{$prefix_drop_invalid}} -j ULOG {{if use_nlgroup}}--ulog-nlgroup {{$nlgroup}}{{endif}} {{if use_cprange}}--ulog-cprange {{$cprange}}{{endif}} {{if use_qthreshold}}--ulog-qthreshold {{$qthreshold}}{{endif}} --ulog-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
+{{$begin_rule}} {{$drop_invalid_log_match}} -j ULOG {{if use_nlgroup}}--ulog-nlgroup {{$nlgroup}}{{endif}} {{if use_cprange}}--ulog-cprange {{$cprange}}{{endif}} {{if use_qthreshold}}--ulog-qthreshold {{$qthreshold}}{{endif}} --ulog-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
 {{endif}}
 
 {{if not_use_ulog}}
-{{$begin_rule}} {{$prefix_drop_invalid}} -j LOG --log-level debug --log-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
+{{$begin_rule}} {{$drop_invalid_log_match}} -j LOG --log-level debug --log-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
 {{endif}}
 
 {{endif}}

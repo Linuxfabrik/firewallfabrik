@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): the generated script offers `reload_address_table`, `add_to_address_table`, `remove_from_address_table` and `test_address_table`, with the same arguments and the same answers as the iptables script, so a block list can be kept up to date without recompiling the firewall.
 * Compiler (nftables): the generated script says which nftables release it was compiled for, the way the iptables script has always said its own.
 
+### Changed
+
+* A firewall that does not set "Drop packets that are associated with no known connection" drops and logs such packets (conntrack state INVALID) with the prefix "INVALID state -- DENY", instead of letting them reach the catch-all rule and show up as its policy hit. A stateless rule no longer accepts them. This covers firewalls imported from Firewall Builder that never saved these settings; uncheck both options to keep the old behaviour.
+* A firewall that does not set a logging limit logs at no more than 10 messages per second, for rules that log and for packets in state INVALID. Set the limit to 0 to log without one.
+
 ### Fixed
 
 * Data file: a rule of a hand-written `.fwf` file that names no position is numbered by its place in the file. Every rule of such a rule set used to be rule 0, so the generated script named the wrong rule in every message and the shadowing check reported a rule as shadowing itself.

@@ -154,7 +154,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Script | Configure bridge interfaces: Creates bridge interfaces using “ip link add type bridge” and assigns member interfaces with “ip link set master”. | `configure_bridge_interfaces` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Script | Configure interfaces: Uses “ip addr add” and “ip addr del” to configure IP addresses on firewall interfaces exactly as defined in the firewall object. | `configure_interfaces` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Script | Turn debugging on: The generated script runs with “set -x”, causing every shell command to be printed to stderr. Warning: produces a lot of output. | `debug` | on/off (`true` / `false`) | `false` | iptables, nftables |
-| Compiler | Drop packets that are associated with no known connection | `drop_invalid` | on/off (`true` / `false`) | `false` | iptables, nftables |
+| Compiler | Drop packets that are associated with no known connection | `drop_invalid` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Prolog/Epilog | Epilog - The following commands will be added verbatim after generated configuration | `epilog_script` | multi-line string | `''` | iptables, nftables |
 | Installer | Directory on the firewall where script should be installed | `firewall_dir` | string | `/etc` | iptables, nftables |
 | Compiler | Assume firewall is part of 'any' | `firewall_is_part_of_any_and_networks` | on/off (`true` / `false`) | `true` | iptables, nftables |
@@ -164,11 +164,11 @@ The following tables list every setting from the firewall settings dialogs and t
 | Installer | Command line options for the script: | `installScriptArgs` | string | `''` | iptables, nftables |
 | IPv6 | The order in which ipv4 and ipv6 rules should be generated: | `ipv4_6_order` | one of: `ipv4_first`, `ipv6_first` | `ipv4_first` | iptables, nftables |
 | Logging | Logging limit: | `limit_suffix` | one of: `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables, nftables |
-| Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `0` | iptables, nftables |
+| Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `10` | iptables, nftables |
 | Script | Load iptables modules: Uses modprobe to load required netfilter kernel modules (connection tracking, NAT). Already loaded modules are skipped automatically. | `load_modules` | on/off (`true` / `false`) | `true` | iptables |
 | Compiler | Enable support for NAT of locally originated connections | `local_nat` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Logging | Activate logging in all rules (overrides rule options, use for debugging) | `log_all` | on/off (`true` / `false`) | `false` | iptables, nftables |
-| Compiler | and log them | `log_invalid` | on/off (`true` / `false`) | `false` | iptables, nftables |
+| Compiler | and log them | `log_invalid` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Logging | log IP options | `log_ip_opt` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Logging | Log level: | `log_level` | one of: ``, `alert`, `crit`, `debug`, `emerg`, `error`, `info`, `notice`, `warning` | `info` | iptables, nftables |
 | Logging | Log prefix: | `log_prefix` | string | `RULE %N -- %A ` | iptables, nftables |

@@ -386,7 +386,7 @@ INVALID).</string>
               <string>and log them</string>
              </property>
              <property name="toolTip">
-              <string>Log packets in INVALID conntrack state before dropping them. Only effective when
+              <string>Log packets in INVALID conntrack state before dropping them, at no more than the logging limit. Only effective when
 "Drop packets associated with no known connection" is also enabled.</string>
              </property>
             </widget>
@@ -1313,7 +1313,7 @@ via NFLOG.</string>
           <number>10000</number>
          </property>
          <property name="toolTip">
-          <string>Maximum number of log messages per time unit. Set to 0 to disable rate limiting.</string>
+          <string>Maximum number of log messages per time unit, for rules that log and for packets in INVALID conntrack state. Set to 0 to disable rate limiting.</string>
          </property>
         </widget>
        </item>

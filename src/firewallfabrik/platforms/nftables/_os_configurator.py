@@ -31,6 +31,7 @@ from firewallfabrik.driver._interface_properties import (
 from firewallfabrik.platforms.linux._netfilter import (
     INVALID_STATE_LOG_PREFIX,
     forwarding_is_off,
+    get_invalid_log_limit,
     get_log_copy_range,
     get_log_netlink_group,
     get_log_queue_threshold,
@@ -213,10 +214,23 @@ class OSConfigurator_nft(OSConfigurator):
         # net/netfilter/nf_conntrack_proto_icmpv6.c, noct_valid_new). Only a
         # truncated one, or one with a bad checksum in prerouting, is
         # INVALID, and the discovery rule accepts it first, as on iptables.
+        # A rate-limited log cannot share the rule with the drop: `limit`
+        # is a match, so a packet above the rate would skip the whole rule
+        # (NFT_BREAK in linux net/netfilter/nft_limit.c) and go on to the
+        # policy. It gets a rule of its own, the way the
+        # iptables configlet logs in the drop_invalid chain before its DROP.
         drop_invalid = self.fw.get_option('drop_invalid')
         log_invalid = self.fw.get_option('log_invalid')
         if drop_invalid and (forwards or not in_forward):
-            if log_invalid:
+            limit = get_invalid_log_limit(self) if log_invalid else None
+            if limit:
+                rate, unit = limit
+                rules.append(
+                    f'        ct state invalid limit rate {rate}/{unit} '
+                    f'counter {self._invalid_log()}'
+                )
+                rules.append('        ct state invalid counter drop')
+            elif log_invalid:
                 rules.append(
                     f'        ct state invalid counter {self._invalid_log()} drop'
                 )

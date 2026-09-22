@@ -200,7 +200,7 @@ options:
 
   drop_invalid:
     type: 'bool'
-    default: false
+    default: true
     supported: true
     widget: 'dropInvalid'
     description: >-
@@ -303,12 +303,13 @@ options:
 
   limit_value:
     type: 'int'
-    default: 0
+    default: 10
     supported: true
     widget: 'logLimitVal'
     description: >-
-      Maximum number of log messages per time unit.
-      Set to 0 to disable rate limiting.
+      Maximum number of log messages per time unit, for rules that
+      log and for packets in INVALID conntrack state. Set to 0 to
+      disable rate limiting.
 
   load_modules:
     type: 'bool'
@@ -339,13 +340,13 @@ options:
 
   log_invalid:
     type: 'bool'
-    default: false
+    default: true
     supported: true
     widget: 'logInvalid'
     description: >-
-      Log packets in INVALID conntrack state before dropping them.
-      Only effective when "Drop packets associated with no known
-      connection" is also enabled.
+      Log packets in INVALID conntrack state before dropping them,
+      at no more than the logging limit. Only effective when "Drop
+      packets associated with no known connection" is also enabled.
 
   log_ip_opt:
     type: 'bool'

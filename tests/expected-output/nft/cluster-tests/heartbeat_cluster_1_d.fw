@@ -293,6 +293,8 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 2 (global)
         #
@@ -308,12 +310,15 @@ table ip fwf_filter {
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        counter log prefix "RULE 12 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 12 -- DENY " level info
+        counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 11 (global)
         #
@@ -323,12 +328,15 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
         # Rule 3 (global)
         #
         # Firewall uses one of the machines
         # on internal network for DNS
-        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter log prefix "RULE 3 -- ACCEPT " level info accept
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new limit rate 10/second counter log prefix "RULE 3 -- ACCEPT " level info
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter accept
         #
         # Rule 4 (global)
         #
@@ -353,7 +361,8 @@ table ip fwf_filter {
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        ip daddr 192.168.1.254 counter log prefix "RULE 12 -- DENY " level info drop
+        ip daddr 192.168.1.254 limit rate 10/second counter log prefix "RULE 12 -- DENY " level info
+        ip daddr 192.168.1.254 counter drop
     }
 }
 
