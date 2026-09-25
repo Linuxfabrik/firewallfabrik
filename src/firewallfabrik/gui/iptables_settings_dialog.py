@@ -58,6 +58,21 @@ _VERSION_GATED_WIDGETS = {
 }
 
 
+def _select_combo_text(combo, value):
+    """Select *value* in *combo*, adding it if the list does not offer it.
+
+    The combo's text is written back on OK, so falling back to the first
+    entry would silently change an option the user never touched, for
+    example a value written by Firewall Builder or by hand.
+    """
+    value = str(value or '')
+    idx = combo.findText(value)
+    if idx < 0:
+        combo.addItem(value)
+        idx = combo.count() - 1
+    combo.setCurrentIndex(idx)
+
+
 class IptablesSettingsDialog(QDialog):
     """Modal dialog for iptables firewall settings."""
 
@@ -174,11 +189,7 @@ class IptablesSettingsDialog(QDialog):
                 val = str(opts[widget_name]).lower() == 'true'
             else:
                 val = bool(default)
-            # acceptSessions checkbox has inverted semantics:
-            if entry.get('inverted', False):
-                widget.setChecked(not val)
-            else:
-                widget.setChecked(val)
+            widget.setChecked(val)
 
         # Line edits — read canonical key, fall back to widget name.
         for widget_name, key in _LINE_EDIT_MAP.items():
@@ -213,9 +224,10 @@ class IptablesSettingsDialog(QDialog):
         self._update_log_stack()
 
         # Log level combo
-        level = opts.get('log_level', _SCHEMA['log_level']['default'])
-        idx = self.logLevel.findText(level)
-        self.logLevel.setCurrentIndex(max(idx, 0))
+        _select_combo_text(
+            self.logLevel,
+            opts.get('log_level', _SCHEMA['log_level']['default']),
+        )
 
         # Logging limit
         default_limit = _SCHEMA['limit_value']['default']
@@ -225,15 +237,16 @@ class IptablesSettingsDialog(QDialog):
         except (ValueError, TypeError):
             self.logLimitVal.setValue(int(default_limit))
 
-        default_suffix = _SCHEMA['limit_suffix']['default']
-        limit_suffix = opts.get('limit_suffix', default_suffix)
-        idx = self.logLimitSuffix.findText(limit_suffix)
-        self.logLimitSuffix.setCurrentIndex(max(idx, 0))
+        _select_combo_text(
+            self.logLimitSuffix,
+            opts.get('limit_suffix', _SCHEMA['limit_suffix']['default']),
+        )
 
         # Action on reject combo
-        action = opts.get('action_on_reject', '')
-        idx = self.actionOnReject.findText(action)
-        self.actionOnReject.setCurrentIndex(max(idx, 0))
+        _select_combo_text(
+            self.actionOnReject,
+            opts.get('action_on_reject', _SCHEMA['action_on_reject']['default']),
+        )
 
         # NFLOG spin boxes
         self.cprange.setValue(
@@ -263,13 +276,9 @@ class IptablesSettingsDialog(QDialog):
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            entry = _SCHEMA.get(key, {})
             # Store as Python bool (not string) so that raw
             # ``options.get(key, False)`` in the compiler works correctly.
-            if entry.get('inverted', False):
-                opts[key] = not widget.isChecked()
-            else:
-                opts[key] = widget.isChecked()
+            opts[key] = widget.isChecked()
             # Clean up stale widget-name key.
             if widget_name != key:
                 opts.pop(widget_name, None)

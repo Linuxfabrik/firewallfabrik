@@ -140,7 +140,7 @@ The following tables list every setting from the firewall settings dialogs and t
 |---|---|---|---|---|---|
 | Compiler | Accept ESTABLISHED and RELATED packets before the first rule | `accept_established` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Compiler | Accept TCP sessions opened prior to firewall restart | `accept_new_tcp_with_no_syn` | on/off (`true` / `false`) | `true` | iptables, nftables |
-| Compiler | Default action on 'Reject': | `action_on_reject` | one of: `ICMP admin prohibited`, `ICMP host prohibited`, `ICMP host unreachable`, `ICMP net prohibited`, `ICMP net unreachable`, `ICMP port unreachable`, `ICMP protocol unreachable`, `TCP RST` | `''` | iptables, nftables |
+| Compiler | Default action on 'Reject': | `action_on_reject` | one of: ``, `ICMP admin prohibited`, `ICMP host prohibited`, `ICMP host unreachable`, `ICMP net prohibited`, `ICMP net unreachable`, `ICMP port unreachable`, `ICMP protocol unreachable`, `TCP RST` | `''` | iptables, nftables |
 | Installer | A command that installer should execute on the firewall in order to activate the policy (if this field is blank, installer runs firewall script in the directory specified above; it uses sudo if user name is not 'root') | `activationCmd` | string | `''` | iptables, nftables |
 | Compiler | Add rules to accept IPv6 Neighbor Discovery packets to IPv6 policies | `add_rules_for_ipv6_neighbor_discovery` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Installer | User name used to authenticate to the firewall | `admUser` | string | `''` | iptables, nftables |
@@ -163,7 +163,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Installer | Policy install script (using built-in installer if this field is blank): | `installScript` | string | `''` | iptables, nftables |
 | Installer | Command line options for the script: | `installScriptArgs` | string | `''` | iptables, nftables |
 | IPv6 | The order in which ipv4 and ipv6 rules should be generated: | `ipv4_6_order` | one of: `ipv4_first`, `ipv6_first` | `ipv4_first` | iptables, nftables |
-| Logging | Logging limit: | `limit_suffix` | one of: `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables, nftables |
+| Logging | Logging limit: | `limit_suffix` | one of: ``, `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables, nftables |
 | Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `10` | iptables, nftables |
 | Script | Load iptables modules: Uses modprobe to load required netfilter kernel modules (connection tracking, NAT). Already loaded modules are skipped automatically. | `load_modules` | on/off (`true` / `false`) | `true` | iptables |
 | Compiler | Enable support for NAT of locally originated connections | `local_nat` | on/off (`true` / `false`) | `false` | iptables, nftables |

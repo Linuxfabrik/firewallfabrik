@@ -38,7 +38,6 @@ Each option entry contains:
 | `placeholder` | (str only) Placeholder text for the GUI when `default` is empty |
 | `description` | Human-readable description, used as GUI tooltip |
 | `values` | (enum only) List of allowed values |
-| `inverted` | (bool only) Whether the checkbox has inverted semantics |
 | `label` | (linux only) Associated QLabel widget name, for disabling |
 | `nftables_supported` | (linux only) Whether the option is relevant for nftables — the editor greys the field out when it is false, so it has to be true for anything the generated nftables script uses |
 

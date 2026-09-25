@@ -305,8 +305,7 @@ list and report a warning.</string>
             <string>Accept TCP sessions opened prior to firewall restart</string>
            </property>
            <property name="toolTip">
-            <string>Accept TCP sessions opened prior to firewall restart. The checkbox label shows
-inverted semantics ("Drop new TCP sessions that do not begin with SYN flag").</string>
+            <string>Accept TCP packets in conntrack state NEW that do not carry the SYN flag, so connections opened before the firewall restart keep working. When off, these packets are dropped.</string>
            </property>
           </widget>
          </item>

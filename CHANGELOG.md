@@ -8,7 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+* Editor (iptables, nftables): "Accept TCP sessions opened prior to firewall restart" shows and saves what its label says instead of the opposite ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177)).
+* Editor (iptables, nftables): saving the platform settings no longer changes the default action on Reject or the logging limit unit when they were left alone ([#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178)).
 
 
 ## [v3.1.0] - 2026-09-22
