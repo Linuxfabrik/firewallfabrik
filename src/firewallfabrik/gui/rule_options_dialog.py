@@ -19,15 +19,16 @@ from PySide6.QtWidgets import QWidget
 
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.ui_loader import FWFUiLoader
+from firewallfabrik.platforms.linux._netfilter import normalize_hashlimit_mode
 
 # Widget name → options key mapping.
 # Combo boxes store the selected *text*; spin boxes store the *value*;
 # check boxes store a boolean; line edits store a string.
 _CHECKBOX_WIDGETS = {
-    'cb_dstip': 'hashlimit_dstip',
-    'cb_dstport': 'hashlimit_dstport',
-    'cb_srcip': 'hashlimit_srcip',
-    'cb_srcport': 'hashlimit_srcport',
+    'cb_dstip': 'hashlimit_mode_dstip',
+    'cb_dstport': 'hashlimit_mode_dstport',
+    'cb_srcip': 'hashlimit_mode_srcip',
+    'cb_srcport': 'hashlimit_mode_srcport',
     'ipt_connlimit_above_not': 'connlimit_above_not',
     'ipt_continue': 'ipt_continue',
     'ipt_hashlimit_dstlimit': 'hashlimit_dstlimit',
@@ -67,6 +68,16 @@ _SPINBOX_WIDGETS = {
     'ipt_nlgroup': 'ulog_nlgroup',
 }
 
+# The hashlimit mode checkboxes, keyed like Firewall Builder's
+# ``hashlimit_mode_<mode>`` (``RuleOptionsDialog.cpp``).  The compilers also
+# read the v2.1 string ``hashlimit_mode``, which overrides the four, and the
+# ``hashlimit_<mode>`` spelling earlier fwf releases wrote.
+_HASHLIMIT_MODES = ('dstip', 'dstport', 'srcip', 'srcport')
+
+# Combos Firewall Builder fills with the firewall's interfaces
+# (``RuleOptionsDialog::fillInterfaces``) instead of a fixed list.
+_INTERFACE_COMBOS = ('ipt_iif', 'ipt_oif')
+
 # The combo box for "assume fw is part of any" uses index → stored value.
 _FW_PART_OF_ANY_VALUES = {0: '', 1: '1', 2: '0'}
 _FW_PART_OF_ANY_REVERSE = {'': 0, '1': 1, '0': 2}
@@ -86,6 +97,16 @@ class RuleOptionsPanel(QWidget):
         self._rule_id = None
         self._loading = False
         self._signals_connected = False
+
+        # The items each fixed-list combo has in the .ui file, so that a
+        # value added for one rule does not linger for the next.
+        self._combo_items = {}
+        for widget_name in _COMBO_WIDGETS:
+            widget = getattr(self, widget_name, None)
+            if widget is not None and widget_name not in _INTERFACE_COMBOS:
+                self._combo_items[widget_name] = [
+                    widget.itemText(i) for i in range(widget.count())
+                ]
 
         # Route tab interaction: "Continue" disables iif and tee.
         if hasattr(self, 'ipt_continue'):
@@ -110,6 +131,7 @@ class RuleOptionsPanel(QWidget):
         self._loading = True
         try:
             opts = self._read_rule_options()
+            interface_names = ['', *self._read_interface_names()]
 
             # Combo boxes.
             for widget_name, key in _COMBO_WIDGETS.items():
@@ -117,22 +139,39 @@ class RuleOptionsPanel(QWidget):
                 if widget is None:
                     continue
                 if key == 'firewall_is_part_of_any_and_networks':
-                    idx = _FW_PART_OF_ANY_REVERSE.get(str(opts.get(key, '')), 0)
+                    # Before v3 this was a checkbox.  Firewall Builder maps
+                    # the old "True" to on and "False" to the firewall's
+                    # setting (RuleOptionsDialog.cpp), as the compilers do.
+                    val = str(opts.get(key, '')).strip()
+                    val = {'True': '1', 'False': ''}.get(val, val)
+                    idx = _FW_PART_OF_ANY_REVERSE.get(val, 0)
                     widget.setCurrentIndex(idx)
+                elif widget_name in _INTERFACE_COMBOS:
+                    _fill_combo(widget, interface_names, opts.get(key, ''))
                 else:
-                    val = str(opts.get(key, ''))
-                    idx = widget.findText(val)
-                    if idx >= 0:
-                        widget.setCurrentIndex(idx)
-                    else:
-                        widget.setCurrentIndex(0)
+                    _fill_combo(
+                        widget, self._combo_items[widget_name], opts.get(key, '')
+                    )
 
             # Check boxes.
+            legacy_modes = {
+                normalize_hashlimit_mode(mode)
+                for mode in str(opts.get('hashlimit_mode', '') or '').split(',')
+                if mode.strip()
+            }
             for widget_name, key in _CHECKBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setChecked(_to_bool(opts.get(key)))
+                checked = _to_bool(opts.get(key))
+                mode = key.removeprefix('hashlimit_mode_')
+                if mode in _HASHLIMIT_MODES:
+                    if legacy_modes:
+                        # The v2.1 string is what the compilers use.
+                        checked = mode in legacy_modes
+                    else:
+                        checked = checked or _to_bool(opts.get(f'hashlimit_{mode}'))
+                widget.setChecked(checked)
 
             # Line edits.
             for widget_name, key in _LINEEDIT_WIDGETS.items():
@@ -183,6 +222,11 @@ class RuleOptionsPanel(QWidget):
             if widget is None:
                 continue
             opts[key] = widget.isChecked()
+        # The checkboxes now say what the rule keys on; the other spellings
+        # would override or add to them in the compilers.
+        opts.pop('hashlimit_mode', None)
+        for mode in _HASHLIMIT_MODES:
+            opts.pop(f'hashlimit_{mode}', None)
 
         # Line edits.
         for widget_name, key in _LINEEDIT_WIDGETS.items():
@@ -265,6 +309,39 @@ class RuleOptionsPanel(QWidget):
         tee = getattr(self, 'ipt_tee', None)
         if tee is not None:
             tee.setEnabled(not disabled)
+
+    def _read_interface_names(self):
+        """Return the sorted interface names of the rule's firewall.
+
+        Ports ``RuleOptionsDialog::fillInterfaces``: every interface below
+        the firewall except the loopback, and for a cluster also the member
+        interfaces its failover groups reference.
+        """
+        if self._model is None:
+            return []
+        from firewallfabrik.core.objects import Cluster, Interface, RuleSet
+
+        names = set()
+        with self._model._db_manager.session() as session:
+            rule_set = session.get(RuleSet, self._model.rule_set_id)
+            device = rule_set.device if rule_set is not None else None
+            if device is None:
+                return []
+            pending = list(device.interfaces)
+            while pending:
+                iface = pending.pop()
+                pending.extend(iface.sub_interfaces)
+                if iface.is_loopback():
+                    continue
+                names.add(iface.name)
+                group = iface.get_failover_group()
+                if isinstance(device, Cluster) and group is not None:
+                    names.update(
+                        member.name
+                        for member in group.get_members()
+                        if isinstance(member, Interface)
+                    )
+        return sorted(names)
 
     def _read_rule_options(self):
         """Read the full options dict from the database rule."""
@@ -350,6 +427,21 @@ class RuleOptionsPanel(QWidget):
             drop.objectDeleted.disconnect(self._on_widget_changed)
 
         self._signals_connected = False
+
+
+def _fill_combo(widget, items, value):
+    """Fill *widget* with *items* and select *value*.
+
+    The panel writes the combo's text back on every change, so a stored
+    value the list does not offer is added rather than replaced by the
+    first entry.
+    """
+    value = str(value or '')
+    widget.clear()
+    widget.addItems(items)
+    if value not in items:
+        widget.addItem(value)
+    widget.setCurrentIndex(widget.findText(value))
 
 
 def _to_bool(val):

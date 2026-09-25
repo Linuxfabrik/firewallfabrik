@@ -81,6 +81,10 @@ def has_nondefault_options(opts):
         'hashlimit_dstip',
         'hashlimit_dstlimit',
         'hashlimit_dstport',
+        'hashlimit_mode_dstip',
+        'hashlimit_mode_dstport',
+        'hashlimit_mode_srcip',
+        'hashlimit_mode_srcport',
         'hashlimit_srcip',
         'hashlimit_srcport',
         'ipt_continue',
@@ -94,6 +98,7 @@ def has_nondefault_options(opts):
     # Combo boxes (default: empty string)
     for key in (
         'firewall_is_part_of_any_and_networks',
+        'hashlimit_mode',
         'hashlimit_suffix',
         'ipt_iif',
         'ipt_oif',
