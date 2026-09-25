@@ -37,8 +37,9 @@ _TYPE_LABELS = {
 
 # The types an interface can have, from Firewall Builder's
 # ``res/os/linux24.xml`` (``interfaces/firewall`` and ``subinterfaces/<parent
-# type>``, read by ``setInterfaceTypes`` in ``libgui/platforms.cpp``).  A
-# parent without a list there offers its sub-interfaces no type.
+# type>``, read by ``setInterfaceTypes`` in ``libgui/platforms.cpp``), in
+# the order given there and deliberately not sorted.  A parent without a
+# list there offers its sub-interfaces no type.
 _INTERFACE_TYPES = ['ethernet', 'bridge', 'bonding']
 _SUBINTERFACE_TYPES = {
     'bonding': ['ethernet', '8021q', 'unknown'],
