@@ -24,11 +24,12 @@ from firewallfabrik.core.objects import AddressTable, get_address_table_source
 
 
 class _Firewall:
-    def __init__(self, data_dir: str) -> None:
+    def __init__(self, data_dir: str, key: str = 'linux24_data_dir') -> None:
         self._data_dir = data_dir
+        self._key = key
 
     def get_option(self, key, default=None):
-        return self._data_dir if key == 'linux24_data_dir' else ''
+        return self._data_dir if key == self._key else ''
 
 
 def _table(filename: str) -> AddressTable:
@@ -41,6 +42,14 @@ def _table(filename: str) -> AddressTable:
 def test_the_token_is_replaced_by_the_firewalls_data_directory():
     source = get_address_table_source(
         _table('%DATADIR%/blocked.txt'), _Firewall('/etc/fw')
+    )
+    assert source == '/etc/fw/blocked.txt'
+
+
+def test_a_firewall_imported_from_fwbuilder_uses_its_data_dir_key():
+    """linux24AdvancedDialog.cpp stores the setting as ``data_dir``."""
+    source = get_address_table_source(
+        _table('%DATADIR%/blocked.txt'), _Firewall('/etc/fw', key='data_dir')
     )
     assert source == '/etc/fw/blocked.txt'
 

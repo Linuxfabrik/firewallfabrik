@@ -105,8 +105,9 @@ class _Firewall:
         self._data_dir = data_dir
 
     def get_option(self, key, default=None):
-        assert key == 'linux24_data_dir'
-        return self._data_dir
+        # ``data_dir`` is fwbuilder's key, read when fwf's is unset.
+        assert key in ('data_dir', 'linux24_data_dir')
+        return self._data_dir if key == 'linux24_data_dir' else ''
 
 
 def test_a_data_file_below_the_data_directory():

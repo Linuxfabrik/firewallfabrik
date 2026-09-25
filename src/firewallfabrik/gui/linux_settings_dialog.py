@@ -24,6 +24,12 @@ _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'linuxsettingsdialog_q.ui'
 # Load the full option schema once at import time.
 _SCHEMA = get_os_defaults('linux24')
 
+# Options Firewall Builder stores under another key.  A firewall imported
+# from a .fwb file carries the fwbuilder key (``linux24AdvancedDialog.cpp``
+# registers the Data directory as ``data_dir``), so it is read as a
+# fallback and replaced by the fwf key on save.
+_FWBUILDER_KEYS = {'linux24_data_dir': 'data_dir'}
+
 # Build typed widget maps from the YAML schema.
 # canonical_key → widget_name (widget may differ from canonical key)
 _COMBOS: dict[str, str] = {}
@@ -199,6 +205,8 @@ class LinuxSettingsDialog(QDialog):
                     widget.setText(opts[key])
                 elif widget_name in opts and widget_name != key:
                     widget.setText(opts[widget_name])
+                elif _FWBUILDER_KEYS.get(key) in opts:
+                    widget.setText(str(opts[_FWBUILDER_KEYS[key]]))
                 else:
                     widget.setText('')
 
@@ -231,6 +239,8 @@ class LinuxSettingsDialog(QDialog):
                 opts[key] = widget.text()
                 if widget_name != key:
                     opts.pop(widget_name, None)
+                if key in _FWBUILDER_KEYS:
+                    opts.pop(_FWBUILDER_KEYS[key], None)
 
         # Reassign to trigger SQLAlchemy JSON mutation detection.
         self._fw.options = opts

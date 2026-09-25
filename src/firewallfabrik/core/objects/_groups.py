@@ -267,11 +267,16 @@ def get_address_table_source(at: AddressTable, fw=None) -> str:
 
     Without *fw* the token is left as it stands, which is what a caller
     that has no firewall at hand can say about it.
+
+    fwf stores the setting as ``linux24_data_dir``; a firewall imported
+    from a .fwb file and not saved from the settings dialog since still
+    carries fwbuilder's ``data_dir``.
     """
     filename = at.get_source_name()
     if '%DATADIR%' not in filename or fw is None:
         return filename
-    data_dir = str(fw.get_option('linux24_data_dir') or '').rstrip('/')
+    data_dir = fw.get_option('linux24_data_dir') or fw.get_option('data_dir')
+    data_dir = str(data_dir or '').rstrip('/')
     return filename.replace('%DATADIR%', data_dir) if data_dir else filename
 
 

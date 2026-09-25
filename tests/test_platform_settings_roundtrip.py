@@ -10,13 +10,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""The platform settings dialogs show and keep what the firewall stores.
+"""The platform and host OS settings dialogs keep what the firewall stores.
 
 Firewall Builder maps "Accept TCP sessions opened prior to firewall
 restart" 1:1 to ``accept_new_tcp_with_no_syn`` (``iptAdvancedDialog.cpp``)
 and offers an empty entry first in the reject and limit-suffix lists
 (``actionsOnReject`` / ``limitSuffixes`` in ``libgui/platforms.cpp``), so
-opening the dialog and clicking OK changes nothing.
+opening the dialog and clicking OK changes nothing.  Its host OS dialog
+stores the Data directory as ``data_dir`` (``linux24AdvancedDialog.cpp``).
 """
 
 import os
@@ -35,6 +36,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 # import through `device_dialogs`.
 import firewallfabrik.gui.ui_loader  # noqa: F401
 from firewallfabrik.gui.iptables_settings_dialog import IptablesSettingsDialog
+from firewallfabrik.gui.linux_settings_dialog import LinuxSettingsDialog
 from firewallfabrik.gui.nftables_settings_dialog import NftablesSettingsDialog
 
 _DIALOGS = [IptablesSettingsDialog, NftablesSettingsDialog]
@@ -86,3 +88,13 @@ def test_an_untouched_dialog_keeps_the_combo_options(dialog_class, options):
     dialog_class(fw).accept()
     for key, value in options.items():
         assert fw.options[key] == value
+
+
+def test_the_linux_dialog_takes_over_fwbuilders_data_dir_key():
+    fw = _Firewall({'data_dir': '/etc/fw'})
+    dlg = LinuxSettingsDialog(fw, platform='iptables')
+    assert dlg.linux24_data_dir.text() == '/etc/fw'
+    dlg.accept()
+    assert fw.options['linux24_data_dir'] == '/etc/fw'
+    assert 'data_dir' not in fw.options
+
