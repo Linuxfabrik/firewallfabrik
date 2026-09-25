@@ -35,12 +35,15 @@ from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 logger = logging.getLogger(__name__)
 
-# Failover protocol types for Linux.
+# Failover protocol types for Linux, in the order of Firewall Builder's
+# ``res/os/linux24.xml`` (``protocols/failover``) and deliberately not
+# sorted: a group without a known type gets the first one, as in
+# ``ClusterGroupDialog::loadFWObject``.
 _FAILOVER_TYPES = [
-    ('heartbeat', 'heartbeat'),
-    ('none', 'None'),
-    ('openais', 'OpenAIS'),
     ('vrrp', 'VRRP'),
+    ('heartbeat', 'heartbeat'),
+    ('openais', 'OpenAIS'),
+    ('none', 'None'),
 ]
 
 # State sync protocol types for Linux.
