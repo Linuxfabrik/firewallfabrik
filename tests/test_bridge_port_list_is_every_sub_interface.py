@@ -25,9 +25,7 @@ import pytest
 
 pytest.importorskip('PySide6', reason='the GUI extra is not installed')
 
-from firewallfabrik.gui.iface_opts_dialog import (
-    _DEVICE_TYPES as IFACE_TYPE_ITEMS,
-)
+from firewallfabrik.gui.iface_opts_dialog import _TYPE_LABELS
 
 
 def _bridge_block(platform, bridge_ports):
@@ -63,7 +61,7 @@ class _Firewall:
 
 def test_the_editor_spells_a_vlan_interface_8021q():
     """The token the dropped filter asked for was never written."""
-    stored = {value for _label, value in IFACE_TYPE_ITEMS}
+    stored = set(_TYPE_LABELS)
     assert '8021q' in stored
     assert 'vlan' not in stored
 
