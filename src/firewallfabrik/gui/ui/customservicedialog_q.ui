@@ -53,7 +53,7 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="1" colspan="2">
+           <item row="0" column="1" colspan="3">
             <widget class="QLineEdit" name="obj_name"/>
            </item>
            <item row="1" column="0">
@@ -63,7 +63,7 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1" colspan="2">
+           <item row="1" column="1" colspan="3">
             <widget class="QComboBox" name="platform">
              <property name="toolTip">
               <string>Custom service object has separate code string for each supported firewall
@@ -78,7 +78,7 @@ platform.</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1" colspan="2">
+           <item row="2" column="1" colspan="3">
             <widget class="QLineEdit" name="code">
              <property name="toolTip">
               <string>Custom service object has separate code string for each supported firewall
@@ -93,7 +93,7 @@ platform.</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1" colspan="2">
+           <item row="3" column="1" colspan="3">
             <widget class="QComboBox" name="protocol">
              <property name="toolTip">
               <string>Choose one of the standard protocols from the menu or enter a custom protocol
@@ -126,6 +126,17 @@ protocol-specific parameters to the generated configuration.</string>
             <widget class="QRadioButton" name="ipv6">
              <property name="text">
               <string>IPv6</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QRadioButton" name="ipv4_and_ipv6">
+             <property name="toolTip">
+              <string>Use the code in the IPv4 and in the IPv6 rules. IPv4 or IPv6 leaves the service
+out of the rules of the other address family.</string>
+             </property>
+             <property name="text">
+              <string>IPv4 and IPv6</string>
              </property>
             </widget>
            </item>
@@ -177,6 +188,7 @@ protocol-specific parameters to the generated configuration.</string>
   <tabstop>protocol</tabstop>
   <tabstop>ipv4</tabstop>
   <tabstop>ipv6</tabstop>
+  <tabstop>ipv4_and_ipv6</tabstop>
  </tabstops>
  <resources>
   <include location="MainRes.qrc"/>

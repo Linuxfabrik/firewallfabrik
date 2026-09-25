@@ -1536,7 +1536,7 @@ The Custom Service dialog provides the following controls:
 - **Platform:** This is a pull-down menu that shows a list of all firewall platform targets available in FirewallFabrik.
 - **Code String:** This is a line of code in the target firewall language. (This is the heart of the custom service object.)
 - **Protocol Name:** Use this option if you want to restrict the custom service object to a particular protocol: TCP, UDP, or ICMP. Default is "any". For example, if this field is set to "tcp", then policy compiler for iptables generates command with parameter "-p tcp" and then inserts code defined in the "Code String" field of the custom service object.
-- **Address Family:** Specify IPv4 or IPv6. Policy compilers use information about address family to properly use the object while compiling IPv4 or IPv6 rule sets.
+- **Address Family:** Specify IPv4, IPv6, or IPv4 and IPv6. Policy compilers use the address family to decide whether the object goes into the IPv4 rules, the IPv6 rules, or both.
 - **Comments:** This is a free-style text field used for comments.
 
 #### Using Custom Service Object in Rules

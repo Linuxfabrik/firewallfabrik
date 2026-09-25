@@ -75,12 +75,17 @@ class CustomServiceDialog(BaseObjectDialog):
         else:
             self.protocol.setEditText(proto)
 
-        # Address family
+        # Address family.  No family means both to the compilers, which is
+        # what a service created here and a .fwb object without the
+        # attribute carry.  Firewall Builder itself has only IPv4 or IPv6
+        # (CustomService.cpp) and reads a missing attribute as IPv4.
         af = self._obj.custom_address_family
         if af == socket.AF_INET6:
             self.ipv6.setChecked(True)
-        else:
+        elif af == socket.AF_INET:
             self.ipv4.setChecked(True)
+        else:
+            self.ipv4_and_ipv6.setChecked(True)
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
@@ -90,9 +95,12 @@ class CustomServiceDialog(BaseObjectDialog):
         self._obj.codes = dict(self._all_codes) if self._all_codes else None
 
         self._obj.protocol = self.protocol.currentText() or 'any'
-        self._obj.custom_address_family = (
-            socket.AF_INET6 if self.ipv6.isChecked() else socket.AF_INET
-        )
+        if self.ipv6.isChecked():
+            self._obj.custom_address_family = socket.AF_INET6
+        elif self.ipv4.isChecked():
+            self._obj.custom_address_family = socket.AF_INET
+        else:
+            self._obj.custom_address_family = None
 
     def _on_platform_changed(self, _index):
         """Save the code for the old platform, load for the new one."""
