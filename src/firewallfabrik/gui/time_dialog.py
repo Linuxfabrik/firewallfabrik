@@ -14,6 +14,7 @@
 
 from PySide6.QtCore import QTime
 
+from firewallfabrik.compiler._interval_helpers import parse_interval_data
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 # Map day-of-week index (0=Sun, fwbuilder convention) to the checkbox
@@ -59,12 +60,14 @@ class TimeDialog(BaseObjectDialog):
             QTime.fromString(end_time, 'HH:mm') if end_time else QTime(23, 59)
         )
 
-        days_str = data.get('days_of_week', '')
-        active_days = set(days_str.split(',')) if days_str else set()
+        # The compilers' reading, which falls back to the first/last
+        # weekday pair older Firewall Builder files carry
+        # (Interval::getDaysOfWeek).
+        active_days = set(parse_interval_data(data)[4])
         for idx, cb_name in _DOW_CHECKBOXES.items():
             cb = getattr(self, cb_name, None)
             if cb:
-                cb.setChecked(str(idx) in active_days)
+                cb.setChecked(idx in active_days)
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
@@ -78,9 +81,11 @@ class TimeDialog(BaseObjectDialog):
             'from_date',
             'from_hour',
             'from_minute',
+            'from_weekday',
             'to_date',
             'to_hour',
             'to_minute',
+            'to_weekday',
         ):
             data.pop(key, None)
 
