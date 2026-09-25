@@ -8,21 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.2.0] - 2026-09-25
+
+**Highlights:** Several editor dialogs changed settings on a plain OK or showed them inverted, and now keep what is stored. If you ticked "Accept TCP sessions opened prior to firewall restart", check it again: it was saved inverted.
+
 ### Added
 
-* Editor: Time objects can be limited to a start and an end date, as in Firewall Builder.
+* Editor: Time objects can have a start and an end date.
 
 ### Fixed
 
-* Compiler (iptables, nftables): an address table read on the firewall finds its file below the Data directory of a firewall imported from Firewall Builder, and the Host OS settings show that directory.
-* Editor (iptables, nftables): "Accept TCP sessions opened prior to firewall restart" shows and saves what its label says instead of the opposite ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177)).
-* Editor (iptables, nftables): checkboxes in the platform settings and the rule set dialog show a value a Firewall Builder file stores on a line of its own, instead of clearing or setting it on save.
-* Editor (iptables, nftables): saving the platform settings no longer changes the default action on Reject or the logging limit unit when they were left alone ([#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178)).
-* Editor (iptables, nftables): the Rule Options panel offers the firewall's interfaces and keeps the interface, hashlimit mode and "firewall is part of any" setting a rule already has when something else is edited.
-* Editor: a Custom Service can be set to IPv4 and IPv6, and one that applies to both is no longer turned into IPv4 only when it is edited.
-* Editor: a failover group without a known protocol falls back to VRRP, as in Firewall Builder, instead of heartbeat.
-* Editor: the Time editor shows the weekdays of an interval from an older Firewall Builder file.
-* Editor: the interface settings offer the types Firewall Builder offers for the interface and no longer turn a sub-interface of type "unknown" under a bridge or bond into one of its ports.
+* Compiler (iptables, nftables): run-time address tables of a firewall imported from Firewall Builder find the Data directory set there.
+* Editor (iptables, nftables): "Accept TCP sessions opened prior to firewall restart" is no longer inverted, and settings you did not touch stay as they are on save ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177), [#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178)).
+* Editor (iptables, nftables): Rule Options keep the interface, hashlimit mode and "firewall is part of any" setting of a rule.
+* Editor: a Custom Service for IPv4 and IPv6 stays that way when edited.
+* Editor: a failover group without a known protocol falls back to VRRP, as in Firewall Builder.
+* Editor: the interface settings no longer turn an "unknown" sub-interface of a bridge or bond into one of its ports.
+* Editor: the Time editor shows the weekdays of intervals from older Firewall Builder files.
 
 
 ## [v3.1.0] - 2026-09-22
@@ -544,7 +549,8 @@ Initial public beta pre-release.
 * Standard service library expanded with the Wikipedia multi-service ports.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.2.0...HEAD
+[v3.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.1.0...v3.2.0
 [v3.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...v3.1.0
 [v3.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...v3.0.0
 [v2.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...v2.0.0
