@@ -12,9 +12,12 @@
 
 """Editor panel dialog for time/interval objects."""
 
-from PySide6.QtCore import QTime
+from PySide6.QtCore import QDate, QTime, Slot
 
-from firewallfabrik.compiler._interval_helpers import parse_interval_data
+from firewallfabrik.compiler._interval_helpers import (
+    parse_interval_data,
+    parse_interval_dates,
+)
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 # Map day-of-week index (0=Sun, fwbuilder convention) to the checkbox
@@ -30,9 +33,21 @@ _DOW_CHECKBOXES = {
 }
 
 
+# The calendar window: (checkbox, date edit, key prefix).  Firewall Builder
+# stores each end as from_/to_ day, month and year, -1 when unused
+# (TimeDialog::applyChanges).
+_DATE_WIDGETS = (
+    ('useStartDate', 'startDate', 'from'),
+    ('useEndDate', 'endDate', 'to'),
+)
+
+
 class TimeDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('timedialog_q.ui', parent)
+        # What each date showed after loading, so that saving an untouched
+        # editor leaves the stored day, month and year as they are.
+        self._loaded_dates = {}
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
@@ -59,6 +74,18 @@ class TimeDialog(BaseObjectDialog):
         self.endTime.setTime(
             QTime.fromString(end_time, 'HH:mm') if end_time else QTime(23, 59)
         )
+
+        for (use_name, date_name, _prefix), date in zip(
+            _DATE_WIDGETS, parse_interval_dates(data), strict=True
+        ):
+            use, edit = getattr(self, use_name), getattr(self, date_name)
+            use.setChecked(date is not None)
+            edit.setDate(
+                QDate(date.year, date.month, date.day)
+                if date is not None
+                else QDate.currentDate()
+            )
+            self._loaded_dates[date_name] = (use.isChecked(), edit.date())
 
         # The compilers' reading, which falls back to the first/last
         # weekday pair older Firewall Builder files carry
@@ -89,6 +116,16 @@ class TimeDialog(BaseObjectDialog):
         ):
             data.pop(key, None)
 
+        for use_name, date_name, prefix in _DATE_WIDGETS:
+            use, edit = getattr(self, use_name), getattr(self, date_name)
+            if (use.isChecked(), edit.date()) == self._loaded_dates.get(date_name):
+                continue
+            date = edit.date()
+            used = use.isChecked()
+            data[f'{prefix}_day'] = date.day() if used else -1
+            data[f'{prefix}_month'] = date.month() if used else -1
+            data[f'{prefix}_year'] = date.year() if used else -1
+
         active_days = []
         for idx, cb_name in _DOW_CHECKBOXES.items():
             cb = getattr(self, cb_name, None)
@@ -96,3 +133,22 @@ class TimeDialog(BaseObjectDialog):
                 active_days.append(str(idx))
         data['days_of_week'] = ','.join(active_days) if active_days else ''
         self._obj.data = data
+
+    def _set_read_only(self, read_only):
+        super()._set_read_only(read_only)
+        self._update_date_widgets()
+
+    def _update_date_widgets(self):
+        """A date can only be edited while its checkbox is ticked.
+
+        Ports ``TimeDialog::enableAllWidgets``.
+        """
+        read_only = self._is_read_only()
+        for use_name, date_name, _prefix in _DATE_WIDGETS:
+            getattr(self, date_name).setEnabled(
+                not read_only and getattr(self, use_name).isChecked()
+            )
+
+    @Slot()
+    def useStartOrEndDate(self):
+        self._update_date_widgets()

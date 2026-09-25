@@ -1608,9 +1608,11 @@ Time interval objects allow you to create a rule that only matches during certai
 
 ![Figure 5.129. Time Interval Dialog](img/obj-time-interval-dialog.png)
 
-Time intervals define recurring schedules based on time-of-day and days of the week. You can combine these options to create an object that represents, for example, Tuesday afternoons from 1 to 3 PM, or weekday work hours from 9 AM to 5 PM.
+Time intervals define recurring schedules based on time-of-day and days of the week, optionally limited to a calendar window. You can combine these options to create an object that represents, for example, Tuesday afternoons from 1 to 3 PM, or weekday work hours from 9 AM to 5 PM.
 
 - **Name:** This is the name of the object.
+- **Start date:** When ticked, the interval begins on this date at the start time. Leave it unticked for no start date.
+- **End date:** When ticked, the interval ends on this date at the end time. Leave it unticked for no end date. With a start or end date set, the start and end times belong to the dates instead of forming a daily window.
 - **Start time:** Indicates the beginning of the daily time window when the rule is active (HH:MM, 24-hour format).
 - **End time:** Indicates the end of the daily time window when the rule is active (HH:MM, 24-hour format). Can be earlier than the start time to define an overnight range (e.g. 22:00 to 06:00).
 - **Mon, Tue, Wed, Thu, Fri, Sat, Sun:** Indicates on which days of the week the time interval should be applicable. For example, if Mon is checked and Tue is not, then the time interval object will apply to Mondays, but not Tuesdays.

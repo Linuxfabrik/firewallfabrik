@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Editor: Time objects can be limited to a start and an end date, as in Firewall Builder.
+
 ### Fixed
 
 * Compiler (iptables, nftables): an address table read on the firewall finds its file below the Data directory of a firewall imported from Firewall Builder, and the Host OS settings show that directory.
