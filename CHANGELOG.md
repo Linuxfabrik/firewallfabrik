@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Compiler (iptables, nftables): an address table read on the firewall finds its file below the Data directory of a firewall imported from Firewall Builder, and the Host OS settings show that directory.
 * Editor (iptables, nftables): "Accept TCP sessions opened prior to firewall restart" shows and saves what its label says instead of the opposite ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177)).
+* Editor (iptables, nftables): checkboxes in the platform settings and the rule set dialog show a value a Firewall Builder file stores on a line of its own, instead of clearing or setting it on save.
 * Editor (iptables, nftables): saving the platform settings no longer changes the default action on Reject or the logging limit unit when they were left alone ([#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178)).
 * Editor (iptables, nftables): the Rule Options panel offers the firewall's interfaces and keeps the interface, hashlimit mode and "firewall is part of any" setting a rule already has when something else is edited.
 * Editor: the interface settings offer the types Firewall Builder offers for the interface and no longer turn a sub-interface of type "unknown" under a bridge or bond into one of its ports.

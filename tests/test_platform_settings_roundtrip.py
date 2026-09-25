@@ -98,3 +98,13 @@ def test_the_linux_dialog_takes_over_fwbuilders_data_dir_key():
     assert fw.options['linux24_data_dir'] == '/etc/fw'
     assert 'data_dir' not in fw.options
 
+
+@pytest.mark.parametrize('dialog_class', _DIALOGS)
+@pytest.mark.parametrize(('stored', 'checked'), [('\n  True\n', True), ('1', True)])
+def test_a_checkbox_reads_what_the_compiler_reads(dialog_class, stored, checked):
+    """Firewall Builder writes a value on a line of its own as well."""
+    fw = _Firewall({'drop_invalid': stored})
+    dlg = dialog_class(fw)
+    assert dlg.dropInvalid.isChecked() is checked
+    dlg.accept()
+    assert fw.options['drop_invalid'] is checked

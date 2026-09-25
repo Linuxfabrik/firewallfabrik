@@ -12,6 +12,7 @@
 
 """Editor panel dialog for RuleSet objects (Policy, NAT, Routing)."""
 
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
@@ -42,9 +43,11 @@ class RuleSetDialog(BaseObjectDialog):
         if platform == 'iptables' and rs_type == 'Policy':
             self.iptables_only.show()
             opts = rs.options or {}
-            mangle_only = opts.get('mangle_only_rule_set', False)
-            self.ipt_mangle_table.setChecked(bool(mangle_only))
-            self.ipt_filter_table.setChecked(not bool(mangle_only))
+            # The compiler's reading, which takes the line-wrapped form
+            # Firewall Builder writes as well.
+            mangle_only = option_is_true(opts.get('mangle_only_rule_set'))
+            self.ipt_mangle_table.setChecked(mangle_only)
+            self.ipt_filter_table.setChecked(not mangle_only)
         else:
             self.iptables_only.hide()
 
@@ -79,7 +82,7 @@ class RuleSetDialog(BaseObjectDialog):
             opts = rs.options or {}
             val = self.ipt_mangle_table.isChecked()
             old_val = opts.get('mangle_only_rule_set')
-            if (old_val is not None or val is not False) and old_val != val:
+            if (old_val is not None or val) and option_is_true(old_val) != val:
                 opts = dict(opts)
                 opts['mangle_only_rule_set'] = val
                 rs.options = opts

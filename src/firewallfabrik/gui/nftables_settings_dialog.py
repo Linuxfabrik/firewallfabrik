@@ -17,6 +17,7 @@ from pathlib import Path
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog, QLineEdit
 
+from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 from firewallfabrik.platforms._defaults import get_platform_defaults
 
@@ -147,9 +148,9 @@ class NftablesSettingsDialog(QDialog):
             entry = _SCHEMA.get(key, {})
             default = entry.get('default', False)
             if key in opts:
-                val = str(opts[key]).lower() == 'true'
+                val = option_is_true(opts[key])
             elif widget_name in opts:
-                val = str(opts[widget_name]).lower() == 'true'
+                val = option_is_true(opts[widget_name])
             else:
                 val = bool(default)
             widget.setChecked(val)
@@ -180,7 +181,7 @@ class NftablesSettingsDialog(QDialog):
         self.prologPlace.setCurrentIndex(idx)
 
         # LOG / NFLOG radio buttons
-        if str(opts.get('use_NFLOG', '')).lower() == 'true':
+        if option_is_true(opts.get('use_NFLOG')):
             self.useNFLOG.setChecked(True)
         else:
             self.useLOG.setChecked(True)
