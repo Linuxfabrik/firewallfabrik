@@ -200,7 +200,20 @@ its series in the kernel changelog), which RHEL 8.6 is the first to ship.
 So RHEL 8.0 to 8.5 take 0.9.0 and RHEL 8.6 to 8.10 take 0.9.1, whether
 they run nftables 0.9.3 or, from 8.9, 1.0.4.
 
-Which entry each distribution takes is the tooltip of the entry.  It was
+Each label names the distributions its entry is right for, in the label
+itself ("0.9.[5-8] (rhel9.0 debian11 leap15.5)"), because a tooltip is too
+slow to wait for while picking; "+" on a distribution means that release
+and every later one measured.  "Lookup Version ..." beside the list logs
+in the way the installer does - management address, user and ssh
+arguments from the firewall's installer settings, a key or the agent
+first and a password only when that is not enough - and reads `nft
+--version`, `iptables --version`, `uname -r` and /etc/os-release
+(`gui/version_lookup.py`).  `_versions.entry_for` then takes the newest
+entry whose first release is not newer than the installed one, and places
+RHEL 8 by its kernel build rather than by its point release, because an
+early rebuild names none (Rocky Linux 8.3 has `VERSION_ID="8"`).
+
+Which entry each distribution takes was
 measured by compiling the corpus for the entry and loading it with
 `tools/compiler-audit/load-nft.sh` (nftables) or replaying it with
 `replay-iptables.sh` (iptables) on a linked clone of each distribution -

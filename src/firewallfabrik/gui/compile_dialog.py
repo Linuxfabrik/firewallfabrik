@@ -32,8 +32,10 @@ from PySide6.QtWidgets import (
 )
 
 from firewallfabrik.core._util import escape_obj_name
-from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.objects import Cluster, Firewall
 from firewallfabrik.gui.ui_loader import FWFUiLoader
+from firewallfabrik.gui.version_lookup import resolve_mgmt_address
+from firewallfabrik.platforms import _versions
 
 
 def escape(text):
@@ -46,6 +48,16 @@ _PLATFORM_CLI = {
     'iptables': 'fwf-ipt',
     'nftables': 'fwf-nft',
 }
+
+# The columns of selectTable, in the order compileinstalldialog_q.ui
+# declares them.
+_COL_FIREWALL = 0
+_COL_PLATFORM = 1
+_COL_COMPILE = 2
+_COL_INSTALL = 3
+_COL_MODIFIED = 4
+_COL_COMPILED = 5
+_COL_INSTALLED = 6
 
 # UserRole offsets for item data stored on selectTable items.
 _R = Qt.ItemDataRole.UserRole
@@ -84,24 +96,6 @@ def _fw_tree_path(fw):
     parts.extend(group_parts)
     parts.append(f'{fw.type}:{escape_obj_name(fw.name)}')
     return '/'.join(parts)
-
-
-def _resolve_mgmt_address(fw):
-    """Return the management address for a firewall.
-
-    Checks ``fw.options['altAddress']`` first, then scans interfaces
-    for one flagged as management and returns its first address.
-    """
-    options = fw.options or {}
-    alt = options.get('altAddress', '')
-    if alt:
-        return alt
-    for iface in fw.interfaces:
-        iface_data = iface.data or {}
-        if str(iface_data.get('management', '')).lower() in ('true', '1'):
-            for addr in iface.addresses:
-                return str(addr.address) if hasattr(addr, 'address') else addr.name
-    return ''
 
 
 class CompileDialog(QDialog):
@@ -160,7 +154,7 @@ class CompileDialog(QDialog):
             )
         else:
             # Compile-only mode: hide install column and batch install frame.
-            self.selectTable.hideColumn(2)  # Install column
+            self.selectTable.hideColumn(_COL_INSTALL)
             self.batchInstFlagFrame.hide()
             self.warning_space.hide()
             self.setWindowTitle('Compile Firewalls')
@@ -181,10 +175,10 @@ class CompileDialog(QDialog):
 
         # Resize columns for selectTable
         header = self.selectTable.header()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(_COL_FIREWALL, QHeaderView.ResizeMode.Stretch)
         header.setMinimumSectionSize(50)
-        self.selectTable.setColumnWidth(0, 250)
-        for col in (1, 2, 3, 4, 5):
+        self.selectTable.setColumnWidth(_COL_FIREWALL, 250)
+        for col in range(_COL_PLATFORM, _COL_INSTALLED + 1):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
 
         # Progress bars start at zero
@@ -245,7 +239,7 @@ class CompileDialog(QDialog):
                 needs_install = last_compiled > last_installed or last_installed == 0
 
                 tree_path = _fw_tree_path(fw)
-                mgmt_address = _resolve_mgmt_address(fw) if self._install_mode else ''
+                mgmt_address = resolve_mgmt_address(fw) if self._install_mode else ''
 
                 item = QTreeWidgetItem()
                 item.setData(0, _R_TREE_PATH, tree_path)
@@ -267,10 +261,21 @@ class CompileDialog(QDialog):
                 item.setData(0, _R_NEEDS_INSTALL, needs_install)
                 item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
 
-                item.setText(0, fw.name)
-                item.setIcon(0, QIcon(':/Icons/Firewall/icon-tree'))
+                item.setText(_COL_FIREWALL, fw.name)
+                item.setIcon(_COL_FIREWALL, QIcon(':/Icons/Firewall/icon-tree'))
 
-                # Col 1 (Compile): checkbox
+                # The packet filter and the release it is compiled for; a
+                # cluster has none of its own, each member names one.
+                item.setText(
+                    _COL_PLATFORM,
+                    _versions.describe(
+                        platform,
+                        data.get('version', ''),
+                        has_release=not isinstance(fw, Cluster),
+                    ),
+                )
+
+                # Compile checkbox
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 if self._preselect_names is not None:
                     check_compile = (
@@ -279,11 +284,11 @@ class CompileDialog(QDialog):
                 else:
                     check_compile = supported and not inactive and needs_compile
                 item.setCheckState(
-                    1,
+                    _COL_COMPILE,
                     Qt.CheckState.Checked if check_compile else Qt.CheckState.Unchecked,
                 )
 
-                # Col 2 (Install): checkbox — only in install mode.
+                # Install checkbox, only in install mode.
                 if self._install_mode:
                     if self._preselect_names is not None:
                         check_install = (
@@ -294,16 +299,18 @@ class CompileDialog(QDialog):
                     else:
                         check_install = supported and not inactive and needs_install
                     item.setCheckState(
-                        2,
+                        _COL_INSTALL,
                         Qt.CheckState.Checked
                         if check_install
                         else Qt.CheckState.Unchecked,
                     )
 
-                # Col 3-5: timestamps (stored as epoch ints)
-                item.setText(3, _format_epoch(data.get('lastModified', 0)))
-                item.setText(4, _format_epoch(data.get('lastCompiled', 0)))
-                item.setText(5, _format_epoch(data.get('lastInstalled', 0)))
+                # Timestamps (stored as epoch ints)
+                item.setText(_COL_MODIFIED, _format_epoch(data.get('lastModified', 0)))
+                item.setText(_COL_COMPILED, _format_epoch(data.get('lastCompiled', 0)))
+                item.setText(
+                    _COL_INSTALLED, _format_epoch(data.get('lastInstalled', 0))
+                )
 
                 # Unsupported platform: disable the item
                 if not supported:
@@ -326,17 +333,17 @@ class CompileDialog(QDialog):
         for i in range(self.selectTable.topLevelItemCount()):
             item = self.selectTable.topLevelItem(i)
             if item.flags() & Qt.ItemFlag.ItemIsEnabled:
-                item.setCheckState(1, Qt.CheckState.Checked)
+                item.setCheckState(_COL_COMPILE, Qt.CheckState.Checked)
                 if self._install_mode:
-                    item.setCheckState(2, Qt.CheckState.Checked)
+                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Checked)
 
     @Slot()
     def deselectAllFirewalls(self):
         for i in range(self.selectTable.topLevelItemCount()):
             item = self.selectTable.topLevelItem(i)
-            item.setCheckState(1, Qt.CheckState.Unchecked)
+            item.setCheckState(_COL_COMPILE, Qt.CheckState.Unchecked)
             if self._install_mode:
-                item.setCheckState(2, Qt.CheckState.Unchecked)
+                item.setCheckState(_COL_INSTALL, Qt.CheckState.Unchecked)
 
     @Slot()
     def selectChangedFirewalls(self):
@@ -345,16 +352,16 @@ class CompileDialog(QDialog):
             if item.flags() & Qt.ItemFlag.ItemIsEnabled and item.data(
                 0, _R_NEEDS_COMPILE
             ):
-                item.setCheckState(1, Qt.CheckState.Checked)
+                item.setCheckState(_COL_COMPILE, Qt.CheckState.Checked)
             else:
-                item.setCheckState(1, Qt.CheckState.Unchecked)
+                item.setCheckState(_COL_COMPILE, Qt.CheckState.Unchecked)
             if self._install_mode:
                 if item.flags() & Qt.ItemFlag.ItemIsEnabled and item.data(
                     0, _R_NEEDS_INSTALL
                 ):
-                    item.setCheckState(2, Qt.CheckState.Checked)
+                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Checked)
                 else:
-                    item.setCheckState(2, Qt.CheckState.Unchecked)
+                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Unchecked)
 
     @Slot(QTreeWidgetItem, int)
     def tableItemChanged(self, item, col):
@@ -379,12 +386,15 @@ class CompileDialog(QDialog):
             compiler_path = item.data(0, _R_COMPILER) or ''
             mgmt_addr = item.data(0, _R_MGMT_ADDRESS) or ''
 
-            if item.checkState(1) == Qt.CheckState.Checked:
+            if item.checkState(_COL_COMPILE) == Qt.CheckState.Checked:
                 self._compile_queue.append(
                     (fw_id, fw_name, platform, output_file, cmdline, compiler_path)
                 )
 
-            if self._install_mode and item.checkState(2) == Qt.CheckState.Checked:
+            if (
+                self._install_mode
+                and item.checkState(_COL_INSTALL) == Qt.CheckState.Checked
+            ):
                 fw_uuid_str = item.data(0, _R_FW_UUID)
                 self._install_queue.append(
                     (fw_id, fw_name, platform, fw_uuid_str, mgmt_addr)
@@ -801,7 +811,7 @@ class CompileDialog(QDialog):
             for i in range(self.selectTable.topLevelItemCount()):
                 item = self.selectTable.topLevelItem(i)
                 if item.data(0, _R_TREE_PATH) in self._compiled_fw_ids:
-                    item.setText(4, display)
+                    item.setText(_COL_COMPILED, display)
 
         # If in install mode and there are firewalls to install, proceed.
         if self._install_mode and self._install_queue:
@@ -1018,7 +1028,7 @@ class CompileDialog(QDialog):
             for i in range(self.selectTable.topLevelItemCount()):
                 item = self.selectTable.topLevelItem(i)
                 if item.data(0, _R_TREE_PATH) in self._installed_fw_ids:
-                    item.setText(5, display)
+                    item.setText(_COL_INSTALLED, display)
 
         self.infoMCLabel.setText('Done')
         self.compProgress.setMaximum(1)

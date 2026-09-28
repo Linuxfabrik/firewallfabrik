@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Editor (iptables, nftables): "Lookup Version ..." next to the version list asks the firewall over SSH which releases it runs and picks the matching entry.
 * Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
+* Editor: the compile and install dialog shows each firewall's platform and release, and so does the object tree.
 
 ### Changed
 

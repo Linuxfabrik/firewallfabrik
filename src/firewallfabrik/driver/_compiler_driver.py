@@ -1118,7 +1118,7 @@ class CompilerDriver(BaseCompiler):
             return
         self.warning(
             f'No {platform} release is set for this firewall, so it is '
-            f'compiled for {_versions.newest(platform)[1]}; set the release '
+            f'compiled for {_versions.newest_range(platform)}; set the release '
             'the firewall runs in the firewall settings'
         )
 

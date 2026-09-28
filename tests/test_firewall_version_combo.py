@@ -76,10 +76,13 @@ def test_the_list_runs_newest_first_and_offers_no_any(platform):
     values = [value for value, _label in entries]
     assert '' not in values
     assert values == sorted(values, key=_key, reverse=True)
+    from firewallfabrik.platforms import _versions
+
+    ranges = [_versions.release_range(platform, value) for value in values]
+    assert ranges[0].endswith('+')
+    assert not any(rng.endswith('+') for rng in ranges[1:])
     labels = [label for _value, label in entries]
-    assert labels[0].endswith('+')
     assert not any('or later' in label or 'any' in label for label in labels)
-    assert not any(label.endswith('+') for label in labels[1:])
 
 
 def test_the_iptables_list_keeps_what_firewall_builder_stores():
@@ -136,15 +139,9 @@ def test_a_firewall_naming_no_release_says_so(panel):
 
 
 def test_each_entry_names_where_it_is_right(panel):
-    from PySide6.QtCore import Qt
-
+    """In the label, not in a tooltip one has to wait for."""
     _fill(panel, 'nftables', '0.9.5')
-    tip = panel.version.itemData(
-        panel.version.currentIndex(), Qt.ItemDataRole.ToolTipRole
-    )
-    assert 'Debian 11' in tip
-    # The closed combo shows it too, below its own explanation.
-    assert 'Debian 11' in panel.version.toolTip()
+    assert panel.version.currentText() == '0.9.[5-8] (rhel9.0 debian11 leap15.5)'
 
 
 def test_a_release_the_list_does_not_offer_is_kept(panel):

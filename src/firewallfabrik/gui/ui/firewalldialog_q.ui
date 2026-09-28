@@ -241,6 +241,30 @@
              </property>
             </widget>
            </item>
+           <item row="3" column="2">
+            <widget class="QPushButton" name="lookupVersion">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>140</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Log in to the firewall the way the installer does (management address,
+user and ssh arguments from its installer settings), read which iptables,
+nftables and distribution it runs, and pick the matching entry.</string>
+             </property>
+             <property name="text">
+              <string>Lookup Version ...</string>
+             </property>
+            </widget>
+           </item>
            <item row="3" column="1">
             <widget class="QComboBox" name="version">
              <property name="sizePolicy">
@@ -258,8 +282,14 @@
              <property name="toolTip">
               <string>The release of the packet filter on the firewall. Each entry is a range of
 releases; pick the one the firewall runs. A lower entry loads there too, but
-leaves out, and reports, every rule that needs more. Point at an entry to
-see the distributions it is right for.</string>
+leaves out, and reports, every rule that needs more. Take the first entry
+from the top that names the firewall's distribution.</string>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+             </property>
+             <property name="minimumContentsLength">
+              <number>20</number>
              </property>
             </widget>
            </item>

@@ -219,6 +219,11 @@
               </column>
               <column>
                <property name="text">
+                <string>Platform</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
                 <string>Compile</string>
                </property>
               </column>

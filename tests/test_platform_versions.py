@@ -108,6 +108,12 @@ def test_a_firewall_naming_no_release_is_compiled_for_the_top_entry(platform):
     assert default == _versions.newest(platform)[0]
 
 
-def test_every_hint_belongs_to_an_entry():
-    for platform, hints in _versions.HINTS.items():
-        assert set(hints) <= _values(platform), platform
+def test_a_label_names_the_range_and_where_it_is_right():
+    """No tooltip to wait for: the distributions are in the label."""
+    assert _versions.label('nftables', '0.9.5') == (
+        '0.9.[5-8] (rhel9.0 debian11 leap15.5)'
+    )
+    assert _versions.label('nftables', '0.9.9') == '0.9.9'
+    assert _versions.describe('nftables', '0.9.5') == 'nftables 0.9.[5-8]'
+    assert _versions.describe('nftables', '') == 'nftables (not set)'
+    assert _versions.describe('iptables', '', has_release=False) == 'iptables'

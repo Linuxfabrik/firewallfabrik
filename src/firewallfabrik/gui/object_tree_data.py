@@ -650,8 +650,10 @@ def obj_brief_attrs(obj, under_interface=False):
         host_os = data.get('host_OS', '')
         host_os = HOST_OS.get(host_os, host_os)
         if platform:
-            ver_part = f' {_versions.label(platform, version)}' if version else ''
-            return f'{platform}{ver_part} on {host_os}'
+            described = _versions.describe(
+                platform, version, has_release=type_str != 'Cluster'
+            )
+            return f'{described} on {host_os}'
         return ''
 
     # -- Services --

@@ -32,11 +32,6 @@ def get_versions_for_platform(key):
     return _versions.versions(key)
 
 
-def get_version_hint(key, value):
-    """Return where the *value* entry of platform *key* is the one to pick."""
-    return _versions.hint(key, value)
-
-
 def get_unset_version_label(key):
     """How the combo shows a firewall that names no release."""
     return _versions.unset_label(key)

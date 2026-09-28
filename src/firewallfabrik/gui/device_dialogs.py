@@ -14,7 +14,7 @@
 
 from datetime import UTC, datetime
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QSettings, Qt, Slot
 from PySide6.QtWidgets import QDialog
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
@@ -27,7 +27,6 @@ from firewallfabrik.gui.platform_settings import (
     get_enabled_os,
     get_enabled_platforms,
     get_unset_version_label,
-    get_version_hint,
     get_versions_for_platform,
 )
 
@@ -77,18 +76,94 @@ class HostDialog(BaseObjectDialog):
 class FirewallDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('firewalldialog_q.ui', parent)
-        # The combo explains itself, and once an entry is chosen it also
-        # says where that entry is the one to pick; connected here, once,
-        # because _populate runs for every object shown.
-        self._version_tooltip = ''
-        if self.version is not None:
-            self._version_tooltip = self.version.toolTip()
-            self.version.currentIndexChanged.connect(self._show_version_hint)
+        # Connected once here: _populate runs for every object shown.  A
+        # cluster's panel has no release, and no button to look one up.
+        lookup = getattr(self, 'lookupVersion', None)
+        if lookup is not None:
+            lookup.clicked.connect(self._lookup_version)
 
-    def _show_version_hint(self, _index=-1):
-        hint = self.version.currentData(Qt.ItemDataRole.ToolTipRole) or ''
-        base = self._version_tooltip
-        self.version.setToolTip(f'{base}\n\n{hint}' if hint and base else hint or base)
+    def _lookup_version(self):
+        """Ask the firewall which releases it runs and offer the entry.
+
+        It logs in the way the installer does (see `version_lookup`), and
+        asks for a password only when the key or the agent is not enough.
+        Nothing is changed until the administrator accepts the entry.
+        """
+        from PySide6.QtWidgets import QApplication, QInputDialog, QLineEdit, QMessageBox
+
+        from firewallfabrik.gui import version_lookup
+        from firewallfabrik.platforms import _versions
+
+        platform = _PLATFORM_INTERNAL.get(self.platform.currentText(), '')
+        options = self._obj.options or {}
+        settings = QSettings()
+        ask = {
+            'address': version_lookup.resolve_mgmt_address(self._obj),
+            'user': options.get('admUser', '') or 'root',
+            'extra_args': options.get('sshArgs', ''),
+            'ssh_path': settings.value('SSH/SSHPath', '', type=str),
+            'timeout': settings.value('SSH/SSHTimeout', 10, type=int) or 10,
+        }
+        title = 'Lookup Version'
+        result = None
+        # Empty until ssh asks for one; not a password of any kind.
+        password = ''  # nosec B105
+        while result is None:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                result = version_lookup.run(password=password, **ask)
+            except version_lookup.AuthenticationRequired:
+                QApplication.restoreOverrideCursor()
+                password, ok = QInputDialog.getText(
+                    self,
+                    title,
+                    f'Password for {ask["user"]}@{ask["address"]}:',
+                    QLineEdit.EchoMode.Password,
+                )
+                if not ok or not password:
+                    return
+                continue
+            except version_lookup.LookupFailed as exc:
+                QApplication.restoreOverrideCursor()
+                QMessageBox.warning(
+                    self, title, f'The firewall could not be asked: {exc}'
+                )
+                return
+            QApplication.restoreOverrideCursor()
+
+        release = result.nftables if platform == 'nftables' else result.iptables
+        facts = (
+            f'{result.distribution or "unknown distribution"}, '
+            f'kernel {result.kernel or "unknown"}\n'
+            f'nftables {result.nftables or "not installed"}\n'
+            f'iptables {result.iptables or "not installed"}'
+            + (f' ({result.iptables_backend})' if result.iptables_backend else '')
+        )
+        entry = result.entry(platform)
+        if not entry:
+            QMessageBox.information(
+                self,
+                title,
+                f'{facts}\n\n{platform} is not installed on the firewall, so no '
+                'entry fits.',
+            )
+            return
+        if entry == self.version.currentData():
+            QMessageBox.information(
+                self,
+                title,
+                f'{facts}\n\nThe entry already chosen fits: '
+                f'{_versions.label(platform, entry)}',
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            title,
+            f'{facts}\n\nThe entry for {platform} {release or ""} on this '
+            f'firewall is:\n{_versions.label(platform, entry)}\n\nUse it?',
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.version.setCurrentIndex(self.version.findData(entry))
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
@@ -184,8 +259,8 @@ class FirewallDialog(BaseObjectDialog):
         Every item carries its stored value beside the label, because the
         two differ: Firewall Builder stores "1.2.5 or earlier" as
         ``lt_1.2.6``, and every entry is a range of releases stored as its
-        first one.  The entries come newest first, each with a tooltip
-        naming the distributions it is right for.  A value the list does not offer - a data file
+        first one.  The entries come newest first, and each label names
+        the distributions it is right for.  A value the list does not offer - a data file
         written by another tool or by hand may name any release - is added
         as an item of its own, where Firewall Builder overwrites it with
         the first entry (`FirewallDialog::fillVersion`); showing the
@@ -195,11 +270,6 @@ class FirewallDialog(BaseObjectDialog):
         self.version.clear()
         for value, label in get_versions_for_platform(platform):
             self.version.addItem(label, value)
-            hint = get_version_hint(platform, value)
-            if hint:
-                self.version.setItemData(
-                    self.version.count() - 1, hint, Qt.ItemDataRole.ToolTipRole
-                )
         index = self.version.findData(stored)
         if index < 0 and stored and keep_unlisted:
             self.version.addItem(stored, stored)
@@ -210,15 +280,22 @@ class FirewallDialog(BaseObjectDialog):
             # top entry, and the combo says that rather than pretending the
             # top entry was chosen - or letting a plain OK write it.
             self.version.insertItem(0, get_unset_version_label(platform), '')
-            self.version.setItemData(
-                0,
-                'No release is set; the compiler warns about it.\n'
-                'Pick the entry that matches the firewall.',
-                Qt.ItemDataRole.ToolTipRole,
-            )
             index = 0
         self.version.setCurrentIndex(max(index, 0))
-        self._show_version_hint()
+        # The closed combo stays narrow (the .ui sets it to a minimum
+        # content length), but the list opens wide enough for the
+        # distributions each label names.
+        # From the font rather than the view, which knows the width of its
+        # items only once it has been shown.
+        metrics = self.version.fontMetrics()
+        widest = max(
+            (
+                metrics.horizontalAdvance(self.version.itemText(i))
+                for i in range(self.version.count())
+            ),
+            default=0,
+        )
+        self.version.view().setMinimumWidth(widest + 40)
 
     @staticmethod
     def _set_combo_text(combo, text):
