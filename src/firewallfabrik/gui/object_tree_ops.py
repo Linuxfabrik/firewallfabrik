@@ -19,16 +19,21 @@ from datetime import UTC, datetime
 import sqlalchemy
 
 from firewallfabrik.core.objects import (
+    NAT,
     Address,
+    Cluster,
     Firewall,
     Group,
     Host,
     Interface,
     Interval,
     Library,
+    Policy,
+    Routing,
     Rule,
     RuleSet,
     Service,
+    StateSyncClusterGroup,
     group_membership,
     rule_elements,
 )
@@ -89,6 +94,39 @@ _ALL_ORM_CLASSES = (
     Group,
     Library,
 )
+
+
+def add_device_defaults(session, device):
+    """Give a new firewall or cluster what Firewall Builder creates with it.
+
+    Ports ``Firewall::init``, which adds an empty Policy, NAT and Routing
+    rule set, each the top one of its kind, and ``Cluster::init``, which
+    adds the state sync group every cluster has.  Without them a new
+    firewall has no rule set to put a rule in and a new cluster no group
+    to name the link conntrackd replicates over.
+    """
+    # The children reference the device, which has to be in the table
+    # before them; the unit of work does not order a group after a device.
+    session.flush()
+    for model_cls in (Policy, NAT, Routing):
+        session.add(
+            model_cls(
+                id=uuid.uuid4(),
+                device_id=device.id,
+                name=model_cls.__name__,
+                top=True,
+            )
+        )
+    if isinstance(device, Cluster):
+        session.add(
+            StateSyncClusterGroup(
+                id=uuid.uuid4(),
+                data={'type': 'conntrack'},
+                device_id=device.id,
+                library_id=device.library_id,
+                name='State Sync Group',
+            )
+        )
 
 
 class TreeOperations:
@@ -1040,6 +1078,8 @@ class TreeOperations:
                     new_obj.top = True
 
             session.add(new_obj)
+            if isinstance(new_obj, Firewall):
+                add_device_defaults(session, new_obj)
             session.commit()
             self._db_manager.save_state(f'{prefix}New {type_name}')
         except Exception:
