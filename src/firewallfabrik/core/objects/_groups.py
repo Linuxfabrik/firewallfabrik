@@ -370,10 +370,6 @@ class ClusterGroup(ObjectGroup):
         """Return the failover / state sync protocol this group speaks."""
         return str((self.data or {}).get('type') or '')
 
-    def get_master_interface_id(self):
-        """Return the id of the interface marked master, or ``None``."""
-        return (self.data or {}).get('master_iface') or None
-
     def get_members(self) -> list:
         """Return the interfaces referenced by this group.
 

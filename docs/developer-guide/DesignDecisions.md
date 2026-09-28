@@ -153,3 +153,12 @@ The same reasoning does not extend to `fwf-edit`, the counterpart of
 `fwbedit`: editing YAML by hand is possible, but a data file still has
 cross-references and a schema that a text editor does not check. See
 [#146](https://github.com/Linuxfabrik/firewallfabrik/issues/146).
+
+
+## No Master Member in a Cluster
+
+Firewall Builder lets one member of a cluster be the master: the New Cluster wizard has a "Master" column, the members dialog of a cluster group a "Master" checkbox, and the group stores the chosen interface as `master_iface`. Only three of its configurators read that value. The PIX compiler installs on the primary only and configures failover from it, the pf configurator gives the master the lower CARP `advskew` (`OSConfigurator_bsd::interfaceConfigLineCARPInternal`), and the secuwall configurator writes it into its VRRP settings. The iptables compiler copies it into interface options (`failover_master`, `state_sync_master`) that nothing reads afterwards.
+
+FirewallFabrik compiles for iptables and nftables only, where the master has no effect on the generated script: which member is master is decided by the failover daemon and its own configuration (keepalived, heartbeat, corosync), which FirewallFabrik does not write. The value could not be kept either, because it is an object id, and object ids are regenerated on every load. So there is no master anywhere in FirewallFabrik. The readers drop `master_iface`, as well as the `master_fw_id` and `member_fw_ids` keys earlier versions wrote onto a cluster, and a file loses them on its next save.
+
+A port of the pf compiler would have to bring the master back, stored as a reference to the member interface the way group members are.

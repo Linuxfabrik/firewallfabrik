@@ -517,7 +517,10 @@ class XmlReader:
         group.comment = elem.get('comment', '')
         group.keywords = _keywords(elem)
         group.ro = _bool(elem.get('ro', 'False'))
-        group.data = _extra_attrs(elem, _COMMON_KNOWN)
+        # master_iface names the member that is master, which only the
+        # PIX, pf (CARP advskew) and secuwall configurators read; neither
+        # compiler here does, and the id it holds is gone after the import.
+        group.data = _extra_attrs(elem, _COMMON_KNOWN | {'master_iface'})
         group.library = library
 
         if parent_group is not None:

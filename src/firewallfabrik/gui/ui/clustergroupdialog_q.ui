@@ -234,11 +234,6 @@ Double click on an entry to navigate to it in the object tree.</string>
            </column>
            <column>
             <property name="text">
-             <string>Master</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
              <string>Status</string>
             </property>
            </column>

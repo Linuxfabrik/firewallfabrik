@@ -63,6 +63,19 @@ _DEVICE_CLASSES = DEVICE_CLASSES
 _RULESET_CLASSES = {**RULESET_CLASSES, 'RuleSet': objects.RuleSet}
 _RULE_CLASSES = {**RULE_CLASSES, 'Rule': objects.Rule}
 
+# Keys older data files carry and nothing reads.  master_fw_id and
+# member_fw_ids were written onto a cluster by the New Cluster wizard, and
+# master_iface onto a cluster group; all three hold object ids, which are
+# not stable across a save and a load, so the value is gone by the time
+# the file is read.  Dropping them here cleans a file on its next save.
+_OBSOLETE_DATA_KEYS = frozenset({'master_fw_id', 'master_iface', 'member_fw_ids'})
+
+
+def _without_obsolete_keys(data):
+    if not data:
+        return data
+    return {k: v for k, v in data.items() if k not in _OBSOLETE_DATA_KEYS}
+
 
 class YamlReader:
     """Parses a single YAML file into a ParseResult compatible with DatabaseManager.load()."""
@@ -324,7 +337,7 @@ class YamlReader:
         grp.comment = data.get('comment', '')
         grp.ro = data.get('ro', False)
         grp.keywords = set(data.get('keywords', []))
-        grp.data = data.get('data', {})
+        grp.data = _without_obsolete_keys(data.get('data', {}))
         grp.options = data.get('options', {})
         grp.library = library
 
@@ -353,7 +366,7 @@ class YamlReader:
         dev.comment = data.get('comment', '')
         dev.ro = data.get('ro', False)
         dev.keywords = set(data.get('keywords', []))
-        dev.data = data.get('data', {})
+        dev.data = _without_obsolete_keys(data.get('data', {}))
         dev.options = data.get('options', {})
         dev.management = data.get('management', {})
         dev.library = library

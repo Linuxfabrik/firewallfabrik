@@ -389,13 +389,10 @@ class CompilerDriver(BaseCompiler):
                     or member_iface.device_id != fw.id
                 ):
                     continue
-                master = group.get_master_interface_id()
                 member_iface.options = {
                     **(member_iface.options or {}),
                     'state_sync_group_member': True,
                     'state_sync_group_id': str(group.id),
-                    'state_sync_master': bool(master)
-                    and str(master) == str(member_iface.id),
                 }
                 fw.options = {
                     **(fw.options or {}),
@@ -489,10 +486,6 @@ class CompilerDriver(BaseCompiler):
                 # (`interfaceProperties::manageIpAddresses`).
                 copy_iface.options['failover_group_id'] = str(group.id)
                 copy_iface.options['failover_protocol'] = group.get_protocol()
-            master = group.get_master_interface_id() if group is not None else None
-            copy_iface.options['failover_master'] = bool(master) and str(master) == str(
-                member_iface.id
-            )
             copy_iface.data['dyn'] = member_iface.is_dynamic()
             copy_iface.data['unnum'] = member_iface.is_unnumbered()
             copy_iface.data['unprotected'] = member_iface.is_unprotected()

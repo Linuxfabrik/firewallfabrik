@@ -13,7 +13,7 @@
 """Editor panel dialog for ClusterGroup objects (Failover / State Sync).
 
 Ports fwbuilder's ``ClusterGroupDialog`` -- shows the cluster group
-name, type combo, a tree of current members with master/status columns,
+name, type combo, a tree of current members with a status column,
 and buttons to manage members and edit protocol parameters.
 """
 
@@ -95,15 +95,6 @@ class ClusterGroupDialog(BaseObjectDialog):
                 selected_idx = idx
         self.type.setCurrentIndex(selected_idx)
 
-        # Determine if master column is needed.
-        enable_master = True
-        if group_type == 'conntrack':
-            enable_master = False
-        if enable_master:
-            self.fwMemberTree.showColumn(2)
-        else:
-            self.fwMemberTree.hideColumn(2)
-
         # Load member firewalls into the tree.
         self._load_member_tree()
 
@@ -164,8 +155,6 @@ class ClusterGroupDialog(BaseObjectDialog):
             return
 
         obj = self._obj
-        data = obj.data or {}
-        master_iface_id = data.get('master_iface', '')
 
         cluster_data = self._cluster_data
         cluster_host_os = cluster_data.get('host_OS', '')
@@ -193,14 +182,6 @@ class ClusterGroupDialog(BaseObjectDialog):
                 if fw is None:
                     continue
 
-                is_master = (
-                    str(iface.id).replace('-', '') == master_iface_id
-                    or str(
-                        iface.id,
-                    )
-                    == master_iface_id
-                )
-
                 # Validate member.
                 fw_data = fw.data or {}
                 valid = (
@@ -208,16 +189,15 @@ class ClusterGroupDialog(BaseObjectDialog):
                     and fw_data.get('platform', '') == cluster_platform
                 )
 
-                self._add_member_row(fw, iface, is_master, valid)
+                self._add_member_row(fw, iface, valid)
         finally:
             session.close()
 
         self.fwMemberTree.resizeColumnToContents(0)
         self.fwMemberTree.resizeColumnToContents(1)
         self.fwMemberTree.resizeColumnToContents(2)
-        self.fwMemberTree.resizeColumnToContents(3)
 
-    def _add_member_row(self, fw, iface, is_master, valid):
+    def _add_member_row(self, fw, iface, valid):
         """Add a single member row to the fwMemberTree."""
         item = QTreeWidgetItem(self.fwMemberTree)
 
@@ -229,28 +209,22 @@ class ClusterGroupDialog(BaseObjectDialog):
         item.setText(1, iface.name)
         item.setIcon(1, QIcon(':/Icons/Interface/icon-ref'))
 
-        # Column 2: Master.
-        if is_master:
-            item.setText(2, 'Master')
-        else:
-            item.setText(2, '')
-
-        # Column 3: Status.
+        # Column 2: Status.
         if valid:
-            item.setText(3, 'OK')
+            item.setText(2, 'OK')
             item.setToolTip(
-                3,
+                2,
                 f'Firewall {fw.name} can be used as a member of this cluster',
             )
         else:
-            item.setText(3, 'Invalid')
+            item.setText(2, 'Invalid')
             item.setToolTip(
-                3,
+                2,
                 f'Firewall {fw.name} cannot be used as a member of this '
                 f'cluster because its host OS or platform does not match '
                 f'those of the cluster.',
             )
-            item.setBackground(3, QBrush(QColor(255, 0, 0, 100)))
+            item.setBackground(2, QBrush(QColor(255, 0, 0, 100)))
 
     # ------------------------------------------------------------------
     # Helper: find parent cluster

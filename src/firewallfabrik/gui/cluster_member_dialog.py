@@ -56,7 +56,6 @@ class _ClusterMember:
     iface_list: list = field(default_factory=list)  # list of (iface_id, name, label)
     iface_map: dict = field(default_factory=dict)  # name -> (iface_id, name, label)
     iface_cluster: tuple | None = None  # (iface_id, name, label) selected for cluster
-    is_master: bool = False
 
 
 class ClusterMemberDialog(QDialog):
@@ -89,20 +88,6 @@ class ClusterMemberDialog(QDialog):
         self._host_os = self._cluster_data.get('host_OS', '')
         self._platform = self._cluster_data.get('platform', '')
 
-        # Determine if the master column is needed.
-        # For now, we always show it (fwbuilder hides it based on
-        # protocol-specific resources; we simplify).
-        self._enable_master_column = True
-        group_data = cluster_group.data or {}
-        group_type = group_data.get('type', '')
-        # conntrack does not need master; vrrp does.
-        if group_type == 'conntrack':
-            self._enable_master_column = False
-        if not self._enable_master_column:
-            self.fwSelectedTable.hideColumn(2)
-
-        self._table_update = False
-
         # Member lists.
         self._selected: list[_ClusterMember] = []
         self._available: list[_ClusterMember] = []
@@ -118,7 +103,6 @@ class ClusterMemberDialog(QDialog):
         self.buttonAdd.clicked.connect(self._on_add)
         self.buttonRemove.clicked.connect(self._on_remove)
         self.fwSelectedTable.cellClicked.connect(self._on_selected_clicked)
-        self.fwSelectedTable.cellChanged.connect(self._on_master_selected)
 
         self.adjustSize()
 
@@ -138,9 +122,6 @@ class ClusterMemberDialog(QDialog):
         """Read currently assigned member interfaces from the database."""
         session = self._db_manager.create_session()
         try:
-            group_data = self._cluster_group.data or {}
-            master_iface_id = group_data.get('master_iface', '')
-
             # Get member interface IDs from group_membership table.
             rows = session.execute(
                 sqlalchemy.select(
@@ -170,14 +151,7 @@ class ClusterMemberDialog(QDialog):
                     )
                     continue
 
-                is_master = (
-                    str(iface.id).replace('-', '') == master_iface_id
-                    or str(iface.id) == master_iface_id
-                )
-
-                member = self._create_member(
-                    fw, session, iface_cluster=iface, is_master=is_master
-                )
+                member = self._create_member(fw, session, iface_cluster=iface)
                 if member is not None:
                     self._selected.append(member)
         finally:
@@ -222,7 +196,6 @@ class ClusterMemberDialog(QDialog):
         fw,
         session,
         iface_cluster=None,
-        is_master=False,
     ):
         """Create a _ClusterMember from a Firewall ORM object."""
         iface_list = []
@@ -248,7 +221,6 @@ class ClusterMemberDialog(QDialog):
             iface_cluster=cluster_entry,
             iface_list=iface_list,
             iface_map=iface_map,
-            is_master=is_master,
         )
 
     # ------------------------------------------------------------------
@@ -286,8 +258,6 @@ class ClusterMemberDialog(QDialog):
 
     def _update_selected_table(self):
         """Refresh the table of selected cluster members."""
-        self._table_update = True
-
         self.fwSelectedTable.setRowCount(len(self._selected))
 
         for row, member in enumerate(self._selected):
@@ -308,22 +278,8 @@ class ClusterMemberDialog(QDialog):
                 self.fwSelectedTable.setItem(row, 1, item)
             item.setText(iface_name)
 
-            # Column 2: Master checkbox.
-            item = self.fwSelectedTable.item(row, 2)
-            state = (
-                Qt.CheckState.Checked if member.is_master else Qt.CheckState.Unchecked
-            )
-            if item is None:
-                item = QTableWidgetItem()
-                item.setCheckState(state)
-                self.fwSelectedTable.setItem(row, 2, item)
-            elif item.checkState() != state:
-                item.setCheckState(state)
-
         self.fwSelectedTable.resizeColumnsToContents()
         self.fwSelectedTable.horizontalHeader().setStretchLastSection(True)
-
-        self._table_update = False
 
     def _invalidate(self):
         """Update both views and reset button states."""
@@ -336,7 +292,7 @@ class ClusterMemberDialog(QDialog):
     # Swap logic
     # ------------------------------------------------------------------
 
-    def _swap(self, from_list, to_list, fw_name, iface_name='', is_master=False):
+    def _swap(self, from_list, to_list, fw_name, iface_name=''):
         """Move a firewall from *from_list* to *to_list*.
 
         Returns True if successful, False if the firewall was not found.
@@ -354,19 +310,9 @@ class ClusterMemberDialog(QDialog):
 
         if iface_name and iface_name in member.iface_map:
             member.iface_cluster = member.iface_map[iface_name]
-        member.is_master = is_master
 
         to_list.append(member)
         return True
-
-    def _set_master(self, fw_name, checked=True):
-        """Set master status for a firewall, clearing all others."""
-        for member in self._selected:
-            if member.fw_name == fw_name:
-                member.is_master = checked
-            else:
-                member.is_master = False
-        self._update_selected_table()
 
     # ------------------------------------------------------------------
     # Slots
@@ -385,33 +331,6 @@ class ClusterMemberDialog(QDialog):
         """Enable the Remove button when a selected member is clicked."""
         if not self.buttonRemove.isEnabled():
             self.buttonRemove.setEnabled(True)
-
-    @Slot(int, int)
-    def _on_master_selected(self, row, column):
-        """Handle master checkbox changes in the selected table."""
-        if self._table_update:
-            return
-
-        # Ensure at least one master is always checked.
-        no_master = True
-        for row_idx in range(self.fwSelectedTable.rowCount()):
-            item = self.fwSelectedTable.item(row_idx, 2)
-            if item is not None and item.checkState() == Qt.CheckState.Checked:
-                no_master = False
-                break
-
-        if no_master:
-            item = self.fwSelectedTable.item(row, 2)
-            if item is not None:
-                item.setCheckState(Qt.CheckState.Checked)
-
-        name_item = self.fwSelectedTable.item(row, 0)
-        master_item = self.fwSelectedTable.item(row, column)
-        if name_item is not None and master_item is not None:
-            self._set_master(
-                name_item.text(),
-                master_item.checkState() == Qt.CheckState.Checked,
-            )
 
     @Slot()
     def _on_add(self):
@@ -448,7 +367,7 @@ class ClusterMemberDialog(QDialog):
             return
 
         fw_name = items[0].text()
-        if not self._swap(self._selected, self._available, fw_name, '', False):
+        if not self._swap(self._selected, self._available, fw_name):
             logger.warning(
                 'ClusterMemberDialog: swap failed for firewall %s',
                 fw_name,
@@ -472,11 +391,7 @@ class ClusterMemberDialog(QDialog):
                 ),
             )
 
-            # Re-fetch the group to update it.
-            grp = session.merge(self._cluster_group)
-
             # Add selected interfaces as group members.
-            master_iface_id = ''
             for pos, member in enumerate(self._selected):
                 if member.iface_cluster is None:
                     continue
@@ -488,18 +403,6 @@ class ClusterMemberDialog(QDialog):
                         position=pos,
                     ),
                 )
-                if member.is_master:
-                    master_iface_id = str(iface_id).replace('-', '')
-
-            # Update master_iface in group data.
-            import copy
-
-            data = copy.deepcopy(grp.data or {})
-            if master_iface_id:
-                data['master_iface'] = master_iface_id
-            elif 'master_iface' in data:
-                del data['master_iface']
-            grp.data = data
 
             session.commit()
         except Exception:
@@ -517,7 +420,7 @@ class ClusterMemberDialog(QDialog):
     # ------------------------------------------------------------------
 
     def get_selected_members(self):
-        """Return list of (fw_id, fw_name, iface_id, iface_name, is_master) tuples."""
+        """Return list of (fw_id, fw_name, iface_id, iface_name) tuples."""
         result = []
         for member in self._selected:
             if member.iface_cluster is None:
@@ -528,7 +431,6 @@ class ClusterMemberDialog(QDialog):
                     member.fw_name,
                     member.iface_cluster[0],
                     member.iface_cluster[1],
-                    member.is_master,
                 )
             )
         return result
