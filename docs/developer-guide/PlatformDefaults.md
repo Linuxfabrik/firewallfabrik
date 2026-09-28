@@ -248,7 +248,12 @@ All of them ship iptables 1.8 (1.8.2 on RHEL 8.0 up to 1.8.11), which is
 the "1.6.2+" iptables entry.  The RHEL kernels are built without the time
 match (`# CONFIG_NETFILTER_XT_MATCH_TIME is not set` in the kernel config
 of 8.10, 9.8 and 10.2), so an iptables rule with a time window fails there
-whatever release is picked.  iptables 1.8.5 (RHEL 8) also refused an
+whatever release is picked.  A script with such rules therefore tries the
+match on a chain of its own before anything is touched, once more after
+`modprobe xt_time`, and stops with the reason if the kernel still refuses
+it (`check_time_match` in the script_skeleton configlet) - measured: RHEL
+8, 9 and 10 stop with the old rules in place, Debian 12 and Ubuntu 24.04
+load the rules.  iptables 1.8.5 (RHEL 8) also refused an
 SNAT port range starting at 0 (`--to-source 198.51.100.1:0-1024`), which
 1.8.7 and later took.  Beyond those two the replay showed only what an
 unprivileged namespace or an unresolvable DNS name causes.  The nftables

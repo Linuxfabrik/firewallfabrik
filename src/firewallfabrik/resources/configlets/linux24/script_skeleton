@@ -31,6 +31,36 @@ load_modules() {
     {{$load_modules}}
 }
 
+{{if using_time_match}}
+## A rule with a time window needs the kernel's time match (xt_time), and
+## not every kernel has it: RHEL 8, 9 and 10 are built without it
+## ("# CONFIG_NETFILTER_XT_MATCH_TIME is not set").  iptables then refuses
+## every such rule, after reset_all has already dropped the old ones.  So
+## the match is tried on a chain of its own before anything is touched -
+## that is what the rules will ask of the kernel - once more after
+## modprobe, and the activation stops if the kernel still refuses it.
+time_match_works() {
+    "$1" -F fwf_time_probe >/dev/null 2>&1
+    "$1" -X fwf_time_probe >/dev/null 2>&1
+    "$1" -N fwf_time_probe >/dev/null 2>&1 || return 1
+    "$1" -A fwf_time_probe -m time --timestart 00:00 --timestop 23:59 -j RETURN >/dev/null 2>&1
+    rc=$?
+    "$1" -F fwf_time_probe >/dev/null 2>&1
+    "$1" -X fwf_time_probe >/dev/null 2>&1
+    return $rc
+}
+
+check_time_match() {
+    for tool in "$@"; do
+        time_match_works "$tool" && continue
+        "$MODPROBE" xt_time >/dev/null 2>&1
+        time_match_works "$tool" && continue
+        log "Error: rules of this firewall match on the time of day, and the kernel has no time match (xt_time); RHEL kernels are built without it. Nothing was changed."
+        exit 1
+    done
+}
+{{endif}}
+
 verify_interfaces() {
     :
     {{$verify_interfaces}}
@@ -158,7 +188,8 @@ case "$cmd" in
 ##      iptables-restore refuses the whole table over the one rule.
         load_run_time_address_table_files
         {{endif}}
-        load_modules "{{$load_modules_with_nat}} {{$load_modules_with_ipv6}}"
+        load_modules "{{$load_modules_with_nat}} {{$load_modules_with_ipv6}}"{{if using_time_match}}
+        check_time_match {{$time_match_tools}}{{endif}}
         configure_interfaces
         verify_interfaces
         {{if prolog_after_interfaces}} prolog_commands {{endif}}

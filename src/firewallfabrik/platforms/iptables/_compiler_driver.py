@@ -185,6 +185,9 @@ class CompilerDriver_ipt(CompilerDriver):
                 for problem in automatic_rules.problems:
                     self.error(problem)
             generated_script = ''
+            # The tools whose rules match on the time of day; the script
+            # checks the kernel has the match before it touches a rule.
+            time_match_tools: list[str] = []
 
             iface_err = self.check_interface_addresses(fw)
             if iface_err:
@@ -511,7 +514,7 @@ class CompilerDriver_ipt(CompilerDriver):
                             generated_script += '# ================ IPv4\n'
                             generated_script += '\n\n'
 
-                    generated_script += self._dump_script(
+                    section = self._dump_script(
                         fw,
                         automatic_rules_stream.getvalue(),
                         automatic_mangle_stream.getvalue(),
@@ -520,6 +523,10 @@ class CompilerDriver_ipt(CompilerDriver):
                         filter_rules_stream.getvalue(),
                         ipv6_policy,
                     )
+                    generated_script += section
+                    tool = '"$IP6TABLES"' if ipv6_policy else '"$IPTABLES"'
+                    if ' -m time ' in section and tool not in time_match_tools:
+                        time_match_tools.append(tool)
 
                     if self.single_rule_compile_on:
                         generated_script += '\n\n'
@@ -598,6 +605,12 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
                 script_skeleton.set_variable(
                     'using_ipset', '1' if oscnf.using_ipset_module() else '0'
+                )
+                script_skeleton.set_variable(
+                    'using_time_match', '1' if time_match_tools else '0'
+                )
+                script_skeleton.set_variable(
+                    'time_match_tools', ' '.join(time_match_tools)
                 )
 
                 # Prolog/epilog scripts
