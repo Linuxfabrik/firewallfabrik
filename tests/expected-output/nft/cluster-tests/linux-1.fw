@@ -277,6 +277,10 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    limit htable_to_fw_0 {
+        rate 10/second
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -297,7 +301,7 @@ table ip fwf_filter {
         # Rule to_fw 0 (global)
         #
         # hashlimit 10/sec
-        limit rate 10/second counter log prefix "RULE 0 -- DENY " level info drop
+        limit name "htable_to_fw_0" counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

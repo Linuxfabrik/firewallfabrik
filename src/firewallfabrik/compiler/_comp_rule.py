@@ -124,6 +124,14 @@ class CompRule:
     # down the pipeline.  Every chain name derived afterwards carries this
     # as well.
     classify_half: bool = False
+    # A line that sees the same packets as another line of its rule - the
+    # CONNMARK save beside the MARK, one option of several in the mangle
+    # table - and so counts in a rate limit bucket of its own.  The rate
+    # limit is one bucket per rule, which every line of the rule names;
+    # that is right for lines a packet takes one of, and makes a packet
+    # crossing two of them pay twice.  Two buckets seeing the same packets
+    # at the same rate decide the same way.
+    limit_instance: str = ''
 
     # Negation flags
     src_single_object_negation: bool = False

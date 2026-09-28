@@ -1,0 +1,102 @@
+name: 'Test: one rate limit per rule'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: false
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '198.51.100.1'
+                  netmask: '255.255.255.0'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'Two sources, one rate between them'
+                options:
+                  limit_burst: '5'
+                  limit_suffix: '/second'
+                  limit_value: '5'
+                  stateless: true
+                action: 'Accept'
+                direction: 'Inbound'
+                src:
+                  - 'Library:Test Objects/IPv4:host-a'
+                  - 'Library:Test Objects/IPv4:host-b'
+              - type: 'PolicyRule'
+                position: 1
+                comment: 'A service beside them, which iptables factors into a chain'
+                options:
+                  limit_suffix: '/second'
+                  limit_value: '10'
+                  stateless: true
+                action: 'Accept'
+                direction: 'Inbound'
+                src:
+                  - 'Library:Test Objects/IPv4:host-a'
+                  - 'Library:Test Objects/IPv4:host-b'
+                srv:
+                  - 'Library:Test Objects/UDPService:udp-9999'
+              - type: 'PolicyRule'
+                position: 2
+                comment: 'Logged, so only what the limit lets through is logged'
+                options:
+                  limit_suffix: '/minute'
+                  limit_value: '20'
+                  log: true
+                  stateless: true
+                action: 'Accept'
+                direction: 'Inbound'
+                src:
+                  - 'Library:Test Objects/IPv4:host-a'
+                  - 'Library:Test Objects/IPv4:host-b'
+                srv:
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 3
+                comment: 'Drops above the rate, not below it'
+                options:
+                  limit_suffix: '/second'
+                  limit_value: '50'
+                  limit_value_not: true
+                  stateless: true
+                action: 'Deny'
+                direction: 'Inbound'
+                srv:
+                  - 'Library:Test Objects/TCPService:http'
+      - type: 'IPv4'
+        name: 'host-a'
+        inet_addr_mask:
+          address: '198.51.100.10'
+          netmask: '255.255.255.255'
+      - type: 'IPv4'
+        name: 'host-b'
+        inet_addr_mask:
+          address: '198.51.100.20'
+          netmask: '255.255.255.255'
+      - type: 'TCPService'
+        name: 'http'
+        dst_range_start: 80
+        dst_range_end: 80
+      - type: 'UDPService'
+        name: 'udp-9999'
+        dst_range_start: 9999
+        dst_range_end: 9999

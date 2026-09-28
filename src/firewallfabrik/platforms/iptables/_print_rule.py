@@ -1724,7 +1724,7 @@ class PrintRule(PolicyRuleProcessor):
             return None
         name = self._truncate_hashlimit_name(rule, name, module, revision_2)
         parts.append(f'--{module}-name {name}')
-        self._check_hashlimit_table(rule, name, limit, mode)
+        self._check_hashlimit_table(rule, name, limit, mode, suffix)
 
         for key, option in (
             ('hashlimit_size', 'htable-size'),
@@ -1769,7 +1769,7 @@ class PrintRule(PolicyRuleProcessor):
         return cut
 
     def _check_hashlimit_table(
-        self, rule: CompRule, name: str, limit: int, mode: str
+        self, rule: CompRule, name: str, limit: int, mode: str, suffix: str
     ) -> None:
         """Warn when a second rule asks the same hash table for something else.
 
@@ -1786,7 +1786,7 @@ class PrintRule(PolicyRuleProcessor):
             # against itself.
             return
         tables = self.compiler.hashlimit_tables
-        shape = (limit, rule.get_option('hashlimit_suffix', '') or '', mode)
+        shape = (limit, suffix, mode)
         first = tables.setdefault(name, shape)
         if first != shape:
             self.compiler.warning(
@@ -1797,11 +1797,22 @@ class PrintRule(PolicyRuleProcessor):
             )
 
     def _print_limit(self, rule: CompRule) -> str | None:
-        """Print ``-m limit`` rate limiting, or None when it cannot be written.
+        """Print the rule's rate limit, or None when it cannot be written.
 
         fwbuilder applies the limit configured in the firewall settings to
         log rules and the limit configured on the rule itself to every
         other rule (PolicyCompiler_PrintRule.cpp:271).
+
+        The rule's own limit is one rate for the whole rule, the way the
+        editor shows it, so it is written as ``-m hashlimit`` without a mode:
+        a hash table with a single bucket, which every line the rule is
+        written as names (``htable_find_get`` hands the table of that name
+        to each of them, net/netfilter/xt_hashlimit.c).  ``-m limit`` is a
+        bucket per line instead, and a rule naming two sources admitted its
+        rate twice - but only where no temporary chain collected the lines
+        first, which the administrator cannot see from the editor.
+        Firewall Builder writes ``-m limit``; see *Intentional deviations*
+        in the developer guide.
 
         ``None`` means the caller has to leave the rule out.  A rate limit
         is a condition like any other: a rule that keeps its action but
@@ -1811,7 +1822,8 @@ class PrintRule(PolicyRuleProcessor):
         have answered it that way since they were written.
         """
         negated = False
-        if rule.ipt_target in LOG_TARGETS:
+        log_limit = rule.ipt_target in LOG_TARGETS
+        if log_limit:
             limit_val = self.compiler.fw.get_option('limit_value')
             limit_suffix = self.compiler.fw.get_option('limit_suffix')
             burst = 0
@@ -1828,22 +1840,6 @@ class PrintRule(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        if negated:
-            # The limit match has no inverted form: --limit carries no
-            # XTOPT_INVERT (netfilter extensions/libxt_limit.c), and
-            # xtables_option_parse() answers a leading "!" with
-            # 'option "--limit" cannot be inverted'
-            # (netfilter libxtables/xtoptions.c).  Emitting the rule with a
-            # plain --limit would turn "only above this rate" into "only
-            # below it", so the condition is reported instead.  nftables
-            # writes it as `limit rate over`.
-            self.compiler.error(
-                rule,
-                'Rate limit is negated, which the iptables limit match cannot '
-                'express; the rule is left out',
-            )
-            return None
-
         unit_name = normalize_rate_unit(str(limit_suffix or ''))
         if unit_name is None:
             self.compiler.error(
@@ -1857,6 +1853,30 @@ class PrintRule(PolicyRuleProcessor):
             burst = int(burst)
         except (ValueError, TypeError):
             burst = 0
+
+        # Revision 1 of the hashlimit match is the first that takes a table
+        # without a key and the first with --hashlimit-upto and
+        # --hashlimit-above (netfilter "Add support for xt_hashlimit match
+        # revision 1", v1.4.1).
+        if not log_limit and (
+            version_compare(self.version, HASHLIMIT_MODE_OPTIONAL_SINCE) >= 0
+        ):
+            return self._print_rule_rate(rule, limit_val, unit_name, burst, negated)
+
+        if negated:
+            # The limit match has no inverted form: --limit carries no
+            # XTOPT_INVERT (netfilter extensions/libxt_limit.c), and
+            # xtables_option_parse() answers a leading "!" with
+            # 'option "--limit" cannot be inverted'
+            # (netfilter libxtables/xtoptions.c).  Emitting the rule with a
+            # plain --limit would turn "only above this rate" into "only
+            # below it", so the condition is reported instead.
+            self.compiler.error(
+                rule,
+                'Rate limit is negated, which the iptables limit match cannot '
+                'express; the rule is left out',
+            )
+            return None
 
         max_rate = XT_LIMIT_SCALE * LIMIT_UNIT_SECONDS[unit_name]
         if limit_val > max_rate:
@@ -1874,11 +1894,74 @@ class PrintRule(PolicyRuleProcessor):
                 f'0 to {MAX_LIMIT_BURST}; the rule is left out',
             )
             return None
+        if not log_limit:
+            self.compiler.warning(
+                rule,
+                f'iptables before {HASHLIMIT_MODE_OPTIONAL_SINCE} has no rate '
+                'limit several lines can share; every line this rule is '
+                'written as admits the rate on its own',
+            )
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'
         if burst > 0:
             result += f' --limit-burst {burst}'
         return result
+
+    def _print_rule_rate(
+        self, rule: CompRule, rate: int, unit_name: str, burst: int, above: bool
+    ) -> str | None:
+        """Print the rule's rate limit as a hash table of one bucket.
+
+        The table is named after the rule, the way a rate limit kept per
+        key is when the editor leaves its name empty, and a line that sees
+        the same packets as another line of the rule gets a table of its
+        own (``CompRule.limit_instance``).  The mangle table is a pass of
+        its own that the same packet crosses as well, so it gets its own
+        names too; nftables has the two in separate tables anyway.
+        """
+        revision_2 = version_compare(self.version, HASHLIMIT_REVISION_2_SINCE) >= 0
+        scale = XT_HASHLIMIT_SCALE_V2 if revision_2 else XT_HASHLIMIT_SCALE_V1
+        max_burst = MAX_HASHLIMIT_BURST_V2 if revision_2 else MAX_HASHLIMIT_BURST_V1
+        if rate > scale * LIMIT_UNIT_SECONDS[unit_name]:
+            # parse_rate stores scale * unit / rate, so a rate above the
+            # scale rounds to zero and the tool answers "Rate too fast"
+            # (netfilter extensions/libxt_hashlimit.c).
+            self.compiler.error(
+                rule,
+                f'Rate limit {rate}/{unit_name} is faster than this iptables '
+                'can express; the rule is left out',
+            )
+            return None
+        if burst > max_burst:
+            self.compiler.error(
+                rule,
+                f'Rate limit burst {burst} is out of range (1-{max_burst}); '
+                'the rule is left out',
+            )
+            return None
+
+        if self.compiler.rule_set_chain:
+            rule_set = re.sub(
+                r'[^0-9A-Za-z._-]', '_', self.compiler.get_rule_set_name()
+            )
+            name = f'limit_{rule_set}_{rule.position}'
+        else:
+            name = f'limit_rule_{rule.position}'
+        if getattr(self.compiler, 'my_table', 'filter') == 'mangle':
+            name = 'm' + name
+        if rule.limit_instance:
+            name += f'_{rule.limit_instance}'
+        if rule.classify_half:
+            name += '_cl'
+        name = self._truncate_hashlimit_name(rule, name, 'hashlimit', revision_2)
+        self._check_hashlimit_table(rule, name, rate, '', unit_name)
+
+        match = 'above' if above else 'upto'
+        parts = [f'-m hashlimit --hashlimit-{match} {rate}/{unit_name}']
+        if burst > 0:
+            parts.append(f'--hashlimit-burst {burst}')
+        parts.append(f'--hashlimit-name {name}')
+        return ' '.join(parts)
 
     # Standard iptables targets that must never be prefixed.
     _BUILTIN_TARGETS = frozenset(

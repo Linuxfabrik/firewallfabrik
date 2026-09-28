@@ -282,6 +282,13 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    limit test {
+        rate 10/second
+    }
+    limit limit_Policy_0 {
+        rate 10/second
+    }
+
     set connlimit_Policy_1_0 {
         type ipv4_addr
         flags dynamic
@@ -299,7 +306,7 @@ table ip fwf_filter {
         # Rule 0 (eth0)
         #
         # limit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit rate 10/second counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit name "limit_Policy_0" counter accept
         #
         # Rule 1 (eth0)
         #
@@ -328,7 +335,7 @@ table ip fwf_filter {
         # Rule Policy_2 0 (eth0)
         #
         # hashlimit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit rate 10/second counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit name "test" counter accept
         #
         # Rule Policy_2 1 (eth0)
         #

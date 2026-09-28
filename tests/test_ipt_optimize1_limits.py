@@ -13,13 +13,13 @@
 """What Optimize1 leaves on the rule it moves into a temporary chain.
 
 The optimiser turns one rule into a jump rule plus a detail rule in a chain
-of its own, and a packet passes both.  A rate limit is a token bucket, so a
-limit left on both is paid twice and the rule fires at half the rate the
-editor shows.  fwbuilder clears all three limit options on the detail rule
-(PolicyCompiler_ipt_optimizer.cpp, optimizeForRuleElement), which is what
-its own regression output shows: optitest carries `-m limit --limit 8
---limit-burst 4` on the FORWARD rule and on neither of the two chains
-behind it.
+of its own, and a packet passes both.  A limit left on both is paid twice,
+so it belongs on one of them - and on the detail rule, where the whole rule
+has matched.  fwbuilder keeps it on the jump
+(PolicyCompiler_ipt_optimizer.cpp, optimizeForRuleElement), which matches on
+the one element being factored out and nothing else: a sender the rule does
+not name then spends the rule's rate, and twenty packets from one left a
+source the rule accepts with none.
 """
 
 import uuid
@@ -84,7 +84,8 @@ def _optimized(options):
     return jump, detail
 
 
-def test_the_limits_stay_on_the_jump_rule():
+def test_the_limits_are_cleared_on_the_jump_rule():
+    """Otherwise a sender the rule does not name spends its rate."""
     jump, _detail = _optimized(
         {
             'limit_value': 8,
@@ -92,13 +93,12 @@ def test_the_limits_stay_on_the_jump_rule():
             'hashlimit_value': 20,
         }
     )
-    assert jump.get_option('limit_value') == 8
-    assert jump.get_option('connlimit_value') == 2
-    assert jump.get_option('hashlimit_value') == 20
+    assert jump.get_option('limit_value') == -1
+    assert jump.get_option('connlimit_value') == -1
+    assert jump.get_option('hashlimit_value') == -1
 
 
-def test_the_limits_are_cleared_on_the_detail_rule():
-    """Otherwise the same packet pays for a token in both rules."""
+def test_the_limits_stay_on_the_detail_rule():
     _jump, detail = _optimized(
         {
             'limit_value': 8,
@@ -106,6 +106,6 @@ def test_the_limits_are_cleared_on_the_detail_rule():
             'hashlimit_value': 20,
         }
     )
-    assert detail.get_option('limit_value') == -1
-    assert detail.get_option('connlimit_value') == -1
-    assert detail.get_option('hashlimit_value') == -1
+    assert detail.get_option('limit_value') == 8
+    assert detail.get_option('connlimit_value') == 2
+    assert detail.get_option('hashlimit_value') == 20

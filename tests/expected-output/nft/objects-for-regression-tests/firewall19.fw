@@ -420,6 +420,10 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    limit limit_Policy_4 {
+        rate 2/second
+    }
+
     set i_ppp0 {
         type ipv4_addr
         flags interval
@@ -450,7 +454,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit name "limit_Policy_4" counter accept
         #
         # Rule 5 (global)
         #
@@ -489,7 +493,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit name "limit_Policy_4" counter accept
         #
         # Rule 5 (global)
         #
@@ -542,7 +546,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit name "limit_Policy_4" counter accept
         #
         # Rule 5 (global)
         #

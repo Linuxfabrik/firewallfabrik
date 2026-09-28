@@ -2338,8 +2338,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             # is mandatory in the current revision, and the real tool
             # accepts it - and the hash table then has a single bucket,
             # which is a rate limit for the rule as a whole.  That is a
-            # plain `limit rate` here, with no meter to key it by.
-            return rate
+            # limit object here, with no meter to key it by, named like the
+            # meter so that a table name two rules share is one bucket on
+            # both platforms.
+            return self._named_limit(
+                rule, self._meter_name(rule), rate.removeprefix('limit ')
+            )
 
         af = 'ip6' if self.compiler.ipv6_policy else 'ip'
         has_ports = self._hashlimit_has_ports(rule)
@@ -2361,9 +2365,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not keys:
             # Every key the mode named was a port and the rule has none, so
             # the whole key is the zero the kernel writes: one bucket for
-            # the rule, which is a plain `limit rate`.  Returning nothing
+            # the rule, which is a limit object as above.  Returning nothing
             # here would leave the rule with no limit at all.
-            return rate
+            return self._named_limit(
+                rule, self._meter_name(rule), rate.removeprefix('limit ')
+            )
 
         key = ' . '.join(keys)
         parts = [key]
@@ -2629,13 +2635,58 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # "over" is nftables' inverted rate limit: the statement matches once
         # the rate has been exceeded (netfilter nftables src/parser_bison.y
-        # maps it to NFT_LIMIT_F_INV, tests/py/any/limit.t).  iptables has no
-        # such form and reports the rule instead.
+        # maps it to NFT_LIMIT_F_INV, tests/py/any/limit.t).  The iptables
+        # side says the same with --hashlimit-above.
         mode = 'over ' if negated else ''
-        result = f'limit rate {mode}{limit_val}{limit_suffix}'
+        rate = f'rate {mode}{limit_val}{limit_suffix}'
         if burst > 0:
-            result += f' burst {burst} packets'
-        return result
+            rate += f' burst {burst} packets'
+        if rule.ipt_target in LOG_TARGETS:
+            # The firewall's logging limit caps each log line on its own,
+            # the way the iptables LOG rule carries its own -m limit.
+            return f'limit {rate}'
+        return self._named_limit(rule, self._limit_name(rule), rate)
+
+    def _limit_name(self, rule: CompRule) -> str:
+        """Return the name of the limit object this rule's rate counts in.
+
+        One per rule, the way ``_meter_name`` names a meter: the rule set
+        and the position identify the rule, and the address family is part
+        of the name because iptables keeps a hash table per family - an
+        IPv4 and an IPv6 packet of one rule do not share a rate there, and
+        a dual-stack firewall puts both into one ``inet`` table here.
+        """
+        # `rule_set_key` rather than the bare rule set name: a branch into
+        # another firewall's "Policy" is compiled into this script as well.
+        name = f'limit_{self.compiler.rule_set_key()}_{rule.position}'
+        # A line crossed by the same packets as another line of the rule
+        # counts on its own; see `CompRule.limit_instance`.
+        if rule.limit_instance:
+            name += f'_{rule.limit_instance}'
+        if rule.classify_half:
+            name += '_cl'
+        if self.compiler.ipv6_policy:
+            name += '_v6'
+        return nft_object_name(name)
+
+    def _named_limit(self, rule: CompRule, name: str, rate: str) -> str:
+        """Register limit object *name* with *rate* and return the reference.
+
+        Every line one rule is written as names the same object, so the
+        rule admits its rate once rather than once per address, chain or
+        protocol group: an anonymous ``limit rate`` is a token bucket per
+        expression (``struct nft_limit``, net/netfilter/nft_limit.c), and a
+        rule written as two lines admitted twice its rate - verified with
+        nft 0.9.3 to 1.1.6 on Rocky 8 to 10, Debian 11 to 13, Fedora 44,
+        Leap 15.5 and 16.0 and Ubuntu 22.04 to 26.04.
+        """
+        if not self.compiler.register_limit(name, rate):
+            self.compiler.warning(
+                rule,
+                f'the rate limit "{name}" is already in use by another rule '
+                'with a different rate; both rules count in the first one',
+            )
+        return f'limit name "{name}"'
 
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""

@@ -171,6 +171,10 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Named counter objects the accounting rules count into. The driver
         # declares them at the top of the table.
         self.counters: list[str] = []
+        # Named limit objects a rate limit counts in, keyed by name and
+        # holding the rate.  The driver hands every compiler of one table
+        # the same dict and declares the objects at the top of the table.
+        self.limits: dict[str, str] = {}
         # Dynamic sets a per-source limit counts in, keyed by set name and
         # holding the address type of the key.
         self.dynamic_sets: dict[str, str] = {}
@@ -586,6 +590,23 @@ class PolicyCompiler_nft(PolicyCompiler):
         """Remember a counter object so the driver can declare it."""
         if name not in self.counters:
             self.counters.append(name)
+
+    def register_limit(self, name: str, rate: str) -> bool:
+        """Remember a named limit object, and say whether *rate* is its rate.
+
+        A rule set writes one rule as several lines - one per address, per
+        chain, per protocol group - and an anonymous ``limit rate`` on each
+        of them is a token bucket of its own (``struct nft_limit`` is
+        allocated per expression, net/netfilter/nft_limit.c), so the rule
+        would admit its rate once per line instead of once.  Every line of
+        the rule therefore names one object of the table instead.
+
+        The object carries the rate of whichever rule registered it first.
+        Only a rate limit table name typed in the editor can be shared by
+        two rules, and the iptables side reports the same thing for a hash
+        table of one name, so the answer lets the caller report it too.
+        """
+        return self.limits.setdefault(name, rate) == rate
 
     def register_dynamic_set(self, name: str, addr_type: str) -> None:
         """Remember a dynamic set so the driver can declare it.
@@ -2578,6 +2599,7 @@ class SplitIfTagAndConnmark(PolicyRuleProcessor):
             save_rule.set_option('tagging', False)
             save_rule.set_option('log', False)
             save_rule.set_option('CONNMARK_arg', '--save-mark')
+            save_rule.limit_instance = 'cm'
             self.tmp_queue.append(save_rule)
 
             cast('PolicyCompiler_nft', self.compiler).have_connmark = True

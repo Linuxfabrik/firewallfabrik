@@ -286,6 +286,16 @@ table ip fwf_filter {
     counter RULE_17 {
     }
 
+    limit limit_Policy_16 {
+        rate 10/minute
+    }
+    limit limit_Policy_17 {
+        rate 10/minute
+    }
+    limit limit_Policy_18 {
+        rate 10/minute
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -358,17 +368,17 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit name "limit_Policy_16" counter log level debug drop
         #
         # Rule 17 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit name "limit_Policy_17" counter name "RULE_17" log level debug
         #
         # Rule 18 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit name "limit_Policy_18" counter log level debug accept
         #
         # Rule 19 (global)
         #
@@ -520,17 +530,17 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit name "limit_Policy_16" counter log level debug drop
         #
         # Rule 17 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit name "limit_Policy_17" counter name "RULE_17" log level debug
         #
         # Rule 18 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit name "limit_Policy_18" counter log level debug accept
         #
         # Rule 20 (global)
         #
@@ -674,17 +684,17 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit name "limit_Policy_16" counter log level debug drop
         #
         # Rule 17 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit name "limit_Policy_17" counter name "RULE_17" log level debug
         #
         # Rule 18 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit name "limit_Policy_18" counter log level debug accept
         #
         # Rule 19 (global)
         #

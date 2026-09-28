@@ -7,14 +7,10 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * host.fw /etc/fwf.sh
+# files: * fw-test.fw /etc/fwf.sh
 #
 # Compiled for nftables (any version)
 #
-#  firewall protects host it is running on
-#
-# host:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
-# host:Policy:8: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -73,65 +69,84 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
-    limit limit_Policy_8 {
-        rate 10/minute burst 50 packets
+    limit limit_Policy_0 {
+        rate 5/second burst 5 packets
+    }
+    limit limit_Policy_1 {
+        rate 10/second
+    }
+    limit limit_Policy_2 {
+        rate 20/minute
+    }
+    limit limit_Policy_3 {
+        rate over 50/second
     }
 
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
         #
-        # Rule 0 (eth0)
+        # Rule 0 (global)
         #
-        iifname "eth0" ip saddr 22.22.22.22 counter log level debug drop
+        # Two sources, one rate between them
+        ip saddr { 198.51.100.10, 198.51.100.20 } limit name "limit_Policy_0" counter accept
         #
-        # Rule 1 (lo)
+        # Rule 1 (global)
         #
-        # allow everything on loopback
-        iif "lo" ct state new counter accept
+        # A service beside them, which iptables factors into a chain
+        ip saddr { 198.51.100.10, 198.51.100.20 } udp dport 9999 limit name "limit_Policy_1" counter accept
         #
-        # Rule 3 (lo)
+        # Rule 2 (global)
         #
-        iif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new counter log level debug accept
+        # Logged, so only what the limit lets through is logged
+        ip saddr { 198.51.100.10, 198.51.100.20 } tcp dport 80 limit name "limit_Policy_2" counter jump C673f40b94f90.0
         #
-        # Rule 7 (global)
+        # Rule 3 (global)
         #
-        ip saddr 22.22.22.22 ct state new counter accept
-        #
-        # Rule 8 (global)
-        #
-        # 'catch all' rule
-        limit name "limit_Policy_8" counter log prefix "CATCH ALL RULE" level debug drop
+        # Drops above the rate, not below it
+        tcp dport 80 limit name "limit_Policy_3" counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
+        #
+        # Rule 0 (global)
+        #
+        # Two sources, one rate between them
+        ip saddr { 198.51.100.10, 198.51.100.20 } limit name "limit_Policy_0" counter accept
+        #
+        # Rule 1 (global)
+        #
+        # A service beside them, which iptables factors into a chain
+        ip saddr { 198.51.100.10, 198.51.100.20 } udp dport 9999 limit name "limit_Policy_1" counter accept
+        #
+        # Rule 2 (global)
+        #
+        # Logged, so only what the limit lets through is logged
+        ip saddr { 198.51.100.10, 198.51.100.20 } tcp dport 80 limit name "limit_Policy_2" counter jump C673f40b94f90.0
+        #
+        # Rule 3 (global)
+        #
+        # Drops above the rate, not below it
+        tcp dport 80 limit name "limit_Policy_3" counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
+    }
+
+    chain C673f40b94f90.0 {
         #
-        # Rule 2 (lo)
+        # Rule 2 (global)
         #
-        # allow everything on loopback
-        oif "lo" ct state new counter accept
-        #
-        # Rule 3 (lo)
-        #
-        oif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new counter log level debug accept
-        #
-        # Rule 7 (global)
-        #
-        ct state new counter accept
-        #
-        # Rule 8 (global)
-        #
-        # 'catch all' rule
-        limit name "limit_Policy_8" counter log prefix "CATCH ALL RULE" level debug drop
+        # Logged, so only what the limit lets through is logged
+        limit rate 10/second counter log prefix "RULE 2 -- ACCEPT " level info
+        meta l4proto tcp counter accept
     }
 }
 
@@ -152,12 +167,7 @@ script_body() {
 
 ip_forward() {
     :
-    echo 0 > /proc/sys/net/ipv4/ip_forward
-}
 
-set_kernel_variables() {
-    echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout
-    echo 1800 > /proc/sys/net/ipv4/tcp_keepalive_intvl
 }
 
 flush_own_tables() {
@@ -195,38 +205,25 @@ remove_other_tables() {
     $NFT list tables 2>/dev/null |
         while read -r line; do
             printf '%s\n' "$FWF_OWN_TABLES" | grep -qxF "$line" && continue
+            # Coexistence: another tool's table is left alone, and
+            # only a table of ours this ruleset no longer installs goes.
+            case $line in
+            "table inet fwf_filter" | "table ip fwf_filter" \
+            | "table ip6 fwf_filter" \
+            | "table inet fwf_mangle" | "table ip fwf_mangle" \
+            | "table ip6 fwf_mangle" \
+            | "table inet fwf_nat" | "table ip fwf_nat" \
+            | "table ip6 fwf_nat") ;;
+            *) continue ;;
+            esac
             printf 'delete %s\n' "$line"
         done |
         $NFT -f - 2>/dev/null
-    flush_legacy_iptables
-    return 0
-}
-
-flush_legacy_iptables() {
-    # Remove stale legacy (xtables) iptables rules left over from a
-    # previous iptables-based policy. "nft flush ruleset" only clears
-    # the nft backend, so on systems still using the legacy backend the
-    # old iptables rules would otherwise survive and shadow the nft
-    # rules. All filtering is delegated to nftables, so the built-in
-    # policies are reset to ACCEPT and every chain is flushed/deleted.
-    for ipt in iptables ip6tables; do
-        command -v "$ipt" >/dev/null 2>&1 || continue
-        "$ipt" -P INPUT ACCEPT 2>/dev/null
-        "$ipt" -P FORWARD ACCEPT 2>/dev/null
-        "$ipt" -P OUTPUT ACCEPT 2>/dev/null
-        for table in filter nat mangle raw; do
-            "$ipt" -t "$table" -F 2>/dev/null
-            "$ipt" -t "$table" -X 2>/dev/null
-        done
-    done
-    # Same as in flush_own_tables: a table the kernel does not offer makes
-    # the last command fail, which must not become the caller's exit code.
     return 0
 }
 
 block_action() {
-    $NFT flush ruleset 2>/dev/null
-    flush_legacy_iptables
+    flush_own_tables
     # block all traffic by default (always use inet to block both IPv4 and IPv6)
     $NFT add table inet fwf_filter
     $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
@@ -235,8 +232,7 @@ block_action() {
 }
 
 stop_action() {
-    $NFT flush ruleset 2>/dev/null
-    flush_legacy_iptables
+    flush_own_tables
 }
 
 check_nft_status() {
@@ -275,7 +271,6 @@ case "$cmd" in
             log "Ruleset rejected by nft, keeping the running firewall"
             run_epilog_and_exit 1
         }
-        set_kernel_variables
         script_body || run_epilog_and_exit 1
         remove_other_tables
         ip_forward

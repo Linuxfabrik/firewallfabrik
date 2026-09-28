@@ -4025,17 +4025,22 @@ class Optimize1(PolicyRuleProcessor):
         r.set_option('classification', False)
         r.set_option('routing', False)
         r.set_option('tagging', False)
+        # The limits go with the rule into the temporary chain, and only
+        # there.  A packet passes both rules, so a limit on both is a second
+        # evaluation the same packet has to pay.  C++ optimizeForRuleElement
+        # keeps them on the jump instead, but the jump matches on the one
+        # element being factored out - the service, say - and nothing else,
+        # so a sender the rule does not name spends the rule's rate: with
+        # the limit on the jump, twenty packets from a stranger left a
+        # source the rule accepts with none (iptables 1.8.11, private
+        # network namespace).  In the chain the whole rule has matched.
+        r.set_option('limit_value', -1)
+        r.set_option('connlimit_value', -1)
+        r.set_option('hashlimit_value', -1)
         self.tmp_queue.append(r)
 
-        # Original rule: moved to temp chain, made stateless.  The rate
-        # limits stay on the jump rule alone: a packet passes both rules, so
-        # a limit left on this one is a second bucket the same packet has to
-        # pay, which halves the rate the editor shows (C++
-        # optimizeForRuleElement clears all three here).
+        # Original rule: moved to temp chain, made stateless.
         rule.set_option('stateless', True)
-        rule.set_option('limit_value', -1)
-        rule.set_option('connlimit_value', -1)
-        rule.set_option('hashlimit_value', -1)
         rule.force_state_check = False
         rule.ipt_chain = new_chain
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
@@ -4881,6 +4886,7 @@ class SplitIfTagAndConnmark(PolicyRuleProcessor):
             r.set_option('tagging', False)
             r.set_option('log', False)
             r.set_option('CONNMARK_arg', '--save-mark')
+            r.limit_instance = 'cm'
             self.tmp_queue.append(r)
 
             ipt_comp.have_connmark = True
@@ -4952,7 +4958,9 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 rule.set_option('stateless', True)
                 rule.set_option('log', False)
 
-            # Create separate rule for tagging
+            # Create separate rule for tagging.  Every rule below sees the
+            # packets the one before it saw, so each counts in a rate limit
+            # bucket of its own (see `CompRule.limit_instance`).
             if rule.get_option('tagging', False):
                 r = rule.clone()
                 r.set_option('classification', False)
@@ -4960,6 +4968,7 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 rule.set_option('tagging', False)
                 r.ipt_chain = new_chain
                 r.action = PolicyAction.Continue
+                r.limit_instance = 't'
                 self.tmp_queue.append(r)
 
             # Create separate rule for classification
@@ -4970,6 +4979,7 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 r.set_option('tagging', False)
                 r.ipt_chain = new_chain
                 r.action = PolicyAction.Continue
+                r.limit_instance = 'c'
                 self.tmp_queue.append(r)
 
             # Keep original for routing or if action is not Continue

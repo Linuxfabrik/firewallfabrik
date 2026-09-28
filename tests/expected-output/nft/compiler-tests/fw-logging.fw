@@ -274,6 +274,10 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    limit htable_Policy_4 {
+        rate 10/minute
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -298,7 +302,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto icmp limit rate 10/minute counter drop
+        meta l4proto icmp limit name "htable_Policy_4" counter drop
     }
 
     chain forward {
@@ -316,7 +320,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto icmp limit rate 10/minute counter drop
+        meta l4proto icmp limit name "htable_Policy_4" counter drop
     }
 
     chain output {

@@ -1133,8 +1133,10 @@ Reduces the number of rule element checks by creating sub-chains. Picks
 the element with the **fewest objects** (≤15) and splits on it:
 
 1. **Jump rule**: matches only the smallest element, all others set to
-   "any", jumps to a temp chain. Stateful check and limits are disabled.
-2. **Detail rule**: in the temp chain, matches all conditions.
+   "any", jumps to a temp chain. The rate, connection and per-key limits
+   are cleared on it (see *Intentional deviations*).
+2. **Detail rule**: in the temp chain, matches all conditions and carries
+   the limits. It is made stateless; the jump keeps the state match.
 
 This is run **3 times** in the pipeline for cascading optimization. Each
 pass can split on a different element.
@@ -1209,7 +1211,7 @@ $IPTABLES -w -t <table> -A <chain>
     <dst_service>                 # --dport port, --icmp-type, etc.
     <state_match>                 # -m conntrack --ctstate NEW
     <time_interval>               # -m time --timestart/--timestop
-    <modules>                     # -m limit, -m connlimit, -m hashlimit
+    <modules>                     # -m hashlimit, -m connlimit
     -j <target>                   # ACCEPT/DROP/REJECT/LOG/MARK/chain/etc.
 ```
 
@@ -1225,7 +1227,7 @@ Key helper methods:
 | `_printTarget()` | `-j TARGET` with options: `--reject-with`, `--set-mark`, `--set-class`, LOG params |
 | `_printLogParameters()` | `-j LOG --log-level --log-prefix` or `-j ULOG/NFLOG --nflog-group --nflog-prefix` |
 | `_printTimeInterval()` | `-m time --timestart HH:MM --timestop HH:MM --days Mon,Tue,...`, or `--datestart`/`--datestop` for an interval that pins a calendar window (iptables 1.4.0 and up) |
-| `_printModules()` | `-m limit --limit N/s`, `-m connlimit --connlimit-above N`, `-m hashlimit ...` |
+| `_printModules()` | `-m hashlimit --hashlimit-upto N/second --hashlimit-name limit_rule_N` for the rule's rate limit, `-m limit` for a log rule's, `-m connlimit --connlimit-above N`, `-m hashlimit ...` |
 | `_printActionOnReject()` | `--reject-with tcp-reset`, `--reject-with icmp-port-unreachable`, etc. |
 | `_printRuleLabel()` | Comment block: `# Rule N (label)\n# description\necho "Rule N ..."\n` |
 | `_createChain()` | `$IPTABLES -N chainname` (skipped if already created, tracked via `minus_n_commands`) |
@@ -1783,6 +1785,39 @@ how a report stops being read.
   and SDNAT expansions on both platforms.  This is the second place where
   `missing` in `compare-reference.sh` is higher than Firewall Builder on
   purpose (8 lines, `firewall33-1` and `firewall81`).
+- **A rule's rate limit is one bucket for the whole rule.**  Firewall
+  Builder writes `-m limit` on every line a rule is compiled into, and a
+  `-m limit` or an nftables `limit rate` is a token bucket per line
+  (`struct nft_limit` is allocated per expression, `net/netfilter/nft_limit.c`).
+  So a rule naming two sources admitted its rate twice - unless a
+  temporary chain collected the lines first (`optimize1`, `Logging2`, a
+  negation), in which case it admitted it once.  Which of the two an
+  administrator got depended on internals the editor does not show, and
+  the tooltip says "the rule stops matching".  fwf writes the rule's own
+  limit as `-m hashlimit --hashlimit-upto` / `--hashlimit-above` without a
+  mode and with a table named after the rule (`limit_rule_<n>`, `m` in
+  front in the mangle table), and nftables as a named `limit` object
+  (`limit_<rule set>_<n>`, `_v6` for IPv6) that every line references.
+  Both keep one bucket per address family, the way iptables keeps one
+  hash table per family.  A line that sees the same packets as another
+  line of its rule - the CONNMARK save beside the MARK, the classify half
+  of a rule that also tags - counts in a bucket of its own
+  (`CompRule.limit_instance`), since two buckets seeing one packet stream
+  decide alike and one bucket would charge it twice.  The limit of a log
+  rule keeps `-m limit` / `limit rate`: it caps each log line.  iptables
+  below 1.4.1 has no keyless hashlimit and keeps `-m limit` with a warning.
+  The bucket per line, and one bucket per rule with the named table and
+  the named object, were measured with nft 0.9.3 to 1.1.6 and iptables
+  1.8.4 to 1.8.11 (legacy on Leap 15.5) on Rocky 8 to 10, Debian 11 to
+  13, Fedora 44, Leap 15.5 and 16.0 and Ubuntu 22.04 to 26.04.
+- **`optimize1` puts the limits on the rule in the temporary chain**, not
+  on the jump.  The jump matches on the one element being factored out,
+  the service say, so with the limit there a sender the rule does not
+  name spent the rule's rate: twenty packets from one left a source the
+  rule accepts with none.  The packet still pays once, because only the
+  rule in the chain carries the limit.  This and the entry above change
+  the iptables output of every rule with a rate limit against the
+  Firewall Builder reference.
 - `VerifyScriptLiterals` (`compiler/processors/_generic.py`) asks a
   question none of those do: three objects cannot be resolved by the
   compiler, so their names travel into the generated shell script and are
@@ -2467,7 +2502,7 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 
 | Feature | nftables backend | fwf status | Notes |
 |---------|------------------|-----------|-------|
-| Inline logging with verdict | Yes | ✅ | One rule carries the log and the verdict (`log prefix "…" accept`), and the mark or the traffic class beside them where iptables needs a temporary chain for the second target. A log with a rate limit of its own becomes two rules, the way iptables' temporary chain does, so the limit gates the logging and not the traffic — and where the rule *also* holds a connection limit or a rate limit kept per key, `SplitLogWithStatefulLimit` builds the jump / log / action chain `Logging2` builds, because two lines would consume that limit twice |
+| Inline logging with verdict | Yes | ✅ | One rule carries the log and the verdict (`log prefix "…" accept`), and the mark or the traffic class beside them where iptables needs a temporary chain for the second target. A log with a rate limit of its own becomes two rules, the way iptables' temporary chain does, so the limit gates the logging and not the traffic — and where the rule *also* holds a limit of its own (a rate limit, a connection limit or a rate limit kept per key), `SplitLogWithStatefulLimit` builds the jump / log / action chain `Logging2` builds, because two lines would consume that limit twice, and a log line without it would log packets the limit then refuses |
 | Custom action | any statement | ✅ | The rule's text is appended to the rule the way the iptables printer appends its custom target.  It carries no platform of its own, so the firewall's platform says what it was written in: a firewall naming another one is reported, because nftables refuses the whole ruleset over a statement it cannot parse |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. A rule set belonging to another firewall or cluster object is compiled into this script as well, the way `CompilerDriver::findImportedRuleSets` does it.  Two cases stay reported: a branch into the firewall's *own* top rule set, whose chains are hooked and cannot be jumped to - Firewall Builder emits the same empty chain there - and the jump that closes a cycle, which the kernel refuses (`nft_chain_validate` answers `-EMLINK`, "Too many links"); see the note under *Intentional deviations* |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |

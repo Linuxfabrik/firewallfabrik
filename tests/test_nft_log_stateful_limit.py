@@ -157,6 +157,9 @@ def test_a_plain_rate_limit_is_not_paid_twice(tmp_path):
         if 'ct count over 2' in line and ' jump ' in line
     )
     jumps = [line for line in script.splitlines() if f'jump {name}' in line]
-    assert jumps and all('limit rate 20/second' in line for line in jumps), jumps
+    assert jumps and all('limit name "limit_Policy_13"' in line for line in jumps), (
+        jumps
+    )
     body = _chain_body(script, name)
-    assert not any('limit rate 20/second' in line for line in body), body
+    assert not any('limit name' in line for line in body), body
+    assert 'limit limit_Policy_13 {\n        rate 20/second\n    }' in script

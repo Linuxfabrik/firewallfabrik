@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+* Compiler (iptables): a rate limit that applies only above the rate is compiled instead of left out.
+* Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
+* Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
 
 
 ## [v3.2.0] - 2026-09-25

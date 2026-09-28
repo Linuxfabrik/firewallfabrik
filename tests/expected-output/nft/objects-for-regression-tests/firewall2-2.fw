@@ -290,6 +290,10 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    limit limit_Policy_27 {
+        rate 5/minute burst 10 packets
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -425,8 +429,7 @@ table ip fwf_filter {
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 27 - ACCEPT **" level debug
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit name "limit_Policy_27" counter jump C356fde7e6309.0
         #
         # Rule 28 (global)
         #
@@ -699,8 +702,7 @@ table ip fwf_filter {
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 27 - ACCEPT **" level debug
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit name "limit_Policy_27" counter jump C356fde7e6309.0
         #
         # Rule 28 (global)
         #
@@ -712,6 +714,16 @@ table ip fwf_filter {
         # 'catch all' rule
         limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
         counter drop
+    }
+
+    chain C356fde7e6309.0 {
+        #
+        # Rule 27 (global)
+        #
+        # host-fw2 has the same address as
+        #         one of the firewall's interfaces
+        limit rate 5/second counter log prefix "RULE 27 - ACCEPT **" level debug
+        meta l4proto tcp counter accept
     }
 }
 

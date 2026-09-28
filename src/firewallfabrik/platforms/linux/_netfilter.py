@@ -688,16 +688,19 @@ def reset_srv_preserving_tcp(rule: CompRule) -> None:
 
 
 def rule_keeps_a_stateful_rate(rule: CompRule) -> bool:
-    """Return whether *rule* carries a rate limit that holds state.
+    """Return whether *rule* carries a limit that holds state.
 
-    A connection limit and a rate limit kept per key both consume state on
-    every evaluation, unlike the plain ``limit rate``, whose buckets a
-    second evaluation simply refills.  A processor that turns one rule into
-    two lines side by side therefore has to know: both lines would carry
-    the match, a packet crossing the first and then the second is counted
-    twice, and half the traffic the rule is meant to stop passes it.
+    Every one of the three does.  A connection limit and a rate limit kept
+    per key consume state on every evaluation, and the plain rate limit is
+    one token bucket for the whole rule, which every line the rule is
+    written as names.  A processor that turns one rule into two lines side
+    by side therefore has to know: both lines would carry the match, a
+    packet crossing the first and then the second is counted twice, and
+    half the traffic the rule is meant to stop passes it.  Leaving the
+    limit off the first line instead lets it act on packets the second one
+    then refuses - a log line saying ACCEPT about a packet that is dropped.
     """
-    for key in ('connlimit_value', 'hashlimit_value'):
+    for key in ('connlimit_value', 'hashlimit_value', 'limit_value'):
         try:
             if int(rule.get_option(key, 0) or 0) > 0:
                 return True

@@ -90,6 +90,21 @@ def _declare_dynamic_sets(sets: dict[str, str]) -> str:
     return ''.join(out)
 
 
+def _declare_limits(limits: dict[str, str]) -> str:
+    """Declare the named limit objects the rate-limited rules count in.
+
+    Like a counter, a limit has to exist as an object of the table before
+    a rule can name it (netfilter nftables doc/stateful-objects.txt).
+    """
+    if not limits:
+        return ''
+    out = []
+    for name, rate in limits.items():
+        out.append(f'    limit {name} {{\n        {rate}\n    }}\n')
+    out.append('\n')
+    return ''.join(out)
+
+
 def _declare_counters(names: list[str]) -> str:
     """Declare the named counter objects an accounting rule counts into.
 
@@ -187,6 +202,11 @@ class CompilerDriver_nft(CompilerDriver):
         self._automatic_rules: list = []
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
+        # Named limit objects, per table.  Every compiler of the table gets
+        # the same dict, so a rate limit table name two rule sets share is
+        # seen as shared.
+        self.filter_limits: dict[str, str] = {}
+        self.mangle_limits: dict[str, str] = {}
         # Dynamic sets a per-source connection limit counts in, per table.
         self.filter_dynamic_sets: dict[str, str] = {}
         self.mangle_dynamic_sets: dict[str, str] = {}
@@ -728,6 +748,7 @@ class CompilerDriver_nft(CompilerDriver):
         policy_compiler = PolicyCompiler_nft(session, fw, ipv6_policy, oscnf)
         policy_compiler.automatic_rules = self._automatic_rules
         policy_compiler.meters = self._meters
+        policy_compiler.limits = self.filter_limits
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
         policy_compiler.branch_loop_edges = self._branch_loop_edges
@@ -800,6 +821,7 @@ class CompilerDriver_nft(CompilerDriver):
         mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
         mangle_compiler.automatic_rules = self._automatic_rules
         mangle_compiler.meters = self._meters
+        mangle_compiler.limits = self.mangle_limits
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.branch_chains = self._branch_chains
         mangle_compiler.branch_loop_edges = self._branch_loop_edges
@@ -1025,6 +1047,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_mangle:
             out.write(f'table {family} {mangle_table} {{\n')
             out.write(_declare_counters(self.mangle_counters))
+            out.write(_declare_limits(self.mangle_limits))
             out.write(_declare_dynamic_sets(self.mangle_dynamic_sets))
             out.write(_declare_address_tables(self.mangle_address_tables))
             for index, (chain, rules) in enumerate(mangle_by_chain):
@@ -1051,6 +1074,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
             out.write(_declare_counters(self.filter_counters))
+            out.write(_declare_limits(self.filter_limits))
             out.write(_declare_dynamic_sets(self.filter_dynamic_sets))
             out.write(_declare_address_tables(self.filter_address_tables))
 
