@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 
 import sqlalchemy
 
+from firewallfabrik.core._util import OPTION_REF_KEYS
 from firewallfabrik.core.objects import (
     NAT,
     Address,
@@ -547,7 +548,9 @@ class TreeOperations:
 
             # Deep-copy children for devices (interfaces, rule sets, rules, rule elements).
             if isinstance(source, Host):
-                self._duplicate_device_children(session, source, new_obj, id_map)
+                self._duplicate_device_children(
+                    session, session, source, new_obj, id_map
+                )
 
             # Copy group_membership entries for groups.
             if isinstance(source, Group):
@@ -587,35 +590,89 @@ class TreeOperations:
             kwargs[key] = val
         return type(source)(id=new_id, **kwargs)
 
-    def _duplicate_device_children(self, session, source_device, new_device, id_map):
-        """Recursively duplicate interfaces, addresses, rule sets, rules, and rule elements."""
-        # Interfaces + their child addresses.
-        for iface in source_device.interfaces:
+    def _duplicate_device_children(
+        self,
+        source_session,
+        target_session,
+        source_device,
+        new_device,
+        id_map,
+    ):
+        """Deep-copy the interfaces, groups and rule sets of a device.
+
+        Reads from *source_session* and writes to *target_session*, which
+        are the same session unless an object is pasted into another file.
+        Everything the copy owns is remapped through *id_map*: a
+        sub-interface points at the copy of its parent, a failover group
+        or an Attached Networks object sits under the copy of its
+        interface, and a rule branching into a rule set of the same device
+        branches into the copy of it (``FWObjectDatabase::fixReferences``).
+        """
+        # Parents before their sub-interfaces: the unique index on
+        # (parent interface, name) and the foreign key to the parent both
+        # need the parent row first.
+        pending = list(source_device.interfaces)
+        interfaces = []
+        while pending:
+            placed = {i.id for i in interfaces}
+            ready = [
+                i
+                for i in pending
+                if i.parent_interface_id is None or i.parent_interface_id in placed
+            ]
+            if not ready:
+                # A parent that is not on this device; keep the rest as is.
+                ready = pending
+            interfaces.extend(ready)
+            pending = [i for i in pending if i not in ready]
+
+        group_tasks = []
+        for iface in interfaces:
             new_iface = self._clone_object(iface, id_map)
             new_iface.device_id = new_device.id
             new_iface.library_id = new_device.library_id
-            session.add(new_iface)
+            if iface.parent_interface_id is not None:
+                new_iface.parent_interface_id = id_map.get(
+                    iface.parent_interface_id, iface.parent_interface_id
+                )
+            target_session.add(new_iface)
+            target_session.flush()
             for addr in iface.addresses:
                 new_addr = self._clone_object(addr, id_map)
                 new_addr.interface_id = new_iface.id
                 new_addr.library_id = None
                 new_addr.group_id = None
-                session.add(new_addr)
+                target_session.add(new_addr)
+            for group in iface.child_groups:
+                new_group = self._clone_object(group, id_map)
+                new_group.interface_id = new_iface.id
+                new_group.library_id = new_device.library_id
+                target_session.add(new_group)
+                group_tasks.append((group, new_group))
+
+        for group in source_device.child_groups:
+            new_group = self._clone_object(group, id_map)
+            new_group.device_id = new_device.id
+            new_group.library_id = new_device.library_id
+            target_session.add(new_group)
+            group_tasks.append((group, new_group))
 
         # Collect source rule_element rows and clone rule sets + rules.
         # We must read source rows before flushing the clones (the flush
         # would otherwise trigger lazy loads that might expire the source
         # relationships).
         rule_element_tasks = []
+        new_rules = []
         for rs in source_device.rule_sets:
             new_rs = self._clone_object(rs, id_map)
             new_rs.device_id = new_device.id
-            session.add(new_rs)
+            target_session.add(new_rs)
             for rule in rs.rules:
                 new_rule = self._clone_object(rule, id_map)
                 new_rule.rule_set_id = new_rs.id
-                session.add(new_rule)
-                rows = session.execute(
+                target_session.add(new_rule)
+                new_rules.append(new_rule)
+                rows = source_session.execute(
                     sqlalchemy.select(rule_elements).where(
                         rule_elements.c.rule_id == rule.id
                     )
@@ -623,26 +680,54 @@ class TreeOperations:
                 if rows:
                     rule_element_tasks.append((new_rule, rows))
 
+        # A branch into a rule set of this device, or a tag object that is
+        # one of its interfaces, follows the copy; every other reference
+        # stays where it points.
+        str_map = {str(old): str(new) for old, new in id_map.items()}
+        for new_rule in new_rules:
+            options = new_rule.options or {}
+            if any(options.get(key) in str_map for key in OPTION_REF_KEYS):
+                new_rule.options = {
+                    **options,
+                    **{
+                        key: str_map[options[key]]
+                        for key in OPTION_REF_KEYS
+                        if options.get(key) in str_map
+                    },
+                }
+
         # Flush all ORM objects so that rule and rule_set rows exist in
         # the DB before we insert the raw rule_elements rows (which
         # reference them via FK).
-        session.flush()
+        target_session.flush()
 
         for new_rule, rows in rule_element_tasks:
             for row in rows:
-                target_id = id_map.get(row.target_id, row.target_id)
-                session.execute(
+                target_session.execute(
                     rule_elements.insert().values(
                         rule_id=new_rule.id,
                         slot=row.slot,
-                        target_id=target_id,
+                        target_id=id_map.get(row.target_id, row.target_id),
                         position=row.position,
                     )
                 )
 
+        for group, new_group in group_tasks:
+            if source_session is target_session:
+                self._duplicate_group_members(source_session, group, new_group, id_map)
+            else:
+                self._duplicate_group_members_cross_db(
+                    source_session, target_session, group, new_group
+                )
+
     @staticmethod
-    def _duplicate_group_members(session, source_group, new_group):
-        """Copy group_membership entries from *source_group* to *new_group*."""
+    def _duplicate_group_members(session, source_group, new_group, id_map=None):
+        """Copy group_membership entries from *source_group* to *new_group*.
+
+        A member that was copied along with the group (*id_map*) is
+        replaced by its copy.
+        """
+        id_map = id_map or {}
         rows = session.execute(
             sqlalchemy.select(group_membership).where(
                 group_membership.c.group_id == source_group.id
@@ -652,7 +737,7 @@ class TreeOperations:
             session.execute(
                 group_membership.insert().values(
                     group_id=new_group.id,
-                    member_id=row.member_id,
+                    member_id=id_map.get(row.member_id, row.member_id),
                     position=row.position,
                 )
             )
@@ -747,7 +832,7 @@ class TreeOperations:
 
             # Deep-copy children for devices (interfaces, rule sets, etc.).
             if isinstance(source, Host):
-                self._duplicate_device_children_cross_db(
+                self._duplicate_device_children(
                     source_session,
                     target_session,
                     source,
@@ -777,68 +862,6 @@ class TreeOperations:
             target_session.close()
 
         return new_id
-
-    def _duplicate_device_children_cross_db(
-        self,
-        source_session,
-        target_session,
-        source_device,
-        new_device,
-        id_map,
-    ):
-        """Duplicate device children across databases.
-
-        Like ``_duplicate_device_children`` but reads from *source_session*
-        and writes to *target_session*.
-        """
-        for iface in source_device.interfaces:
-            new_iface = self._clone_object(iface, id_map)
-            new_iface.device_id = new_device.id
-            new_iface.library_id = new_device.library_id
-            target_session.add(new_iface)
-            for addr in iface.addresses:
-                new_addr = self._clone_object(addr, id_map)
-                new_addr.interface_id = new_iface.id
-                new_addr.library_id = None
-                new_addr.group_id = None
-                target_session.add(new_addr)
-
-        rule_element_tasks = []
-        for rs in source_device.rule_sets:
-            new_rs = self._clone_object(rs, id_map)
-            new_rs.device_id = new_device.id
-            target_session.add(new_rs)
-            for rule in rs.rules:
-                new_rule = self._clone_object(rule, id_map)
-                new_rule.rule_set_id = new_rs.id
-                target_session.add(new_rule)
-                rows = source_session.execute(
-                    sqlalchemy.select(rule_elements).where(
-                        rule_elements.c.rule_id == rule.id,
-                    ),
-                ).all()
-                if rows:
-                    rule_element_tasks.append((new_rule, rows))
-
-        target_session.flush()
-
-        for new_rule, rows in rule_element_tasks:
-            for row in rows:
-                # Remap target_id if it's a child of the cloned device;
-                # otherwise keep the original (references to shared
-                # Standard Library objects stay as-is — they won't
-                # exist in the target DB but that's acceptable for
-                # cross-file paste of rule elements referencing
-                # non-standard objects; those will need manual fixup).
-                target_id = id_map.get(row.target_id, row.target_id)
-                target_session.execute(
-                    rule_elements.insert().values(
-                        rule_id=new_rule.id,
-                        slot=row.slot,
-                        target_id=target_id,
-                        position=row.position,
-                    ),
-                )
 
     @staticmethod
     def _duplicate_group_members_cross_db(
