@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QMessageBox,
     QTreeWidgetItem,
+    QTreeWidgetItemIterator,
 )
 
 from firewallfabrik.core._util import escape_obj_name
@@ -71,9 +72,26 @@ _R_COMPILER = _R + 6
 _R_NEEDS_COMPILE = _R + 7
 _R_NEEDS_INSTALL = _R + 8
 _R_MGMT_ADDRESS = _R + 9
+_R_IS_CLUSTER = _R + 10
+_R_SELECTABLE = _R + 11
 
 # Match "Rule N" in compiler error messages for clickable navigation.
 _RULE_ERROR_RE = re.compile(r'Rule\s+(\d+)')
+
+
+def _has_check(item, col):
+    """Whether *item* shows a checkbox in *col*."""
+    return item.data(col, Qt.ItemDataRole.CheckStateRole) is not None
+
+
+def _is_checked(item, col):
+    return item.checkState(col) == Qt.CheckState.Checked
+
+
+def _set_check(item, col, checked):
+    item.setCheckState(
+        col, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+    )
 
 
 def _format_epoch(value):
@@ -134,6 +152,7 @@ class CompileDialog(QDialog):
         self._installing = False
         self._install_queue = []
         self._installed_fw_ids = []
+        self._cluster_members = {}  # cluster fw_id -> member fw_ids
         self._installer = None
         self._canceled_all = False
         self._batch_config = None
@@ -218,6 +237,16 @@ class CompileDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _populate_select_table(self):
+        """Fill the table the way ``instDialog::fillCompileSelectList`` does.
+
+        A cluster is listed with its members below it: the cluster gets
+        the compile checkbox, because compiling it compiles every member,
+        and each member gets the install checkbox, because a cluster is
+        not a machine that could be installed.  A member is ticked for
+        install whenever its cluster is ticked for compile
+        (``instDialog::setFlags``).  Firewalls that belong to no cluster
+        follow, with both checkboxes.
+        """
         with self._db_manager.session() as session:
             firewalls = (
                 session.execute(
@@ -226,142 +255,214 @@ class CompileDialog(QDialog):
                 .scalars()
                 .all()
             )
-            for fw in firewalls:
-                data = fw.data or {}
-                options = fw.options or {}
-                platform = data.get('platform', '')
-                inactive = data.get('inactive') in (True, 'True')
-                supported = platform in _PLATFORM_CLI
-                last_modified = int(data.get('lastModified', 0) or 0)
-                last_compiled = int(data.get('lastCompiled', 0) or 0)
-                last_installed = int(data.get('lastInstalled', 0) or 0)
-                needs_compile = last_modified > last_compiled or last_compiled == 0
-                needs_install = last_compiled > last_installed or last_installed == 0
+            members_of_a_cluster = set()
+            for cluster in (fw for fw in firewalls if isinstance(fw, Cluster)):
+                members = cluster.get_members_list()
+                cluster_item = self._create_item(cluster)
+                self.selectTable.addTopLevelItem(cluster_item)
 
-                tree_path = _fw_tree_path(fw)
-                mgmt_address = resolve_mgmt_address(fw) if self._install_mode else ''
-
-                item = QTreeWidgetItem()
-                item.setData(0, _R_TREE_PATH, tree_path)
-                item.setData(0, _R_FW_NAME, fw.name)
-                item.setData(0, _R_PLATFORM, platform)
-                item.setData(
-                    0,
-                    _R_OUTPUT_FILE,
-                    options.get('output_file', '') or options.get('outputFileName', ''),
-                )
-                item.setData(0, _R_FW_UUID, str(fw.id))
-                item.setData(
-                    0,
-                    _R_CMDLINE,
-                    options.get('cmdline', '') or options.get('compilerArgs', ''),
-                )
-                item.setData(0, _R_COMPILER, options.get('compiler', ''))
-                item.setData(0, _R_NEEDS_COMPILE, needs_compile)
-                item.setData(0, _R_NEEDS_INSTALL, needs_install)
-                item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
-
-                item.setText(_COL_FIREWALL, fw.name)
-                item.setIcon(_COL_FIREWALL, QIcon(':/Icons/Firewall/icon-tree'))
-
-                # The packet filter and the release it is compiled for; a
-                # cluster has none of its own, each member names one.
-                item.setText(
-                    _COL_PLATFORM,
-                    _versions.describe(
-                        platform,
-                        data.get('version', ''),
-                        has_release=not isinstance(fw, Cluster),
-                    ),
-                )
-
-                # Compile checkbox
-                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                if self._preselect_names is not None:
-                    check_compile = (
-                        supported and not inactive and fw.name in self._preselect_names
+                # A cluster without members has nothing to compile and gets
+                # no checkbox, like in Firewall Builder.
+                check_compile = False
+                if members:
+                    member_preselected = self._preselect_names is not None and any(
+                        m.name in self._preselect_names for m in members
                     )
+                    check_compile = self._should_check(
+                        cluster_item, _R_NEEDS_COMPILE, member_preselected
+                    )
+                    _set_check(cluster_item, _COL_COMPILE, check_compile)
                 else:
-                    check_compile = supported and not inactive and needs_compile
-                item.setCheckState(
-                    _COL_COMPILE,
-                    Qt.CheckState.Checked if check_compile else Qt.CheckState.Unchecked,
-                )
+                    cluster_item.setToolTip(
+                        _COL_FIREWALL,
+                        f'Cluster "{cluster.name}" has no members: a cluster '
+                        'names its members through the failover groups of its '
+                        'interfaces and its state sync group.',
+                    )
 
-                # Install checkbox, only in install mode.
-                if self._install_mode:
-                    if self._preselect_names is not None:
-                        check_install = (
-                            supported
-                            and not inactive
-                            and fw.name in self._preselect_names
+                # Picking one member compiles its cluster, which is where
+                # its script comes from, but installs that member alone.
+                install_all_members = check_compile and (
+                    self._preselect_names is None
+                    or cluster.name in self._preselect_names
+                )
+                for member in members:
+                    members_of_a_cluster.add(member.id)
+                    member_item = self._create_item(member, cluster_item)
+                    if self._install_mode:
+                        _set_check(
+                            member_item,
+                            _COL_INSTALL,
+                            self._should_check(
+                                member_item, _R_NEEDS_INSTALL, install_all_members
+                            ),
                         )
-                    else:
-                        check_install = supported and not inactive and needs_install
-                    item.setCheckState(
-                        _COL_INSTALL,
-                        Qt.CheckState.Checked
-                        if check_install
-                        else Qt.CheckState.Unchecked,
-                    )
+                cluster_item.setExpanded(True)
 
-                # Timestamps (stored as epoch ints)
-                item.setText(_COL_MODIFIED, _format_epoch(data.get('lastModified', 0)))
-                item.setText(_COL_COMPILED, _format_epoch(data.get('lastCompiled', 0)))
-                item.setText(
-                    _COL_INSTALLED, _format_epoch(data.get('lastInstalled', 0))
-                )
-
-                # Unsupported platform: disable the item
-                if not supported:
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
-                    item.setToolTip(
-                        0, f'Platform "{platform or "(none)"}" is not supported yet'
-                    )
-
-                if needs_compile and supported:
-                    font = item.font(0)
-                    font.setBold(True)
-                    for col in range(self.selectTable.columnCount()):
-                        item.setFont(col, font)
-
+            for fw in firewalls:
+                if isinstance(fw, Cluster) or fw.id in members_of_a_cluster:
+                    continue
+                item = self._create_item(fw)
                 self.selectTable.addTopLevelItem(item)
+                _set_check(
+                    item,
+                    _COL_COMPILE,
+                    self._should_check(item, _R_NEEDS_COMPILE),
+                )
+                if self._install_mode:
+                    _set_check(
+                        item,
+                        _COL_INSTALL,
+                        self._should_check(item, _R_NEEDS_INSTALL),
+                    )
+
+    def _should_check(self, item, needs_role, forced=False):
+        """Whether a checkbox of *item* starts out ticked.
+
+        *forced* ticks it regardless of the preselection and of the
+        timestamps - a member whose cluster is going to be compiled has to
+        be installed afterwards.
+        """
+        if not item.data(0, _R_SELECTABLE):
+            return False
+        if forced:
+            return True
+        if self._preselect_names is not None:
+            return item.data(0, _R_FW_NAME) in self._preselect_names
+        return bool(item.data(0, needs_role))
+
+    def _create_item(self, fw, parent=None):
+        """Build the table row of *fw*, without any checkbox."""
+        data = fw.data or {}
+        options = fw.options or {}
+        platform = data.get('platform', '')
+        inactive = data.get('inactive') in (True, 'True')
+        supported = platform in _PLATFORM_CLI
+        last_modified = int(data.get('lastModified', 0) or 0)
+        last_compiled = int(data.get('lastCompiled', 0) or 0)
+        last_installed = int(data.get('lastInstalled', 0) or 0)
+        needs_compile = last_modified > last_compiled or last_compiled == 0
+        needs_install = last_compiled > last_installed or last_installed == 0
+        is_cluster = isinstance(fw, Cluster)
+
+        mgmt_address = (
+            resolve_mgmt_address(fw) if self._install_mode and not is_cluster else ''
+        )
+
+        item = QTreeWidgetItem(parent) if parent is not None else QTreeWidgetItem()
+        item.setData(0, _R_TREE_PATH, _fw_tree_path(fw))
+        item.setData(0, _R_FW_NAME, fw.name)
+        item.setData(0, _R_PLATFORM, platform)
+        item.setData(
+            0,
+            _R_OUTPUT_FILE,
+            options.get('output_file', '') or options.get('outputFileName', ''),
+        )
+        item.setData(0, _R_FW_UUID, str(fw.id))
+        item.setData(
+            0,
+            _R_CMDLINE,
+            options.get('cmdline', '') or options.get('compilerArgs', ''),
+        )
+        item.setData(0, _R_COMPILER, options.get('compiler', ''))
+        item.setData(0, _R_NEEDS_COMPILE, needs_compile)
+        item.setData(0, _R_NEEDS_INSTALL, needs_install)
+        item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
+        item.setData(0, _R_IS_CLUSTER, is_cluster)
+        item.setData(0, _R_SELECTABLE, supported and not inactive)
+
+        item.setText(_COL_FIREWALL, fw.name)
+        item.setIcon(
+            _COL_FIREWALL,
+            QIcon(
+                ':/Icons/Cluster/icon-tree'
+                if is_cluster
+                else ':/Icons/Firewall/icon-tree'
+            ),
+        )
+
+        # The packet filter and the release it is compiled for; a
+        # cluster has none of its own, each member names one.
+        item.setText(
+            _COL_PLATFORM,
+            _versions.describe(
+                platform,
+                data.get('version', ''),
+                has_release=not is_cluster,
+            ),
+        )
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+
+        # Timestamps (stored as epoch ints)
+        item.setText(_COL_MODIFIED, _format_epoch(data.get('lastModified', 0)))
+        item.setText(_COL_COMPILED, _format_epoch(data.get('lastCompiled', 0)))
+        item.setText(_COL_INSTALLED, _format_epoch(data.get('lastInstalled', 0)))
+
+        # Unsupported platform: disable the item
+        if not supported:
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            item.setToolTip(
+                0, f'Platform "{platform or "(none)"}" is not supported yet'
+            )
+
+        if needs_compile and supported:
+            font = item.font(0)
+            font.setBold(True)
+            for col in range(self.selectTable.columnCount()):
+                item.setFont(col, font)
+
+        return item
+
+    def _all_items(self):
+        """Every row of the table, a cluster before its members."""
+        it = QTreeWidgetItemIterator(self.selectTable)
+        while it.value() is not None:
+            yield it.value()
+            it += 1
+
+    def _checkbox_columns(self):
+        if self._install_mode:
+            return (_COL_COMPILE, _COL_INSTALL)
+        return (_COL_COMPILE,)
 
     # Slots declared in .ui connections
     @Slot()
     def selectAllFirewalls(self):
-        for i in range(self.selectTable.topLevelItemCount()):
-            item = self.selectTable.topLevelItem(i)
+        for item in self._all_items():
             if item.flags() & Qt.ItemFlag.ItemIsEnabled:
-                item.setCheckState(_COL_COMPILE, Qt.CheckState.Checked)
-                if self._install_mode:
-                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Checked)
+                for col in self._checkbox_columns():
+                    if _has_check(item, col):
+                        _set_check(item, col, True)
 
     @Slot()
     def deselectAllFirewalls(self):
-        for i in range(self.selectTable.topLevelItemCount()):
-            item = self.selectTable.topLevelItem(i)
-            item.setCheckState(_COL_COMPILE, Qt.CheckState.Unchecked)
-            if self._install_mode:
-                item.setCheckState(_COL_INSTALL, Qt.CheckState.Unchecked)
+        for item in self._all_items():
+            for col in self._checkbox_columns():
+                if _has_check(item, col):
+                    _set_check(item, col, False)
 
     @Slot()
     def selectChangedFirewalls(self):
-        for i in range(self.selectTable.topLevelItemCount()):
-            item = self.selectTable.topLevelItem(i)
-            if item.flags() & Qt.ItemFlag.ItemIsEnabled and item.data(
-                0, _R_NEEDS_COMPILE
-            ):
-                item.setCheckState(_COL_COMPILE, Qt.CheckState.Checked)
-            else:
-                item.setCheckState(_COL_COMPILE, Qt.CheckState.Unchecked)
-            if self._install_mode:
-                if item.flags() & Qt.ItemFlag.ItemIsEnabled and item.data(
-                    0, _R_NEEDS_INSTALL
-                ):
-                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Checked)
-                else:
-                    item.setCheckState(_COL_INSTALL, Qt.CheckState.Unchecked)
+        for item in self._all_items():
+            enabled = bool(item.flags() & Qt.ItemFlag.ItemIsEnabled)
+            if _has_check(item, _COL_COMPILE):
+                _set_check(
+                    item,
+                    _COL_COMPILE,
+                    enabled and item.data(0, _R_NEEDS_COMPILE),
+                )
+            if self._install_mode and _has_check(item, _COL_INSTALL):
+                # The cluster row comes first, so its compile checkbox is
+                # already decided when its members are reached.
+                parent = item.parent()
+                cluster_compiles = parent is not None and _is_checked(
+                    parent, _COL_COMPILE
+                )
+                _set_check(
+                    item,
+                    _COL_INSTALL,
+                    enabled and (item.data(0, _R_NEEDS_INSTALL) or cluster_compiles),
+                )
 
     @Slot(QTreeWidgetItem, int)
     def tableItemChanged(self, item, col):
@@ -376,8 +477,9 @@ class CompileDialog(QDialog):
         """Collect checked firewalls and start compilation."""
         self._compile_queue = []
         self._install_queue = []
-        for i in range(self.selectTable.topLevelItemCount()):
-            item = self.selectTable.topLevelItem(i)
+        self._cluster_members = {}
+        queued_for_install = set()
+        for item in self._all_items():
             fw_id = item.data(0, _R_TREE_PATH)
             fw_name = item.data(0, _R_FW_NAME)
             platform = item.data(0, _R_PLATFORM)
@@ -386,15 +488,30 @@ class CompileDialog(QDialog):
             compiler_path = item.data(0, _R_COMPILER) or ''
             mgmt_addr = item.data(0, _R_MGMT_ADDRESS) or ''
 
-            if item.checkState(_COL_COMPILE) == Qt.CheckState.Checked:
+            if item.data(0, _R_IS_CLUSTER):
+                # Each member writes its own script, under the file name
+                # its own "Output file name" gives or else its name - which
+                # is where the installer looks for it.  A -o would send
+                # every member into one file.
+                output_file = ''
+                self._cluster_members[fw_id] = [
+                    item.child(n).data(0, _R_TREE_PATH)
+                    for n in range(item.childCount())
+                ]
+
+            if _is_checked(item, _COL_COMPILE):
                 self._compile_queue.append(
                     (fw_id, fw_name, platform, output_file, cmdline, compiler_path)
                 )
 
+            # A firewall that is a member of two clusters is listed twice
+            # and installed once.
             if (
                 self._install_mode
-                and item.checkState(_COL_INSTALL) == Qt.CheckState.Checked
+                and _is_checked(item, _COL_INSTALL)
+                and fw_id not in queued_for_install
             ):
+                queued_for_install.add(fw_id)
                 fw_uuid_str = item.data(0, _R_FW_UUID)
                 self._install_queue.append(
                     (fw_id, fw_name, platform, fw_uuid_str, mgmt_addr)
@@ -580,11 +697,6 @@ class CompileDialog(QDialog):
                     '-d',
                     str(self._dest_dir),
                     '-v',
-                    # Compiling a cluster compiles each of its members, and
-                    # two clusters may well have a member of the same name.
-                    # The cluster name in front of the file keeps them apart
-                    # and is what Firewall Builder's own GUI passes.
-                    '--xc',
                 ]
             )
             if output_file:
@@ -665,8 +777,11 @@ class CompileDialog(QDialog):
                 work_item.setText(1, 'Compile Error')
                 work_item.setForeground(1, QColor('red'))
             if self._install_mode:
+                # A cluster that failed leaves its members without a script
+                # to install (instDialog::blockInstallForFirewall).
+                blocked = {fw_id, *self._cluster_members.get(fw_id, ())}
                 self._install_queue = [
-                    entry for entry in self._install_queue if entry[0] != fw_id
+                    entry for entry in self._install_queue if entry[0] not in blocked
                 ]
 
         self._resize_sidebar()
@@ -786,11 +901,16 @@ class CompileDialog(QDialog):
             now = datetime.now(tz=UTC)
             epoch = int(now.timestamp())
             display = now.strftime('%Y-%m-%d %H:%M:%S')
-            fw_uuids = []
-            for i in range(self.selectTable.topLevelItemCount()):
-                item = self.selectTable.topLevelItem(i)
-                if item.data(0, _R_TREE_PATH) in self._compiled_fw_ids:
-                    fw_uuids.append(uuid.UUID(item.data(0, _R_FW_UUID)))
+            # Compiling a cluster compiled its members as well
+            # (instDialog::compilerFinished).
+            compiled = set(self._compiled_fw_ids)
+            for fw_id in self._compiled_fw_ids:
+                compiled.update(self._cluster_members.get(fw_id, ()))
+            fw_uuids = {
+                uuid.UUID(item.data(0, _R_FW_UUID))
+                for item in self._all_items()
+                if item.data(0, _R_TREE_PATH) in compiled
+            }
             with self._db_manager.session() as session:
                 session.execute(
                     sqlalchemy.update(Firewall)
@@ -808,9 +928,8 @@ class CompileDialog(QDialog):
                 )
             self._db_manager.save_state('Compile firewalls')
 
-            for i in range(self.selectTable.topLevelItemCount()):
-                item = self.selectTable.topLevelItem(i)
-                if item.data(0, _R_TREE_PATH) in self._compiled_fw_ids:
+            for item in self._all_items():
+                if item.data(0, _R_TREE_PATH) in compiled:
                     item.setText(_COL_COMPILED, display)
 
         # If in install mode and there are firewalls to install, proceed.
@@ -1003,11 +1122,11 @@ class CompileDialog(QDialog):
             now = datetime.now(tz=UTC)
             epoch = int(now.timestamp())
             display = now.strftime('%Y-%m-%d %H:%M:%S')
-            fw_uuids = []
-            for i in range(self.selectTable.topLevelItemCount()):
-                item = self.selectTable.topLevelItem(i)
-                if item.data(0, _R_TREE_PATH) in self._installed_fw_ids:
-                    fw_uuids.append(uuid.UUID(item.data(0, _R_FW_UUID)))
+            fw_uuids = {
+                uuid.UUID(item.data(0, _R_FW_UUID))
+                for item in self._all_items()
+                if item.data(0, _R_TREE_PATH) in self._installed_fw_ids
+            }
             with self._db_manager.session() as session:
                 session.execute(
                     sqlalchemy.update(Firewall)
@@ -1025,8 +1144,7 @@ class CompileDialog(QDialog):
                 )
             self._db_manager.save_state('Install firewalls')
 
-            for i in range(self.selectTable.topLevelItemCount()):
-                item = self.selectTable.topLevelItem(i)
+            for item in self._all_items():
                 if item.data(0, _R_TREE_PATH) in self._installed_fw_ids:
                     item.setText(_COL_INSTALLED, display)
 

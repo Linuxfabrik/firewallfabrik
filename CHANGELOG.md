@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a firewall set to the nftables release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04, instead of being refused as a whole.
 * Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
 * Compiler (nftables): rate limits kept per source, destination or port load on nftables before 1.1.0 instead of taking the whole ruleset down.
+* Editor: a cluster member compiled from the compile and install dialog gets the script it is installed from, instead of the installer picking up an outdated or missing one ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
+* Editor: the install dialog lists each cluster with its members below it and ticks the members for install when the cluster is compiled ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 
 
 ## [v3.2.0] - 2026-09-25
