@@ -97,8 +97,37 @@ class InterfaceProperties:
         return True, ''
 
     def is_eligible_for_cluster(self, iface: Interface) -> bool:
-        """Check if interface can be part of a cluster."""
-        return not iface.is_loopback()
+        """Whether *iface* can stand behind a cluster interface.
+
+        Ports ``interfaceProperties::isEligibleForCluster`` (fwbuilder
+        ticket #727): a bridge port cannot, a VLAN, bridge or bond
+        interface can, and an Ethernet interface cannot when it is a port
+        of a bridge, a slave of a bond, or the parent of VLAN
+        sub-interfaces - in each of those cases the address, and so the
+        failover, lives on the other interface.  The loopback is eligible,
+        as in Firewall Builder, and gets the failover protocol None in the
+        New Cluster wizard if no failover rules are wanted on it.
+        """
+        if iface.is_bridge_port():
+            return False
+        iface_type = iface.get_option('type', '') or 'ethernet'
+        if iface_type in ('8021q', 'bridge', 'bonding'):
+            return True
+        if iface_type != 'ethernet':
+            return True
+        parent = iface.parent_interface
+        if parent is not None and parent.get_option('type', '') == 'bridge':
+            return False
+        device = iface.device
+        for other in device.interfaces if device is not None else ():
+            other_parent = other.parent_interface
+            if (
+                other_parent is not None
+                and other_parent.get_option('type', '') == 'bonding'
+                and other.name == iface.name
+            ):
+                return False
+        return not iface.sub_interfaces
 
     def manage_ip_addresses(
         self,

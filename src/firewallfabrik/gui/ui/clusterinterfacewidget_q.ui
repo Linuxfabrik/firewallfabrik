@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ClusterInterfaceWidget</class>
+ <widget class="QWidget" name="ClusterInterfaceWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>578</width>
+    <height>463</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="nameLabel">
+       <property name="text">
+        <string>Name:</string>
+       </property>
+       <property name="toolTip">
+        <string>Name of the cluster interface. With VRRP, heartbeat and OpenAIS it has to
+be the name of the member interfaces it stands for, because the generated
+rules match on that name.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="name">
+       <property name="toolTip">
+        <string>Name of the cluster interface. With VRRP, heartbeat and OpenAIS it has to
+be the name of the member interfaces it stands for, because the generated
+rules match on that name.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="labelLabel">
+       <property name="text">
+        <string>Label:</string>
+       </property>
+       <property name="toolTip">
+        <string>Optional label shown in the rule set views instead of the name, taken
+over from the member interfaces when they all carry the same one.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="label">
+       <property name="toolTip">
+        <string>Optional label shown in the rule set views instead of the name, taken
+over from the member interfaces when they all carry the same one.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="commentLabel">
+       <property name="text">
+        <string>Comment:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPlainTextEdit" name="comment">
+       <property name="toolTip">
+        <string>Optional comment for this cluster interface</string>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>70</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="selectHint">
+     <property name="text">
+      <string>Select the interface of each member firewall this cluster interface stands for.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="interfaceBox"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="explanation">
+     <property name="text">
+      <string>VRRP, heartbeat and OpenAIS create no interface of their own, so a cluster interface has the same name as the member interfaces it stands for, such as &lt;i&gt;eth0&lt;/i&gt;, &lt;i&gt;eth1.102&lt;/i&gt; or &lt;i&gt;bond0&lt;/i&gt;. It maps those interfaces to each other and holds the configuration of the failover protocol, which is chosen on the next page. Bridge ports, bond slaves and interfaces that carry VLAN sub-interfaces cannot be used, because the address lives on the bridge, the bond or the VLAN.</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::TextFormat::RichText</enum>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

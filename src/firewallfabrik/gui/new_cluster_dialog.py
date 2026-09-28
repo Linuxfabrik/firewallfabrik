@@ -10,317 +10,670 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Wizard dialog for creating a new Cluster object."""
+"""Wizard dialog for creating a new Cluster object.
 
+Ports fwbuilder's ``newClusterDialog`` with its five pages:
+
+1. the name and the member firewalls (``FirewallSelectorWidget``),
+2. the cluster interfaces and the member interfaces each stands for
+   (``ClusterInterfacesSelectorWidget``, ``ClusterInterfaceWidget``),
+3. the failover protocol and the addresses of each cluster interface
+   (``InterfacesTabWidget`` in cluster mode),
+4. the member whose Policy and NAT rules the cluster takes over, if any,
+5. a summary.
+
+The Master column of the first page is left out: see "No Master Member
+in a Cluster" in DesignDecisions.md.  The cluster itself is created by
+``TreeOperations.create_cluster`` from what ``get_result()`` returns.
+"""
+
+import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import sqlalchemy
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QByteArray, QSettings, Qt
+from PySide6.QtGui import QIcon, QPalette
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
     QRadioButton,
     QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
     QWidget,
 )
 
-from firewallfabrik.core.objects import Host
-from firewallfabrik.gui.platform_settings import HOST_OS
+from firewallfabrik.core.objects import Firewall
+from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
+from firewallfabrik.gui.netmask import (
+    EMPTY_ADDRESS_OR_NETMASK,
+    NetmaskRejected,
+    netmask_for_interface_address,
+)
+from firewallfabrik.gui.new_host_dialog import NewHostDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
+_UI_DIR = Path(__file__).resolve().parent / 'ui'
+
 _PAGE_FIREWALLS = 0
-_PAGE_SUMMARY = 1
+_PAGE_INTERFACES = 1
+_PAGE_ADDRESSES = 2
+_PAGE_POLICY = 3
+_PAGE_SUMMARY = 4
+
+_SETTINGS_GEOMETRY = 'NewClusterDialog/geometry'
+# The failover protocol picked last is offered first next time
+# (FWBSettings::getNewClusterFailoverProtocol).
+_SETTINGS_PROTOCOL = 'NewClusterDialog/failoverProtocol'
+
+_MEMBER_ROLE = Qt.ItemDataRole.UserRole
+
+
+@dataclass
+class _Iface:
+    """What the wizard needs to know about one member interface."""
+
+    id: uuid.UUID
+    name: str
+    label: str
+    eligible: bool
+    sub_interfaces: list = field(default_factory=list)
+
+
+@dataclass
+class _Member:
+    """A firewall the wizard offers as a member."""
+
+    id: uuid.UUID
+    name: str
+    library: str
+    platform: str
+    host_os: str
+    interfaces: list = field(default_factory=list)  # top-level _Iface
+
+    def all_interfaces(self):
+        for iface in self.interfaces:
+            yield iface
+            yield from iface.sub_interfaces
 
 
 class NewClusterDialog(QDialog):
-    """Two-page wizard for creating a new Cluster.
-
-    Page 1: Enter cluster name and select member firewalls (with master
-    designation).  Page 2: Review a summary before finishing.
-
-    Mirrors fwbuilder's ``newClusterDialog`` — simplified to two pages
-    (interface/failover/policy pages deferred).
-    """
+    """Five-page wizard for creating a new Cluster."""
 
     def __init__(self, db_manager, parent=None, preselected_fw_ids=None):
         super().__init__(parent)
 
-        ui_path = Path(__file__).resolve().parent / 'ui' / 'newclusterdialog_q.ui'
         loader = FWFUiLoader(self)
-        loader.load(str(ui_path))
-
+        loader.load(str(_UI_DIR / 'newclusterdialog_q.ui'))
         self.setWindowIcon(QIcon(':/Icons/Cluster/icon-tree'))
 
-        self._db_manager = db_manager
-        self._preselected_fw_ids = set(preselected_fw_ids or [])
+        self._members = self._load_firewalls(db_manager)
+        self._use_boxes = {}  # member id -> QCheckBox
+        self._selector_tabs = []  # page 2: one widget per cluster interface
+        self._policy_group = QButtonGroup(self)
+        self._policy_group.addButton(self.noPolicy)
+        self._policy_buttons = {}  # QRadioButton -> member id
 
-        # Firewall rows: list of (fw_id, fw_name, fw_data) tuples.
-        self._firewalls = []
-        # Widgets per row: list of (QCheckBox, QRadioButton) tuples.
-        self._row_widgets = []
+        preselected = {str(fw_id) for fw_id in preselected_fw_ids or ()}
+        self._fill_firewall_selector(preselected)
 
-        self._master_group = QButtonGroup(self)
-        self._master_group.setExclusive(True)
-
-        # Connections.
         self.backButton.clicked.connect(self._on_back)
         self.nextButton.clicked.connect(self._on_next)
         self.finishButton.clicked.connect(self.accept)
-        self.cancelButton.clicked.connect(self.reject)
-        self.obj_name.textChanged.connect(self._validate)
+        self.obj_name.textChanged.connect(self._update_buttons)
+        self.addInterfaceButton.clicked.connect(self._on_add_interface)
+        self.removeInterfaceButton.clicked.connect(self._on_remove_interface)
 
-        self.obj_name.selectAll()
-
-        self._populate_firewall_table()
-        self._validate()
         self._show_page(_PAGE_FIREWALLS)
-
-        self.adjustSize()
-
-        # Center on parent window.
-        if parent is not None:
-            parent_center = parent.geometry().center()
-            self.move(
-                parent_center.x() - self.width() // 2,
-                parent_center.y() - self.height() // 2,
-            )
+        self.obj_name.setFocus()
+        self._restore_geometry(parent)
 
     # ------------------------------------------------------------------
-    # Firewall table
+    # Geometry persistence
     # ------------------------------------------------------------------
 
-    def _populate_firewall_table(self):
-        """Query all Firewall objects and populate the table."""
-        if self._db_manager is None:
+    def _restore_geometry(self, parent):
+        geometry = QSettings().value(_SETTINGS_GEOMETRY, type=QByteArray)
+        if geometry and self.restoreGeometry(geometry):
             return
+        if parent is not None:
+            geo = self.geometry()
+            geo.moveCenter(parent.geometry().center())
+            self.setGeometry(geo)
 
-        session = self._db_manager.create_session()
-        try:
+    def done(self, result):
+        QSettings().setValue(_SETTINGS_GEOMETRY, self.saveGeometry())
+        super().done(result)
+
+    # ------------------------------------------------------------------
+    # Page 1: firewalls
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_firewalls(db_manager):
+        """Snapshot every firewall with the interfaces the wizard shows."""
+        props = LinuxInterfaceProperties()
+        members = []
+        with db_manager.session() as session:
             firewalls = session.scalars(
-                sqlalchemy.select(Host)
-                .where(Host.type == 'Firewall')
-                .order_by(Host.name),
+                sqlalchemy.select(Firewall)
+                .where(Firewall.type == 'Firewall')
+                .order_by(Firewall.name)
             ).all()
-            self._firewalls = [
-                (str(fw.id), fw.name, dict(fw.data or {})) for fw in firewalls
-            ]
-        finally:
-            session.close()
+            for fw in firewalls:
+                data = fw.data or {}
+                member = _Member(
+                    host_os=str(data.get('host_OS', '')),
+                    id=fw.id,
+                    library=fw.library.name if fw.library else '',
+                    name=fw.name,
+                    platform=str(data.get('platform', '')),
+                )
+                for iface in sorted(fw.interfaces, key=lambda i: i.name):
+                    if iface.parent_interface_id is not None:
+                        continue
+                    entry = _Iface(
+                        eligible=props.is_eligible_for_cluster(iface),
+                        id=iface.id,
+                        label=str((iface.data or {}).get('label', '')),
+                        name=iface.name,
+                    )
+                    for sub in sorted(iface.sub_interfaces, key=lambda i: i.name):
+                        entry.sub_interfaces.append(
+                            _Iface(
+                                eligible=props.is_eligible_for_cluster(sub),
+                                id=sub.id,
+                                label=str((sub.data or {}).get('label', '')),
+                                name=sub.name,
+                            )
+                        )
+                    member.interfaces.append(entry)
+                members.append(member)
+        return members
 
-        table = self.firewallTable
-        table.setSortingEnabled(False)
-        table.setRowCount(len(self._firewalls))
-        self._row_widgets = []
+    def _fill_firewall_selector(self, preselected):
+        """One row per firewall, as ``FirewallSelectorWidget::setFirewallList``.
 
-        for row, (fw_id, fw_name, _fw_data) in enumerate(self._firewalls):
-            # Column 0: Firewall name.
-            name_item = QTableWidgetItem(fw_name)
-            name_item.setFlags(
-                Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable,
-            )
-            name_item.setIcon(QIcon(':/Icons/Firewall/icon-tree'))
-            table.setItem(row, 0, name_item)
+        Two firewalls of one name in different libraries are shown with
+        the library in front, so they can be told apart.
+        """
+        names = [m.name for m in self._members]
+        table = self.firewallSelector
+        table.setRowCount(len(self._members))
+        for row, member in enumerate(self._members):
+            text = member.name
+            if names.count(member.name) > 1:
+                text = f'{member.library} / {member.name}'
+            item = QTableWidgetItem(QIcon(':/Icons/Firewall/icon'), text)
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            table.setItem(row, 0, item)
 
-            # Column 1: "Use" checkbox.
-            use_cb = QCheckBox()
-            use_cb.setToolTip(f'Include {fw_name} in the cluster')
-            use_container = QWidget()
-            layout = _centered_layout(use_container)
-            layout.addWidget(use_cb)
-            table.setCellWidget(row, 1, use_container)
-
-            # Column 2: "Master" radio button.
-            master_rb = QRadioButton()
-            master_rb.setToolTip(f'Designate {fw_name} as master')
-            master_rb.setEnabled(False)
-            self._master_group.addButton(master_rb, row)
-            master_container = QWidget()
-            layout = _centered_layout(master_container)
-            layout.addWidget(master_rb)
-            table.setCellWidget(row, 2, master_container)
-
-            # Connect checkbox to enable/disable the radio button.
-            use_cb.toggled.connect(
-                lambda checked, rb=master_rb: self._on_use_toggled(checked, rb),
-            )
-
-            self._row_widgets.append((use_cb, master_rb))
-
-            # Pre-select if in the preselected list.
-            if fw_id in self._preselected_fw_ids:
-                use_cb.setChecked(True)
-
-        # Auto-select master for the first checked firewall if preselected.
-        if self._preselected_fw_ids:
-            self._auto_select_master()
-
-        table.setSortingEnabled(True)
+            box = QCheckBox()
+            box.setChecked(str(member.id) in preselected)
+            box.setToolTip(f'Use {member.name} as a member of the cluster')
+            box.toggled.connect(self._update_buttons)
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(box)
+            table.setCellWidget(row, 1, container)
+            self._use_boxes[member.id] = box
         table.resizeColumnsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
-    def _on_use_toggled(self, checked, radio_button):
-        """Enable/disable the master radio button when "Use" is toggled."""
-        radio_button.setEnabled(checked)
-        if not checked:
-            radio_button.setChecked(False)
-            # If no master is selected, auto-select one.
-            self._auto_select_master()
-        self._validate()
+    def _selected_members(self):
+        return [m for m in self._members if self._use_boxes[m.id].isChecked()]
 
-    def _auto_select_master(self):
-        """Auto-select the first checked firewall as master if none is selected."""
-        if self._master_group.checkedId() >= 0:
-            # A master is already selected; check it's still checked in "Use".
-            master_row = self._master_group.checkedId()
-            if master_row < len(self._row_widgets):
-                use_cb, _ = self._row_widgets[master_row]
-                if use_cb.isChecked():
-                    return
-        # Find the first checked firewall and make it master.
-        for use_cb, master_rb in self._row_widgets:
-            if use_cb.isChecked():
-                master_rb.setChecked(True)
-                return
-
-    # ------------------------------------------------------------------
-    # Validation
-    # ------------------------------------------------------------------
-
-    def _validate(self):
-        """Validate wizard state and update button enabled states."""
-        name = self.obj_name.text().strip()
-        errors = []
-
-        if not name:
-            errors.append('Enter a cluster name.')
-
-        selected_count = sum(1 for use_cb, _ in self._row_widgets if use_cb.isChecked())
-        if selected_count < 2:
-            errors.append('Select at least two member firewalls.')
-
-        has_master = self._master_group.checkedId() >= 0
-        if selected_count >= 2 and not has_master:
-            errors.append('Designate one firewall as master.')
-        elif has_master:
-            master_row = self._master_group.checkedId()
-            if master_row < len(self._row_widgets):
-                use_cb, _ = self._row_widgets[master_row]
-                if not use_cb.isChecked():
-                    errors.append('The master firewall must be selected for use.')
-
-        self.validationLabel.setText('\n'.join(errors))
-        is_valid = len(errors) == 0
-        self.nextButton.setEnabled(is_valid)
+    def _firewalls_valid(self):
+        """Port of ``FirewallSelectorWidget::isValid``."""
+        members = self._selected_members()
+        if not members:
+            return self._fail(
+                'You should select at least one firewall to use with the cluster'
+            )
+        if len({m.host_os for m in members}) > 1:
+            return self._fail(
+                'Host operation systems of chosen firewalls are different'
+            )
+        if len({m.platform for m in members}) > 1:
+            return self._fail('Platforms of chosen firewalls are different')
+        first_names = {iface.name for iface in members[0].interfaces}
+        if not any(
+            all(name in {i.name for i in m.interfaces} for m in members)
+            for name in first_names
+        ):
+            return self._fail(
+                'Cluster firewalls should have at least one common interface'
+            )
+        return True
 
     # ------------------------------------------------------------------
-    # Page navigation
+    # Page 2: cluster interfaces and their member interfaces
     # ------------------------------------------------------------------
 
-    def _show_page(self, page):
-        """Switch to the given wizard page and update button states."""
+    def _fill_interface_selector(self):
+        """One tab per interface name all members share.
+
+        Ports ``ClusterInterfacesSelectorWidget::setFirewallList``: the
+        names are taken from every interface, sub-interfaces included, and
+        a tab is kept only if each member has an eligible interface of
+        that name.
+        """
+        while self.interfaceSelector.count():
+            widget = self.interfaceSelector.widget(0)
+            self.interfaceSelector.removeTab(0)
+            widget.deleteLater()
+        self._selector_tabs = []
+
+        members = self._selected_members()
+        shared = set.intersection(
+            *({i.name for i in m.all_interfaces()} for m in members)
+        )
+        for name in sorted(shared):
+            widget = self._add_selector_tab(members)
+            if not self._select_member_interfaces(widget, name):
+                self._remove_selector_tab(widget)
+        self._update_interface_buttons()
+
+    def _add_selector_tab(self, members):
+        widget = QWidget()
+        FWFUiLoader(widget).load(str(_UI_DIR / 'clusterinterfacewidget_q.ui'))
+        widget.trees = {}
+        for member in members:
+            column = QVBoxLayout()
+            column.addWidget(QLabel(member.name))
+            tree = QTreeWidget()
+            tree.setHeaderHidden(True)
+            tree.setToolTip(
+                f'Interface of {member.name} this cluster interface stands for.\n'
+                'Greyed out interfaces cannot be used in a cluster.'
+            )
+            root = QTreeWidgetItem(tree, [member.name])
+            root.setIcon(0, QIcon(':/Icons/Firewall/icon-tree'))
+            root.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            for iface in member.interfaces:
+                item = self._interface_item(root, iface)
+                for sub in iface.sub_interfaces:
+                    self._interface_item(item, sub)
+            tree.expandAll()
+            column.addWidget(tree)
+            widget.interfaceBox.addLayout(column)
+            widget.trees[member.id] = tree
+        widget.name.textChanged.connect(
+            lambda text, w=widget: self.interfaceSelector.setTabText(
+                self.interfaceSelector.indexOf(w), text
+            )
+        )
+        self.interfaceSelector.addTab(widget, 'New interface')
+        self._selector_tabs.append(widget)
+        return widget
+
+    def _interface_item(self, parent, iface):
+        """A member interface, selectable only if it can be used.
+
+        An interface that cannot be used stays enabled and is only greyed
+        out: Qt disables every child of a disabled item, and the VLAN
+        sub-interfaces of an interface that cannot be used are exactly
+        the ones that can.
+        """
+        item = QTreeWidgetItem(parent, [iface.name])
+        item.setIcon(0, QIcon(':/Icons/Interface/icon-tree'))
+        item.setData(0, _MEMBER_ROLE, iface)
+        if iface.eligible:
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        else:
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            item.setForeground(
+                0,
+                self.palette().color(
+                    QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text
+                ),
+            )
+            item.setToolTip(
+                0,
+                f'{iface.name} cannot be used in a cluster: it is a bridge port,\n'
+                'a bond slave or the parent of VLAN sub-interfaces.',
+            )
+        return item
+
+    @staticmethod
+    def _select_member_interfaces(widget, name):
+        """Port of ``ClusterInterfaceWidget::setCurrentInterface``."""
+        labels = set()
+        for tree in widget.trees.values():
+            matches = [
+                item
+                for item in tree.findItems(
+                    name,
+                    Qt.MatchFlag.MatchExactly
+                    | Qt.MatchFlag.MatchCaseSensitive
+                    | Qt.MatchFlag.MatchRecursive,
+                )
+                if item.data(0, _MEMBER_ROLE) is not None
+                and item.data(0, _MEMBER_ROLE).eligible
+            ]
+            if not matches:
+                return False
+            tree.setCurrentItem(matches[0])
+            labels.add(matches[0].data(0, _MEMBER_ROLE).label)
+        widget.name.setText(name)
+        if len(labels) == 1:
+            widget.label.setText(labels.pop())
+        return True
+
+    def _remove_selector_tab(self, widget):
+        self.interfaceSelector.removeTab(self.interfaceSelector.indexOf(widget))
+        self._selector_tabs.remove(widget)
+        widget.deleteLater()
+
+    def _on_add_interface(self):
+        widget = self._add_selector_tab(self._selected_members())
+        self.interfaceSelector.setCurrentWidget(widget)
+        widget.name.setFocus()
+        self._update_interface_buttons()
+
+    def _on_remove_interface(self):
+        widget = self.interfaceSelector.currentWidget()
+        if widget is not None:
+            self._remove_selector_tab(widget)
+        self._update_interface_buttons()
+
+    def _update_interface_buttons(self):
+        has_tabs = bool(self._selector_tabs)
+        self.removeInterfaceButton.setEnabled(has_tabs)
+        self.interfaceSelector.setVisible(has_tabs)
+        self.noInterfacesLabel.setVisible(not has_tabs)
+
+    def _chosen_member_interfaces(self, widget):
+        """The member interface picked in each tree, or None if one is not."""
+        chosen = []
+        for tree in widget.trees.values():
+            items = tree.selectedItems()
+            if not items or items[0].data(0, _MEMBER_ROLE) is None:
+                return None
+            chosen.append(items[0].data(0, _MEMBER_ROLE))
+        return chosen
+
+    def _interfaces_valid(self):
+        """Port of ``ClusterInterfacesSelectorWidget::isValid``."""
+        used = {}
+        names = set()
+        for widget in self._selector_tabs:
+            self.interfaceSelector.setCurrentWidget(widget)
+            name = widget.name.text().strip()
+            if not name:
+                return self._fail('Interface name can not be blank.')
+            if name in names:
+                return self._fail(f'The cluster has two interfaces named {name}.')
+            names.add(name)
+            chosen = self._chosen_member_interfaces(widget)
+            if chosen is None:
+                return self._fail(
+                    'Some of the cluster interfaces do not have any member '
+                    'firewall interface selected'
+                )
+            for member, iface in zip(widget.trees, chosen, strict=True):
+                if iface.id in used:
+                    fw_name = next(m.name for m in self._members if m.id == member)
+                    return self._fail(
+                        f'Interface {iface.name} of firewall {fw_name} is used '
+                        'in more than one cluster interface.'
+                    )
+                used[iface.id] = name
+        return True
+
+    # ------------------------------------------------------------------
+    # Page 3: failover protocol and addresses
+    # ------------------------------------------------------------------
+
+    def _fill_interface_editor(self):
+        """One editor per cluster interface, in cluster mode.
+
+        Ports ``InterfacesTabWidget::addClusterInterface`` and
+        ``InterfaceEditorWidget::setClusterMode``: the name is fixed on the
+        previous page, the interface type does not apply, and the failover
+        protocol and the explanation are shown.
+        """
+        while self.interfaceEditor.count():
+            widget = self.interfaceEditor.widget(0)
+            self.interfaceEditor.removeTab(0)
+            widget.deleteLater()
+
+        last_protocol = QSettings().value(_SETTINGS_PROTOCOL, '', type=str)
+        for source in self._selector_tabs:
+            widget = QWidget()
+            FWFUiLoader(widget).load(str(_UI_DIR / 'interfaceeditorwidget_q.ui'))
+            widget.ifaceName.setText(source.name.text().strip())
+            widget.ifaceName.setEnabled(False)
+            widget.ifaceLabel.setText(source.label.text())
+            widget.ifaceComment.setPlainText(source.comment.toPlainText())
+            for hidden in (widget.typeLabel, widget.ifaceType):
+                hidden.setVisible(False)
+            for shown in (widget.explanation, widget.protocolLabel, widget.protocol):
+                shown.setVisible(True)
+            widget.addressTable.horizontalHeader().setStretchLastSection(True)
+            widget.addAddressButton.clicked.connect(
+                lambda _=False, w=widget: NewHostDialog._add_address_row(w)
+            )
+            widget.removeAddressButton.clicked.connect(
+                lambda _=False, w=widget: NewHostDialog._remove_address_row(w)
+            )
+            widget.protocol.currentTextChanged.connect(
+                lambda text, w=widget: self._on_protocol_changed(w, text)
+            )
+            index = widget.protocol.findText(last_protocol)
+            widget.protocol.setCurrentIndex(max(index, 0))
+            self._on_protocol_changed(widget, widget.protocol.currentText())
+            self.interfaceEditor.addTab(widget, widget.ifaceName.text())
+
+    @staticmethod
+    def _on_protocol_changed(widget, text):
+        """Port of ``InterfaceEditorWidget::protocolChanged``.
+
+        None takes part in no failover and so carries no address.
+        """
+        no_address = text == 'None'
+        if no_address:
+            widget.addressTable.setRowCount(0)
+        for control in (
+            widget.addressTable,
+            widget.addAddressButton,
+            widget.removeAddressButton,
+        ):
+            control.setEnabled(not no_address)
+        QSettings().setValue(_SETTINGS_PROTOCOL, text)
+
+    def _addresses_valid(self):
+        for index in range(self.interfaceEditor.count()):
+            widget = self.interfaceEditor.widget(index)
+            name = widget.ifaceName.text()
+            table = widget.addressTable
+            for row in range(table.rowCount()):
+                self.interfaceEditor.setCurrentIndex(index)
+                address, netmask, is_v4 = self._address_row(table, row)
+                where = f'Interface "{name}", row {row + 1}'
+                if not address or not netmask:
+                    return self._fail(f'{where}: {EMPTY_ADDRESS_OR_NETMASK}.')
+                if not NewHostDialog._is_valid_address(address, is_v4):
+                    family = 'IPv4' if is_v4 else 'IPv6'
+                    return self._fail(
+                        f"{where}: '{address}' is not a valid {family} address."
+                    )
+                try:
+                    netmask_for_interface_address(netmask, is_v4=is_v4)
+                except NetmaskRejected as rejected:
+                    return self._fail(f'{where}: {rejected.message}.')
+        return True
+
+    @staticmethod
+    def _address_row(table, row):
+        address_item = table.item(row, 0)
+        netmask_item = table.item(row, 1)
+        combo = table.cellWidget(row, 2)
+        return (
+            address_item.text().strip() if address_item else '',
+            netmask_item.text().strip() if netmask_item else '',
+            combo.currentIndex() == 0 if combo else True,
+        )
+
+    def _interface_data(self):
+        """The cluster interfaces as ``create_cluster`` takes them."""
+        result = []
+        for index, source in enumerate(self._selector_tabs):
+            editor = self.interfaceEditor.widget(index)
+            addresses = []
+            for row in range(editor.addressTable.rowCount()):
+                address, netmask, is_v4 = self._address_row(editor.addressTable, row)
+                addresses.append(
+                    {
+                        'address': address,
+                        'ipv4': is_v4,
+                        'netmask': NewHostDialog._normalized_netmask(netmask, is_v4),
+                    }
+                )
+            result.append(
+                {
+                    'addresses': addresses,
+                    'comment': editor.ifaceComment.toPlainText().strip(),
+                    'label': editor.ifaceLabel.text().strip(),
+                    'members': [i.id for i in self._chosen_member_interfaces(source)],
+                    'name': editor.ifaceName.text(),
+                    'protocol': editor.protocol.currentText().lower(),
+                }
+            )
+        return result
+
+    # ------------------------------------------------------------------
+    # Page 4: rules
+    # ------------------------------------------------------------------
+
+    def _fill_policy_choice(self):
+        for button in self._policy_buttons:
+            self._policy_group.removeButton(button)
+            button.deleteLater()
+        self._policy_buttons = {}
+        for member in self._selected_members():
+            button = QRadioButton(member.name)
+            button.setToolTip(
+                f'The cluster takes over the rules of {member.name}; every\n'
+                'member is backed up and left with empty rule sets.'
+            )
+            self.policySourceLayout.addWidget(button)
+            self._policy_group.addButton(button)
+            self._policy_buttons[button] = member.id
+        self.noPolicy.setChecked(True)
+
+    def _policy_source(self):
+        return self._policy_buttons.get(self._policy_group.checkedButton())
+
+    # ------------------------------------------------------------------
+    # Page 5: summary
+    # ------------------------------------------------------------------
+
+    def _fill_summary(self):
+        self.clusterName.setText(f'Name: {self.obj_name.text().strip()}')
+        self.firewallsList.setText('\n'.join(m.name for m in self._selected_members()))
+        lines = []
+        interfaces = self._interface_data() if self._selector_tabs else []
+        for index, iface in enumerate(interfaces):
+            protocol = self.interfaceEditor.widget(index).protocol.currentText()
+            text = f'{iface["name"]} ({protocol})'
+            addresses = [f'{a["address"]}/{a["netmask"]}' for a in iface['addresses']]
+            if addresses:
+                word = 'address' if len(addresses) == 1 else 'addresses'
+                text += f' with {word}: ' + ', '.join(addresses)
+            lines.append(text)
+        self.interfacesList.setText('\n'.join(lines) or 'none')
+        source = self._policy_source()
+        name = next((m.name for m in self._members if m.id == source), '')
+        self.policyLabel.setText(
+            f'Policy and NAT rules will be copied from firewall: {name}'
+        )
+        self.policyLabel.setVisible(source is not None)
+
+    # ------------------------------------------------------------------
+    # Navigation
+    # ------------------------------------------------------------------
+
+    def _fail(self, message):
+        QMessageBox.critical(self, self.windowTitle(), message)
+        return False
+
+    def _show_page(self, page, blank=True):
+        """Port of ``newClusterDialog::showPage``.
+
+        *blank* rebuilds the page from the previous ones, which happens on
+        the way forward; going back keeps what was entered.
+        """
+        if blank:
+            if page == _PAGE_INTERFACES:
+                self._fill_interface_selector()
+            elif page == _PAGE_ADDRESSES:
+                self._fill_interface_editor()
+            elif page == _PAGE_POLICY:
+                self._fill_policy_choice()
+        if page == _PAGE_SUMMARY:
+            self._fill_summary()
         self.stackedWidget.setCurrentIndex(page)
+        self.titleLabel.setText(self.stackedWidget.currentWidget().windowTitle())
+        self._update_buttons()
 
-        if page == _PAGE_FIREWALLS:
-            self.titleLabel.setText('Select member firewalls')
-            self.backButton.setEnabled(False)
-            self._validate()  # Updates nextButton.
-            self.finishButton.setEnabled(False)
-        elif page == _PAGE_SUMMARY:
-            self.titleLabel.setText('Review cluster configuration')
-            self.backButton.setEnabled(True)
-            self.nextButton.setEnabled(False)
-            self.finishButton.setEnabled(True)
-            self.finishButton.setDefault(True)
-            self._populate_summary()
-
-    def _on_back(self):
-        """Navigate to the previous page."""
-        current = self.stackedWidget.currentIndex()
-        if current > _PAGE_FIREWALLS:
-            self._show_page(current - 1)
+    def _update_buttons(self):
+        page = self.stackedWidget.currentIndex()
+        self.backButton.setEnabled(page != _PAGE_FIREWALLS)
+        self.nextButton.setEnabled(
+            page != _PAGE_SUMMARY
+            and (page != _PAGE_FIREWALLS or bool(self.obj_name.text().strip()))
+        )
+        self.finishButton.setEnabled(page == _PAGE_SUMMARY)
+        (self.finishButton if page == _PAGE_SUMMARY else self.nextButton).setDefault(
+            True
+        )
 
     def _on_next(self):
-        """Navigate to the next page."""
-        current = self.stackedWidget.currentIndex()
-        if current < _PAGE_SUMMARY:
-            self._show_page(current + 1)
+        page = self.stackedWidget.currentIndex()
+        if page == _PAGE_FIREWALLS and not self._firewalls_valid():
+            return
+        if page == _PAGE_INTERFACES and not self._interfaces_valid():
+            return
+        if page == _PAGE_ADDRESSES and not self._addresses_valid():
+            return
+        following = page + 1
+        # A cluster without interfaces has no addresses to set.
+        if following == _PAGE_ADDRESSES and not self._selector_tabs:
+            following = _PAGE_POLICY
+        self._show_page(following)
 
-    # ------------------------------------------------------------------
-    # Summary
-    # ------------------------------------------------------------------
-
-    def _populate_summary(self):
-        """Fill in the summary page labels."""
-        name = self.obj_name.text().strip()
-        self.clusterName.setText(f'Name: {name}')
-
-        selected_names = []
-        master_name = ''
-        master_data = {}
-        master_row = self._master_group.checkedId()
-
-        for row, (use_cb, _master_rb) in enumerate(self._row_widgets):
-            if use_cb.isChecked():
-                _fw_id, fw_name, fw_data = self._firewalls[row]
-                selected_names.append(fw_name)
-                if row == master_row:
-                    master_name = fw_name
-                    master_data = fw_data
-
-        self.firewallsList.setText('\n'.join(sorted(selected_names)))
-        self.masterLabel.setText(f'Master firewall: {master_name}')
-
-        platform = master_data.get('platform', '')
-        host_os = master_data.get('host_OS', '')
-        host_os_display = HOST_OS.get(host_os, host_os)
-
-        self.platformLabel.setText(f'Platform: {platform}')
-        self.hostOSLabel.setText(f'Host OS: {host_os_display}')
+    def _on_back(self):
+        page = self.stackedWidget.currentIndex()
+        previous = page - 1
+        if previous == _PAGE_ADDRESSES and not self._selector_tabs:
+            previous = _PAGE_INTERFACES
+        self._show_page(previous, blank=False)
 
     # ------------------------------------------------------------------
     # Result
     # ------------------------------------------------------------------
 
     def get_result(self):
-        """Return ``(name, extra_data)`` for object creation.
+        """Return the cluster as ``TreeOperations.create_cluster`` takes it.
 
-        *extra_data* contains ``platform``, ``host_OS``,
-        ``member_fw_ids`` and ``master_fw_id``, derived from the selected
-        master firewall.  No release: Firewall Builder writes only the
-        platform and the host OS onto a cluster
-        (``newClusterDialog_create.cpp``), and neither compiler reads one
-        there - a member compiles for the release it names itself.
+        The platform and host OS are those of the first member, which the
+        first page has checked all members share.
         """
-        name = self.obj_name.text().strip()
-        master_row = self._master_group.checkedId()
-
-        member_ids = []
-        master_id = None
-        master_data = {}
-
-        for row, (use_cb, _master_rb) in enumerate(self._row_widgets):
-            if use_cb.isChecked():
-                fw_id = self._firewalls[row][0]
-                member_ids.append(fw_id)
-                if row == master_row:
-                    master_id = fw_id
-                    master_data = self._firewalls[row][2]
-
-        return name, {
-            'host_OS': master_data.get('host_OS', ''),
-            'master_fw_id': master_id,
-            'member_fw_ids': sorted(member_ids),
-            'platform': master_data.get('platform', ''),
+        members = self._selected_members()
+        return {
+            'copy_rules_from': self._policy_source(),
+            'host_OS': members[0].host_os,
+            'interfaces': self._interface_data() if self._selector_tabs else [],
+            'members': [m.id for m in members],
+            'name': self.obj_name.text().strip(),
+            'platform': members[0].platform,
         }
-
-
-def _centered_layout(parent):
-    """Create a centered QHBoxLayout with zero margins for cell widgets."""
-    from PySide6.QtWidgets import QHBoxLayout
-
-    layout = QHBoxLayout(parent)
-    layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    layout.setContentsMargins(0, 0, 0, 0)
-    return layout

@@ -23,6 +23,7 @@ from firewallfabrik.core.objects import (
     NAT,
     Address,
     Cluster,
+    FailoverClusterGroup,
     Firewall,
     Group,
     Host,
@@ -46,6 +47,12 @@ from firewallfabrik.gui.object_tree_data import (
     normalize_subfolders,
 )
 from firewallfabrik.gui.object_usage import find_referencing_firewalls
+from firewallfabrik.platforms.linux._automatic_rules import (
+    HEARTBEAT_DEFAULT_ADDRESS,
+    HEARTBEAT_DEFAULT_PORT,
+    OPENAIS_DEFAULT_ADDRESS,
+    OPENAIS_DEFAULT_PORT,
+)
 
 
 def _stamp_parent_firewall(obj):
@@ -97,7 +104,7 @@ _ALL_ORM_CLASSES = (
 )
 
 
-def add_device_defaults(session, device):
+def add_device_defaults(session, device, *, rule_sets=True):
     """Give a new firewall or cluster what Firewall Builder creates with it.
 
     Ports ``Firewall::init``, which adds an empty Policy, NAT and Routing
@@ -109,7 +116,7 @@ def add_device_defaults(session, device):
     # The children reference the device, which has to be in the table
     # before them; the unit of work does not order a group after a device.
     session.flush()
-    for model_cls in (Policy, NAT, Routing):
+    for model_cls in (Policy, NAT, Routing) if rule_sets else ():
         session.add(
             model_cls(
                 id=uuid.uuid4(),
@@ -128,6 +135,34 @@ def add_device_defaults(session, device):
                 name='State Sync Group',
             )
         )
+
+
+def failover_group_defaults(protocol):
+    """The options a new failover group of *protocol* starts with.
+
+    Ports ``setDefaultFailoverGroupAttributes``: without them a VRRP
+    group has no virtual router id, and the heartbeat and OpenAIS groups
+    no address and port for the automatic rules to permit.
+    """
+    if protocol == 'vrrp':
+        return {
+            'vrrp_over_ipsec_ah': False,
+            # An empty VRRP secret the administrator fills in, not a password.
+            'vrrp_secret': '',  # nosec B105
+            'vrrp_vrid': '1',
+        }
+    if protocol == 'heartbeat':
+        return {
+            'heartbeat_address': HEARTBEAT_DEFAULT_ADDRESS,
+            'heartbeat_port': str(HEARTBEAT_DEFAULT_PORT),
+            'heartbeat_unicast': False,
+        }
+    if protocol == 'openais':
+        return {
+            'openais_address': OPENAIS_DEFAULT_ADDRESS,
+            'openais_port': str(OPENAIS_DEFAULT_PORT),
+        }
+    return {}
 
 
 class TreeOperations:
@@ -657,6 +692,32 @@ class TreeOperations:
             target_session.add(new_group)
             group_tasks.append((group, new_group))
 
+        self._copy_rule_sets(
+            source_session, target_session, source_device, new_device, id_map
+        )
+
+        for group, new_group in group_tasks:
+            if source_session is target_session:
+                self._duplicate_group_members(source_session, group, new_group, id_map)
+            else:
+                self._duplicate_group_members_cross_db(
+                    source_session, target_session, group, new_group
+                )
+
+    @staticmethod
+    def _copy_rule_sets(
+        source_session, target_session, source_device, new_device, id_map
+    ):
+        """Copy the rule sets of *source_device* onto *new_device*.
+
+        Every reference the copied rules hold - a rule element, the rule
+        set a Branch rule jumps into, a tag object - is remapped through
+        *id_map*, which the rule sets and rules are added to as they are
+        cloned.  A caller can seed it to point references somewhere else:
+        the New Cluster wizard maps a member firewall and its interfaces
+        onto the cluster and its interfaces (``FWObjectDatabase::
+        fixReferences``).
+        """
         # Collect source rule_element rows and clone rule sets + rules.
         # We must read source rows before flushing the clones (the flush
         # would otherwise trigger lazy loads that might expire the source
@@ -664,11 +725,11 @@ class TreeOperations:
         rule_element_tasks = []
         new_rules = []
         for rs in source_device.rule_sets:
-            new_rs = self._clone_object(rs, id_map)
+            new_rs = TreeOperations._clone_object(rs, id_map)
             new_rs.device_id = new_device.id
             target_session.add(new_rs)
             for rule in rs.rules:
-                new_rule = self._clone_object(rule, id_map)
+                new_rule = TreeOperations._clone_object(rule, id_map)
                 new_rule.rule_set_id = new_rs.id
                 target_session.add(new_rule)
                 new_rules.append(new_rule)
@@ -710,14 +771,6 @@ class TreeOperations:
                         target_id=id_map.get(row.target_id, row.target_id),
                         position=row.position,
                     )
-                )
-
-        for group, new_group in group_tasks:
-            if source_session is target_session:
-                self._duplicate_group_members(source_session, group, new_group, id_map)
-            else:
-                self._duplicate_group_members_cross_db(
-                    source_session, target_session, group, new_group
                 )
 
     @staticmethod
@@ -1112,6 +1165,160 @@ class TreeOperations:
             session.close()
 
         return new_id
+
+    def create_cluster(self, lib_id, spec, *, folder=None, prefix=''):
+        """Create a cluster from the New Cluster wizard. Returns its UUID.
+
+        Ports ``newClusterDialog::createNewCluster``.  *spec* is what
+        ``NewClusterDialog.get_result()`` returns: the name, platform and
+        host OS, the member firewalls, one entry per cluster interface
+        (name, label, comment, failover protocol, addresses and the member
+        interfaces it stands for) and, optionally, the member whose rules
+        the cluster takes over.
+
+        Each cluster interface gets a failover group named
+        ``<cluster>:<interface>:members`` that references the member
+        interfaces, and the protocol's default options.  Taking over the
+        rules of a member first stores a disabled copy of every member as
+        ``<member>-bak``, then copies the rule sets with every reference to
+        a member firewall or one of its mapped interfaces pointing at the
+        cluster instead, and finally leaves each member with empty
+        Policy, NAT and Routing rule sets - a member rule set of the same
+        name would otherwise override the cluster's.  All of it is one
+        undo step.
+        """
+        if self._db_manager is None:
+            return None
+
+        session = self._db_manager.create_session()
+        try:
+            cluster = Cluster(
+                id=uuid.uuid4(),
+                type='Cluster',
+                library_id=lib_id,
+                data={'host_OS': spec['host_OS'], 'platform': spec['platform']},
+            )
+            target_group = find_group_by_path(
+                session, lib_id, SYSTEM_GROUP_PATHS.get('Cluster', '')
+            )
+            if target_group is not None:
+                cluster.group_id = target_group.id
+            # A user subfolder is kept the way create_new_object keeps it;
+            # the system folder is what group_id already says.
+            if folder and folder not in NEW_TYPES_FOR_FOLDER:
+                cluster.data = {**cluster.data, 'folder': folder}
+            cluster.name = spec['name']
+            cluster.name = self.make_name_unique(session, cluster)
+            session.add(cluster)
+            source_id = spec.get('copy_rules_from')
+            add_device_defaults(session, cluster, rule_sets=source_id is None)
+
+            # setDefaultStateSyncGroupAttributes names the group after the
+            # first state sync protocol of the host OS.
+            for group in cluster.child_groups:
+                group.name = 'conntrack'
+
+            id_map = {}
+            for iface_spec in spec['interfaces']:
+                iface = Interface(
+                    id=uuid.uuid4(),
+                    comment=iface_spec['comment'],
+                    data={
+                        'dyn': False,
+                        'label': iface_spec['label'],
+                        'security_level': '0',
+                        'unnum': False,
+                    },
+                    device_id=cluster.id,
+                    library_id=lib_id,
+                    name=iface_spec['name'],
+                    options={'type': 'cluster_interface'},
+                )
+                session.add(iface)
+                for addr_spec in iface_spec['addresses']:
+                    is_v4 = addr_spec['ipv4']
+                    session.add(
+                        Address(
+                            id=uuid.uuid4(),
+                            inet_addr_mask={
+                                'address': addr_spec['address'],
+                                'netmask': addr_spec['netmask'],
+                            },
+                            interface_id=iface.id,
+                            name=f'{cluster.name}:{iface.name}:'
+                            + ('ip' if is_v4 else 'ip6'),
+                            type='IPv4' if is_v4 else 'IPv6',
+                        )
+                    )
+                protocol = iface_spec['protocol']
+                group = FailoverClusterGroup(
+                    id=uuid.uuid4(),
+                    data={'type': protocol},
+                    interface_id=iface.id,
+                    library_id=lib_id,
+                    name=f'{cluster.name}:{iface.name}:members',
+                    options=failover_group_defaults(protocol),
+                )
+                session.add(group)
+                session.flush()
+                for position, member_iface_id in enumerate(iface_spec['members']):
+                    id_map[member_iface_id] = iface.id
+                    session.execute(
+                        group_membership.insert().values(
+                            group_id=group.id,
+                            member_id=member_iface_id,
+                            position=position,
+                        )
+                    )
+
+            if source_id is not None:
+                self._take_over_member_rules(
+                    session, cluster, spec['members'], source_id, id_map
+                )
+
+            session.commit()
+            self._db_manager.save_state(f'{prefix}New Cluster {cluster.name}')
+            new_id = cluster.id
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return new_id
+
+    def _take_over_member_rules(self, session, cluster, member_ids, source_id, id_map):
+        """Back up the members, copy the rules of one, empty all of them."""
+        members = [session.get(Firewall, member_id) for member_id in member_ids]
+        for member in members:
+            id_map[member.id] = cluster.id
+
+            backup_map = {}
+            backup = self._clone_object(member, backup_map)
+            backup.name = f'{member.name}-bak'
+            backup.name = self.make_name_unique(session, backup)
+            backup.data = {**(backup.data or {}), 'inactive': True}
+            session.add(backup)
+            self._duplicate_device_children(
+                session, session, member, backup, backup_map
+            )
+
+        source = session.get(Firewall, source_id)
+        self._copy_rule_sets(session, session, source, cluster, id_map)
+
+        for member in members:
+            obj_ids, rule_ids = set(), set()
+            for rule_set in member.rule_sets:
+                if rule_set.type not in ('NAT', 'Policy', 'Routing'):
+                    continue
+                obj_ids.add(rule_set.id)
+                for rule in rule_set.rules:
+                    obj_ids.add(rule.id)
+                    rule_ids.add(rule.id)
+            self._cleanup_references_and_delete(session, obj_ids, rule_ids)
+            session.flush()
+            session.expire(member, ['rule_sets'])
+            add_device_defaults(session, member)
 
     def create_host_with_interfaces(
         self,

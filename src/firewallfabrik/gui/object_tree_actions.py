@@ -781,7 +781,6 @@ class TreeActionHandler:
         )
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        name, extra_data = dlg.get_result()
 
         # Place the new cluster in the first writable library.
         libs = self._get_writable_libraries()
@@ -789,17 +788,7 @@ class TreeActionHandler:
             return
         lib_id = libs[0][0]
 
-        new_id = self._ops.create_new_object(
-            MODEL_MAP['Cluster'],
-            'Cluster',
-            lib_id,
-            extra_data=extra_data,
-            folder='Clusters',
-            name=name,
-        )
-        if new_id is not None:
-            self._ot.tree_changed.emit(str(new_id), 'Cluster')
-            QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
+        self.create_cluster_in_library(lib_id, dlg.get_result())
 
     def _ctx_new_object(self, item, type_name):
         """Create a new object of *type_name* in the context of *item*."""
@@ -821,7 +810,19 @@ class TreeActionHandler:
             )
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
-            name, extra_data = dlg.get_result()
+            lib_id = self._ot._get_item_library_id(item)
+            if lib_id is None:
+                return
+            folder = None
+            if item.data(0, Qt.ItemDataRole.UserRole + 1) is None:
+                folder = self._ot._get_category_folder_path(item)
+            self.create_cluster_in_library(
+                lib_id,
+                dlg.get_result(),
+                folder=folder,
+                prefix=self._ot._get_device_prefix(item),
+            )
+            return
         elif type_name == 'Host':
             from firewallfabrik.gui.new_host_dialog import NewHostDialog
 
@@ -1165,6 +1166,17 @@ class TreeActionHandler:
         )
         if new_id is not None:
             self._ot.tree_changed.emit(str(new_id), type_name)
+            QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
+        return new_id
+
+    def create_cluster_in_library(self, lib_id, spec, *, folder=None, prefix=''):
+        """Create the cluster the New Cluster wizard describes in *spec*.
+
+        Returns the new cluster's UUID, or ``None`` on failure.
+        """
+        new_id = self._ops.create_cluster(lib_id, spec, folder=folder, prefix=prefix)
+        if new_id is not None:
+            self._ot.tree_changed.emit(str(new_id), 'Cluster')
             QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
         return new_id
 

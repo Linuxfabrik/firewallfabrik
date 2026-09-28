@@ -2487,13 +2487,8 @@ class FWWindow(QMainWindow):
             )
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
-            name, extra_data = dlg.get_result()
-            self._object_tree._actions.create_new_object_in_library(
-                type_name,
-                lib_id,
-                extra_data=extra_data,
-                folder=folder,
-                name=name,
+            self._object_tree._actions.create_cluster_in_library(
+                lib_id, dlg.get_result(), folder=folder
             )
         elif type_name == 'Host':
             from firewallfabrik.gui.new_host_dialog import NewHostDialog
@@ -2558,9 +2553,8 @@ class FWWindow(QMainWindow):
             )
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
-            name, extra_data = dlg.get_result()
-            new_id = self._object_tree._actions.create_new_object_in_library(
-                type_name, lib_id, extra_data=extra_data, name=name
+            new_id = self._object_tree._actions.create_cluster_in_library(
+                lib_id, dlg.get_result()
             )
         elif type_name in ('Firewall', 'Host'):
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog

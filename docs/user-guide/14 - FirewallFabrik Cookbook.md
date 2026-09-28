@@ -1409,9 +1409,6 @@ This opens a wizard that will walk you through the process of creating new clust
 
 ![Choosing the Name for the New Cluster Object](img/cookbook-107.png)
 
-> [!NOTE]
-> A word about the "Master" column. Not all failover protocols require one of the member firewalls to be designated as "master". Most protocols used on Linux don't, so you can disregard this setting on the first page of the wizard.
-
 ![Choosing Interfaces of the Member Firewalls](img/cookbook-108.png)
 
 This page of the wizard allows me to establish correspondence between interfaces of the member firewalls and create cluster interface objects that will represent them. Cluster interface object should have the same name as corresponding member firewall interfaces. The program tries to guess what interfaces of the member firewalls can be used for the cluster and in a simple configuration like the one I am working with, guesses right.
