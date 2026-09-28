@@ -1052,13 +1052,17 @@ def _tcp_flag_names(bits: int) -> list[str]:
     return [name for name, bit in _TCP_FLAG_XLATE if bits & bit]
 
 
-def _nft_tcp_flags(mask: int, comp: int, negated: bool) -> str | None:
+def _nft_tcp_flags(
+    mask: int, comp: int, negated: bool, flag_mask: bool = True
+) -> str | None:
     """`tcp flags` for a MASK/COMP pair, in the spelling nft parses.
 
     nft refuses the ``value / mask`` form when the mask names a single
     symbolic flag, so that case - and the empty comparison, which is
     iptables' ``NONE`` - go out as the bitwise form the same way
-    `tcp_flags_match_nft` writes them for a TCP service object.
+    `tcp_flags_match_nft` writes them for a TCP service object.  So does
+    every case when *flag_mask* is False: the slash notation needs
+    nftables 0.9.9 (`NFT_FLAG_MASK_FIRST_RELEASE`).
     """
     if not mask:
         return None
@@ -1069,7 +1073,7 @@ def _nft_tcp_flags(mask: int, comp: int, negated: bool) -> str | None:
         return f'tcp flags & ({mask_pipe}) != {" | ".join(comp_names) or "0x0"}'
     if not comp_names:
         return f'tcp flags & ({mask_pipe}) == 0x0'
-    if len(mask_names) == 1:
+    if len(mask_names) == 1 or not flag_mask:
         return f'tcp flags & ({mask_pipe}) == {" | ".join(comp_names)}'
     return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
 
@@ -1127,7 +1131,7 @@ def _rt_clause(option: str, argument: str, negated: bool) -> str | None:
 
 
 def custom_service_nftables_code(
-    iptables_code: str, ipv6_only: bool = False
+    iptables_code: str, ipv6_only: bool = False, flag_mask: bool = True
 ) -> str | None:
     """The nftables spelling of an iptables Custom Service, if it has one.
 
@@ -1278,7 +1282,7 @@ def custom_service_nftables_code(
             continue
 
         if word == '--syn':
-            flags = _nft_tcp_flags(_TCP_SYN_MASK, _TCP_SYN_COMP, negated)
+            flags = _nft_tcp_flags(_TCP_SYN_MASK, _TCP_SYN_COMP, negated, flag_mask)
             if flags is None:
                 return None
             parts.append(flags)
@@ -1293,7 +1297,7 @@ def custom_service_nftables_code(
             index += 2
             if mask is None or comp is None or comp & ~mask:
                 return None
-            flags = _nft_tcp_flags(mask, comp, negated)
+            flags = _nft_tcp_flags(mask, comp, negated, flag_mask)
             if flags is None:
                 return None
             parts.append(flags)
@@ -1345,13 +1349,15 @@ def _ct_states(argument: str) -> str | None:
     return ','.join(n for n in _CT_STATE_OUTPUT_ORDER if n in wanted)
 
 
-def custom_service_code(srv, platform: str) -> str:
+def custom_service_code(srv, platform: str, flag_mask: bool = True) -> str:
     """The code *srv* carries for *platform*, ``''`` when it carries none.
 
     One reader for the field, because the compilers ask about it in five
     places - the two checks, the statelessness question and the two print
     rules - and a place that skipped the fallback below would report a
     service the print rule then writes out, or the other way round.
+    *flag_mask* only changes how a translated TCP flag match is spelled,
+    never whether there is code, so only the print rules pass it.
     """
     codes = srv.codes or {}
     code = codes.get(platform, '')
@@ -1361,7 +1367,9 @@ def custom_service_code(srv, platform: str) -> str:
     # what tells an IPv6-only match apart from one written for either.
     ipv6_only = getattr(srv, 'custom_address_family', None) == socket.AF_INET6
     return (
-        custom_service_nftables_code(codes.get('iptables', ''), ipv6_only=ipv6_only)
+        custom_service_nftables_code(
+            codes.get('iptables', ''), ipv6_only=ipv6_only, flag_mask=flag_mask
+        )
         or ''
     )
 

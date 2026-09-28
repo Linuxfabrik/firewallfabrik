@@ -23,7 +23,10 @@ and use it", 2018-06-11).  On v0.9.0 the declaration is a syntax error, and
 nftables loads a ruleset in one transaction - so the rule would not only
 lose its limit, it would take the whole ruleset with it and leave the
 firewall on the rules it had.  ``ct count`` and the ``add @set`` statement
-themselves are both older than that and need no gate of their own.
+themselves are both older than that in nftables and in mainline Linux, but
+the kernel of RHEL 8 refuses the count in a set (EOPNOTSUPP on Rocky 8,
+4.18.0-240, nftables 0.9.3).  RHEL 8 is therefore compiled for 0.9.1, and
+the limit waits for 0.9.2 (``NFT_CONNLIMIT_SET_FIRST_RELEASE``).
 """
 
 import uuid
@@ -34,6 +37,7 @@ from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.core.objects import PolicyAction
 from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
 from firewallfabrik.platforms.nftables._utils import (
+    NFT_CONNLIMIT_SET_FIRST_RELEASE,
     NFT_DYNAMIC_SET_FIRST_RELEASE,
     nft_feature_available,
 )
@@ -98,21 +102,25 @@ def test_the_dynamic_set_needs_0_9_1(version, available):
     assert nft_feature_available(compiler, NFT_DYNAMIC_SET_FIRST_RELEASE) is available
 
 
-@pytest.mark.parametrize('version', ['', '0.9.1', '0.9.5'])
-def test_a_release_that_knows_the_flag_writes_the_limit(version):
+@pytest.mark.parametrize('version', ['', '0.9.2', '0.9.5'])
+def test_a_release_that_can_count_in_a_set_writes_the_limit(version):
     printer, result = _print(version, connlimit_value=10)
     assert result == 'add @connlimit_Policy_3 { ip saddr ct count over 10 }'
     assert printer.compiler.dynamic_sets == {'connlimit_Policy_3': 'ipv4_addr'}
     assert not printer.compiler.messages
 
 
-def test_an_older_release_leaves_the_rule_out():
-    """Emitting it would cost the whole ruleset, not the one rule."""
-    printer, result = _print('0.9.0', connlimit_value=10)
+@pytest.mark.parametrize('version', ['0.9.0', '0.9.1'])
+def test_an_older_release_leaves_the_rule_out(version):
+    """Emitting it would cost the whole ruleset, not the one rule.
+
+    0.9.1 is the release RHEL 8 is compiled for.
+    """
+    printer, result = _print(version, connlimit_value=10)
     assert result is None
     assert not printer.compiler.dynamic_sets
     assert any(
-        NFT_DYNAMIC_SET_FIRST_RELEASE in msg for msg in printer.compiler.messages
+        NFT_CONNLIMIT_SET_FIRST_RELEASE in msg for msg in printer.compiler.messages
     )
 
 

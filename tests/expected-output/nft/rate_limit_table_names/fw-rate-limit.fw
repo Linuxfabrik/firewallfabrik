@@ -69,13 +69,22 @@ table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    set htable_Policy_0 {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
+    set htable_Policy_second_0 {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        tcp dport 80 meter htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
+        tcp dport 80 update @htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
     }
 
     chain forward {
@@ -84,7 +93,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        tcp dport 80 meter htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
+        tcp dport 80 update @htable_Policy_0 { ip saddr timeout 1s limit rate 10/second } counter accept
     }
 
     chain output {
@@ -96,7 +105,7 @@ table ip fwf_filter {
         #
         # Rule Policy_second 0 (global)
         #
-        meta iif != 0 tcp dport 443 meter htable_Policy_second_0 { ip daddr timeout 1s limit rate 10/second } counter accept
+        meta iif != 0 tcp dport 443 update @htable_Policy_second_0 { ip daddr timeout 1s limit rate 10/second } counter accept
     }
 }
 

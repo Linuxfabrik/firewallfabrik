@@ -255,6 +255,12 @@
                <height>26</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>The release of the packet filter on the firewall. A rule that needs a newer
+release is reported and left out, because a construct the firewall cannot
+load costs the whole nftables ruleset. On RHEL 8 and its rebuilds pick
+nftables 0.9.1: its kernel lacks features the installed 0.9.3 can write.</string>
+             </property>
             </widget>
            </item>
            <item row="2" column="1">

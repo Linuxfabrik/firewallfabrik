@@ -98,10 +98,14 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_set_reference_name,
 )
 from firewallfabrik.platforms.nftables._utils import (
-    NFT_DYNAMIC_SET_FIRST_RELEASE,
+    NFT_CONNLIMIT_SET_FIRST_RELEASE,
+    NFT_FLAG_MASK_FIRST_RELEASE,
     NFT_IP_OPTION_FIRST_RELEASE,
+    NFT_RATE_PER_KEY_FIRST_RELEASE,
+    NFT_REJECT_CODE_FIRST_RELEASE,
     NFT_TIME_FIRST_RELEASE,
     nft_feature_available,
+    nft_tcp_flags,
 )
 
 if TYPE_CHECKING:
@@ -950,7 +954,7 @@ def indent_comment_block(block: str) -> str:
     return ''.join(f'        {line}\n' for line in block.splitlines())
 
 
-def tcp_flags_match_nft(srv, negated: bool = False) -> str:
+def tcp_flags_match_nft(srv, negated: bool = False, fw=None) -> str:
     """Format TCP flag inspection for nftables.
 
     The service decides which flags go into the MASK and which into the
@@ -961,7 +965,8 @@ def tcp_flags_match_nft(srv, negated: bool = False) -> str:
     tests/py/inet/tcp.t).
 
     Shared with the NAT print rule: a NAT rule whose service names a flag
-    combination translates every TCP packet without it.
+    combination translates every TCP packet without it.  *fw* decides the
+    spelling (``nft_tcp_flags``); None means the newest release.
     """
     mask_names, comp_names = srv.tcp_flag_match()
     if not mask_names:
@@ -981,7 +986,7 @@ def tcp_flags_match_nft(srv, negated: bool = False) -> str:
         # the single-flag MASK, so it is that same flag.
         comp_pipe = ' | '.join(comp_names)
         return f'tcp flags & ({mask_pipe}) == {comp_pipe}'
-    return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+    return nft_tcp_flags(fw, comp_names, mask_names)
 
 
 # The last second a signed 32-bit time stamp can name, 2038-01-19 03:14:07
@@ -1843,7 +1848,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ' '.join(parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
-            code = custom_service_code(srv, nft_comp.my_platform_name())
+            code = custom_service_code(
+                srv,
+                nft_comp.my_platform_name(),
+                flag_mask=nft_feature_available(nft_comp, NFT_FLAG_MASK_FIRST_RELEASE),
+            )
             if not code:
                 # VerifyCustomServices already reported the missing code.
                 return None
@@ -1943,7 +1952,10 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_tcp_flags(self, srv, negated: bool = False) -> str:
         """Format TCP flag inspection for nftables."""
-        return tcp_flags_match_nft(srv, negated)
+        # A printer built without a compiler (a unit test) gets the newest
+        # release's spelling.
+        fw = getattr(getattr(self, '_compiler', None), 'fw', None)
+        return tcp_flags_match_nft(srv, negated, fw)
 
     def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str | None:
         """Print TCP/UDP service matching.
@@ -2185,16 +2197,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit <= 0:
             return ''
 
-        if not nft_feature_available(self.compiler, NFT_DYNAMIC_SET_FIRST_RELEASE):
+        if not nft_feature_available(self.compiler, NFT_CONNLIMIT_SET_FIRST_RELEASE):
             # The set the counts live in has to be declared `flags dynamic`,
-            # and that keyword is not in the grammar of an older release.  A
-            # ruleset is loaded in one transaction, so the rule would not
-            # only lose its limit, it would take every other rule with it.
+            # which is not in the grammar before NFT_DYNAMIC_SET_FIRST_RELEASE,
+            # and the kernel of RHEL 8 refuses the count in a set even where
+            # nft can write it (NFT_CONNLIMIT_SET_FIRST_RELEASE).  A ruleset
+            # is loaded in one transaction, so the rule would not only lose
+            # its limit, it would take every other rule with it.
             self.compiler.error(
                 rule,
-                f'nftables before {NFT_DYNAMIC_SET_FIRST_RELEASE} cannot count '
-                'connections per source, which needs a set the rule adds to; '
-                'the rule is left out',
+                f'nftables before {NFT_CONNLIMIT_SET_FIRST_RELEASE}, and the '
+                'kernel of RHEL 8, cannot count connections per source, which '
+                'needs a set the rule adds to; the rule is left out',
             )
             return None
 
@@ -2348,6 +2362,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         af = 'ip6' if self.compiler.ipv6_policy else 'ip'
         has_ports = self._hashlimit_has_ports(rule)
         keys = []
+        types = []
         for mode in modes:
             field = self._HASHLIMIT_KEYS[mode]
             if mode.endswith('port'):
@@ -2360,8 +2375,10 @@ class PrintRule_nft(PolicyRuleProcessor):
                     # rule away from bytes that are not a port.
                     continue
                 keys.append(f'th {field}')
+                types.append('inet_service')
             else:
                 keys.append(f'{af} {field}')
+                types.append('ipv6_addr' if af == 'ip6' else 'ipv4_addr')
         if not keys:
             # Every key the mode named was a port and the rule has none, so
             # the whole key is the zero the kernel writes: one bucket for
@@ -2370,6 +2387,17 @@ class PrintRule_nft(PolicyRuleProcessor):
             return self._named_limit(
                 rule, self._meter_name(rule), rate.removeprefix('limit ')
             )
+
+        if not nft_feature_available(self.compiler, NFT_RATE_PER_KEY_FIRST_RELEASE):
+            # See NFT_RATE_PER_KEY_FIRST_RELEASE.  One rule the kernel
+            # refuses costs the whole ruleset.
+            self.compiler.error(
+                rule,
+                f'nftables before {NFT_RATE_PER_KEY_FIRST_RELEASE}, and the kernel '
+                'of RHEL 8, cannot keep a rate limit per source, destination or '
+                'port; the rule is left out',
+            )
+            return None
 
         key = ' . '.join(keys)
         parts = [key]
@@ -2419,7 +2447,22 @@ class PrintRule_nft(PolicyRuleProcessor):
             # first rule, so neither rule limits what it says it limits.
             # Verified by loading such a ruleset in a network namespace.
             return None
-        return f'meter {name}{size} {{ {" ".join(parts)} }}'
+        # A set of the table, declared with `flags dynamic,timeout`, which
+        # the rule updates - not a `meter`.  Before nftables v1.1.0 a meter
+        # is an anonymous set created without the timeout flag, so the
+        # kernel refuses its element timeout with EOPNOTSUPP, and a second
+        # rule naming the same meter is EBUSY ("evaluate: translate meter
+        # into dynamic set", b8f8ddff).  The declared set is what v1.1.0
+        # itself turns a meter into, and it loads on every release.
+        # Verified on Rocky 9, Debian 11 and 12, Leap 15.5 and Ubuntu 22.04
+        # and 24.04, where the meter was refused.
+        # Not while `Optimize3` rehearses the rule: a set declared then
+        # would give a later rule of the same name the rehearsed key type.
+        if not getattr(self.compiler, 'muted_now', False):
+            self.compiler.register_dynamic_set(
+                name, ' . '.join(types), timeout=True, size=max(entries, 0)
+            )
+        return f'update @{name} {{ {" ".join(parts)} }}'
 
     def _meter_fits(
         self,
@@ -3316,6 +3359,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         table = _REJECT_CODE_IPV6 if is_ipv6 else _REJECT_CODE_IPV4
         code = table.get(token)
         if code:
+            if not nft_feature_available(self.compiler, NFT_REJECT_CODE_FIRST_RELEASE):
+                # See NFT_REJECT_CODE_FIRST_RELEASE: the older grammar wants
+                # the keyword, every later one still takes it.
+                return f'reject with {icmp_kw} type {code}'
             return f'reject with {icmp_kw} {code}'
 
         self.compiler.warning(

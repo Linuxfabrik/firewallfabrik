@@ -72,6 +72,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     tos_dscp_matches,
 )
 from firewallfabrik.platforms.nftables._utils import (
+    NFT_FLAG_MASK_FIRST_RELEASE,
     NFT_IP_OPTION_FIRST_RELEASE,
     NFT_NETMAP_FIRST_RELEASE,
     nft_feature_available,
@@ -103,6 +104,14 @@ class NATPrintRule_nft(NATRuleProcessor):
         # dedup must be independent per chain.
         self._chain_labels: dict[str, str] = {}
         self.reported_long_ifaces: set[str] = set()
+
+    def _firewall(self):
+        """The firewall being compiled, or None without a compiler context.
+
+        A printer built without one (a unit test) gets the spelling of the
+        newest release.
+        """
+        return getattr(getattr(self, '_compiler', None), 'fw', None)
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -688,7 +697,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             return None
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)
-            code = custom_service_code(srv, nft_comp.my_platform_name())
+            code = custom_service_code(
+                srv,
+                nft_comp.my_platform_name(),
+                flag_mask=nft_feature_available(nft_comp, NFT_FLAG_MASK_FIRST_RELEASE),
+            )
             if not code:
                 # VerifyCustomServices already reported the missing code.
                 return None
@@ -763,7 +776,9 @@ class NATPrintRule_nft(NATRuleProcessor):
                 srv.dst_range_start or 0, srv.dst_range_end or 0
             )
             flags = (
-                tcp_flags_match_nft(srv, True) if isinstance(srv, TCPService) else ''
+                tcp_flags_match_nft(srv, True, self._firewall())
+                if isinstance(srv, TCPService)
+                else ''
             )
             if flags and (src_ports or dst_ports):
                 self.compiler.error(
@@ -809,7 +824,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         # the handshake stage it was written for.  The match is legal in a
         # nat chain, so it is emitted rather than reported.
         if isinstance(srv, TCPService):
-            flags = tcp_flags_match_nft(srv, bool(neg))
+            flags = tcp_flags_match_nft(srv, bool(neg), self._firewall())
             if flags:
                 parts.append(flags)
 

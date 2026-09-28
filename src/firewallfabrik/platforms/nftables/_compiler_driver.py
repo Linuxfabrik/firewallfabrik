@@ -58,6 +58,7 @@ from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._utils import (
     nft_chain_priority,
     nft_mangle_chain_type,
+    nft_tcp_flags,
 )
 
 if TYPE_CHECKING:
@@ -69,7 +70,7 @@ AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
 
 
-def _declare_dynamic_sets(sets: dict[str, str]) -> str:
+def _declare_dynamic_sets(sets: dict[str, str | tuple[str, bool, int]]) -> str:
     """Declare the dynamic sets a per-source connection limit counts in.
 
     A rule can only add elements to a set that is already an object of the
@@ -79,13 +80,13 @@ def _declare_dynamic_sets(sets: dict[str, str]) -> str:
     if not sets:
         return ''
     out = []
-    for name, addr_type in sorted(sets.items()):
-        out.append(
-            f'    set {name} {{\n'
-            f'        type {addr_type}\n'
-            f'        flags dynamic\n'
-            f'    }}\n'
-        )
+    for name, spec in sorted(sets.items()):
+        addr_type, timeout, size = spec if isinstance(spec, tuple) else (spec, False, 0)
+        flags = 'dynamic,timeout' if timeout else 'dynamic'
+        out.append(f'    set {name} {{\n        type {addr_type}\n')
+        if size:
+            out.append(f'        size {size}\n')
+        out.append(f'        flags {flags}\n    }}\n')
     out.append('\n')
     return ''.join(out)
 
@@ -208,8 +209,8 @@ class CompilerDriver_nft(CompilerDriver):
         self.filter_limits: dict[str, str] = {}
         self.mangle_limits: dict[str, str] = {}
         # Dynamic sets a per-source connection limit counts in, per table.
-        self.filter_dynamic_sets: dict[str, str] = {}
-        self.mangle_dynamic_sets: dict[str, str] = {}
+        self.filter_dynamic_sets: dict[str, str | tuple[str, bool, int]] = {}
+        self.mangle_dynamic_sets: dict[str, str | tuple[str, bool, int]] = {}
         # Address tables rendered as named sets, per table of the ruleset.
         # Each maps the set name to the file the script reads it from.
         self.filter_address_tables: dict[str, tuple[str, bool, str]] = {}
@@ -914,6 +915,7 @@ class CompilerDriver_nft(CompilerDriver):
         # the first line of every base chain, so getting it wrong costs the
         # whole ruleset rather than one rule.
         dstnat_priority = nft_chain_priority(fw, 'dstnat')
+        output_nat_priority = nft_chain_priority(fw, 'dstnat', hook='output')
         filter_priority = nft_chain_priority(fw, 'filter')
         mangle_priority = nft_chain_priority(fw, 'mangle')
         srcnat_priority = nft_chain_priority(fw, 'srcnat')
@@ -1128,9 +1130,9 @@ class CompilerDriver_nft(CompilerDriver):
                     have_ipv6 and not forwarding_is_off(fw, True)
                 )
                 if forwards:
+                    flags = nft_tcp_flags(fw, ['syn'], ['syn', 'rst'])
                     out.write(
-                        '        tcp flags syn / syn,rst '
-                        'counter tcp option maxseg size set rt mtu\n'
+                        f'        {flags} counter tcp option maxseg size set rt mtu\n'
                     )
             if auto_rules['forward']:
                 out.write(auto_rules['forward'])
@@ -1185,7 +1187,9 @@ class CompilerDriver_nft(CompilerDriver):
             if output_nat_rules.strip():
                 out.write('\n')
                 out.write('    chain output {\n')
-                out.write(f'        type nat hook output priority {dstnat_priority};\n')
+                out.write(
+                    f'        type nat hook output priority {output_nat_priority};\n'
+                )
                 out.write(output_nat_rules)
                 out.write('    }\n')
 

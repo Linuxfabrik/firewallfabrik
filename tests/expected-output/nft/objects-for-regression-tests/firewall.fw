@@ -296,6 +296,10 @@ table ip fwf_filter {
         type ipv4_addr
         flags dynamic
     }
+    set htable_Policy_14 {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
 
     chain input {
         type filter hook input priority filter; policy drop;
@@ -381,9 +385,9 @@ table ip fwf_filter {
         #
         # reject using connlimit
         # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
-        iifname "eth0" ip daddr { 192.168.1.1, 222.222.222.222 } meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        iifname "eth0" ip daddr { 192.168.1.1, 222.222.222.222 } update @htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
-        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        iifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } update @htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         #
         # Rule 15 (eth0,eth1)
         #

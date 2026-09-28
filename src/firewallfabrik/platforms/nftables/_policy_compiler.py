@@ -177,7 +177,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.limits: dict[str, str] = {}
         # Dynamic sets a per-source limit counts in, keyed by set name and
         # holding the address type of the key.
-        self.dynamic_sets: dict[str, str] = {}
+        self.dynamic_sets: dict[str, str | tuple[str, bool, int]] = {}
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
@@ -608,14 +608,22 @@ class PolicyCompiler_nft(PolicyCompiler):
         """
         return self.limits.setdefault(name, rate) == rate
 
-    def register_dynamic_set(self, name: str, addr_type: str) -> None:
+    def register_dynamic_set(
+        self, name: str, addr_type: str, timeout: bool = False, size: int = 0
+    ) -> None:
         """Remember a dynamic set so the driver can declare it.
 
         A rule that adds elements to a set can only do so once the set is an
         object of the table (netfilter nftables doc/sets.txt), the same way
-        a named counter has to exist before a rule counts into it.
+        a named counter has to exist before a rule counts into it.  A set
+        whose elements time out has to say so when it is declared: the
+        kernel refuses an element timeout on a set without the flag
+        (`nft_dynset_init`, net/netfilter/nft_dynset.c).
         """
-        self.dynamic_sets.setdefault(name, addr_type)
+        if timeout or size:
+            self.dynamic_sets.setdefault(name, (addr_type, timeout, size))
+        else:
+            self.dynamic_sets.setdefault(name, addr_type)
 
     def register_meter(
         self, name: str, keys: str, timeout: str, size: str, rate: str

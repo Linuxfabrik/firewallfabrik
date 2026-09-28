@@ -38,6 +38,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
     mgmt_address_family,
 )
+from firewallfabrik.platforms.nftables._utils import nft_tcp_flags
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -185,9 +186,8 @@ class OSConfigurator_nft(OSConfigurator):
         if not self.fw.get_option('accept_new_tcp_with_no_syn') and (
             forwards or not in_forward
         ):
-            rules.append(
-                '        tcp flags != syn / syn,rst,ack ct state new counter drop'
-            )
+            flags = nft_tcp_flags(self.fw, ['syn'], ['syn', 'rst', 'ack'], negated=True)
+            rules.append(f'        {flags} ct state new counter drop')
 
         # Permit IPv6 neighbor discovery. Without these a dual-stack firewall
         # with a default-drop policy cannot resolve a neighbour and loses IPv6

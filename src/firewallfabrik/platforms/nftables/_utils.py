@@ -30,10 +30,15 @@ from firewallfabrik.platforms.iptables._utils import version_compare
 
 __all__ = [
     'DEFAULT_NFTABLES_VERSION',
+    'NFT_CONNLIMIT_SET_FIRST_RELEASE',
     'NFT_DYNAMIC_SET_FIRST_RELEASE',
+    'NFT_FLAG_MASK_FIRST_RELEASE',
     'NFT_INET_ROUTE_CHAIN_FIRST_RELEASE',
     'NFT_IP_OPTION_FIRST_RELEASE',
+    'NFT_NAT_PRIORITY_ANY_HOOK_FIRST_RELEASE',
     'NFT_NETMAP_FIRST_RELEASE',
+    'NFT_RATE_PER_KEY_FIRST_RELEASE',
+    'NFT_REJECT_CODE_FIRST_RELEASE',
     'NFT_STANDARD_PRIORITIES',
     'NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE',
     'NFT_TIME_FIRST_RELEASE',
@@ -41,6 +46,7 @@ __all__ = [
     'nft_chain_priority',
     'nft_feature_available',
     'nft_mangle_chain_type',
+    'nft_tcp_flags',
     'version_compare',
 ]
 
@@ -57,6 +63,22 @@ DEFAULT_NFTABLES_VERSION = '1.1'
 # ("src: add dynamic flag and use it", 2018-06-11); the token does not
 # exist in v0.9.0's scanner, so the ruleset does not parse there at all.
 NFT_DYNAMIC_SET_FIRST_RELEASE = '0.9.1'
+
+# `ct count` inside a set, which a per-source connection limit compiles
+# to.  nftables 0.9.1 can write it and mainline Linux has taken it since
+# 4.18 ("netfilter: nf_tables: add connlimit support", 290180e2448c), but
+# the kernel of RHEL 8 answers it with EOPNOTSUPP (measured on Rocky 8,
+# 4.18.0-240, nftables 0.9.3).  That kernel refuses `ip option` and
+# `meta hour` as well, which are gated at 0.9.2 and 0.9.3 already, so the
+# release to pick for RHEL 8 is 0.9.1, and this gate joins them at 0.9.2.
+NFT_CONNLIMIT_SET_FIRST_RELEASE = '0.9.2'
+
+# A rate limit kept per key, which is a `limit` inside a set the rule
+# updates.  Mainline Linux has evaluated an expression in a set element
+# since the dynset expression support of 4.3, but the kernel of RHEL 8
+# answers it with EOPNOTSUPP as well (measured on Rocky 8, 4.18.0-240,
+# nftables 0.9.3), so it joins `ct count` at 0.9.2 for the same reason.
+NFT_RATE_PER_KEY_FIRST_RELEASE = '0.9.2'
 
 # `ip option <name> exists`, which an IP Service matching a source-route,
 # record-route or router-alert option compiles to.  Matching an IPv4 header
@@ -102,6 +124,29 @@ NFT_STANDARD_PRIORITIES = {
 # 2019-07-07), the same proxy `NFT_IP_OPTION_FIRST_RELEASE` and
 # `NFT_TIME_FIRST_RELEASE` use for a kernel feature.
 NFT_INET_ROUTE_CHAIN_FIRST_RELEASE = '0.9.2'
+
+# The `<value> / <mask>` notation for a flag match - `tcp flags syn /
+# syn,rst,ack` - which reads as the iptables `--tcp-flags` it translates.
+# nftables v0.9.9 ("parser_bison: add shortcut syntax for matching flags
+# without binary operations", c3d57114, 2021-05-13); before it the slash is
+# a syntax error, and the bitwise form every release parses has to be
+# written out: `tcp flags & (syn | rst | ack) == syn`.
+NFT_FLAG_MASK_FIRST_RELEASE = '0.9.9'
+
+# `reject with icmp host-unreachable`, the code without the `type` keyword
+# in front of it.  nftables v1.0.0 ("src: promote 'reject with icmp CODE'
+# syntax", 08d2f049, 2021-07-26); before it the grammar wants `icmp type
+# <code>`, which every later release still parses (src/parser_bison.y,
+# `reject_opts`).
+NFT_REJECT_CODE_FIRST_RELEASE = '1.0.0'
+
+# The name of a NAT priority on the hook the other half of NAT uses:
+# `priority dstnat` on the output hook, `priority srcnat` on the input hook.
+# nftables v1.0.9 ("rule: allow src/dstnat prios in input and output",
+# 8beafab7, 2023-07-28); before it `std_prio_lookup` accepts `dstnat` on
+# prerouting and `srcnat` on postrouting alone and answers "invalid
+# priority expression value in this context" everywhere else.
+NFT_NAT_PRIORITY_ANY_HOOK_FIRST_RELEASE = '1.0.9'
 
 # `snat prefix to` / `dnat prefix to`, the 1:1 network translation the
 # iptables NETMAP target does.  A plain `snat to <prefix>` is a different
@@ -165,7 +210,7 @@ def nft_mangle_chain_type(fw, family: str, chain: str) -> str:
     return 'route'
 
 
-def nft_chain_priority(fw, name: str) -> str:
+def nft_chain_priority(fw, name: str, hook: str = '') -> str:
     """Spell a standard chain priority the way the target release reads it.
 
     The name is the readable form and what every current nftables prints
@@ -174,9 +219,26 @@ def nft_chain_priority(fw, name: str) -> str:
     transaction, so a base chain the target cannot parse costs the whole
     ruleset and the firewall keeps the rules it had.
     """
-    if (
-        version_compare(get_nftables_version(fw), NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE)
-        >= 0
+    release = get_nftables_version(fw)
+    unusual_nat_hook = (name, hook) in (('dstnat', 'output'), ('srcnat', 'input'))
+    if version_compare(release, NFT_SYMBOLIC_PRIORITY_FIRST_RELEASE) >= 0 and (
+        not unusual_nat_hook
+        or version_compare(release, NFT_NAT_PRIORITY_ANY_HOOK_FIRST_RELEASE) >= 0
     ):
         return name
     return str(NFT_STANDARD_PRIORITIES[name])
+
+
+def nft_tcp_flags(fw, values: list[str], mask: list[str], negated: bool = False) -> str:
+    """Match the TCP flags in *mask* against *values*, in the target's spelling.
+
+    Both spellings compare the same bits; the slash one is what current
+    nftables prints back and what iptables-translate writes, so it is kept
+    wherever the release parses it.  *fw* may be None for "the newest".
+    """
+    release = get_nftables_version(fw) if fw is not None else DEFAULT_NFTABLES_VERSION
+    if version_compare(release, NFT_FLAG_MASK_FIRST_RELEASE) >= 0:
+        operator = '!= ' if negated else ''
+        return f'tcp flags {operator}{",".join(values)} / {",".join(mask)}'
+    operator = '!=' if negated else '=='
+    return f'tcp flags & ({" | ".join(mask)}) {operator} {" | ".join(values)}'

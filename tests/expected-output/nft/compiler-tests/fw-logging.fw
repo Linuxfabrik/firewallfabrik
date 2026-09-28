@@ -278,6 +278,11 @@ table ip fwf_filter {
         rate 10/minute
     }
 
+    set htable_Policy_3 {
+        type ipv4_addr . inet_service
+        flags dynamic,timeout
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -298,7 +303,7 @@ table ip fwf_filter {
         #
         # Rule 3 (global)
         #
-        meta l4proto { tcp, udp } th dport 53 meter htable_Policy_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
+        meta l4proto { tcp, udp } th dport 53 update @htable_Policy_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
         #
         # Rule 4 (global)
         #
@@ -316,7 +321,7 @@ table ip fwf_filter {
         #
         # Rule 3 (global)
         #
-        meta l4proto { tcp, udp } th dport 53 meter htable_Policy_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
+        meta l4proto { tcp, udp } th dport 53 update @htable_Policy_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
         #
         # Rule 4 (global)
         #

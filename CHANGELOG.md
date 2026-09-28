@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up.
 
+### Added
+
+* Editor (nftables): the version list offers 0.9.9, 1.0.0 and 1.0.9, and its tooltip says to pick 0.9.1 on RHEL 8.
+
 ### Fixed
 
 * Compiler (iptables): a rate limit that applies only above the rate is compiled instead of left out.
 * Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
+* Compiler (nftables): a firewall set to the nftables release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04, instead of being refused as a whole.
 * Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
+* Compiler (nftables): rate limits kept per source, destination or port load on nftables before 1.1.0 instead of taking the whole ruleset down.
 
 
 ## [v3.2.0] - 2026-09-25

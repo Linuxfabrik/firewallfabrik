@@ -161,17 +161,46 @@ part of the `missing` column in `compare-reference.sh`.
 The list the editor offers is `PLATFORM_VERSIONS` in
 `gui/platform_settings.py`: Firewall Builder's own list for iptables,
 value for value, and for nftables the releases at which this compiler's
-output changes - 0.9.1 for the `flags dynamic` set a per-source
-connection limit counts in *and* for the name of a standard chain priority
-(`priority filter` rather than `priority 0`, which is the first line of
-every base chain), 0.9.2 for `ip option <name> exists`, 0.9.3 for
-`meta hour` / `meta day` / `meta time` and 0.9.5 for `snat prefix to` /
-`dnat prefix to`.  Everything else the nftables compiler emits is 0.9.0
-or older, and `ct count`, `auto-merge` and `log flags` are the three that
-reach that floor.  Add a row to that list
-whenever a new construct needs a release newer than one a supported
-distribution ships, and a matching constant in
+output changes - 0.9.1 for the `flags dynamic` set and for the name of a
+standard chain priority (`priority filter` rather than `priority 0`,
+which is the first line of every base chain), 0.9.2 for `ip option
+<name> exists`, `ct count` in a set and a rate limit kept per key, 0.9.3 for `meta hour` / `meta
+day` / `meta time`, 0.9.5 for `snat prefix to` / `dnat prefix to`, 0.9.9
+for the `tcp flags syn / syn,rst,ack` notation, 1.0.0 for `reject with
+icmp <code>` without `type`, and 1.0.9 for `priority dstnat` on the
+output hook.  Below each of them the compiler writes the older spelling,
+or reports the rule and leaves it out where there is none.  Add a row to
+that list whenever a new construct needs a release newer than one a
+supported distribution ships, and a matching constant in
 `platforms/nftables/_utils.py`.
+
+A kernel feature is gated at the first nftables release after the kernel
+that brought it - a proxy, since the version field names nftables and not
+the kernel.  RHEL 8 breaks it: its 4.18 kernel refuses `ip option`,
+`meta hour`, `ct count` in a set and a rate limit kept per key, all of
+which the nftables 0.9.3 it ships can write.  RHEL 8 therefore takes the
+0.9.1 entry, and the last two are gated at 0.9.2 with `ip option` for
+that reason alone.
+
+Which entry to pick, measured by loading the whole corpus compiled for it
+on each distribution (`tools/compiler-audit/load-nft.sh`):
+
+| Distribution | nftables, kernel | Entry |
+|---|---|---|
+| RHEL 8 and rebuilds | 0.9.3, 4.18 | 0.9.1 |
+| Debian 11 | 0.9.8, 5.10 | 0.9.5 |
+| openSUSE Leap 15.5 | 0.9.8, 5.14 | 0.9.5 |
+| Ubuntu 22.04 | 1.0.2, 5.15 | 1.0.0 |
+| Debian 12 | 1.0.6, 6.1 | 1.0.0 |
+| RHEL 9 and rebuilds | 1.0.9, 5.14 | 1.0.9 |
+| Ubuntu 24.04 | 1.0.9, 6.8 | 1.0.9 |
+| RHEL 10, Debian 13, Fedora, Leap 16.0, Ubuntu 26.04 | 1.1.1 and later | - any - |
+
+A rate limit kept per key is written as a set of the table declared
+`flags dynamic,timeout` that the rule updates, not as a `meter`, on every
+release: before nftables 1.1.0 a meter is an anonymous set without the
+timeout flag, which the kernel refuses with EOPNOTSUPP, and a second rule
+naming the same meter fails with EBUSY.
 
 ## The `placeholder` Field
 

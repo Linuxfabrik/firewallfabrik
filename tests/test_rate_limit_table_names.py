@@ -68,8 +68,8 @@ def test_iptables_keeps_the_reference_spelling_for_the_top_rule_set(ipt_script):
 
 
 def test_nftables_gives_each_rule_set_a_meter_of_its_own(nft_script):
-    assert 'meter htable_Policy_0 ' in nft_script
-    assert f'meter {BRANCH} ' in nft_script
+    assert 'update @htable_Policy_0 ' in nft_script
+    assert f'update @{BRANCH} ' in nft_script
 
 
 def test_neither_platform_reuses_one_name_for_both_rule_sets(ipt_script, nft_script):
@@ -79,7 +79,7 @@ def test_neither_platform_reuses_one_name_for_both_rule_sets(ipt_script, nft_scr
     than once - that is the same rule counting into its own table.  What
     must not happen is the two rule sets ending up on one name.
     """
-    for script, keyword in ((ipt_script, '--hashlimit-name'), (nft_script, 'meter')):
+    for script, keyword in ((ipt_script, '--hashlimit-name'), (nft_script, 'update @')):
         names = {
             line.split(keyword, 1)[1].split()[0]
             for line in script.splitlines()

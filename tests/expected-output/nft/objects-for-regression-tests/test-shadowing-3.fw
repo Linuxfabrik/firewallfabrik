@@ -293,6 +293,18 @@ table ip fwf_filter {
         type ipv4_addr
         flags dynamic
     }
+    set htable_rule_4 {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
+    set htable_rule_5 {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
+    set test {
+        type ipv4_addr
+        flags dynamic,timeout
+    }
 
     chain input {
         type filter hook input priority filter; policy drop;
@@ -347,12 +359,12 @@ table ip fwf_filter {
         # Rule Policy_3 0 (eth0)
         #
         # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 50/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 50/second } counter accept
         #
         # Rule Policy_3 1 (eth0)
         #
         # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 50/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 50/second } counter accept
     }
 
     chain Policy_4 {
@@ -361,22 +373,22 @@ table ip fwf_filter {
         #
         # 30/sec
         # test-shadowing-3:Policy_4:0: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 30/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 30/second } counter accept
         #
         # Rule Policy_4 1 (eth0)
         #
         # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 50/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 50/second } counter accept
         #
         # Rule Policy_4 2 (eth0)
         #
         # htable_rule_4
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter htable_rule_4 { ip saddr timeout 1s limit rate 10/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @htable_rule_4 { ip saddr timeout 1s limit rate 10/second } counter accept
         #
         # Rule Policy_4 3 (eth0)
         #
         # htable_rule_5
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter htable_rule_5 { ip saddr timeout 1s limit rate 10/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @htable_rule_5 { ip saddr timeout 1s limit rate 10/second } counter accept
     }
 
     chain Policy_5 {
@@ -384,13 +396,13 @@ table ip fwf_filter {
         # Rule Policy_5 0 (eth0)
         #
         # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 50/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 50/second } counter accept
         #
         # Rule Policy_5 1 (eth0)
         #
         # 30/sec
         # test-shadowing-3:Policy_5:1: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new meter test { ip saddr timeout 1s limit rate 30/second } counter accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new update @test { ip saddr timeout 1s limit rate 30/second } counter accept
     }
 
     chain Policy_6 {

@@ -286,19 +286,26 @@ def test_the_entry_ceiling_of_a_rate_limit_table_reaches_the_meter():
     not seen yet.  The iptables printer has written the option out since
     the match was added; the nftables one never read it, although the
     grammar has the slot (netfilter nftables src/parser_bison.y,
-    `METER identifier SIZE NUM`).  Offered to nft 1.1.6, which declares the
-    set with `size 128`.
+    `METER identifier SIZE NUM`).  The set is declared rather than left to
+    a meter, so the bound goes into the declaration.
     """
     printer = _printer()
     printer.compiler.meters = {}
     printer.compiler.ipv6_policy = False
     printer.compiler.get_rule_set_name = lambda: 'Policy'
     printer.compiler.register_meter = lambda *_args: (True, True)
+    declared = {}
+    printer.compiler.register_dynamic_set = (
+        lambda name, addr_type, timeout=False, size=0: declared.setdefault(
+            name, (addr_type, timeout, size)
+        )
+    )
     rule = _Rule(hashlimit_value=10, hashlimit_max=128, hashlimit_mode_srcip=True)
     rule.position = 0
     rule.srv = []
     out = printer._print_hashlimit(rule)
-    assert out.startswith('meter htable_Policy_0 size 128 {')
+    assert out.startswith('update @htable_Policy_0 { ip saddr timeout')
+    assert declared == {'htable_Policy_0': ('ipv4_addr', True, 128)}
 
 
 def _meter_printer():
@@ -312,6 +319,10 @@ def _meter_printer():
     printer.compiler.get_rule_set_name = lambda: 'Policy'
     printer.compiler.register_meter = lambda *args: PolicyCompiler_nft.register_meter(
         printer.compiler, *args
+    )
+    printer.compiler.dynamic_sets = {}
+    printer.compiler.register_dynamic_set = lambda *args, **kwargs: (
+        PolicyCompiler_nft.register_dynamic_set(printer.compiler, *args, **kwargs)
     )
     return printer
 
@@ -393,6 +404,7 @@ def test_the_shape_is_not_claimed_while_the_compiler_is_rehearsing():
 
     assert rehearsed is not None
     assert printer.compiler.meters == {}
+    assert printer.compiler.dynamic_sets == {}
     assert (
         printer._print_hashlimit(_meter_rule(1, hashlimit_mode_dstport=True))
         is not None

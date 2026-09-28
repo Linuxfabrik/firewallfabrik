@@ -39,9 +39,15 @@ HOST_OS = {'linux24': 'Linux'}
 # `meta time`, which a rule with a Time object compiles to, arrived in
 # 0.9.3 (`NFT_META_TIME_HOUR`, 2019-08-29); `snat prefix to` and
 # `dnat prefix to`, which a 1:1 network translation compiles to, in 0.9.5
-# (`STMT_NAT_F_PREFIX`, 2020-04-24).  Everything else the compiler emits
-# is 0.8.2 or older.  A release that is too old for a construct refuses
-# the *whole* ruleset, so the firewall keeps the rules it had.
+# (`STMT_NAT_F_PREFIX`, 2020-04-24); the `<value> / <mask>` flag match in
+# 0.9.9, `reject with icmp <code>` without `type` in 1.0.0, and a NAT
+# priority named on the output hook in 1.0.9.  The kernel features are
+# gated at the first release after the kernel that brought them, and
+# RHEL 8 is the exception that proves the proxy: its 4.18 kernel lacks
+# what nftables 0.9.3 can write, so it takes the 0.9.1 entry (see
+# `NFT_CONNLIMIT_SET_FIRST_RELEASE` and `NFT_RATE_PER_KEY_FIRST_RELEASE`).  A release that is too old for a
+# construct refuses the *whole* ruleset, so the firewall keeps the rules
+# it had.
 PLATFORM_VERSIONS = {
     'iptables': [
         ('', '- any -'),
@@ -63,6 +69,9 @@ PLATFORM_VERSIONS = {
         ('0.9.2', '0.9.2 or later'),
         ('0.9.3', '0.9.3 or later'),
         ('0.9.5', '0.9.5 or later'),
+        ('0.9.9', '0.9.9 or later'),
+        ('1.0.0', '1.0.0 or later'),
+        ('1.0.9', '1.0.9 or later'),
     ],
 }
 
