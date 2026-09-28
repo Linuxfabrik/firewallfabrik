@@ -36,6 +36,7 @@ not.
 | `parity.py --values` | and do they check it against the same value? | a wrong port, a wrong mask, an inverted operator |
 | `compare-address-families.py` | is compiling one address family alone the same as half a dual-stack run? | state carried from one address-family pass into the other, or a decision taken on the wrong family |
 | `compare-output.py` | which firewalls does this change actually affect? | the blast radius of a fix, before a release |
+| `compare-verdicts.py` | and does any packet notice? | a rewrite of the rules - addresses folded into a set, a limit moved, rules reordered - that lets through or stops a packet the old rules did not |
 
 ## Running them
 
@@ -61,6 +62,9 @@ tools/compiler-audit/replay-interfaces.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 python tools/compiler-audit/check-negations.py /tmp/audit
 ```
+
+`compare-verdicts.py` compares two trees rather than checking one; see
+*Sending packets through the change*.
 
 `compare-address-families.py` needs two more trees beside the ordinary
 one, because the question it asks is about three compiles of the same
@@ -338,6 +342,39 @@ the block around it, so without that the whole policy of a firewall can
 move from the filter table to the mangle table and read as no change at
 all. **Check a hundred percent against a plain `diff` before believing
 it.**
+
+## Sending packets through the change
+
+`compare-output.py` says which rules changed, not whether a packet
+notices.  `compare-verdicts.py` takes the same two trees and, for every
+nftables ruleset whose rules changed, sends packets through the old and
+the new one and reports every packet the two decide differently:
+
+```bash
+python tools/compiler-audit/compare-verdicts.py /tmp/out-before /tmp/out-after
+```
+
+The packets are drawn from what the two rulesets name - addresses, ports,
+interfaces - plus an address and a port neither names, and go through all
+three hooks: sent to the firewall, through it, and from it.  Each run is a
+private network namespace of its own (`unshare -rn`, no root), with one
+neighbour namespace per interface the rulesets name, so connection
+tracking starts empty every time.  Three rules keep the answer honest:
+
+* a run without a ruleset comes first, and a packet it does not deliver is
+  left out - otherwise a sandbox that delivers nothing would read as "both
+  rulesets drop everything" and pass any change;
+* a packet the two runs disagree on is sent again on its own, in a fresh
+  sandbox, and reported only if they disagree again, because a rate limit
+  makes a verdict in a batch depend on the order;
+* the transport checksum of every packet is correct, because conntrack
+  calls a packet with a bad one invalid and a ruleset dropping invalid
+  packets would then decide for the wrong reason.
+
+It probes IPv4 and the nftables output only, and needs Python 3.12 or
+newer for `os.setns`.  Named sets the script fills after loading stay
+empty on both sides.  A ruleset the kernel refuses is reported and
+skipped; `load-nft.sh` is the oracle for that.
 
 ## Using your own corpus
 

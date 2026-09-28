@@ -359,6 +359,14 @@ namespace, and asks the three questions that block can fail: does
 iproute2 accept every command, is a second activation silent, and do the
 bridges end up with the ports the script named.
 
+And it sends packets.  `compare-verdicts.py` takes two compiles of the
+corpus - before and after a change - and puts packets drawn from what the
+rules name through the old and the new nftables ruleset, in a private
+network namespace, reporting every packet the two decide differently.
+Every other oracle here asks whether a ruleset is accepted or what it
+says; a change that only rewrites rules has to be asked what a packet
+notices.
+
 See `tools/compiler-audit/README.md`. These checks are not part of `pytest`:
 they need `unshare`, `nft` and `iptables`, run over a corpus rather than
 over the fixtures, and a full run takes minutes.
