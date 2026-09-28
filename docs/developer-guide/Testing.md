@@ -284,7 +284,7 @@ When reviewing nft expected output files (especially newly created ones), pay ex
 ## Running the Output Through the Real Tools
 
 The expected-output tests guard against *changes* in the compiler output, not
-against output that does not work. Three tests in the suite do ask the real
+against output that does not work. Four tests in the suite do ask the real
 tools, and each skips itself when it cannot, so the suite still runs without
 them:
 

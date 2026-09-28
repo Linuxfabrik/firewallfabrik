@@ -1485,7 +1485,7 @@ ConvertToAtomicForAddresses → countChainUsage → PrintRule → simplePrintPro
 ### iptables NAT pipeline order
 
 The NAT compilation pipeline (`NATCompiler_ipt.compile()`) processes NAT rules
-through some 90 processor instances. Read it as the shape of the pass, not as
+through some 95 processor instances. Read it as the shape of the pass, not as
 a ledger: verify the wiring against `compile()` itself, which is where this
 listing is derived from.
 
@@ -2427,7 +2427,7 @@ CheckForZeroAddr → CheckForObjectsWithErrors →
 PrintRule_nft → SimplePrintProgress
 ```
 
-~70 processors vs. ~110 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the temp-chain and multiport processors (nftables has native `!=` negation and sets).
+Some 110 processor instances vs. some 125 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the temp-chain and multiport processors (nftables has native `!=` negation and sets).
 
 The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`, which still builds a temporary chain and only for the negated interval that says two things at once.  `SrvNegation` builds the same chain for the two service shapes no `!=` can say - a service inspecting TCP flags *and* naming a port, and a match carrying no protocol beside one that does - and `SplitLogWithStatefulLimit` is the third user of that chain.  Everything else about a negated service element is one rule per protocol group, written by `print_negated_services`. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
 

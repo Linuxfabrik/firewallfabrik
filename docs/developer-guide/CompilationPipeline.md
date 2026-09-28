@@ -115,11 +115,11 @@ This walks through what happens when `fwf-ipt firewall1` (or the GUI
        object by `Compiler._resolve_multi_address`, which the
        `ResolveMultiAddress` processor calls and caches.
     2. **NAT compilation** — instantiate `NATCompiler_ipt`, run its
-       ~50-processor pipeline (see *iptables NAT pipeline order* in
+       pipeline of some 95 processors (see *iptables NAT pipeline order* in
        [RuleProcessors.md](RuleProcessors.md)). Output goes into the `*nat`
        table section.
     3. **Policy compilation** — instantiate `PolicyCompiler_ipt`, run its
-       ~77-processor pipeline (see *Main compilation pass* in
+       pipeline of some 125 processors (see *Main compilation pass* in
        [RuleProcessors.md](RuleProcessors.md)). Output is split across the
        `*filter` and `*mangle` tables via `ipt_chain` on each rule.
     4. **Mangle pass** — a dedicated `PolicyCompiler_ipt` run for the
@@ -137,9 +137,10 @@ This walks through what happens when `fwf-ipt firewall1` (or the GUI
    driver reports `Compiled successfully` or `Compiled with errors` and
    collects all warnings/errors in `all_errors` / `all_warnings`.
 
-nftables follows the same shape, but simpler: no temp-chain tricks
-(native `!=` for negation, native sets for multiport) and fewer
-processors overall (~35 policy, ~30 NAT). It keeps the mangle pass,
+nftables follows the same shape, but simpler: native `!=` for negation
+and native sets for multiport, so a temporary chain is only needed where
+one rule cannot say a thing, and somewhat fewer processors (some 110
+policy, some 85 NAT). It keeps the mangle pass,
 because a packet mark still has to be set before the routing decision;
 `MangleCompiler_nft` fills a `<name>_mangle` table whose chains hook in
 at `priority mangle`. The final script is a `/bin/sh` one, the way the

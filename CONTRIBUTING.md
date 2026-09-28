@@ -193,6 +193,7 @@ When adding a new `nosec` annotation, always run bandit once and grep the output
 
 Detailed developer documentation lives in [`docs/developer-guide/`](docs/developer-guide/):
 
+- [CompilationPipeline](docs/developer-guide/CompilationPipeline.md) -- read this first
 - [DatabaseManager](docs/developer-guide/DatabaseManager.md)
 - [Debugging](docs/developer-guide/Debugging.md)
 - [DesignDecisions](docs/developer-guide/DesignDecisions.md)
