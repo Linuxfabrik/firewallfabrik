@@ -34,6 +34,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._interface_properties import (
     get_interface_var_name,
 )
+from firewallfabrik.platforms._versions import newest
 from firewallfabrik.platforms.linux._netfilter import (
     bridge_port_match_needs_the_bridge,
     count_bridge_interfaces,
@@ -48,8 +49,10 @@ __all__ = ['get_interface_var_name']
 # pinned version the target is whatever iptables the host runs, which for
 # every currently supported distribution is 1.8.x.  Assuming the oldest
 # known release instead would emit forms that current iptables rejects,
-# such as the intrapositioned ``-s ! 192.0.2.0/24``.
-DEFAULT_IPTABLES_VERSION = '1.8'
+# such as the intrapositioned ``-s ! 192.0.2.0/24``.  The value is the top
+# entry of the editor's list (platforms/_versions.py), so that a gate added
+# above it moves both together.
+DEFAULT_IPTABLES_VERSION = newest('iptables')[0]
 
 # The release a match first shipped in, per address family (IPv4, IPv6).
 # Several of these started out as IPv4-only extensions and only reached

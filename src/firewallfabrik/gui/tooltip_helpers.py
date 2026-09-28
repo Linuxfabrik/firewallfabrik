@@ -19,6 +19,7 @@ Used by both the object tree and the policy/NAT/routing rule editor.
 from datetime import UTC, datetime
 
 from firewallfabrik.gui.platform_settings import HOST_OS
+from firewallfabrik.platforms import _versions
 
 
 def get_library_name(obj):
@@ -103,7 +104,16 @@ def obj_tooltip(obj):
     elif type_str in ('Cluster', 'Firewall'):
         data = getattr(obj, 'data', None) or {}
         platform = data.get('platform', '')
-        version = data.get('version', '') or '- any -'
+        version = data.get('version', '')
+        # The label of the entry, the way the editor shows it; a firewall
+        # naming none says so instead of "any", which read as "fits all".
+        # A cluster has no release of its own; each member names one.
+        if type_str == 'Cluster':
+            version = '-'
+        elif version:
+            version = _versions.label(platform, version)
+        else:
+            version = _versions.unset_label(platform)
         host_os = data.get('host_OS', '')
         host_os = HOST_OS.get(host_os, host_os)
         ts_modified = int(data.get('lastModified', 0) or 0)

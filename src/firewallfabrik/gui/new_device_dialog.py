@@ -17,7 +17,11 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDialog, QMessageBox
 
-from firewallfabrik.gui.platform_settings import get_enabled_os, get_enabled_platforms
+from firewallfabrik.gui.platform_settings import (
+    get_enabled_os,
+    get_enabled_platforms,
+    get_newest_version,
+)
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 from firewallfabrik.platforms._defaults import get_default_values
 
@@ -102,5 +106,13 @@ class NewDeviceDialog(QDialog):
             'host_OS': self.hostOS.currentData() or '',
             'options': get_default_values(platform) if platform else {},
             'platform': platform,
-            'version': '',
+            # The newest entry, written out: a firewall that names no release
+            # makes the compiler warn, and one that names the newest keeps it
+            # when a later list gains a newer entry.  A cluster has no release
+            # of its own - each member compiles for the one it names.
+            'version': (
+                get_newest_version(platform)
+                if platform and self._type_name != 'Cluster'
+                else ''
+            ),
         }

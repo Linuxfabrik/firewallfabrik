@@ -12,6 +12,7 @@
 # Compiled for iptables (any version)
 #
 
+# No iptables release is set for this firewall, so it is compiled for 1.6.2+; set the release the firewall runs in the firewall settings
 # Rule '7 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'All TCP'
 # Rule '1 (global)' shadows rule '8 (global)' below it, for destination 'fw-services:eth1:ip' and service 'http'
 # Rule '7 (global)' shadows rule '9 (global)' below it, for destination 'fw-services:eth1:ip' and service 'tos-and-dscp'

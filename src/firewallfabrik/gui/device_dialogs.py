@@ -14,7 +14,7 @@
 
 from datetime import UTC, datetime
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QDialog
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
@@ -26,6 +26,8 @@ from firewallfabrik.gui.platform_settings import (
     PLATFORMS,
     get_enabled_os,
     get_enabled_platforms,
+    get_unset_version_label,
+    get_version_hint,
     get_versions_for_platform,
 )
 
@@ -75,6 +77,18 @@ class HostDialog(BaseObjectDialog):
 class FirewallDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('firewalldialog_q.ui', parent)
+        # The combo explains itself, and once an entry is chosen it also
+        # says where that entry is the one to pick; connected here, once,
+        # because _populate runs for every object shown.
+        self._version_tooltip = ''
+        if self.version is not None:
+            self._version_tooltip = self.version.toolTip()
+            self.version.currentIndexChanged.connect(self._show_version_hint)
+
+    def _show_version_hint(self, _index=-1):
+        hint = self.version.currentData(Qt.ItemDataRole.ToolTipRole) or ''
+        base = self._version_tooltip
+        self.version.setToolTip(f'{base}\n\n{hint}' if hint and base else hint or base)
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
@@ -169,7 +183,9 @@ class FirewallDialog(BaseObjectDialog):
 
         Every item carries its stored value beside the label, because the
         two differ: Firewall Builder stores "1.2.5 or earlier" as
-        ``lt_1.2.6``.  A value the list does not offer - a data file
+        ``lt_1.2.6``, and every entry is a range of releases stored as its
+        first one.  The entries come newest first, each with a tooltip
+        naming the distributions it is right for.  A value the list does not offer - a data file
         written by another tool or by hand may name any release - is added
         as an item of its own, where Firewall Builder overwrites it with
         the first entry (`FirewallDialog::fillVersion`); showing the
@@ -179,11 +195,30 @@ class FirewallDialog(BaseObjectDialog):
         self.version.clear()
         for value, label in get_versions_for_platform(platform):
             self.version.addItem(label, value)
+            hint = get_version_hint(platform, value)
+            if hint:
+                self.version.setItemData(
+                    self.version.count() - 1, hint, Qt.ItemDataRole.ToolTipRole
+                )
         index = self.version.findData(stored)
         if index < 0 and stored and keep_unlisted:
             self.version.addItem(stored, stored)
             index = self.version.count() - 1
+        elif not stored and keep_unlisted:
+            # A firewall imported from a `.fwb`, or written before the list
+            # had to be answered, names no release.  It is compiled for the
+            # top entry, and the combo says that rather than pretending the
+            # top entry was chosen - or letting a plain OK write it.
+            self.version.insertItem(0, get_unset_version_label(platform), '')
+            self.version.setItemData(
+                0,
+                'No release is set; the compiler warns about it.\n'
+                'Pick the entry that matches the firewall.',
+                Qt.ItemDataRole.ToolTipRole,
+            )
+            index = 0
         self.version.setCurrentIndex(max(index, 0))
+        self._show_version_hint()
 
     @staticmethod
     def _set_combo_text(combo, text):

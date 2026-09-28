@@ -12,7 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Editor (nftables): the version list offers 0.9.9, 1.0.0 and 1.0.9, and its tooltip says to pick 0.9.1 on RHEL 8.
+* Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
+
+### Changed
+
+* Compiler (iptables, nftables): a firewall without a release set is compiled for the newest one and the compiler says so.
+* Editor (iptables, nftables): the version list shows exact release ranges, newest first, instead of "or later" and "any", and a new firewall starts with the newest release.
 
 ### Fixed
 

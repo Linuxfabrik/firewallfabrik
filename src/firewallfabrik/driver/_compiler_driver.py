@@ -1101,6 +1101,27 @@ class CompilerDriver(BaseCompiler):
         ),
     ]
 
+    def _warn_unset_release(self, fw, platform: str) -> None:
+        """Say that the firewall names no release of *platform*.
+
+        It is compiled for the top entry of the release list, the one
+        range open upwards - which an older machine refuses rule by rule
+        on iptables and as a whole on nftables.  An imported `.fwb` names
+        none as a rule, and neither did a firewall created before the list
+        had to be answered.  A firewall set to the other platform is
+        compiled with that platform's release ignored anyway (the audit
+        corpus compiles every firewall for both), so it is not reported.
+        """
+        from firewallfabrik.platforms import _versions
+
+        if getattr(fw, 'platform', '') != platform or getattr(fw, 'version', ''):
+            return
+        self.warning(
+            f'No {platform} release is set for this firewall, so it is '
+            f'compiled for {_versions.newest(platform)[1]}; set the release '
+            'the firewall runs in the firewall settings'
+        )
+
     def _warn_unsupported_options(self, options: dict, fw=None) -> None:
         """Emit warnings for recognised but unimplemented firewall options."""
         for opt, msg in self._UNSUPPORTED_BOOL_OPTIONS:

@@ -2200,15 +2200,16 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not nft_feature_available(self.compiler, NFT_CONNLIMIT_SET_FIRST_RELEASE):
             # The set the counts live in has to be declared `flags dynamic`,
             # which is not in the grammar before NFT_DYNAMIC_SET_FIRST_RELEASE,
-            # and the kernel of RHEL 8 refuses the count in a set even where
-            # nft can write it (NFT_CONNLIMIT_SET_FIRST_RELEASE).  A ruleset
+            # and the kernel of RHEL 8 before 8.6 refuses the count in a set
+            # even where nft can write it (NFT_CONNLIMIT_SET_FIRST_RELEASE),
+            # which is why that RHEL takes the 0.9.0 entry.  A ruleset
             # is loaded in one transaction, so the rule would not only lose
             # its limit, it would take every other rule with it.
             self.compiler.error(
                 rule,
-                f'nftables before {NFT_CONNLIMIT_SET_FIRST_RELEASE}, and the '
-                'kernel of RHEL 8, cannot count connections per source, which '
-                'needs a set the rule adds to; the rule is left out',
+                f'nftables before {NFT_CONNLIMIT_SET_FIRST_RELEASE}, and RHEL 8 '
+                'before 8.6, cannot count connections per source, which needs '
+                'a set the rule adds to; the rule is left out',
             )
             return None
 
@@ -2393,8 +2394,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             # refuses costs the whole ruleset.
             self.compiler.error(
                 rule,
-                f'nftables before {NFT_RATE_PER_KEY_FIRST_RELEASE}, and the kernel '
-                'of RHEL 8, cannot keep a rate limit per source, destination or '
+                f'nftables before {NFT_RATE_PER_KEY_FIRST_RELEASE}, and RHEL 8 '
+                'before 8.6, cannot keep a rate limit per source, destination or '
                 'port; the rule is left out',
             )
             return None

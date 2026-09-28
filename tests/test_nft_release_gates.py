@@ -128,10 +128,10 @@ def test_a_translated_custom_service_follows_the_flag_spelling():
 
 
 @pytest.mark.parametrize(
-    ('version', 'kept'), [('', True), ('0.9.2', True), ('0.9.1', False)]
+    ('version', 'kept'), [('', True), ('0.9.1', True), ('0.9.0', False)]
 )
-def test_a_rate_limit_per_key_waits_for_0_9_2(version, kept):
-    """0.9.1 is the entry RHEL 8 takes, whose kernel refuses it."""
+def test_a_rate_limit_per_key_needs_0_9_1(version, kept):
+    """0.9.0 is also the entry RHEL 8.0 to 8.5 take, whose kernel refuses it."""
     import uuid
 
     from firewallfabrik.compiler._comp_rule import CompRule

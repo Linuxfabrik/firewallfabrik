@@ -293,6 +293,7 @@ class CompilerDriver_nft(CompilerDriver):
                 options = fw.options or {}
 
                 self._warn_unsupported_options(options, fw)
+                self._warn_unset_release(fw, 'nftables')
 
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)

@@ -158,43 +158,88 @@ output writes an address range out as covering networks where fwf uses
 `-m iprange`.  That difference is deliberate and accounts for a large
 part of the `missing` column in `compare-reference.sh`.
 
-The list the editor offers is `PLATFORM_VERSIONS` in
-`gui/platform_settings.py`: Firewall Builder's own list for iptables,
-value for value, and for nftables the releases at which this compiler's
-output changes - 0.9.1 for the `flags dynamic` set and for the name of a
-standard chain priority (`priority filter` rather than `priority 0`,
-which is the first line of every base chain), 0.9.2 for `ip option
-<name> exists`, `ct count` in a set and a rate limit kept per key, 0.9.3 for `meta hour` / `meta
-day` / `meta time`, 0.9.5 for `snat prefix to` / `dnat prefix to`, 0.9.9
-for the `tcp flags syn / syn,rst,ack` notation, 1.0.0 for `reject with
-icmp <code>` without `type`, and 1.0.9 for `priority dstnat` on the
-output hook.  Below each of them the compiler writes the older spelling,
-or reports the rule and leaves it out where there is none.  Add a row to
-that list whenever a new construct needs a release newer than one a
-supported distribution ships, and a matching constant in
-`platforms/nftables/_utils.py`.
+The list the editor offers lives in `platforms/_versions.py`, beside the
+compilers, newest first.  Each entry is one range of releases between two
+gates - "1.0.0 to 1.0.8", "0.9.5 to 0.9.8" - so that exactly one entry is
+right for a machine, and only the top one is open upwards ("1.0.9+",
+"1.6.2+").  There is no "or later" below it and no "any": an entry below
+the machine's release loads there as well, but leaves out, and reports,
+every rule that needs more - on a Deny rule that is a firewall letting
+through what it should stop - and "any" read as "fits every machine" when
+it meant "the newest".  A new firewall stores the top entry's value; one
+that names none (an imported `.fwb`, an older data file) is shown as "not
+set", compiled for the top entry, and the driver warns about it.
+`DEFAULT_IPTABLES_VERSION` and `DEFAULT_NFTABLES_VERSION` are derived from
+the top entry, and `tests/test_platform_versions.py` fails when a compiler
+gains a gate the list has no entry for.
+
+The stored value of an entry is the first release of its range, which
+keeps every value Firewall Builder wrote readable.  `ge_1.2.6` is the one
+without an entry: the comparison reads it as 0.2.6, below every gate, so
+it never compiled as "1.2.6 to 1.2.8", and the combo shows it as the value
+it is.
+
+The nftables gates are 0.9.1 (`flags dynamic`, the name of a standard
+chain priority, `ct count` and `limit` in a set), 0.9.2 (`ip option`, the
+inet route chain), 0.9.3 (`meta hour` / `day` / `time`), 0.9.5
+(`snat` / `dnat prefix to`), 0.9.9 (the `tcp flags syn / syn,rst,ack`
+notation), 1.0.0 (`reject with icmp <code>` without `type`) and 1.0.9
+(`priority dstnat` on the output hook).  Below each of them the compiler
+writes the older spelling, or reports the rule and leaves it out where
+there is none.  The iptables gates are the checks of the iptables
+compiler, from 1.2.6 to 1.6.2, and the upper end of each range is the last
+release before the next gate (netfilter iptables tags).
 
 A kernel feature is gated at the first nftables release after the kernel
-that brought it - a proxy, since the version field names nftables and not
-the kernel.  RHEL 8 breaks it: its 4.18 kernel refuses `ip option`,
-`meta hour`, `ct count` in a set and a rate limit kept per key, all of
-which the nftables 0.9.3 it ships can write.  RHEL 8 therefore takes the
-0.9.1 entry, and the last two are gated at 0.9.2 with `ip option` for
-that reason alone.
+that brought it - a proxy, since the entry names nftables and not the
+kernel.  RHEL 8 is the exception, and it is handled by which entry it
+takes, not by a gate: its 4.18 kernel refuses `ip option` and `meta hour`
+at every point release, and `ct count` and `limit` in a set before kernel
+build 4.18.0-359 ("nf_tables: add elements with stateful expressions" and
+its series in the kernel changelog), which RHEL 8.6 is the first to ship.
+So RHEL 8.0 to 8.5 take 0.9.0 and RHEL 8.6 to 8.10 take 0.9.1, whether
+they run nftables 0.9.3 or, from 8.9, 1.0.4.
 
-Which entry to pick, measured by loading the whole corpus compiled for it
-on each distribution (`tools/compiler-audit/load-nft.sh`):
+Which entry each distribution takes is the tooltip of the entry.  It was
+measured by compiling the corpus for the entry and loading it with
+`tools/compiler-audit/load-nft.sh` (nftables) or replaying it with
+`replay-iptables.sh` (iptables) on a linked clone of each distribution -
+once as the template came, once fully updated - and, for RHEL, by booting
+the kernel and installing the nftables of each point release from the
+Rocky vault, whose repositories also gave the releases per point release:
 
-| Distribution | nftables, kernel | Entry |
+| Distribution | nftables, kernel | nftables entry |
 |---|---|---|
-| RHEL 8 and rebuilds | 0.9.3, 4.18 | 0.9.1 |
-| Debian 11 | 0.9.8, 5.10 | 0.9.5 |
-| openSUSE Leap 15.5 | 0.9.8, 5.14 | 0.9.5 |
-| Ubuntu 22.04 | 1.0.2, 5.15 | 1.0.0 |
-| Debian 12 | 1.0.6, 6.1 | 1.0.0 |
-| RHEL 9 and rebuilds | 1.0.9, 5.14 | 1.0.9 |
-| Ubuntu 24.04 | 1.0.9, 6.8 | 1.0.9 |
-| RHEL 10, Debian 13, Fedora, Leap 16.0, Ubuntu 26.04 | 1.1.1 and later | - any - |
+| RHEL 8.0 to 8.5 | 0.9.0 to 0.9.3, 4.18.0-80 to -348 | 0.9.0 |
+| RHEL 8.6 to 8.8 | 0.9.3, 4.18.0-372 to -477 | 0.9.1 |
+| RHEL 8.9, 8.10 | 1.0.4, 4.18.0-513, -553 | 0.9.1 |
+| RHEL 9.0 | 0.9.8, 5.14.0-70 | 0.9.5 to 0.9.8 |
+| RHEL 9.1 to 9.3 | 1.0.4, 5.14.0-162 to -362 | 1.0.0 to 1.0.8 |
+| RHEL 9.4 to 9.8 | 1.0.9, 5.14.0-427 to -687 | 1.0.9+ |
+| RHEL 10.0 to 10.2 | 1.1.1 to 1.1.5, 6.12 | 1.0.9+ |
+| Debian 11 | 0.9.8, 5.10 | 0.9.5 to 0.9.8 |
+| Debian 12 | 1.0.6, 6.1 | 1.0.0 to 1.0.8 |
+| Debian 13 | 1.1.3, 6.12 | 1.0.9+ |
+| Fedora 44 | 1.1.6, 6.19 to 7.2 | 1.0.9+ |
+| openSUSE Leap 15.5 | 0.9.8, 5.14 | 0.9.5 to 0.9.8 |
+| openSUSE Leap 16.0 | 1.1.3, 6.12 | 1.0.9+ |
+| Ubuntu 22.04 | 1.0.2, 5.15 | 1.0.0 to 1.0.8 |
+| Ubuntu 24.04 | 1.0.9, 6.8 | 1.0.9+ |
+| Ubuntu 26.04 | 1.1.6, 7.0 | 1.0.9+ |
+
+Measured points: RHEL 8.3, 8.5, 8.6 and 8.10, 9.0, 9.1, 9.4 and 9.8,
+10.0 and 10.2.  RHEL 8.0 to 8.2 were not loaded; their releases come from
+the CentOS vault (kernel 4.18.0-80 to -193, nftables 0.9.0 and 0.9.3), and
+they are listed with 8.5 because their kernel predates the same backport.
+All of them ship iptables 1.8 (1.8.2 on RHEL 8.0 up to 1.8.11), which is
+the "1.6.2+" iptables entry.  The RHEL kernels are built without the time
+match (`# CONFIG_NETFILTER_XT_MATCH_TIME is not set` in the kernel config
+of 8.10, 9.8 and 10.2), so an iptables rule with a time window fails there
+whatever release is picked.  iptables 1.8.5 (RHEL 8) also refused an
+SNAT port range starting at 0 (`--to-source 198.51.100.1:0-1024`), which
+1.8.7 and later took.  Beyond those two the replay showed only what an
+unprivileged namespace or an unresolvable DNS name causes.  The nftables
+`meta time` is part of nf_tables and loads on RHEL.
 
 A rate limit kept per key is written as a set of the table declared
 `flags dynamic,timeout` that the rule updates, not as a `meter`, on every

@@ -24,9 +24,9 @@ nftables loads a ruleset in one transaction - so the rule would not only
 lose its limit, it would take the whole ruleset with it and leave the
 firewall on the rules it had.  ``ct count`` and the ``add @set`` statement
 themselves are both older than that in nftables and in mainline Linux, but
-the kernel of RHEL 8 refuses the count in a set (EOPNOTSUPP on Rocky 8,
-4.18.0-240, nftables 0.9.3).  RHEL 8 is therefore compiled for 0.9.1, and
-the limit waits for 0.9.2 (``NFT_CONNLIMIT_SET_FIRST_RELEASE``).
+the kernel of RHEL 8 before 8.6 refuses the count in a set (EOPNOTSUPP on
+Rocky 8.3, 4.18.0-240, nftables 0.9.3), so that RHEL takes the 0.9.0
+entry.
 """
 
 import uuid
@@ -102,7 +102,7 @@ def test_the_dynamic_set_needs_0_9_1(version, available):
     assert nft_feature_available(compiler, NFT_DYNAMIC_SET_FIRST_RELEASE) is available
 
 
-@pytest.mark.parametrize('version', ['', '0.9.2', '0.9.5'])
+@pytest.mark.parametrize('version', ['', '0.9.1', '0.9.5'])
 def test_a_release_that_can_count_in_a_set_writes_the_limit(version):
     printer, result = _print(version, connlimit_value=10)
     assert result == 'add @connlimit_Policy_3 { ip saddr ct count over 10 }'
@@ -110,11 +110,11 @@ def test_a_release_that_can_count_in_a_set_writes_the_limit(version):
     assert not printer.compiler.messages
 
 
-@pytest.mark.parametrize('version', ['0.9.0', '0.9.1'])
+@pytest.mark.parametrize('version', ['0.9.0'])
 def test_an_older_release_leaves_the_rule_out(version):
     """Emitting it would cost the whole ruleset, not the one rule.
 
-    0.9.1 is the release RHEL 8 is compiled for.
+    0.9.0 is also the entry RHEL 8.0 to 8.5 take.
     """
     printer, result = _print(version, connlimit_value=10)
     assert result is None

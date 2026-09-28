@@ -13,6 +13,7 @@
 #
 
 # Rule 0 (global): Empty group or address table object 'empty-group' is used in the rule but option 'Ignore rules with empty groups' is off
+# No iptables release is set for this firewall, so it is compiled for 1.6.2+; set the release the firewall runs in the firewall settings
 
 FWBDEBUG=""
 RETVAL=0

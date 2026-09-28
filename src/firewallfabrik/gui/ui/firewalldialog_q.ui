@@ -256,10 +256,10 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>The release of the packet filter on the firewall. A rule that needs a newer
-release is reported and left out, because a construct the firewall cannot
-load costs the whole nftables ruleset. On RHEL 8 and its rebuilds pick
-nftables 0.9.1: its kernel lacks features the installed 0.9.3 can write.</string>
+              <string>The release of the packet filter on the firewall. Each entry is a range of
+releases; pick the one the firewall runs. A lower entry loads there too, but
+leaves out, and reports, every rule that needs more. Point at an entry to
+see the distributions it is right for.</string>
              </property>
             </widget>
            </item>

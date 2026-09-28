@@ -30,6 +30,7 @@ from firewallfabrik.core.objects import (
     ServiceGroup,
 )
 from firewallfabrik.gui.platform_settings import HOST_OS
+from firewallfabrik.platforms import _versions
 
 # Map ORM type discriminator strings to QRC icon aliases.
 ICON_MAP = {
@@ -649,7 +650,7 @@ def obj_brief_attrs(obj, under_interface=False):
         host_os = data.get('host_OS', '')
         host_os = HOST_OS.get(host_os, host_os)
         if platform:
-            ver_part = f' {version}' if version else ''
+            ver_part = f' {_versions.label(platform, version)}' if version else ''
             return f'{platform}{ver_part} on {host_os}'
         return ''
 

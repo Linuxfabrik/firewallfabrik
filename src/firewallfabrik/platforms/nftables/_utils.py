@@ -26,6 +26,7 @@ cannot read it refuses every ruleset this compiler writes.
 
 from __future__ import annotations
 
+from firewallfabrik.platforms._versions import newest
 from firewallfabrik.platforms.iptables._utils import version_compare
 
 __all__ = [
@@ -50,11 +51,12 @@ __all__ = [
     'version_compare',
 ]
 
-# Release assumed for a firewall that pins none.  The same convention the
-# iptables side uses: without a pinned release the target is whatever
-# nftables the machine runs, and assuming the oldest known release would
-# take away constructs every current distribution can parse.
-DEFAULT_NFTABLES_VERSION = '1.1'
+# Release assumed for a firewall that pins none: the top entry of the
+# editor's list (platforms/_versions.py), the one range that is open
+# upwards.  The same convention the iptables side uses, and derived from
+# the list rather than written twice, so that a gate added above it moves
+# both together.  The driver warns about a firewall that pins none.
+DEFAULT_NFTABLES_VERSION = newest('nftables')[0]
 
 # `flags dynamic` on a set declaration, which a rule limiting concurrent
 # connections per source needs: the set holds one element per address and
@@ -65,20 +67,20 @@ DEFAULT_NFTABLES_VERSION = '1.1'
 NFT_DYNAMIC_SET_FIRST_RELEASE = '0.9.1'
 
 # `ct count` inside a set, which a per-source connection limit compiles
-# to.  nftables 0.9.1 can write it and mainline Linux has taken it since
-# 4.18 ("netfilter: nf_tables: add connlimit support", 290180e2448c), but
-# the kernel of RHEL 8 answers it with EOPNOTSUPP (measured on Rocky 8,
-# 4.18.0-240, nftables 0.9.3).  That kernel refuses `ip option` and
-# `meta hour` as well, which are gated at 0.9.2 and 0.9.3 already, so the
-# release to pick for RHEL 8 is 0.9.1, and this gate joins them at 0.9.2.
-NFT_CONNLIMIT_SET_FIRST_RELEASE = '0.9.2'
+# to.  It needs the set declared `flags dynamic`, so it cannot come before
+# NFT_DYNAMIC_SET_FIRST_RELEASE, and mainline Linux has taken it since
+# 4.18 ("netfilter: nf_tables: add connlimit support", 290180e2448c).
+# RHEL 8 got the set element expressions only with kernel build
+# 4.18.0-359 ("nf_tables: add elements with stateful expressions" and its
+# series, in the kernel changelog), which RHEL 8.6 ships; RHEL 8.0 to 8.5
+# answer it with EOPNOTSUPP and therefore take the 0.9.0 entry.
+NFT_CONNLIMIT_SET_FIRST_RELEASE = '0.9.1'
 
 # A rate limit kept per key, which is a `limit` inside a set the rule
-# updates.  Mainline Linux has evaluated an expression in a set element
-# since the dynset expression support of 4.3, but the kernel of RHEL 8
-# answers it with EOPNOTSUPP as well (measured on Rocky 8, 4.18.0-240,
-# nftables 0.9.3), so it joins `ct count` at 0.9.2 for the same reason.
-NFT_RATE_PER_KEY_FIRST_RELEASE = '0.9.2'
+# updates - declared `flags dynamic,timeout`, so again not before
+# NFT_DYNAMIC_SET_FIRST_RELEASE.  The kernel side is the same set element
+# expression support as for `ct count`, with the same RHEL 8 history.
+NFT_RATE_PER_KEY_FIRST_RELEASE = '0.9.1'
 
 # `ip option <name> exists`, which an IP Service matching a source-route,
 # record-route or router-alert option compiles to.  Matching an IPv4 header

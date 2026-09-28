@@ -220,6 +220,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     return ''
 
                 self._warn_unsupported_options(options, fw)
+                self._warn_unset_release(fw, 'iptables')
 
                 flush_ruleset = self.firewall_option(fw, 'flush_ruleset')
                 table_name = self.firewall_option(fw, 'table_name') or 'fwf'
