@@ -100,6 +100,37 @@
 {{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type neighbour-solicitation -m hl --hl-eq 255 -j ACCEPT {{$end_rule}}
 {{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type neighbour-advertisement -m hl --hl-eq 255 -j ACCEPT {{$end_rule}}
 {{endif}}
+## Multicast Listener Discovery.  A switch that snoops MLD forwards the
+## solicited-node multicast neighbour discovery depends on only to ports
+## whose hosts report the group, so without the reports discovery fails
+## as well (RFC 4890 section 4.4.1).  The types are numbers because
+## ip6tables names 130 to 132 only since 1.8.10 and 143 not at all
+## (extensions/libxt_icmp.h).  The source and hop limit are what the
+## kernel itself requires of a query and a report (net/ipv6/mcast.c,
+## igmp6_event_query and igmp6_event_report): link-local, or unspecified
+## for a report sent before the host has an address, and a hop limit of
+## 1.  conntrack files MLD as UNTRACKED, so the INVALID drop below does
+## not see it (net/netfilter/nf_conntrack_proto_icmpv6.c, noct_valid_new).
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 130 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 130 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 132 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 132 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}  -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}} -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{if bridging_firewall}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 130 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 132 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s fe80::/10 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 131 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}}  -p ipv6-icmp -m icmp6 --icmpv6-type 143 -s ::/128 -m hl --hl-eq 1 -j ACCEPT {{$end_rule}}
+{{endif}}
 {{endif}}
 
 {{if drop_invalid}}

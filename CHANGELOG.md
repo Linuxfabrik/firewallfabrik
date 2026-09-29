@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * Compiler (iptables, nftables): a firewall without a release set is compiled for the newest one and the compiler says so.
+* Compiler (iptables, nftables): the option that permits IPv6 neighbour discovery also permits Multicast Listener Discovery, without which a switch that snoops MLD cuts neighbour discovery off.
 * Editor (iptables, nftables): the version list shows exact release ranges, newest first, instead of "or later" and "any", and a new firewall starts with the newest release.
 * Editor: cluster members can no longer be marked as master, which had no effect on iptables or nftables output and was lost on the next load.
 * Standard library: the ICMP object for type 11 code 1 is named "time exceeded in reassembly", which is what the code means, instead of "time exceeded in transit"; existing files get the name with "Update Standard Library".

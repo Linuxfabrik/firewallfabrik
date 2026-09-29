@@ -473,6 +473,8 @@ table inet fwf_filter {
         ct state established,related counter accept
         tcp dport 22 ip saddr 1.1.1.2 ct state new,established counter accept
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
+        icmpv6 type { mld-listener-query, mld-listener-report, mld-listener-done, mld2-listener-report } ip6 saddr fe80::/10 ip6 hoplimit 1 counter accept
+        icmpv6 type { mld-listener-report, mld2-listener-report } ip6 saddr :: ip6 hoplimit 1 counter accept
         ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         #
         # Rule 4 (global)
@@ -644,6 +646,8 @@ table inet fwf_filter {
         ct state established,related counter accept
         tcp sport 22 ip daddr 1.1.1.2 ct state established,related counter accept
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
+        icmpv6 type { mld-listener-query, mld-listener-report, mld-listener-done, mld2-listener-report } ip6 saddr fe80::/10 ip6 hoplimit 1 counter accept
+        icmpv6 type { mld-listener-report, mld2-listener-report } ip6 saddr :: ip6 hoplimit 1 counter accept
         ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
         #
         # Rule 11 (global)

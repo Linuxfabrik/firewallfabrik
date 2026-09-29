@@ -74,9 +74,14 @@ options:
     supported: true
     widget: 'ipv6NeighborDiscovery'
     description: >-
-      Automatically generate rules to permit ICMPv6 packets used
-      in IPv6 Neighbor Discovery. These rules are inserted after
-      the ESTABLISHED,RELATED accept and before the INVALID drop.
+      Automatically generate rules to permit the ICMPv6 packets used
+      in IPv6 Neighbor Discovery and Multicast Listener Discovery.
+      Without them a firewall that drops by default loses IPv6
+      connectivity (RFC 4861); without the MLD reports a switch that
+      snoops MLD stops forwarding the multicast neighbour discovery
+      depends on (RFC 4890).  Only link-local packets are accepted.
+      These rules are inserted after the ESTABLISHED,RELATED accept
+      and before the INVALID drop.
 
   admUser:
     type: 'str'

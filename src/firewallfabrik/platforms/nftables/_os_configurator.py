@@ -70,6 +70,19 @@ class OSConfigurator_nft(OSConfigurator):
         'nd-neighbor-advert',
     )
 
+    # Multicast Listener Discovery, which the same option permits: a switch
+    # that snoops MLD forwards the solicited-node multicast neighbour
+    # discovery depends on only to ports whose hosts report the group
+    # (RFC 4890 section 4.4.1).  A report may come from the unspecified
+    # address, sent before the host has one; a query may not.
+    _MLD_TYPES = (
+        'mld-listener-query',
+        'mld-listener-report',
+        'mld-listener-done',
+        'mld2-listener-report',
+    )
+    _MLD_REPORT_TYPES = ('mld-listener-report', 'mld2-listener-report')
+
     def _invalid_log(self) -> str:
         """Return the log statement of the "drop invalid packets" rule.
 
@@ -205,6 +218,20 @@ class OSConfigurator_nft(OSConfigurator):
             types = ', '.join(self._NEIGHBOR_DISCOVERY_TYPES)
             rules.append(
                 f'        icmpv6 type {{ {types} }} ip6 hoplimit 255 counter accept'
+            )
+            # The source and hop limit are what the kernel itself requires
+            # of a query and a report (net/ipv6/mcast.c, igmp6_event_query
+            # and igmp6_event_report).  conntrack files MLD as UNTRACKED
+            # too, so the INVALID drop below does not see it.
+            types = ', '.join(self._MLD_TYPES)
+            rules.append(
+                f'        icmpv6 type {{ {types} }} ip6 saddr fe80::/10 '
+                'ip6 hoplimit 1 counter accept'
+            )
+            types = ', '.join(self._MLD_REPORT_TYPES)
+            rules.append(
+                f'        icmpv6 type {{ {types} }} ip6 saddr :: '
+                'ip6 hoplimit 1 counter accept'
             )
 
         # Drop invalid packets, last of the automatic rules, where the
