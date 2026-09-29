@@ -149,7 +149,12 @@ options:
     widget: 'linux24_ipv6_forward'
     description: >-
       Enable IPv6 packet forwarding. Controls
-      /proc/sys/net/ipv6/conf/all/forwarding.
+      /proc/sys/net/ipv6/conf/all/forwarding, which the kernel copies to
+      every interface.  An interface that forwards ignores Router
+      Advertisements unless its accept_ra is 2, so a firewall that takes
+      its own IPv6 address or default route from the uplink by SLAAC
+      loses them once they expire.  Set accept_ra to 2 on that
+      interface, for example in the prolog.
 
   linux24_log_martians:
     type: 'tristate'
