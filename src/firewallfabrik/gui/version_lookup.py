@@ -29,11 +29,11 @@ import os
 import re
 import shlex
 import shutil
-import stat
 import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
 
+from firewallfabrik.gui import _ssh_askpass
 from firewallfabrik.platforms import _versions
 
 # One command, so the machine is asked once.  /usr/sbin is not on an
@@ -155,8 +155,8 @@ def run(  # nosec B107
     Without a password the login must work non-interactively (a key or
     the ssh-agent), and a login that wants one raises
     AuthenticationRequired.  With one, ssh reads it through SSH_ASKPASS
-    from a helper that prints an environment variable, so it appears
-    neither on a command line nor in a file.
+    from a helper (see ``_ssh_askpass``) that prints an environment
+    variable, so it appears neither on a command line nor in a file.
     """
     if not address:
         raise LookupFailed(
@@ -166,22 +166,12 @@ def run(  # nosec B107
         )
     args = ssh_args(address, user, extra_args, ssh_path, timeout)
     env = dict(os.environ)
-    helper = None
+    helper_dir = None
     if password:
-        # SSH_ASKPASS_REQUIRE=force makes ssh (OpenSSH 8.4 and later) use
-        # the helper even with a terminal attached and without DISPLAY.
-        helper = tempfile.NamedTemporaryFile(  # noqa: SIM115
-            'w', suffix='.sh', delete=False
-        )
-        helper.write('#!/bin/sh\nprintf \'%s\\n\' "$FWF_LOOKUP_SECRET"\n')
-        helper.close()
-        Path(helper.name).chmod(stat.S_IRWXU)
-        env.update(
-            FWF_LOOKUP_SECRET=password,
-            SSH_ASKPASS=helper.name,
-            SSH_ASKPASS_REQUIRE='force',
-            DISPLAY=env.get('DISPLAY', ':0'),
-        )
+        helper_dir = tempfile.TemporaryDirectory(prefix='fwf-askpass-')
+        wrapper = _ssh_askpass.write_wrapper(Path(helper_dir.name))
+        if wrapper is not None:
+            env.update(_ssh_askpass.environment(wrapper, password, env))
         args[1:1] = ['-o', 'NumberOfPasswordPrompts=1']
     else:
         args[1:1] = ['-o', 'BatchMode=yes']
@@ -202,8 +192,8 @@ def run(  # nosec B107
     except OSError as exc:
         raise LookupFailed(f'ssh could not be started: {exc}') from exc
     finally:
-        if helper is not None:
-            Path(helper.name).unlink()
+        if helper_dir is not None:
+            helper_dir.cleanup()
     if proc.returncode == 255:
         message = proc.stderr.strip().splitlines()[-1:] or ['ssh failed']
         if 'Permission denied' in message[0] and not password:
