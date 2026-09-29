@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor: installing with a password no longer hangs, also on Windows and on RHEL 8 with the GUI started from a terminal, and a wrong password or an unknown host key is reported ([#181](https://github.com/Linuxfabrik/firewallfabrik/pull/181)).
 * Editor: the install dialog lists each cluster with its members below it and ticks the members for install when the cluster is compiled ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 * Editor: the New Cluster wizard creates the cluster interfaces with their failover groups, protocols and addresses, so a new cluster has members, and it can take over the rules of one member, as in Firewall Builder ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
+* Standard library: the IPSEC service group includes the key exchange (UDP 500) and NAT traversal (UDP 4500), so a rule using it lets a tunnel come up; existing files get it with "Update Standard Library".
 
 
 ## [v3.2.0] - 2026-09-25
