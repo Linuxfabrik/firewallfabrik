@@ -339,8 +339,14 @@ options:
     widget: 'linux24_rp_filter'
     label: 'label369'
     description: >-
-      Enable kernel reverse-path filter for anti-spoofing
-      protection. Controls /proc/sys/net/ipv4/conf/all/rp_filter.
+      Kernel reverse-path filter for anti-spoofing protection, written
+      to /proc/sys/net/ipv4/conf/*/rp_filter.  On is strict mode: a
+      packet is dropped unless it arrived on the interface the reply
+      would leave through.  That breaks asymmetric routing - several
+      uplinks, policy routing, some IPsec road-warrior setups - where
+      Loose only drops a source address no interface can reach.  The
+      kernel applies the higher of the value for all interfaces and the
+      one for the interface.  IPv4 only.
 
   linux24_tcp_ecn:
     type: 'tristate'

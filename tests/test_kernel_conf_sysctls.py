@@ -35,9 +35,17 @@ The generated script therefore writes every copy.  The glob covers
 ``default`` is what an interface created later starts from.
 """
 
-import pytest
+import copy
+from pathlib import Path
 
+import pytest
+import sqlalchemy
+
+from firewallfabrik.core import DatabaseManager
+from firewallfabrik.core.objects import Firewall
 from firewallfabrik.driver._configlet import Configlet
+from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
+from firewallfabrik.platforms.nftables._compiler_driver import CompilerDriver_nft
 
 # The setting, the family, and the option value written into it.
 _CONF_SETTINGS = (
@@ -92,3 +100,31 @@ def test_a_setting_without_a_per_interface_copy_is_left_alone():
     rendered = configlet.expand()
     assert 'echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_all' in rendered
     assert 'for f in' not in rendered
+
+
+@pytest.mark.parametrize('platform', ['iptables', 'nftables'])
+def test_loose_reverse_path_filtering_reaches_the_script(tmp_path, platform):
+    """rp_filter 2 is loose mode (RFC 3704), for asymmetric routing.
+
+    The value goes through unchanged into every copy of the setting.
+    """
+    driver_class = CompilerDriver_ipt if platform == 'iptables' else CompilerDriver_nft
+    db = DatabaseManager()
+    db.load(str(Path(__file__).parent / 'fixtures' / 'basic_accept_deny.fwf'))
+    with db.session() as session:
+        fw = session.execute(
+            sqlalchemy.select(Firewall).where(Firewall.name == 'fw-test'),
+        ).scalar_one()
+        options = copy.deepcopy(fw.options or {})
+        options['linux24_rp_filter'] = '2'
+        fw.options = options
+        fw_id = str(fw.id)
+    driver = driver_class(db)
+    driver.wdir = str(tmp_path)
+    driver.file_name_setting = 'fw-test.fw'
+    driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+    script = Path(driver.file_names[fw_id]).read_text()
+    assert (
+        'for f in /proc/sys/net/ipv4/conf/*/rp_filter ; do echo 2 > "$f" ; done'
+        in script
+    )

@@ -108,3 +108,17 @@ def test_a_checkbox_reads_what_the_compiler_reads(dialog_class, stored, checked)
     assert dlg.dropInvalid.isChecked() is checked
     dlg.accept()
     assert fw.options['drop_invalid'] is checked
+
+
+@pytest.mark.parametrize('stored', ['', '0', '1', '2'])
+def test_the_reverse_path_filter_keeps_every_mode(stored):
+    """Loose mode (2) is a value of its own, not "on" and not "no change"."""
+    fw = _Firewall({'linux24_rp_filter': stored})
+    dlg = LinuxSettingsDialog(fw, platform='iptables')
+    dlg.accept()
+    assert fw.options['linux24_rp_filter'] == stored
+
+    dlg = LinuxSettingsDialog(_Firewall({}), platform='iptables')
+    dlg.linux24_rp_filter.setCurrentText('Loose')
+    dlg.accept()
+    assert dlg._fw.options['linux24_rp_filter'] == '2'

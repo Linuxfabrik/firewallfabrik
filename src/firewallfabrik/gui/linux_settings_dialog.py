@@ -67,6 +67,8 @@ _COMBO_TEXT_TO_VALUE = {
     'No change': '',
     'On': '1',
     'Off': '0',
+    # Only the reverse path filter offers it: rp_filter 2 is loose mode.
+    'Loose': '2',
 }
 
 # Reverse mapping from stored option value to combo text.

@@ -125,7 +125,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Path | lsmod: | `linux24_path_lsmod` | string | `''` | iptables |
 | Path | modprobe: | `linux24_path_modprobe` | string | `''` | iptables |
 | Path | vconfig: | `linux24_path_vconfig` | string | `''` | iptables |
-| Options | Kernel anti-spoofing protection | `linux24_rp_filter` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
+| Options | Kernel anti-spoofing protection | `linux24_rp_filter` | tri-state (`''` no change, `'1'` on (strict), `'2'` loose, `'0'` off) | `''` | iptables, nftables |
 | TCP | TCP ECN | `linux24_tcp_ecn` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
 | TCP | TCP fack | `linux24_tcp_fack` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables |
 | TCP | TCP FIN timeout (sec) | `linux24_tcp_fin_timeout` | integer (`-1` = kernel default) | `-1` | iptables, nftables |

@@ -165,6 +165,11 @@
          </item>
          <item>
           <property name="text">
+           <string>Loose</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>Off</string>
           </property>
          </item>
