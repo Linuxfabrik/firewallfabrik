@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor: a cluster member compiled from the compile and install dialog gets the script it is installed from, instead of the installer picking up an outdated or missing one ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 * Editor: a new firewall or cluster starts with an empty Policy, NAT and Routing rule set, and a new cluster with its state sync group, as in Firewall Builder.
 * Editor: duplicating a firewall with sub-interfaces no longer fails, a duplicated cluster keeps its failover and state sync groups, and a duplicated rule branching into its own firewall's rule set points at the copy.
+* Editor: installing with a password no longer hangs, also on Windows and on RHEL 8 with the GUI started from a terminal, and a wrong password or an unknown host key is reported ([#181](https://github.com/Linuxfabrik/firewallfabrik/pull/181)).
 * Editor: the install dialog lists each cluster with its members below it and ticks the members for install when the cluster is compiled ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 * Editor: the New Cluster wizard creates the cluster interfaces with their failover groups, protocols and addresses, so a new cluster has members, and it can take over the rules of one member, as in Firewall Builder ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 

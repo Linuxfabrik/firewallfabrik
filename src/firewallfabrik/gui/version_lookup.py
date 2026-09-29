@@ -186,6 +186,10 @@ def run(  # nosec B107
             env=env,
             stdin=subprocess.DEVNULL,
             check=False,
+            # Without a controlling terminal OpenSSH before 8.4, which
+            # ignores SSH_ASKPASS_REQUIRE, takes the password from the
+            # helper as well instead of asking on the terminal.
+            start_new_session=os.name != 'nt',
         )
     except subprocess.TimeoutExpired as exc:
         raise LookupFailed(f'no answer from {address} within {timeout * 3}s') from exc

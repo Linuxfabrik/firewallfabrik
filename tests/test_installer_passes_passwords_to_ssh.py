@@ -119,6 +119,27 @@ def test_environment_points_ssh_at_the_helper():
     assert not Path(wrapper).exists()
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX sessions')
+@pytest.mark.usefixtures('qt_core_app')
+def test_ssh_runs_without_a_controlling_terminal():
+    """OpenSSH before 8.4 ignores SSH_ASKPASS_REQUIRE.
+
+    With a terminal at hand it asks there and waits, which is what a GUI
+    started from a terminal on RHEL 8 (OpenSSH 8.0) did.  In a session of
+    its own it has no controlling terminal and takes the helper.
+    """
+    from PySide6.QtCore import QProcess
+
+    inst = _installer(password='pw')  # nosec B106
+    try:
+        inst._start_process('true', [], env=inst._ssh_environment())
+        flags = inst._process.unixProcessParameters().flags
+        assert flags & QProcess.UnixProcessFlag.CreateNewSession
+        inst._process.waitForFinished(5000)
+    finally:
+        inst.terminate()
+
+
 @pytest.mark.usefixtures('qt_core_app')
 def test_no_password_leaves_the_environment_alone():
     inst = _installer()

@@ -326,6 +326,15 @@ class FirewallInstaller(QObject):
         self._process = QProcess(self)
         if env is not None:
             self._process.setProcessEnvironment(env)
+            if not _IS_WINDOWS:
+                # OpenSSH before 8.4 (RHEL 8 ships 8.0) ignores
+                # SSH_ASKPASS_REQUIRE and asks on the terminal whenever
+                # there is one, so a GUI started from a terminal hung on
+                # a prompt nobody saw.  Without a controlling terminal it
+                # takes the helper too.
+                self._process.setUnixProcessParameters(
+                    QProcess.UnixProcessFlag.CreateNewSession
+                )
         self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self._process.readyReadStandardOutput.connect(self._on_output)
         self._process.finished.connect(self._on_finished)
