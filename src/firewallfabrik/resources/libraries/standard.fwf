@@ -710,7 +710,7 @@ libraries:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:all ICMP unreachables'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:ping reply'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time exceeded'
-        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time exceeded in transit'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time exceeded in reassembly'
       - type: 'ServiceGroup'
         name: 'Windows NT'
         members:
@@ -837,7 +837,8 @@ libraries:
           type: 11
           code: 0
       - type: 'ICMPService'
-        name: 'time exceeded in transit'
+        name: 'time exceeded in reassembly'
+        comment: 'The fragments of a packet did not all arrive before the reassembly timer ran out (RFC 792, code 1).'
         codes:
           type: 11
           code: 1
