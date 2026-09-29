@@ -84,6 +84,21 @@ libraries:
       name: 'Addresses'
       children:
       - type: 'IPv4'
+        name: 'all DVMRP'
+        inet_addr_mask:
+          address: '224.0.0.4'
+          netmask: '0.0.0.0'
+      - type: 'IPv4'
+        name: 'all-hosts'
+        inet_addr_mask:
+          address: '224.0.0.1'
+          netmask: '0.0.0.0'
+      - type: 'IPv4'
+        name: 'all-routers'
+        inet_addr_mask:
+          address: '224.0.0.2'
+          netmask: '0.0.0.0'
+      - type: 'IPv4'
         name: 'DHCP server, relay agent'
         comment: 'RFC 1884'
         inet_addr_mask:
@@ -109,6 +124,11 @@ libraries:
         comment: 'Link-Local Multicast Name Resolution, RFC4795'
         inet_addr_mask:
           address: '224.0.0.252'
+          netmask: '0.0.0.0'
+      - type: 'IPv4'
+        name: 'mDNS'
+        inet_addr_mask:
+          address: '224.0.0.251'
           netmask: '0.0.0.0'
       - type: 'IPv4'
         name: 'OSPF (all routers)'
@@ -154,26 +174,6 @@ libraries:
         comment: 'RFC3768'
         inet_addr_mask:
           address: '224.0.0.18'
-          netmask: '0.0.0.0'
-      - type: 'IPv4'
-        name: 'all DVMRP'
-        inet_addr_mask:
-          address: '224.0.0.4'
-          netmask: '0.0.0.0'
-      - type: 'IPv4'
-        name: 'all-hosts'
-        inet_addr_mask:
-          address: '224.0.0.1'
-          netmask: '0.0.0.0'
-      - type: 'IPv4'
-        name: 'all-routers'
-        inet_addr_mask:
-          address: '224.0.0.2'
-          netmask: '0.0.0.0'
-      - type: 'IPv4'
-        name: 'mDNS'
-        inet_addr_mask:
-          address: '224.0.0.251'
           netmask: '0.0.0.0'
     - type: 'ObjectGroup'
       name: 'DNS Names'
@@ -276,35 +276,6 @@ libraries:
       name: 'Networks'
       children:
       - type: 'Network'
-        name: 'Benchmark tests network'
-        comment: 'RFC 5735'
-        inet_addr_mask:
-          address: '198.18.0.0'
-          netmask: '255.254.0.0'
-      - type: 'Network'
-        name: 'TEST-NET-2'
-        comment: 'RFC 5735
-
-          RFC 5737
-
-          '
-        inet_addr_mask:
-          address: '198.51.100.0'
-          netmask: '255.255.255.0'
-      - type: 'Network'
-        name: 'TEST-NET-3'
-        comment: 'RFC 5735
-
-          RFC 5737'
-        inet_addr_mask:
-          address: '203.0.113.0'
-          netmask: '255.255.255.0'
-      - type: 'NetworkIPv6'
-        name: 'Teredo'
-        inet_addr_mask:
-          address: '2001::'
-          netmask: '32'
-      - type: 'Network'
         name: 'all multicasts'
         comment: '224.0.0.0/4 - This block, formerly known as the Class D address
 
@@ -318,6 +289,12 @@ libraries:
         inet_addr_mask:
           address: '224.0.0.0'
           netmask: '240.0.0.0'
+      - type: 'Network'
+        name: 'Benchmark tests network'
+        comment: 'RFC 5735'
+        inet_addr_mask:
+          address: '198.18.0.0'
+          netmask: '255.254.0.0'
       - type: 'NetworkIPv6'
         name: 'documentation net'
         comment: 'RFC3849'
@@ -429,6 +406,11 @@ libraries:
         inet_addr_mask:
           address: '192.168.2.0'
           netmask: '255.255.255.0'
+      - type: 'NetworkIPv6'
+        name: 'Teredo'
+        inet_addr_mask:
+          address: '2001::'
+          netmask: '32'
       - type: 'Network'
         name: 'test-net'
         comment: '192.0.2.0/24 - This block is assigned as "TEST-NET" for use in
@@ -444,6 +426,24 @@ libraries:
           '
         inet_addr_mask:
           address: '192.0.2.0'
+          netmask: '255.255.255.0'
+      - type: 'Network'
+        name: 'TEST-NET-2'
+        comment: 'RFC 5735
+
+          RFC 5737
+
+          '
+        inet_addr_mask:
+          address: '198.51.100.0'
+          netmask: '255.255.255.0'
+      - type: 'Network'
+        name: 'TEST-NET-3'
+        comment: 'RFC 5735
+
+          RFC 5737'
+        inet_addr_mask:
+          address: '203.0.113.0'
           netmask: '255.255.255.0'
       - type: 'Network'
         name: 'this-net'
@@ -897,6 +897,18 @@ libraries:
         named_protocols:
           protocol_num: '2'
       - type: 'IPService'
+        name: 'ip_fragments'
+        comment: '''Short'' fragments'
+        data:
+          fragm: false
+          lsrr: false
+          rr: false
+          short_fragm: true
+          ssrr: false
+          ts: false
+        named_protocols:
+          protocol_num: '0'
+      - type: 'IPService'
         name: 'PIM'
         comment: 'Protocol Independent Multicast - Dense Mode (PIM-DM), RFC 3973, or Protocol Independent Multicast-Sparse Mode (PIM-SM) RFC 2362'
         data:
@@ -943,18 +955,6 @@ libraries:
           rr: false
           short_fragm: false
           ssrr: true
-          ts: false
-        named_protocols:
-          protocol_num: '0'
-      - type: 'IPService'
-        name: 'ip_fragments'
-        comment: '''Short'' fragments'
-        data:
-          fragm: false
-          lsrr: false
-          rr: false
-          short_fragm: true
-          ssrr: false
           ts: false
         named_protocols:
           protocol_num: '0'
@@ -8910,6 +8910,23 @@ libraries:
   - type: 'IntervalGroup'
     name: 'Time'
     children:
+    - name: 'afterhours'
+      comment: 'any day 6:00pm - 12:00am'
+      data:
+        days_of_week: '0,1,2,3,4,5,6'
+        from_day: '-1'
+        from_hour: '18'
+        from_minute: '0'
+        from_month: '-1'
+        from_weekday: '-1'
+        from_year: '-1'
+        to_day: '-1'
+        to_hour: '23'
+        to_minute: '59'
+        to_month: '-1'
+        to_weekday: '-1'
+        to_year: '-1'
+      type: 'Interval'
     - name: 'Sat'
       data:
         days_of_week: '6'
@@ -8940,23 +8957,6 @@ libraries:
         to_minute: '59'
         to_month: '-1'
         to_weekday: '0'
-        to_year: '-1'
-      type: 'Interval'
-    - name: 'afterhours'
-      comment: 'any day 6:00pm - 12:00am'
-      data:
-        days_of_week: '0,1,2,3,4,5,6'
-        from_day: '-1'
-        from_hour: '18'
-        from_minute: '0'
-        from_month: '-1'
-        from_weekday: '-1'
-        from_year: '-1'
-        to_day: '-1'
-        to_hour: '23'
-        to_minute: '59'
-        to_month: '-1'
-        to_weekday: '-1'
         to_year: '-1'
       type: 'Interval'
     - name: 'weekends'
