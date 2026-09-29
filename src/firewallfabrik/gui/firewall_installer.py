@@ -12,16 +12,31 @@
 
 """Firewall installer engine — deploys compiled scripts via SSH/SCP."""
 
+import logging
+import os
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from html import escape as _html_escape
 from pathlib import Path
 from typing import NamedTuple
 
-from PySide6.QtCore import QByteArray, QObject, QProcess, QSettings, Signal
+from PySide6.QtCore import (
+    QByteArray,
+    QObject,
+    QProcess,
+    QProcessEnvironment,
+    QSettings,
+    Signal,
+)
 
 from firewallfabrik.driver._configlet import Configlet
+from firewallfabrik.gui import _ssh_askpass
+
+logger = logging.getLogger(__name__)
+
+_IS_WINDOWS = os.name == 'nt'
 
 
 def _esc(text):
@@ -212,6 +227,10 @@ class FirewallInstaller(QObject):
         self._jobs: list[InstallJob] = []
         self._process: QProcess | None = None
         self._output_buf = ''
+        self._askpass_dir: tempfile.TemporaryDirectory | None = None
+        self._askpass_wrapper: Path | None = None
+        self.job_finished.connect(self._cleanup_askpass)
+        self.job_failed.connect(self._cleanup_askpass)
 
     def run_jobs(self) -> None:
         """Build the job list and start executing."""
@@ -221,6 +240,50 @@ class FirewallInstaller(QObject):
             self.job_finished.emit()
             return
         self._run_next()
+
+    def _ensure_askpass(self) -> Path | None:
+        """Create the askpass wrapper on first use; None if unavailable."""
+        if self._askpass_wrapper is None and self._askpass_dir is None:
+            self._askpass_dir = tempfile.TemporaryDirectory(prefix='fwf-askpass-')
+            try:
+                self._askpass_wrapper = _ssh_askpass.write_wrapper(
+                    Path(self._askpass_dir.name),
+                )
+            except OSError:
+                logger.exception('Could not create the SSH askpass helper')
+                self._askpass_wrapper = None
+        return self._askpass_wrapper
+
+    def _cleanup_askpass(self, *_args) -> None:
+        if self._askpass_dir is not None:
+            self._askpass_dir.cleanup()
+        self._askpass_dir = None
+        self._askpass_wrapper = None
+
+    def _ssh_environment(self) -> QProcessEnvironment | None:
+        """Environment that makes ssh/scp take the password from the
+        askpass helper instead of a (possibly invisible) console."""
+        if not self._config.password:
+            return None
+        wrapper = self._ensure_askpass()
+        if wrapper is None:
+            return None
+        env = QProcessEnvironment.systemEnvironment()
+        base = {'DISPLAY': env.value('DISPLAY')}
+        for name, value in _ssh_askpass.environment(
+            wrapper, self._config.password, base
+        ).items():
+            env.insert(name, value)
+        return env
+
+    def _batch_mode_args(self, user_args: str) -> list[str]:
+        """On Windows, OpenSSH prompts on a console the user cannot see
+        and would hang forever. Without a password, fail fast instead."""
+        if not _IS_WINDOWS or self._config.password:
+            return []
+        if 'batchmode' in user_args.lower():
+            return []
+        return ['-o', 'BatchMode=yes']
 
     def _run_next(self) -> None:
         if not self._jobs:
@@ -240,22 +303,29 @@ class FirewallInstaller(QObject):
             f'<b>Copying {_esc(Path(local).name)} -> {_esc(remote)}</b>'
         )
         args = self._pack_scp_args(local, remote)
-        self._start_process(args[0], args[1:])
+        self._start_process(args[0], args[1:], env=self._ssh_environment())
 
     def _activate_policy(self, cmd: str) -> None:
         self.log_message.emit(
             f'<b>Activating policy on {_esc(self._config.mgmt_address)}</b>'
         )
         args = self._pack_ssh_args(cmd)
-        self._start_process(args[0], args[1:])
+        self._start_process(args[0], args[1:], env=self._ssh_environment())
 
     def _run_external_script(self, script: str, script_args: str) -> None:
         self.log_message.emit(f'<b>Running external script: {_esc(script)}</b>')
         args = script_args.split() if script_args else []
         self._start_process(script, args)
 
-    def _start_process(self, program: str, args: list[str]) -> None:
+    def _start_process(
+        self,
+        program: str,
+        args: list[str],
+        env: QProcessEnvironment | None = None,
+    ) -> None:
         self._process = QProcess(self)
+        if env is not None:
+            self._process.setProcessEnvironment(env)
         self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self._process.readyReadStandardOutput.connect(self._on_output)
         self._process.finished.connect(self._on_finished)
@@ -295,12 +365,22 @@ class FirewallInstaller(QObject):
         return any(prompt in self._output_buf for prompt in _PASSWORD_PROMPTS)
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
+        output = self._output_buf
         self._process = None
         self._output_buf = ''
         if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
             self._run_next()
-        else:
-            self.job_failed.emit(f'Process exited with code {exit_code}')
+            return
+        message = f'Process exited with code {exit_code}'
+        if 'Host key verification failed' in output:
+            message += (
+                '. The host key of the firewall is not known yet: connect'
+                ' once with ssh from a terminal, check and accept the key,'
+                ' then install again.'
+            )
+        elif 'Permission denied' in output:
+            message += '. The firewall rejected the user name or password.'
+        self.job_failed.emit(message)
 
     def _pack_ssh_args(self, cmd: str) -> list[str]:
         """Build SSH command line arguments.
@@ -322,6 +402,7 @@ class FirewallInstaller(QObject):
             '-t',
             '-t',
         ]
+        args.extend(self._batch_mode_args(self._config.ssh_args))
         if self._config.ssh_args:
             args.extend(self._config.ssh_args.split())
         args.extend(['-l', self._config.user, self._config.mgmt_address, cmd])
@@ -348,6 +429,7 @@ class FirewallInstaller(QObject):
             '-o',
             f'ConnectTimeout={connect_timeout}',
         ]
+        args.extend(self._batch_mode_args(self._config.scp_args))
         if self._config.scp_args:
             args.extend(self._config.scp_args.split())
         if self._config.quiet:
@@ -370,3 +452,4 @@ class FirewallInstaller(QObject):
             self._process.kill()
             self._process.waitForFinished(3000)
         self._jobs.clear()
+        self._cleanup_askpass()
