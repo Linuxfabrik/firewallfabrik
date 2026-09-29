@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor (iptables, nftables): "Lookup Version ..." next to the version list asks the firewall over SSH which releases it runs and picks the matching entry.
 * Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
 * Editor: the compile and install dialog shows each firewall's platform and release, and so does the object tree.
+* Standard library: services for Amanda, gpsd, IRC over TLS, Jellyfin, Mumble, NSCA, NUT, Plex, SANE, Subversion, Syncthing, TeamSpeak and USB/IP; existing files get them with "Update Standard Library".
 
 ### Changed
 

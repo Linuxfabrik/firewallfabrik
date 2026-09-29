@@ -1492,25 +1492,6 @@ libraries:
           rst: false
           syn: false
           fin: false
-      - type: 'TCPService'
-        name: 'BGP 179'
-        dst_range_start: 179
-        dst_range_end: 179
-        tcp_flags:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        tcp_flags_masks:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        comment: Border Gateway Protocol
       - type: TCPService
         name: Beats 5044
         comment: Elastic Beats (Filebeat, Metricbeat, etc.) default input port for shipping logs, metrics and other data to Logstash.
@@ -1530,6 +1511,25 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: 'TCPService'
+        name: 'BGP 179'
+        dst_range_start: 179
+        dst_range_end: 179
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        comment: Border Gateway Protocol
       - type: TCPService
         name: Bitcoin 8333
         comment: Bitcoin peer-to-peer network protocol for node communication.
@@ -1721,10 +1721,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Collabora Online 9980
-        comment: Collabora Online (coolwsd) for collaborative document editing in Nextcloud, ownCloud, and other platforms
-        dst_range_start: 9980
-        dst_range_end: 9980
+        name: Coda Auth 370
+        comment: codaauth2, Coda authentication server
+        dst_range_start: 370
+        dst_range_end: 370
         tcp_flags:
           urg: false
           ack: false
@@ -1740,10 +1740,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Coda Auth 370
-        comment: codaauth2, Coda authentication server
-        dst_range_start: 370
-        dst_range_end: 370
+        name: Collabora Online 9980
+        comment: Collabora Online (coolwsd) for collaborative document editing in Nextcloud, ownCloud, and other platforms
+        dst_range_start: 9980
+        dst_range_end: 9980
         tcp_flags:
           urg: false
           ack: false
@@ -2958,6 +2958,25 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: gpsd 2947
+        comment: gpsd GPS service daemon. Serves position and time data from GPS receivers, often used as a time source for chronyd or ntpd.
+        dst_range_start: 2947
+        dst_range_end: 2947
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: Grafana 3000
         comment: Grafana monitoring and observability dashboard web interface.
         dst_range_start: 3000
@@ -3775,6 +3794,25 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: IRC TLS 6697
+        comment: Internet Relay Chat over TLS, the port RFC 7194 assigns to it.
+        dst_range_start: 6697
+        dst_range_end: 6697
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: iSCSI 860
         comment: iSCSI (RFC 3720)
         dst_range_start: 860
@@ -3817,6 +3855,44 @@ libraries:
         comment: ISO Transport Service Access Point
         dst_range_start: 102
         dst_range_end: 102
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Jellyfin 8096
+        comment: Jellyfin media server web interface and API over HTTP.
+        dst_range_start: 8096
+        dst_range_end: 8096
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Jellyfin HTTPS 8920
+        comment: Jellyfin media server web interface and API over HTTPS.
+        dst_range_start: 8920
+        dst_range_end: 8920
         tcp_flags:
           urg: false
           ack: false
@@ -3946,10 +4022,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: KGS Go Server 2379
-        comment: KGS Go Server, online platform for the board game Go.
-        dst_range_start: 2379
-        dst_range_end: 2379
+        name: Keycloak 8443
+        comment: Keycloak identity and access management server (HTTPS). Used for SSO, OAuth2, OpenID Connect and SAML authentication.
+        dst_range_start: 8443
+        dst_range_end: 8443
         tcp_flags:
           urg: false
           ack: false
@@ -3965,10 +4041,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Keycloak 8443
-        comment: Keycloak identity and access management server (HTTPS). Used for SSO, OAuth2, OpenID Connect and SAML authentication.
-        dst_range_start: 8443
-        dst_range_end: 8443
+        name: KGS Go Server 2379
+        comment: KGS Go Server, online platform for the board game Go.
+        dst_range_start: 2379
+        dst_range_end: 2379
         tcp_flags:
           urg: false
           ack: false
@@ -4193,10 +4269,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Linux-HA 694
-        comment: Linux-HA high-availability heartbeat
-        dst_range_start: 694
-        dst_range_end: 694
+        name: Libvirt 16509
+        comment: libvirt remote management daemon (libvirtd). Used by KVM/QEMU, oVirt and virt-manager for hypervisor management over TCP/TLS.
+        dst_range_start: 16509
+        dst_range_end: 16509
         tcp_flags:
           urg: false
           ack: false
@@ -4212,10 +4288,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Libvirt 16509
-        comment: libvirt remote management daemon (libvirtd). Used by KVM/QEMU, oVirt and virt-manager for hypervisor management over TCP/TLS.
-        dst_range_start: 16509
-        dst_range_end: 16509
+        name: Linux-HA 694
+        comment: Linux-HA high-availability heartbeat
+        dst_range_start: 694
+        dst_range_end: 694
         tcp_flags:
           urg: false
           ack: false
@@ -4250,10 +4326,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Logstash Beats Input 5044
-        comment: Logstash Beats input plugin. Receives data from Elastic Beats agents (Filebeat, Metricbeat, etc.).
-        dst_range_start: 5044
-        dst_range_end: 5044
+        name: Logstash API 9600
+        comment: Logstash monitoring API for pipeline stats and health checks.
+        dst_range_start: 9600
+        dst_range_end: 9600
         tcp_flags:
           urg: false
           ack: false
@@ -4269,10 +4345,10 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Logstash API 9600
-        comment: Logstash monitoring API for pipeline stats and health checks.
-        dst_range_start: 9600
-        dst_range_end: 9600
+        name: Logstash Beats Input 5044
+        comment: Logstash Beats input plugin. Receives data from Elastic Beats agents (Filebeat, Metricbeat, etc.).
+        dst_range_start: 5044
+        dst_range_end: 5044
         tcp_flags:
           urg: false
           ack: false
@@ -4762,6 +4838,25 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: Mumble 64738
+        comment: Mumble voice chat server (murmur). Control channel on TCP; voice uses UDP on the same port and falls back to TCP.
+        dst_range_start: 64738
+        dst_range_end: 64738
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'MySQL 3306'
         dst_range_start: 3306
@@ -4974,10 +5069,48 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: NSCA 5667
+        comment: Nagios Service Check Acceptor. Receives passive check results sent with send_nsca.
+        dst_range_start: 5667
+        dst_range_end: 5667
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: NTRIP 2101
         comment: Networked Transport of RTCM via Internet Protocol (NTRIP)
         dst_range_start: 2101
         dst_range_end: 2101
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: NUT 3493
+        comment: Network UPS Tools (upsd). Clients such as upsmon read UPS status and shut down on power loss.
+        dst_range_start: 3493
+        dst_range_end: 3493
         tcp_flags:
           urg: false
           ack: false
@@ -5415,6 +5548,25 @@ libraries:
         comment: SW Soft Plesk Control Panel
         dst_range_start: 8443
         dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Plex 32400
+        comment: Plex Media Server web interface, API and streaming.
+        dst_range_start: 32400
+        dst_range_end: 32400
         tcp_flags:
           urg: false
           ack: false
@@ -5905,25 +6057,6 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: Rocket.Chat 3000
-        comment: Rocket.Chat open-source team communication platform default web interface port.
-        dst_range_start: 3000
-        dst_range_end: 3000
-        tcp_flags:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        tcp_flags_masks:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-      - type: TCPService
         name: rlogin 513
         comment: Remote login (Berkeley r-command). Unencrypted, use SSH instead.
         dst_range_start: 513
@@ -5947,6 +6080,25 @@ libraries:
         comment: BIND Remote Name Daemon Control for managing DNS server configuration. Restrict to localhost or management hosts only.
         dst_range_start: 953
         dst_range_end: 953
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Rocket.Chat 3000
+        comment: Rocket.Chat open-source team communication platform default web interface port.
+        dst_range_start: 3000
+        dst_range_end: 3000
         tcp_flags:
           urg: false
           ack: false
@@ -6096,6 +6248,25 @@ libraries:
           syn: false
           fin: false
         comment: Referral Whois Protocol
+      - type: TCPService
+        name: SANE 6566
+        comment: SANE network scanner daemon (saned). Data connections use dynamic ports, handled by the nf_conntrack_sane helper.
+        dst_range_start: 6566
+        dst_range_end: 6566
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: TCPService
         name: SCCM HTTP 8005
         comment: Windows SCCM HTTP listener service
@@ -6571,6 +6742,25 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: Subversion 3690
+        comment: Subversion server (svnserve) using the svn:// protocol.
+        dst_range_start: 3690
+        dst_range_end: 3690
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'SunRPC 111'
         dst_range_start: 111
@@ -6590,6 +6780,25 @@ libraries:
           syn: false
           fin: false
         comment: Open Network Computing Remote Procedure Call
+      - type: TCPService
+        name: Syncthing 22000
+        comment: Syncthing file synchronization, TCP based sync protocol.
+        dst_range_start: 22000
+        dst_range_end: 22000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: TCPService
         name: Synology 5000
         comment: Synology Inc. Management Console, File Station, Audio Station
@@ -6683,6 +6892,44 @@ libraries:
           syn: true
           fin: true
         comment: Matches TCP SYN packets (connection initiation only).
+      - type: TCPService
+        name: TeamSpeak File Transfer 30033
+        comment: TeamSpeak server file transfer (avatars, icons, channel files).
+        dst_range_start: 30033
+        dst_range_end: 30033
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: TeamSpeak ServerQuery 10011
+        comment: TeamSpeak server administration interface (raw ServerQuery). Should not be reachable from the internet.
+        dst_range_start: 10011
+        dst_range_end: 10011
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: TCPService
         name: TeamViewer 5938
         comment: TeamViewer remote desktop
@@ -7011,6 +7258,25 @@ libraries:
         comment: Urchin Web Analytics
         dst_range_start: 9999
         dst_range_end: 9999
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: USB/IP 3240
+        comment: USB/IP server (usbipd). Shares USB devices over the network; the Linux default port, IANA lists 3240 under another name.
+        dst_range_start: 3240
+        dst_range_end: 3240
         tcp_flags:
           urg: false
           ack: false
@@ -7425,44 +7691,6 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
-        name: WINS 1512
-        comment: Microsoft Windows Internet Name Service
-        dst_range_start: 1512
-        dst_range_end: 1512
-        tcp_flags:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        tcp_flags_masks:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-      - type: 'TCPService'
-        name: 'WINS replication 42'
-        dst_range_start: 42
-        dst_range_end: 42
-        tcp_flags:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        tcp_flags_masks:
-          urg: false
-          ack: false
-          psh: false
-          rst: false
-          syn: false
-          fin: false
-        comment: Microsoft WINS database replication between WINS servers.
-      - type: TCPService
         name: WinRM 5985
         comment: Windows Remote Management (WS-Management) over HTTP
         dst_range_start: 5985
@@ -7500,6 +7728,44 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: WINS 1512
+        comment: Microsoft Windows Internet Name Service
+        dst_range_start: 1512
+        dst_range_end: 1512
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: 'TCPService'
+        name: 'WINS replication 42'
+        dst_range_start: 42
+        dst_range_end: 42
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        comment: Microsoft WINS database replication between WINS servers.
       - type: 'TCPService'
         name: 'X11 6000-6063'
         comment: 'X Window System'
@@ -7769,6 +8035,11 @@ libraries:
         comment: 'ipchains used to use this port range for masqueraded packets'
         src_range_start: 61000
         src_range_end: 65095
+      - type: UDPService
+        name: Amanda 10080
+        comment: Amanda backup client/server communication. Data connections use dynamic ports, handled by the nf_conntrack_amanda helper.
+        dst_range_start: 10080
+        dst_range_end: 10080
       - type: UDPService
         name: AMQP 5672
         comment: Advanced Message Queuing Protocol. Used by RabbitMQ, Apache Qpid, and other message brokers.
@@ -8070,6 +8341,11 @@ libraries:
         dst_range_start: 19000
         dst_range_end: 19000
       - type: UDPService
+        name: Jellyfin Discovery 7359
+        comment: Jellyfin client discovery on the local network.
+        dst_range_start: 7359
+        dst_range_end: 7359
+      - type: UDPService
         name: Jupyter 8888
         comment: Default for IPython / Jupyter notebook dashboards
         dst_range_start: 8888
@@ -8214,6 +8490,11 @@ libraries:
         comment: Microsoft SQL Server monitor/browser
         dst_range_start: 1434
         dst_range_end: 1434
+      - type: UDPService
+        name: Mumble 64738
+        comment: Mumble voice chat server (murmur). Voice traffic.
+        dst_range_start: 64738
+        dst_range_end: 64738
       - type: UDPService
         name: nCUBE License 1521
         comment: nCUBE License Manager
@@ -8424,6 +8705,16 @@ libraries:
         dst_range_start: 111
         dst_range_end: 111
         comment: Open Network Computing Remote Procedure Call
+      - type: UDPService
+        name: Syncthing 22000
+        comment: Syncthing file synchronization, QUIC based sync protocol.
+        dst_range_start: 22000
+        dst_range_end: 22000
+      - type: UDPService
+        name: Syncthing Discovery 21027
+        comment: Syncthing local discovery. Broadcasts on IPv4, multicasts on IPv6.
+        dst_range_start: 21027
+        dst_range_end: 21027
       - type: 'UDPService'
         name: 'syslog 514'
         dst_range_start: 514
@@ -8434,6 +8725,11 @@ libraries:
         comment: Syslog, used for system logging
         dst_range_start: 514
         dst_range_end: 514
+      - type: UDPService
+        name: TeamSpeak Voice 9987
+        comment: TeamSpeak server voice traffic. The only port clients strictly need.
+        dst_range_start: 9987
+        dst_range_end: 9987
       - type: UDPService
         name: TeamViewer 5938
         comment: TeamViewer remote desktop
