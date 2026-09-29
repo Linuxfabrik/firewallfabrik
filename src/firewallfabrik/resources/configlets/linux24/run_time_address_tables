@@ -53,6 +53,15 @@ reload_address_table() {
     data_file=$2
     af=${3:--4}
 
+##  "-6" means the IPv6 set of the table, which carries the "_v6" suffix
+##  (see address_table_set_for below); a name that already has it keeps it.
+##  The activation passes that name, but the administrator passes the name
+##  of the object, and the IPv6 lines were then swapped into the IPv4 set,
+##  which ipset refuses, while the IPv6 set kept the old addresses.
+    if [ "$af" = "-6" ]; then
+        addrtbl_name="${addrtbl_name%_v6}_v6"
+    fi
+
     test -z "$addrtbl_name" || test -z "$data_file" && {
         echo "Usage: reload_address_table address_table_object_name file_name [-4|-6]"
         exit 1

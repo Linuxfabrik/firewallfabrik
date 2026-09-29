@@ -120,3 +120,57 @@ def test_a_reload_says_what_it_could_not_load(tmp_path):
     assert 'ANSWERED' in proc.stdout
     said = (tmp_path / 'said.txt').read_text()
     assert '3 of the addresses' in said, said
+
+
+@pytest.mark.skipif(not CAN_ASK_IPSET, reason=SKIP_REASON_IPSET)
+def test_a_reload_touches_the_set_of_the_family_it_names(tmp_path):
+    """``-4`` reloads the IPv4 ipset and ``-6`` the ``_v6`` one, nothing else.
+
+    The activation passes the set name, but the usage line asks for the
+    name of the address table object, and with ``-6`` that name reached the
+    IPv4 set: ipset refused to swap an IPv6 set into it and the IPv6 set
+    kept the old addresses - a delegated prefix that changed never reached
+    the rules.  The IPv4 direction and a name that already carries the
+    suffix are checked as well.
+    """
+    script = _script(tmp_path)
+    functions = _FUNCTIONS_RE.search(script)
+    assert functions, 'the address table commands are no longer where the test looks'
+
+    first = tmp_path / 'first.tbl'
+    first.write_text('192.0.2.0/24\n2001:db8:a::/64\n')
+    second = tmp_path / 'second.tbl'
+    second.write_text('198.51.100.0/24\n2001:db8:b::/64\n')
+
+    harness = f"""
+        IPSET=ipset
+        {functions.group(0)}
+        is_in() {{ test_address_table blk "$1" > /dev/null; }}
+        reload_address_table blk {first} -4 > /dev/null || exit 1
+        reload_address_table blk {first} -6 > /dev/null || exit 2
+        is_in 192.0.2.7 && is_in 2001:db8:a::7 || exit 3
+
+        reload_address_table blk {second} -6 > /dev/null || exit 10
+        is_in 2001:db8:b::7 || exit 11
+        is_in 2001:db8:a::7 && exit 12
+        is_in 192.0.2.7 || exit 13
+
+        reload_address_table blk {second} -4 > /dev/null || exit 20
+        is_in 198.51.100.7 || exit 21
+        is_in 192.0.2.7 && exit 22
+        is_in 2001:db8:b::7 || exit 23
+
+        reload_address_table blk_v6 {first} -6 > /dev/null || exit 30
+        is_in 2001:db8:a::7 || exit 31
+        is_in 198.51.100.7 || exit 32
+        echo SWAPPED
+    """
+    proc = subprocess.run(  # nosec B603 B607
+        ['unshare', '-rn', 'sh', '-c', harness],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stdout + proc.stderr)
+    assert 'SWAPPED' in proc.stdout, proc.stdout

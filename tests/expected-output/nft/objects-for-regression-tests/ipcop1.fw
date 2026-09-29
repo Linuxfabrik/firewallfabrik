@@ -456,10 +456,18 @@ reload_address_table() {
         return 1
     }
     at_af=${3:--4}
+    # "-6" means the IPv6 set of the table, which carries the "_v6" suffix;
+    # a name that already has it keeps it.  Looked up under the plain name
+    # the IPv4 set was reloaded with the IPv6 lines of the file, which nft
+    # refuses, and the IPv6 set kept the old ones.
+    at_want=$1
+    if [ "$at_af" = "-6" ]; then
+        at_want="${1%_v6}_v6"
+    fi
     at_found=0
     at_status=0
     while read -r at_family at_table at_set; do
-        test "$at_set" = "$1" || continue
+        test "$at_set" = "$at_want" || continue
         at_found=1
         load_address_table "$at_family" "$at_table" "$at_set" "$2" "$at_af" \
             replace || at_status=1
@@ -467,7 +475,7 @@ reload_address_table() {
 $(address_table_sets)
 FWF_EOF
     test "$at_found" = 1 || {
-        echo "This ruleset has no address table set named $1"
+        echo "This ruleset has no address table set named $at_want"
         return 1
     }
     return "$at_status"

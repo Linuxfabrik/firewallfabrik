@@ -213,3 +213,120 @@ def test_the_answer_reads_the_same_as_the_iptables_one(tmp_path):
     assert '198.51.100.1 is in address table block_these' in proc.stdout
     assert '192.0.2.1 is not in address table block_these' in proc.stdout
     assert 'No such file or directory' not in proc.stdout + proc.stderr
+
+
+def _dual_stack_script(tmp_path):
+    """A firewall whose rule names a run-time table in both address families.
+
+    The table then has a set per family, ``lan_prefix`` and
+    ``lan_prefix_v6``, the case of a gateway whose rules follow a
+    delegated IPv6 prefix that a DHCPv6 hook writes into the file.
+    """
+    import uuid
+
+    from firewallfabrik.core.objects import (
+        AddressTable,
+        Library,
+        PolicyRule,
+        rule_elements,
+    )
+
+    db = DatabaseManager()
+    db.load(str(FIXTURES / 'basic_accept_deny.fwf'))
+    with db.session() as session:
+        fw = session.execute(
+            sqlalchemy.select(Firewall).where(Firewall.name == 'fw-test')
+        ).scalar_one()
+        fw_id = str(fw.id)
+        library = session.execute(sqlalchemy.select(Library)).scalars().first()
+        table = AddressTable(
+            data={'filename': str(tmp_path / 'lan_prefix.txt'), 'run_time': True},
+            id=uuid.uuid4(),
+            library_id=library.id,
+            name='lan_prefix',
+            type='AddressTable',
+        )
+        session.add(table)
+        policy = next(rs for rs in fw.rule_sets if rs.type == 'Policy')
+        policy.ipv4 = policy.ipv6 = True
+        rule = PolicyRule(
+            id=uuid.uuid4(),
+            policy_action=0,
+            position=len(policy.rules),
+            rule_set_id=policy.id,
+            type='PolicyRule',
+        )
+        session.add(rule)
+        session.flush()
+        session.execute(
+            rule_elements.insert().values(
+                position=0, rule_id=rule.id, slot='src', target_id=table.id
+            )
+        )
+    (tmp_path / 'lan_prefix.txt').write_text('2001:db8:a::/64\n')
+    driver = CompilerDriver_nft(db)
+    driver.wdir = str(tmp_path)
+    driver.file_name_setting = 'fw-test.fw'
+    driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+    return Path(driver.file_names[fw_id]).read_text()
+
+
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
+def test_a_reload_touches_the_set_of_the_family_it_names(tmp_path):
+    """``-4`` reloads the IPv4 set and ``-6`` the IPv6 set, and nothing else.
+
+    ``-6`` used to look the set up under the plain name and fill the IPv4
+    set with the IPv6 lines of the file, which nft refused, so a changed
+    IPv6 prefix never reached the running ruleset.  The IPv4 direction is
+    checked as well, and so is a name that already carries the suffix.
+    """
+    script = _dual_stack_script(tmp_path)
+    ruleset = _RULES_RE.search(script)
+    functions = _FUNCTIONS_RE.search(script)
+    assert ruleset and functions
+    assert 'lan_prefix_v6' in script
+
+    ruleset_file = tmp_path / 'ruleset.nft'
+    ruleset_file.write_text(ruleset.group(1) + '\n')
+    first = tmp_path / 'first.txt'
+    first.write_text('192.0.2.0/24\n2001:db8:a::/64\n')
+    second = tmp_path / 'second.txt'
+    second.write_text('198.51.100.0/24\n2001:db8:b::/64\n')
+
+    harness = f"""
+        NFT=nft
+        {functions.group(0)}
+        is_in() {{ test_address_table lan_prefix "$1" > /dev/null; }}
+        nft -f {ruleset_file} || exit 1
+        reload_address_table lan_prefix {first} -4 || exit 1
+        reload_address_table lan_prefix {first} -6 || exit 1
+        is_in 192.0.2.7 && is_in 2001:db8:a::7 || exit 1
+
+        # IPv6 only: the new prefix replaces the old, IPv4 is untouched.
+        reload_address_table lan_prefix {second} -6 || exit 1
+        is_in 2001:db8:b::7 || exit 11
+        is_in 2001:db8:a::7 && exit 12
+        is_in 192.0.2.7 || exit 13
+        is_in 198.51.100.7 && exit 14
+
+        # IPv4 only: the other way round.
+        reload_address_table lan_prefix {second} -4 || exit 1
+        is_in 198.51.100.7 || exit 21
+        is_in 192.0.2.7 && exit 22
+        is_in 2001:db8:b::7 || exit 23
+
+        # The name of the IPv6 set itself works too.
+        reload_address_table lan_prefix_v6 {first} -6 || exit 1
+        is_in 2001:db8:a::7 || exit 31
+        is_in 198.51.100.7 || exit 32
+        echo SWAPPED
+    """
+    proc = subprocess.run(  # nosec B603 B607
+        ['unshare', '-rn', 'sh', '-c', harness],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stdout + proc.stderr)
+    assert 'SWAPPED' in proc.stdout, proc.stdout
