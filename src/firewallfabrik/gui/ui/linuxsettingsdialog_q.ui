@@ -1015,7 +1015,33 @@ the probes.</string>
        <item row="13" column="1" colspan="2">
         <widget class="QLineEdit" name="linux24_path_ip6tables_restore" />
        </item>
-       <item row="14" column="2">
+       <item row="14" column="0">
+        <widget class="QLabel" name="label_iptables_save">
+         <property name="text">
+          <string>iptables-save:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="1" colspan="2">
+        <widget class="QLineEdit" name="linux24_path_iptables_save" />
+       </item>
+       <item row="15" column="0">
+        <widget class="QLabel" name="label_ip6tables_save">
+         <property name="text">
+          <string>ip6tables-save:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="15" column="1" colspan="2">
+        <widget class="QLineEdit" name="linux24_path_ip6tables_save" />
+       </item>
+       <item row="16" column="2">
         <spacer>
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -1425,6 +1451,8 @@ Explanation of this parameter can be found at&lt;br&gt;
   <tabstop>linux24_path_lsmod</tabstop>
   <tabstop>linux24_path_iptables_restore</tabstop>
   <tabstop>linux24_path_ip6tables_restore</tabstop>
+  <tabstop>linux24_path_iptables_save</tabstop>
+  <tabstop>linux24_path_ip6tables_save</tabstop>
   <tabstop>tabWidget</tabstop>
  </tabstops>
  <resources />

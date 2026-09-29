@@ -56,3 +56,15 @@ check_tools() {
   {{if need_ifenslave}}find_program "$IFENSLAVE"{{endif}}
   {{if need_ipset}}find_program "$IPSET"{{endif}}
 }
+
+## The start branch saves the running ruleset and puts it back when the
+## activation fails (fwf_save_ruleset), so it needs the save and restore
+## programs whatever form the rules are installed in.  Only the start
+## branch: stop, status and block do not use them, and a missing
+## iptables-save must not keep stop from opening the firewall.
+check_rollback_tools() {
+  find_program "$IPTABLES_SAVE"
+  find_program "$IPTABLES_RESTORE"
+  {{if need_ip6tables}}find_program "$IP6TABLES_SAVE"{{endif}}
+  {{if need_ip6tables}}find_program "$IP6TABLES_RESTORE"{{endif}}
+}

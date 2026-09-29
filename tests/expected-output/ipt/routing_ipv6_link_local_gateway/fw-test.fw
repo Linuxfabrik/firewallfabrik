@@ -26,6 +26,8 @@ IPTABLES="iptables"
 IP6TABLES="ip6tables"
 IPTABLES_RESTORE="iptables-restore"
 IP6TABLES_RESTORE="ip6tables-restore"
+IPTABLES_SAVE="iptables-save"
+IP6TABLES_SAVE="ip6tables-save"
 IP="ip"
 IFCONFIG="ifconfig"
 VCONFIG="vconfig"
@@ -122,6 +124,12 @@ check_tools() {
  find_program "$IPTABLES"
  find_program "$IP6TABLES"
  find_program "$IP"
+}
+check_rollback_tools() {
+ find_program "$IPTABLES_SAVE"
+ find_program "$IPTABLES_RESTORE"
+ find_program "$IP6TABLES_SAVE"
+ find_program "$IP6TABLES_RESTORE"
 }
 # The tables to clear. /proc/net/ip_tables_names, which used to be
 # read here, only exists while the legacy ip_tables module is loaded;
@@ -436,6 +444,46 @@ run_epilog_and_exit() {
  exit "$1"
 }
 
+# The activation empties the ruleset before it installs the new one, so a
+# rule iptables refuses halfway through would leave the machine with DROP
+# policies and part of the rules - on a remote machine usually without
+# the rule that lets the administrator back in. The running ruleset is
+# therefore saved before anything is changed and put back when the
+# activation fails, the way Shorewall restores its saved state.
+fwf_save_ruleset() {
+ :
+
+ fwf_saved_v6=$($IP6TABLES_SAVE) || { log "Error: \"$IP6TABLES_SAVE\" cannot read the running ruleset. Nothing was changed."; exit 1; }
+}
+
+fwf_restore_family() {
+ fwf_save_tool=$1
+ fwf_saved=$2
+ shift 2
+ fwf_now=$("$fwf_save_tool") || return 1
+ {
+ printf '%s\n' "$fwf_saved"
+ for fwf_table in $(printf '%s\n' "$fwf_now" | sed -n 's/^\*//p'); do
+ printf '%s\n' "$fwf_saved" | grep -qx "\*$fwf_table" && continue
+ echo "*$fwf_table"
+ test "$fwf_table" = filter && printf ':INPUT ACCEPT [0:0]\n:FORWARD ACCEPT [0:0]\n:OUTPUT ACCEPT [0:0]\n'
+ echo COMMIT
+ done
+ } | "$@"
+}
+
+fwf_rollback_and_exit() {
+ fwf_rollback_status=0
+
+ fwf_restore_family "$IP6TABLES_SAVE" "$fwf_saved_v6" "$IP6TABLES_RESTORE" -w 5 || fwf_rollback_status=1
+ if test "$fwf_rollback_status" -eq 0; then
+ log "Error: the activation failed. The ruleset that was running before it is back in place."
+ else
+ log "Error: the activation failed, and the ruleset that was running before it could not be put back. The firewall is left with the part of the new rules it could install."
+ fi
+ run_epilog_and_exit "$1"
+}
+
 configure_interfaces() {
  :
  # Configure interfaces
@@ -630,6 +678,7 @@ case "$cmd" in
  start)
  log "Activating firewall script generated TIMESTAMP"
  check_tools
+ check_rollback_tools
  prolog_commands
  check_run_time_address_table_files
 
@@ -637,10 +686,11 @@ case "$cmd" in
  configure_interfaces
  verify_interfaces
 
+ fwf_save_ruleset
  reset_all
  setup_fwf_jumps_v6 "fwf"
 
- script_body || run_epilog_and_exit 1
+ script_body || fwf_rollback_and_exit 1
  ip_forward
  epilog_commands
  ;;

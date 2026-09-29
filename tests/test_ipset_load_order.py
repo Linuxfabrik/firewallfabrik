@@ -52,7 +52,7 @@ def _index(branch: list[str], call: str) -> int:
 
 def test_the_sets_are_filled_before_the_rules_name_them(start_branch):
     assert _index(start_branch, 'load_run_time_address_table_files') < _index(
-        start_branch, 'script_body || run_epilog_and_exit 1'
+        start_branch, 'script_body || fwf_rollback_and_exit 1'
     )
 
 

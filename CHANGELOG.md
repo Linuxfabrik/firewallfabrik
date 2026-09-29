@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up.
+**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this.
 
 ### Added
 
@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): `reload_address_table <table> <file> -6` reloads the IPv6 addresses of a run-time address table instead of failing, so a changed IPv6 prefix reaches the rules without recompiling.
 * Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
 * Compiler (iptables): a firewall with time-of-day rules no longer loses its rules on a kernel without the time match, such as RHEL 8 to 10; the script stops before changing anything and says why.
+* Compiler (iptables): an activation that fails halfway puts back the ruleset that was running before it, instead of leaving the firewall with DROP policies and part of the new rules; the script now needs `iptables-save` and `ip6tables-save`, whose paths can be set in the host settings.
 * Compiler (nftables): a firewall set to the nftables release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04, instead of being refused as a whole.
 * Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
 * Compiler (nftables): rate limits kept per source, destination or port load on nftables before 1.1.0 instead of taking the whole ruleset down.

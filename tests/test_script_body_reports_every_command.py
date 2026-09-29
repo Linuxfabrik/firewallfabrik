@@ -13,8 +13,9 @@
 """`script_body` answers for every command it ran, not for the last one.
 
 The start branch of both scripts ends with `script_body ||
-run_epilog_and_exit 1`, so what that function returns is what the
-administrator, the init system and the installer read.
+run_epilog_and_exit 1` (`fwf_rollback_and_exit 1` on iptables, which
+puts the previous ruleset back first), so what that function returns is
+what the administrator, the init system and the installer read.
 
 The shell form of the iptables policy is hundreds of separate commands and
 the shell hands back the status of the last one, so a rule the tool refused

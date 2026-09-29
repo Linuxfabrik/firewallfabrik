@@ -33,10 +33,10 @@ echo COMMIT
 {{endif}}
 {{if ipv4}}
 ) | {{$restore_command}}; IPTABLES_RESTORE_RES=$?
-test "$IPTABLES_RESTORE_RES" != 0 && run_epilog_and_exit "$IPTABLES_RESTORE_RES"
+test "$IPTABLES_RESTORE_RES" != 0 && fwf_rollback_and_exit "$IPTABLES_RESTORE_RES"
 {{endif}}
 {{if ipv6}}
 ) | {{$restore6_command}}; IPTABLES_RESTORE_RES=$?
-test "$IPTABLES_RESTORE_RES" != 0 && run_epilog_and_exit "$IPTABLES_RESTORE_RES"
+test "$IPTABLES_RESTORE_RES" != 0 && fwf_rollback_and_exit "$IPTABLES_RESTORE_RES"
 {{endif}}
 {{endif}}

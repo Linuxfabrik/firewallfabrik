@@ -1646,7 +1646,7 @@ echo "-A RULE_6 -j DROP "
 #
 echo COMMIT
 ) | $IPTABLES_RESTORE; IPTABLES_RESTORE_RES=$?
-test $IPTABLES_RESTORE_RES != 0 && run_epilog_and_exit $IPTABLES_RESTORE_RES
+test $IPTABLES_RESTORE_RES != 0 && fwf_rollback_and_exit $IPTABLES_RESTORE_RES
 ```
 
 > [!NOTE]

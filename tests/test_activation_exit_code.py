@@ -21,7 +21,8 @@ and filtering, so its status must not become the script's.
 
 The iptables skeleton leaves RETVAL at the 0 it was initialised with for
 the whole `start` branch, and so does fwbuilder; only a failing
-`script_body` ends it, through `run_epilog_and_exit 1`.
+`script_body` ends it, through `fwf_rollback_and_exit 1`, which puts the
+previous ruleset back and then calls `run_epilog_and_exit 1`.
 """
 
 import re
@@ -59,7 +60,7 @@ def test_a_successful_start_does_not_report_the_sysctl_status(platform):
     assert 'ip_forward' in branch
     assert 'RETVAL' not in branch, (
         'the start branch must leave RETVAL at 0; only a failing script_body '
-        'ends it, through run_epilog_and_exit'
+        'ends it, through fwf_rollback_and_exit'
     )
 
 

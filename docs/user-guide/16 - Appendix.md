@@ -116,9 +116,11 @@ The following tables list every setting from the firewall settings dialogs and t
 | Path | ip: | `linux24_path_ip` | string | `''` | iptables |
 | Path | ip6tables: | `linux24_path_ip6tables` | string | `''` | iptables |
 | Path | ip6tables-restore: | `linux24_path_ip6tables_restore` | string | `''` | iptables |
+| Path | ip6tables-save: | `linux24_path_ip6tables_save` | string | `''` | iptables |
 | Path | ipset: | `linux24_path_ipset` | string | `''` | iptables |
 | Path | iptables: | `linux24_path_iptables` | string | `''` | iptables |
 | Path | iptables-restore: | `linux24_path_iptables_restore` | string | `''` | iptables |
+| Path | iptables-save: | `linux24_path_iptables_save` | string | `''` | iptables |
 | Path | logger: | `linux24_path_logger` | string | `''` | iptables |
 | Path | lsmod: | `linux24_path_lsmod` | string | `''` | iptables |
 | Path | modprobe: | `linux24_path_modprobe` | string | `''` | iptables |

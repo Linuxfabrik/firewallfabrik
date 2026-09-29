@@ -228,6 +228,19 @@ options:
       Path to the ip6tables-restore binary.
       Leave empty to use the compiler default.
 
+  linux24_path_ip6tables_save:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ip6tables_save'
+    placeholder: '/sbin/ip6tables-save'
+    description: >-
+      Path to the ip6tables-save binary.  The script saves the running
+      IPv6 ruleset with it before it changes anything, and puts that
+      ruleset back when the activation fails.  Leave empty to use the
+      compiler default.
+
   linux24_path_iptables:
     type: 'str'
     default: ''
@@ -249,6 +262,19 @@ options:
     description: >-
       Path to the iptables-restore binary.
       Leave empty to use the compiler default.
+
+  linux24_path_iptables_save:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_iptables_save'
+    placeholder: '/sbin/iptables-save'
+    description: >-
+      Path to the iptables-save binary.  The script saves the running
+      IPv4 ruleset with it before it changes anything, and puts that
+      ruleset back when the activation fails.  Leave empty to use the
+      compiler default.
 
   linux24_path_ipset:
     type: 'str'

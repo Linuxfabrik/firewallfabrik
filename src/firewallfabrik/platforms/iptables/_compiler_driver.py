@@ -742,6 +742,15 @@ class CompilerDriver_ipt(CompilerDriver):
                     'not_using_iptables_restore', 1 if run_reset_all else 0
                 )
 
+                # The families `fwf_save_ruleset` saves and
+                # `fwf_rollback_and_exit` puts back: exactly the ones the
+                # script resets and installs rules for.
+                script_skeleton.set_variable('save_v4', 1 if have_ipv4 else 0)
+                script_skeleton.set_variable('save_v6', 1 if have_ipv6 else 0)
+                script_skeleton.set_variable(
+                    'restore_wait', self._restore_wait_option(fw).strip()
+                )
+
                 reset_buf = ''
                 if flush_ruleset:
                     # Default: flush everything for a deterministic state.
@@ -1245,6 +1254,25 @@ class CompilerDriver_ipt(CompilerDriver):
 
         return empty_output
 
+    @staticmethod
+    def _restore_wait_option(fw: Firewall) -> str:
+        """The wait option of `iptables-restore`, with a leading space.
+
+        Every `iptables` command of the generated script waits for the
+        xtables lock, and the restore has to as well or a firewall that
+        shares the machine loses the race against the tool it shares it
+        with: `iptables-restore` says "Another app is currently holding
+        the xtables lock" and the activation stops.  The option reached
+        the restore programs later than the command
+        (netfilter iptables/iptables-restore.c, v1.6.2), so it has a gate
+        of its own; `parse_wait_time` is the same parser the command
+        uses, which is why the value stands as its own argument.
+        """
+        version = get_iptables_version(fw)
+        if version_compare(version, '1.6.2') < 0:
+            return ''
+        return f' {get_wait_option(version)}'.rstrip()
+
     # -- dumpScript: per-AF script body via configlets --
 
     def _dump_script(
@@ -1282,18 +1310,7 @@ class CompilerDriver_ipt(CompilerDriver):
         # "No chain/target/match by that name" and the activation stops
         # with the built-in policies already at DROP.
         noflush = '' if self.firewall_option(fw, 'flush_ruleset') else ' --noflush'
-        # Every `iptables` command of the generated script waits for the
-        # xtables lock, and the restore has to as well or a firewall that
-        # shares the machine loses the race against the tool it shares it
-        # with: `iptables-restore` says "Another app is currently holding
-        # the xtables lock" and the activation stops.  The option reached
-        # the restore programs later than the command
-        # (netfilter iptables/iptables-restore.c, v1.6.2), so it has a gate
-        # of its own; `parse_wait_time` is the same parser the command
-        # uses, which is why the value stands as its own argument.
-        wait = ''
-        if version_compare(get_iptables_version(fw), '1.6.2') >= 0:
-            wait = f' {get_wait_option(get_iptables_version(fw))}'.rstrip()
+        wait = self._restore_wait_option(fw)
         conf.set_variable('restore_command', f'$IPTABLES_RESTORE{wait}{noflush}')
         conf.set_variable('restore6_command', f'$IP6TABLES_RESTORE{wait}{noflush}')
 

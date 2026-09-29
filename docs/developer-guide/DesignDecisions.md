@@ -162,3 +162,14 @@ Firewall Builder lets one member of a cluster be the master: the New Cluster wiz
 FirewallFabrik compiles for iptables and nftables only, where the master has no effect on the generated script: which member is master is decided by the failover daemon and its own configuration (keepalived, heartbeat, corosync), which FirewallFabrik does not write. The value could not be kept either, because it is an object id, and object ids are regenerated on every load. So there is no master anywhere in FirewallFabrik. The readers drop `master_iface`, as well as the `master_fw_id` and `member_fw_ids` keys earlier versions wrote onto a cluster, and a file loses them on its next save.
 
 A port of the pf compiler would have to bring the master back, stored as a reference to the member interface the way group members are.
+
+
+## A Failed iptables Activation Puts the Previous Ruleset Back
+
+The start branch of the iptables script empties the ruleset before it installs the new one: `reset_all` sets the built-in policies to DROP in the shell form, and `iptables-restore` replaces each table in the restore form. In Firewall Builder a rule iptables refuses therefore leaves the machine with DROP policies and part of the new rules, on a remote machine usually without the rule that lets the administrator back in. Its installer once had a rollback, which rebooted the firewall, and dropped it in 4.2.0 as "too heavy-handed" (`FirewallInstaller.cpp`).
+
+The generated script therefore saves the running ruleset with `iptables-save` and `ip6tables-save` right before it changes anything (`fwf_save_ruleset` in the `script_skeleton` configlet) and pipes it back into `iptables-restore` when the activation fails (`fwf_rollback_and_exit`), for both address families together, because an IPv6 failure comes after the IPv4 rules are already in place. The idea is Shorewall's, which restores its saved state the same way. A table the saved ruleset does not name did not exist before and is restored empty, with ACCEPT policies in filter.
+
+What is not rolled back: kernel variables, interface addresses, ipsets, and nftables tables of other tools that `nft flush ruleset` removed. The nftables script does not need any of this, because `nft -f` loads a ruleset atomically and the script runs `nft --check` first.
+
+`tests/test_ipt_activation_rollback.py` checks both forms in a network namespace, with the failure injected into the IPv6 part.
