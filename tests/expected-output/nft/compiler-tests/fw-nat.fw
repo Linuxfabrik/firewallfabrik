@@ -580,6 +580,30 @@ status_action() {
     exit 3
 }
 
+# Two runs of this script at the same time - an installer and a timer, or
+# an address table reload during an activation - interleave their
+# commands, and the second one works on the first one's half-finished
+# ruleset.  Every command that changes the firewall therefore takes a
+# lock first and waits up to a minute for it.  /run belongs to root, so
+# the file cannot be a planted symlink.  flock comes with util-linux;
+# where it or the lock file is missing, the script runs without the lock
+# rather than not at all.  "reload" runs "$0 start", which finds the lock
+# already held (FWF_LOCKED) instead of waiting for itself.
+FWF_LOCK_FILE=${FWF_LOCK_FILE:-/run/fwf.lock}
+
+fwf_lock() {
+    test -n "$FWF_LOCKED" && return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    (: >>"$FWF_LOCK_FILE") 2>/dev/null || return 0
+    exec 9>>"$FWF_LOCK_FILE"
+    if ! flock -w 60 9; then
+        log "Error: another run of this script still holds $FWF_LOCK_FILE after a minute. Nothing was changed."
+        exit 1
+    fi
+    FWF_LOCKED=1
+    export FWF_LOCKED
+}
+
 # See how we were called.
 # For backwards compatibility missing argument is equivalent to 'start'
 
@@ -587,6 +611,11 @@ cmd=$1
 test -z "$cmd" && {
     cmd="start"
 }
+
+case "$cmd" in
+    status|test_interfaces|test_address_table) ;;
+    *) fwf_lock ;;
+esac
 
 case "$cmd" in
     start)

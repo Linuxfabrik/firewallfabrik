@@ -173,3 +173,10 @@ The generated script therefore saves the running ruleset with `iptables-save` an
 What is not rolled back: kernel variables, interface addresses, ipsets, and nftables tables of other tools that `nft flush ruleset` removed. The nftables script does not need any of this, because `nft -f` loads a ruleset atomically and the script runs `nft --check` first.
 
 `tests/test_ipt_activation_rollback.py` checks both forms in a network namespace, with the failure injected into the IPv6 part.
+
+
+## One Run of the Script at a Time
+
+Both generated scripts take a lock with `flock` before a command that changes the firewall (`fwf_lock`, in the `script_skeleton` configlet and the nftables template), and wait up to a minute for it; `status`, `test_interfaces` and `test_address_table` only look and do not take it. Without it, two runs at the same time - an installation and a timer, or `reload_address_table` from cron during an activation - interleave their commands, and the second works on the first one's half-finished ruleset. The idea is Shorewall's `mutex_on`, but with `flock` instead of its lockfile and PID check, which Shorewall itself calls race-prone.
+
+The lock file is `/run/fwf.lock`: `/run` belongs to root, so the file cannot be a symlink someone planted, and it is a tmpfs, so a lock never outlives a reboot. `FWF_LOCK_FILE` overrides it, which is what `tests/test_script_lock.py` uses in a network namespace. `reload` runs `$0 start` and exports `FWF_LOCKED`, so the child does not wait for the lock its parent holds. Without `flock` or without a writable lock file the script runs unlocked rather than not at all; Firewall Builder has no lock.

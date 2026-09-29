@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Compiler (iptables, nftables): two runs of the generated script, such as an installation and a timer, no longer change the firewall at the same time; the second one waits up to a minute for the first.
 * Editor (iptables, nftables): "Lookup Version ..." next to the version list asks the firewall over SSH which releases it runs and picks the matching entry.
 * Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
 * Editor (iptables, nftables): the reverse path filter offers loose mode, for firewalls with several uplinks or policy routing, which strict mode breaks.
