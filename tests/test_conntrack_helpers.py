@@ -277,3 +277,17 @@ def test_the_standard_ftp_and_tftp_ask_for_their_helper():
         ).one()
         assert ftp.data['conntrack_helper'] == 'ftp'
         assert tftp.data['conntrack_helper'] == 'tftp'
+
+
+# -- anti-spoofing -------------------------------------------------------
+
+
+@pytest.mark.parametrize('platform', ['ipt', 'nft'])
+def test_helpers_without_reverse_path_filter_are_reported(tmp_path, platform):
+    """A helper trusts the addresses it reads; anti-spoofing comes first."""
+    _, warnings = _compile(tmp_path, platform)
+    assert any('reverse path filter is off for IPv4 and IPv6' in w for w in warnings)
+    _, warnings = _compile(
+        tmp_path, platform, linux24_rp_filter='1', linux24_ipv6_rpfilter='2'
+    )
+    assert not any('reverse path filter' in w for w in warnings), warnings

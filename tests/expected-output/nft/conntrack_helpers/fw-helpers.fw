@@ -11,6 +11,7 @@
 #
 # Compiled for nftables (any version)
 #
+# Rules assign connection tracking helpers, which trust the addresses they read from packets, but the reverse path filter is off for IPv4 and IPv6; turn it on in the host settings
 # fw-helpers:Policy:2: warning: The irc connection tracking helper exists for IPv4 only; the IPv6 rule accepts the service without it
 
 FWBDEBUG=""

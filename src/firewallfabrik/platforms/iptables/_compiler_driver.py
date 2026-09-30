@@ -53,6 +53,7 @@ from firewallfabrik.platforms.iptables._utils import (
 )
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._conntrack_helpers import (
+    anti_spoofing_warning,
     helpers_used,
     nat_helper_modules,
 )
@@ -330,6 +331,14 @@ class CompilerDriver_ipt(CompilerDriver):
                     for nat_rs in all_nat
                     for rule in load_rules(session, nat_rs)
                 )
+                warning = anti_spoofing_warning(
+                    fw,
+                    self._helpers_used,
+                    self.ipv4_run and any(rs.ipv4 for rs in all_policies),
+                    self.ipv6_run and any(rs.ipv6 for rs in all_policies),
+                )
+                if warning:
+                    self.all_warnings.append(warning)
 
                 have_ipv4 = False
                 have_ipv6 = False

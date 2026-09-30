@@ -49,6 +49,7 @@ from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._conntrack_helpers import (
+    anti_spoofing_warning,
     helpers_used,
     nat_helper_modules,
 )
@@ -391,6 +392,14 @@ class CompilerDriver_nft(CompilerDriver):
                     for nat_rs in all_nat
                     for rule in load_rules(session, nat_rs)
                 )
+                warning = anti_spoofing_warning(
+                    fw,
+                    self._helpers_used,
+                    self.ipv4_run and any(rs.ipv4 for rs in all_policies),
+                    self.ipv6_run and any(rs.ipv6 for rs in all_policies),
+                )
+                if warning:
+                    self.all_warnings.append(warning)
 
                 # Determine whether to run IPv4/IPv6 compilation passes
                 # based on the rule sets' explicit address-family flags.

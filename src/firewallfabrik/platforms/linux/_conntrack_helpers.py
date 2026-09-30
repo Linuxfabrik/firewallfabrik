@@ -162,3 +162,37 @@ def nat_helper_modules(names) -> str:
     """
     modules = {HELPERS[name].nat_module for name in names if name in HELPERS}
     return ' '.join(sorted(module for module in modules if module))
+
+
+def anti_spoofing_warning(fw, helpers, have_ipv4, have_ipv6) -> str:
+    """Return a warning when helpers are in use without reverse path filtering.
+
+    A helper trusts the addresses it reads from the packets, so the
+    netfilter developers make anti-spoofing a precondition of using one
+    ("Secure use of iptables and connection tracking helpers").  The
+    reverse path filter of the host settings is that protection: the
+    kernel's rp_filter for IPv4, the script's own filter for IPv6.  A
+    host OS fwf has no defaults for counts as unset.
+    """
+    if not helpers:
+        return ''
+
+    def option(key):
+        try:
+            return str(fw.get_option(key) or '')
+        except (KeyError, ModuleNotFoundError):
+            return ''
+
+    missing = []
+    if have_ipv4 and option('linux24_rp_filter') not in ('1', '2'):
+        missing.append('IPv4')
+    if have_ipv6 and option('linux24_ipv6_rpfilter') not in ('1', '2'):
+        missing.append('IPv6')
+    if not missing:
+        return ''
+    return (
+        'Rules assign connection tracking helpers, which trust the addresses '
+        'they read from packets, but the reverse path filter is off for '
+        + ' and '.join(missing)
+        + '; turn it on in the host settings'
+    )

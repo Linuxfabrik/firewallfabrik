@@ -1511,7 +1511,7 @@ The helper only reads the connections the rule accepts. The RELATED connections 
 
 A helper that exists for IPv4 only is reported in the IPv6 pass, and the IPv6 rule accepts the service without it. Where the firewall translates addresses, the script also loads the NAT module of every helper in use (`nf_nat_ftp` and so on), which rewrites the addresses inside the negotiation - without it active FTP from a masqueraded client fails. On iptables the assignment then names no destination, because the raw table sees a packet before a DNAT has translated it.
 
-Because a helper parses data an attacker can send, turn on reverse path filtering (see the Cookbook, "Reverse Path Filtering") on a firewall that uses one.
+Because a helper parses data an attacker can send, turn on reverse path filtering (see the Cookbook, "Reverse Path Filtering") on a firewall that uses one; the compiler warns while it is off.
 
 ### User Service
 
