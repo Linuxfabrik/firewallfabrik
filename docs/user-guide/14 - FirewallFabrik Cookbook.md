@@ -251,6 +251,27 @@ $IPTABLES -A In_RULE_0 -j DROP
 
 The script defines a shell function *"getaddr"* at the beginning. This function uses *"ip addr show"* command to determine the actual address of the interface at the time when script is running and assigns the address to the shell variable *i_eth0*. The iptables commands then use this variable to build rules matching address of this interface. Otherwise, generated rules are the same as in the previous example.
 
+## Reverse Path Filtering
+
+An anti-spoofing rule lists the addresses that must not arrive on the external interface. Reverse path filtering asks the routing table instead: a packet is dropped when the firewall would not route a reply to its source address back out through the interface the packet came in on. It needs no list of networks, follows every change of the routing table, and covers all interfaces at once. Neither is switched on implicitly; both are settings of the firewall object (Host OS Settings, "Options" tab).
+
+- **Kernel anti-spoofing protection** (IPv4) sets the kernel's `rp_filter` on every interface. *On* is strict mode: the route back has to leave through the interface the packet came in on. *Loose* only drops a source address that no interface can reach at all.
+- **IPv6 reverse path filter** does the same for IPv6, which has no kernel setting for it. The script adds a rule instead: `-m rpfilter` in the mangle table on iptables, a `fib` lookup in a prerouting chain on nftables. Neighbour solicitations and router advertisements are let through before the check, because duplicate address detection sends from `::`, which has no route back.
+
+Strict mode breaks asymmetric routing: a firewall with several uplinks, with policy routing, or with IPsec road warriors whose replies leave through another interface drops legitimate packets. Use *Loose* there. Loose mode still drops a source address the firewall has no route for, but with a default route every address has one, so it no longer stops a spoofed internet address arriving on the external interface.
+
+Reverse path filtering does not replace the anti-spoofing rule. The two complement each other:
+
+| | Anti-spoofing rule (rule 0) | Reverse path filter |
+|---|---|---|
+| What it checks | The source addresses you list, on the interface you name | The route back to any source address, on every interface |
+| Maintenance | Update the rule when a network is added | None, it follows the routing table |
+| Private or reserved addresses from the internet | Dropped if you list them | Pass through on the external interface, because the default route leads back there |
+| Logging | Yes, with the rule's log prefix | IPv4: `log_martians`; IPv6: a counter on the rule |
+| Visible in the policy | Yes | No, it is a setting |
+
+A firewall between the internet and an internal network therefore keeps its rule 0 for its own and its internal networks (and for private and reserved address ranges, if those must not arrive from outside), and switches on reverse path filtering in addition, strict where the routing is symmetric. Connection tracking helpers trust the addresses they read from packets, so a firewall that uses them should not do without it.
+
 ## Using Groups
 
 Sometimes we need to define a lot of very similar rules for multiple hosts or networks. For example, there may be a need to permit the same service to 10 different hosts on the network, while still blocking it to all others. The simplest way to accomplish this is to add 10 rules with the same source and service fields and just different destinations. Another method is to add 10 objects to the Source or Destination rule element of the same rule. Either method can clutter the firewall policy and make it less readable. To avoid this, we can use groups. A group is just a container which includes references to multiple objects of the same or similar type. FirewallFabrik supports groups of objects and groups of services. You can put "Address", "Host", "Network" and "Firewall" objects in an object group, but you cannot put service objects in such a group. Similarly, a service group can contain "IP Service", "TCP Service", "UDP Service" and "ICMP Service" objects, but cannot contain hosts or networks. Groups can contain other groups of the same type as well. Figure 14.17 represents an object group used in this example.

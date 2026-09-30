@@ -1081,6 +1081,45 @@ class CompilerDriver_nft(CompilerDriver):
             out.write(_declare_dynamic_sets(self.filter_dynamic_sets))
             out.write(_declare_address_tables(self.filter_address_tables))
 
+            # Reverse path filter for IPv6, which has no rp_filter sysctl.
+            # A chain of its own on the prerouting hook, at the filter
+            # priority: after the mangle table has set a mark, which the
+            # lookup includes so that policy routing by mark passes, the
+            # way firewalld builds it (src/firewall/core/nftables.py,
+            # build_rpfilter_rules) and the ip6tables-translate of
+            # `-m rpfilter --validmark --invert` reads
+            # (extensions/libxt_rpfilter.txlate).  Neighbour solicitations
+            # and router advertisements go first: duplicate address
+            # detection sends from ::, which has no route back, and kernels
+            # 4.16 and 4.17 got router advertisements wrong (RHBZ#1575431).
+            # Verified in network namespaces on Rocky Linux 8 and 10 and Debian 12 and
+            # 13, both platforms: strict drops a spoofed source whether or not the
+            # firewall has a default route, loose only when it has no route back, and
+            # without the rule the kernel lets both through.
+            # A host OS option: a firewall naming a host OS fwf has no
+            # defaults for (a legacy ipcop appliance) counts it as unset,
+            # the way the kernel settings do (OSConfigurator_nft).
+            try:
+                rpfilter = str(fw.get_option('linux24_ipv6_rpfilter') or '')
+            except (KeyError, ModuleNotFoundError):
+                rpfilter = ''
+            if have_ipv6 and rpfilter in ('1', '2'):
+                lookup = 'saddr . mark . iif' if rpfilter == '1' else 'saddr . mark'
+                out.write('    chain prerouting {\n')
+                out.write(
+                    f'        type filter hook prerouting '
+                    f'priority {filter_priority}; policy accept;\n'
+                )
+                out.write(
+                    '        meta nfproto ipv6 icmpv6 type '
+                    '{ nd-neighbor-solicit, nd-router-advert } accept\n'
+                )
+                out.write(
+                    f'        meta nfproto ipv6 fib {lookup} oif missing counter drop\n'
+                )
+                out.write('    }\n')
+                out.write('\n')
+
             # Input chain
             out.write('    chain input {\n')
             out.write(

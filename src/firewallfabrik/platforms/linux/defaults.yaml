@@ -141,6 +141,23 @@ options:
       Enable IPv4 packet forwarding. Controls
       /proc/sys/net/ipv4/ip_forward.
 
+  linux24_ipv6_rpfilter:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: true
+    widget: 'linux24_ipv6_rpfilter'
+    label: 'label_ipv6_rpfilter'
+    description: >-
+      Reverse path filter for IPv6, which has no rp_filter setting in
+      the kernel: the script drops a packet whose source address the
+      firewall would not route back.  On is strict mode - the route back
+      has to leave through the interface the packet came in on - and
+      breaks asymmetric routing, several uplinks and policy routing,
+      where Loose only drops a source address no interface can reach.
+      Connection tracking helpers rely on it, because they trust
+      addresses they read from the packets.
+
   linux24_ipv6_forward:
     type: 'tristate'
     default: ''

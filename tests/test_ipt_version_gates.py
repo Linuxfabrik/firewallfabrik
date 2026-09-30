@@ -54,6 +54,7 @@ _EXTENSION_FILES = {
     'hashlimit': ('libipt_hashlimit.c', 'libip6t_hashlimit.c'),
     'hl': (None, 'libip6t_hl.c'),
     'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
+    'rpfilter': ('libxt_rpfilter.c', 'libxt_rpfilter.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
     'time': ('libipt_time.c', 'libxt_time.c'),
     'tos': ('libipt_tos.c', 'libxt_tos.c'),

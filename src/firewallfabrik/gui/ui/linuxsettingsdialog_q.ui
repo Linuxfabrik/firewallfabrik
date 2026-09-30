@@ -90,7 +90,7 @@
          </item>
         </widget>
        </item>
-       <item row="1" column="3" rowspan="7">
+       <item row="1" column="3" rowspan="8">
         <spacer>
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
@@ -176,6 +176,35 @@
         </widget>
        </item>
        <item row="4" column="0" colspan="2">
+        <widget class="QLabel" name="label_ipv6_rpfilter">
+         <property name="text">
+          <string>IPv6 reverse path filter</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2">
+        <widget class="QComboBox" name="linux24_ipv6_rpfilter">
+         <item>
+          <property name="text">
+           <string>Off</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>On</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Loose</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
         <widget class="QLabel" name="label370">
          <property name="text">
           <string>Ignore broadcast pings</string>
@@ -188,7 +217,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
+       <item row="5" column="2">
         <widget class="QComboBox" name="linux24_icmp_echo_ignore_broadcasts">
          <item>
           <property name="text">
@@ -207,7 +236,7 @@
          </item>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
+       <item row="6" column="0" colspan="2">
         <widget class="QLabel" name="label386">
          <property name="text">
           <string>Ignore all pings</string>
@@ -220,7 +249,7 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="2">
+       <item row="6" column="2">
         <widget class="QComboBox" name="linux24_icmp_echo_ignore_all">
          <item>
           <property name="text">
@@ -239,7 +268,7 @@
          </item>
         </widget>
        </item>
-       <item row="6" column="0" colspan="2">
+       <item row="7" column="0" colspan="2">
         <widget class="QLabel" name="label371">
          <property name="text">
           <string>Accept source route</string>
@@ -252,7 +281,7 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="2">
+       <item row="7" column="2">
         <widget class="QComboBox" name="linux24_accept_source_route">
          <item>
           <property name="text">
@@ -271,7 +300,7 @@
          </item>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
+       <item row="8" column="0" colspan="2">
         <widget class="QLabel" name="label373">
          <property name="text">
           <string>Accept ICMP redirects</string>
@@ -284,7 +313,7 @@
          </property>
         </widget>
        </item>
-       <item row="7" column="2">
+       <item row="8" column="2">
         <widget class="QComboBox" name="linux24_accept_redirects">
          <item>
           <property name="text">
@@ -303,7 +332,7 @@
          </item>
         </widget>
        </item>
-       <item row="8" column="0" colspan="2">
+       <item row="9" column="0" colspan="2">
         <widget class="QLabel" name="label374">
          <property name="text">
           <string>Ignore bogus ICMP errors</string>
@@ -316,7 +345,7 @@
          </property>
         </widget>
        </item>
-       <item row="8" column="2">
+       <item row="9" column="2">
         <widget class="QComboBox" name="linux24_icmp_ignore_bogus_error_responses">
          <item>
           <property name="text">
@@ -335,7 +364,7 @@
          </item>
         </widget>
        </item>
-       <item row="9" column="0" colspan="2">
+       <item row="10" column="0" colspan="2">
         <widget class="QLabel" name="label375">
          <property name="text">
           <string>Allow dynamic addresses</string>
@@ -348,7 +377,7 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="2">
+       <item row="10" column="2">
         <widget class="QComboBox" name="linux24_ip_dynaddr">
          <item>
           <property name="text">
@@ -367,7 +396,7 @@
          </item>
         </widget>
        </item>
-       <item row="10" column="0">
+       <item row="11" column="0">
         <spacer>
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
@@ -383,7 +412,7 @@
          </property>
         </spacer>
        </item>
-       <item row="10" column="1">
+       <item row="11" column="1">
         <widget class="QLabel" name="label380">
          <property name="text">
           <string>Log martians</string>
@@ -396,7 +425,7 @@
          </property>
         </widget>
        </item>
-       <item row="10" column="2">
+       <item row="11" column="2">
         <widget class="QComboBox" name="linux24_log_martians">
          <property name="whatsThis">
           <string comment="whats this comment">whats this text</string>
@@ -418,7 +447,7 @@
          </item>
         </widget>
        </item>
-       <item row="11" column="2">
+       <item row="12" column="2">
         <spacer>
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -1428,6 +1457,7 @@ Explanation of this parameter can be found at&lt;br&gt;
   <tabstop>linux24_ip_forward</tabstop>
   <tabstop>linux24_ipv6_forward</tabstop>
   <tabstop>linux24_rp_filter</tabstop>
+  <tabstop>linux24_ipv6_rpfilter</tabstop>
   <tabstop>linux24_icmp_echo_ignore_broadcasts</tabstop>
   <tabstop>linux24_icmp_echo_ignore_all</tabstop>
   <tabstop>linux24_accept_source_route</tabstop>

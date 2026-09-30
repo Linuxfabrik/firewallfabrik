@@ -110,6 +110,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Options | Allow dynamic addresses | `linux24_ip_dynaddr` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
 | Options | IPv4 Packet forwarding | `linux24_ip_forward` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
 | Options | IPv6 Packet forwarding | `linux24_ipv6_forward` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
+| Options | IPv6 reverse path filter | `linux24_ipv6_rpfilter` | tri-state (`''` or `'0'` off, `'1'` on (strict), `'2'` loose) | `''` | iptables, nftables |
 | Options | Log martians | `linux24_log_martians` | tri-state (`''` no change, `'1'` on, `'0'` off) | `''` | iptables, nftables |
 | Path | brctl: | `linux24_path_brctl` | string | `''` | iptables |
 | Path | ifenslave: | `linux24_path_ifenslave` | string | `''` | iptables |

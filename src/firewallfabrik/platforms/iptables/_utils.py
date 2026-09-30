@@ -101,6 +101,9 @@ MATCH_FIRST_RELEASE = {
     # thing that asks for it.
     'hl': ('0', '1.2.8'),
     'iprange': ('1.2.9', '1.4.1'),
+    # The reverse path filter reached both tools in one release
+    # (extensions/libxt_rpfilter.c); only the IPv6 pass asks for it.
+    'rpfilter': ('1.4.13', '1.4.13'),
     'set': ('1.3.0', '1.4.9'),
     'time': ('0', '1.4.0'),
     'tos': ('0', '1.4.1'),

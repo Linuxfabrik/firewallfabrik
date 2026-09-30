@@ -1238,11 +1238,17 @@ class CompilerDriver_ipt(CompilerDriver):
         auto_mangle_pos = automatic_mangle_stream.tell()
         if self._is_top_ruleset(pol_rs) and auto_mangle_pos <= 0:
             mangle_auto_buf = io.StringIO()
+            # The mangle pass has reported by now; what the automatic rules
+            # report comes after it and is collected here, or it is lost.
+            seen_errors = len(mangle_compiler.get_errors())
+            seen_warnings = len(mangle_compiler.get_warnings())
             mangle_auto_buf.write(
                 mangle_compiler.print_automatic_rules_for_mangle_table(
                     self.have_connmark, self.have_connmark_in_output
                 )
             )
+            self.all_errors.extend(mangle_compiler.get_errors()[seen_errors:])
+            self.all_warnings.extend(mangle_compiler.get_warnings()[seen_warnings:])
 
             mangle_auto_text = mangle_auto_buf.getvalue()
             if mangle_auto_text:

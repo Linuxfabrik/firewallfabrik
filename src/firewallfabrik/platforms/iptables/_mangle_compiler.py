@@ -25,6 +25,7 @@ from firewallfabrik.compiler.processors._policy import (
 )
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 from firewallfabrik.platforms.iptables._utils import (
+    MATCH_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
     get_iptables_version,
     get_wait_option,
@@ -124,6 +125,44 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
             result += self._automatic_rule_line(
                 f'{chain("OUTPUT")} -j CONNMARK --restore-mark'
             )
+
+        # Reverse path filter for IPv6, which has no rp_filter sysctl.  It
+        # comes after the mark is restored, because --validmark includes
+        # the mark in the route lookup and policy routing by mark would
+        # otherwise fail the check.  Neighbour solicitations and router
+        # advertisements are let through first, the way firewalld does it
+        # (src/firewall/core/ipXtables.py, build_rpfilter_rules): duplicate
+        # address detection sends from ::, which has no route back, and
+        # kernels 4.16 and 4.17 got router advertisements wrong
+        # (RHBZ#1575431).  ACCEPT here ends only the mangle table.
+        # Verified in network namespaces on Rocky Linux 8 and 10 and Debian 12 and
+        # 13, both platforms: strict drops a spoofed source whether or not the
+        # firewall has a default route, loose only when it has no route back, and
+        # without the rule the kernel lets both through.
+        # A host OS option: a firewall naming a host OS fwf has no defaults
+        # for (a legacy ipcop appliance) counts it as unset.
+        try:
+            rpfilter = str(self.fw.get_option('linux24_ipv6_rpfilter') or '')
+        except (KeyError, ModuleNotFoundError):
+            rpfilter = ''
+        if ipv6 and rpfilter in ('1', '2'):
+            first = MATCH_FIRST_RELEASE['rpfilter'][1]
+            if version_compare(version, first) < 0:
+                self.warning(
+                    f'ip6tables before {first} has no "rpfilter" match, so the '
+                    'IPv6 reverse path filter is left out'
+                )
+            else:
+                pre = chain('PREROUTING')
+                for icmp_type in ('neighbour-solicitation', 'router-advertisement'):
+                    result += self._automatic_rule_line(
+                        f'{pre} -p ipv6-icmp -m icmp6 --icmpv6-type {icmp_type} '
+                        '-j ACCEPT'
+                    )
+                loose = ' --loose' if rpfilter == '2' else ''
+                result += self._automatic_rule_line(
+                    f'{pre} -m rpfilter --invert --validmark{loose} -j DROP'
+                )
 
         # TCPMSS clamping.  From 1.3.0 on the rule belongs to the mangle
         # table; the filter-table form the older releases want is emitted
