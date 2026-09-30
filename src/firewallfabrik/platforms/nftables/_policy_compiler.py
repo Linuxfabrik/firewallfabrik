@@ -22,7 +22,7 @@ Unlike iptables, nftables does not need:
 from __future__ import annotations
 
 import hashlib
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import interval_is_a_conjunction
@@ -73,6 +73,7 @@ from firewallfabrik.compiler.processors._policy import (
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
+    SplitHelperAssignment,
     VerifyIcmpTypes,
     VerifyIpProtocols,
     VerifyPortRanges,
@@ -198,6 +199,13 @@ class PolicyCompiler_nft(PolicyCompiler):
             'output': [],
         }
 
+        # Connection tracking helpers: the names the accepting rules of the
+        # firewall assign (the driver scans for them before any rule set is
+        # compiled), and the `ct helper` objects of the filter table the
+        # assignments name, shared across rule sets by the driver.
+        self.helpers_used: set[str] = set()
+        self.helper_objects: dict[str, str] = {}
+
         # The chain a branch rule set writes into, set by the driver.
         # Empty for the top rule set.
         self.rule_set_chain: str = ''
@@ -232,6 +240,26 @@ class PolicyCompiler_nft(PolicyCompiler):
         rule in a network namespace, in a filter and in a nat chain.
         """
         return True
+
+    # The chains the RELATED connections of the assigned helpers are sent
+    # through, one per base chain, the way the iptables compiler does it
+    # (platforms/iptables/_policy_compiler.py, HELPER_CHAINS).
+    HELPER_CHAINS: ClassVar[dict[str, str]] = {
+        'input': 'related_helper_in',
+        'output': 'related_helper_out',
+        'forward': 'related_helper_fwd',
+    }
+
+    def uses_helper_chain(self) -> bool:
+        """Whether RELATED connections go through the helper chains.
+
+        Only with the automatic accept of established connections, which
+        jumps to them; without it an accept written into one would never be
+        reached and only the assignment is written.
+        """
+        return bool(self.helpers_used) and bool(
+            self.fw.get_option('accept_established')
+        )
 
     def register_rule_set_chain(self, chain_name: str) -> None:
         """Give this branch rule set a regular chain of its own."""
@@ -397,6 +425,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
+        # Before negation, logging and the optimisations move a rule into
+        # temporary chains that no longer carry its addresses or services.
+        self.add(SplitHelperAssignment('split off connection tracking helpers'))
 
         self.add(CheckForTCPEstablished('check for TCP established flag'))
 
@@ -2934,7 +2965,7 @@ class Optimize3(PolicyRuleProcessor):
         # dropped right below.
         with self.compiler.muted():
             command = pr.policy_rule_to_string(rule)
-        rule_str = f'{rule.label} {chain}:{command}'
+        rule_str = f'{rule.label} {rule.helper_assign} {chain}:{command}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

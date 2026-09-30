@@ -1,0 +1,164 @@
+name: 'Test: conntrack helpers'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'TCPService'
+        name: 'ftp'
+        data:
+          conntrack_helper: 'ftp'
+        dst_range_start: 21
+        dst_range_end: 21
+      - type: 'Host'
+        name: 'ftp-server'
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'ftp-server-addr'
+                inet_addr_mask:
+                  address: '192.168.1.10'
+                  netmask: '255.255.255.0'
+              - type: 'IPv6'
+                name: 'ftp-server-addr6'
+                inet_addr_mask:
+                  address: '2001:db8:1::10'
+                  netmask: '64'
+      - type: 'Firewall'
+        name: 'fw-helpers'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: true
+          configure_interfaces: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            data:
+              label: 'outside'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+              - type: 'IPv6'
+                name: 'eth0-addr6'
+                inet_addr_mask:
+                  address: '2001:db8:f::1'
+                  netmask: '64'
+          - name: 'eth1'
+            data:
+              label: 'inside'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth1-addr'
+                inet_addr_mask:
+                  address: '192.168.1.1'
+                  netmask: '255.255.255.0'
+              - type: 'IPv6'
+                name: 'eth1-addr6'
+                inet_addr_mask:
+                  address: '2001:db8:1::1'
+                  netmask: '64'
+          - name: 'lo'
+            addresses:
+              - type: 'IPv4'
+                name: 'lo-addr'
+                inet_addr_mask:
+                  address: '127.0.0.1'
+                  netmask: '255.0.0.0'
+        rule_sets:
+          - type: 'NAT'
+            name: 'NAT'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'NATRule'
+                comment: 'Masquerading, so the raw table assignment cannot name a
+                  destination DNAT might still change'
+                action: 'Translate'
+                osrc:
+                  - 'Library:Test Objects/Network:internal-net'
+                tsrc:
+                  - 'Library:Test Objects/Firewall:fw-helpers/Interface:eth0'
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            ipv6: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'FTP and HTTP to the server; only FTP gets the helper, and
+                  logging moves the rule into a chain of its own'
+                options:
+                  log: true
+                action: 'Accept'
+                direction: 'Both'
+                dst:
+                  - 'Library:Test Objects/Host:ftp-server'
+                srv:
+                  - 'Library:Test Objects/TCPService:ftp'
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 1
+                comment: 'TFTP from the inside'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                  - 'Library:Test Objects/NetworkIPv6:internal-net6'
+                srv:
+                  - 'Library:Test Objects/UDPService:tftp'
+              - type: 'PolicyRule'
+                position: 2
+                comment: 'IRC has an IPv4 helper only'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                  - 'Library:Test Objects/NetworkIPv6:internal-net6'
+                srv:
+                  - 'Library:Test Objects/TCPService:irc'
+              - type: 'PolicyRule'
+                position: 3
+                comment: 'FTP to the firewall itself'
+                action: 'Accept'
+                direction: 'Inbound'
+                dst:
+                  - 'Library:Test Objects/Firewall:fw-helpers'
+                srv:
+                  - 'Library:Test Objects/TCPService:ftp'
+              - type: 'PolicyRule'
+                position: 4
+                action: 'Deny'
+                direction: 'Both'
+      - type: 'TCPService'
+        name: 'http'
+        dst_range_start: 80
+        dst_range_end: 80
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.168.1.0'
+          netmask: '255.255.255.0'
+      - type: 'NetworkIPv6'
+        name: 'internal-net6'
+        inet_addr_mask:
+          address: '2001:db8:1::'
+          netmask: '64'
+      - type: 'TCPService'
+        name: 'irc'
+        data:
+          conntrack_helper: 'irc'
+        dst_range_start: 6667
+        dst_range_end: 6667
+      - type: 'UDPService'
+        name: 'tftp'
+        data:
+          conntrack_helper: 'tftp'
+        dst_range_start: 69
+        dst_range_end: 69

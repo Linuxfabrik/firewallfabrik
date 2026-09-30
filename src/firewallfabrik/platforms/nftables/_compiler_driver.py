@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import CompilerStatus
+from firewallfabrik.compiler._comp_rule import load_rules
 from firewallfabrik.compiler.processors._policy import (
     is_mangle_only_rule_set,
     rule_set_classifies,
@@ -47,6 +48,10 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
+from firewallfabrik.platforms.linux._conntrack_helpers import (
+    helpers_used,
+    nat_helper_modules,
+)
 from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     is_valid_mgmt_address,
@@ -203,6 +208,12 @@ class CompilerDriver_nft(CompilerDriver):
         self._automatic_rules: list = []
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
+        # Connection tracking helpers: the names the accepting rules assign,
+        # scanned before any rule set is compiled, and the `ct helper`
+        # objects of the filter table, shared by every compiler of it.
+        self._helpers_used: set[str] = set()
+        self._firewall_has_nat: bool = False
+        self.filter_helper_objects: dict[str, str] = {}
         # Named limit objects, per table.  Every compiler of the table gets
         # the same dict, so a rate limit table name two rule sets share is
         # seen as shared.
@@ -369,6 +380,17 @@ class CompilerDriver_nft(CompilerDriver):
                 # the name on the rule, and only the id beside it is kept
                 # current.
                 self.resolve_branch_names(session, [*all_policies, *all_nat])
+
+                # The automatic rules at the top of the base chains send the
+                # RELATED connections of exactly these helpers through the
+                # helper chains, and a branch rule set is compiled before
+                # the top one, so they have to be known first.
+                self._helpers_used = helpers_used(session, all_policies)
+                self._firewall_has_nat = any(
+                    not rule.disabled
+                    for nat_rs in all_nat
+                    for rule in load_rules(session, nat_rs)
+                )
 
                 # Determine whether to run IPv4/IPv6 compilation passes
                 # based on the rule sets' explicit address-family flags.
@@ -751,6 +773,8 @@ class CompilerDriver_nft(CompilerDriver):
         policy_compiler.automatic_rules = self._automatic_rules
         policy_compiler.meters = self._meters
         policy_compiler.limits = self.filter_limits
+        policy_compiler.helpers_used = self._helpers_used
+        policy_compiler.helper_objects = self.filter_helper_objects
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
         policy_compiler.branch_loop_edges = self._branch_loop_edges
@@ -786,6 +810,12 @@ class CompilerDriver_nft(CompilerDriver):
         # this branch lives in another rule set.
         if policy_compiler.rule_set_chain:
             filter_chains.setdefault(policy_compiler.rule_set_chain, [])
+        # The automatic rules jump to the helper chains whether or not a
+        # rule of this family accepted anything into them, and nftables
+        # refuses the whole ruleset over a jump to a chain it does not know.
+        if policy_compiler.uses_helper_chain():
+            for helper_chain in policy_compiler.HELPER_CHAINS.values():
+                filter_chains.setdefault(helper_chain, [])
         for chain_name, rules in policy_compiler.chain_rules.items():
             if rules:
                 self.have_filter = True
@@ -939,6 +969,11 @@ class CompilerDriver_nft(CompilerDriver):
         # exist. Otherwise nftables loads an empty ruleset that filters
         # nothing (fail-open), unlike the iptables output which always
         # installs the default-drop chains.
+        oscnf.helper_names = (
+            sorted(self._helpers_used)
+            if self._helpers_used and self.firewall_option(fw, 'accept_established')
+            else []
+        )
         auto_rules = {
             chain: oscnf.generate_automatic_rules(chain, have_ipv6)
             for chain in ('input', 'forward', 'output')
@@ -1077,6 +1112,14 @@ class CompilerDriver_nft(CompilerDriver):
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
             out.write(_declare_counters(self.filter_counters))
+            out.write(
+                ''.join(
+                    self.filter_helper_objects[name]
+                    for name in sorted(self.filter_helper_objects)
+                )
+            )
+            if self.filter_helper_objects:
+                out.write('\n')
             out.write(_declare_limits(self.filter_limits))
             out.write(_declare_dynamic_sets(self.filter_dynamic_sets))
             out.write(_declare_address_tables(self.filter_address_tables))
@@ -1498,6 +1541,9 @@ class CompilerDriver_nft(CompilerDriver):
             'nat_table': nat_table,
             'mangle_table': mangle_table,
             'address_table_file_checks': self._address_table_file_checks(),
+            'nat_helper_modules': (
+                nat_helper_modules(self._helpers_used) if self._firewall_has_nat else ''
+            ),
             'address_table_code': self._address_table_load_commands(
                 filter_family, filter_table, mangle_table, nat_table
             ),

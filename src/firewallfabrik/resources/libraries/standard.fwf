@@ -2727,7 +2727,9 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: File Transfer Protocol control
+        comment: 'File Transfer Protocol control. A rule accepting it assigns the ftp connection tracking helper, which lets the data connections of passive and active FTP through as RELATED.'
+        data:
+          conntrack_helper: 'ftp'
       - type: 'TCPService'
         name: 'FTP data 20'
         comment: "FTP data channel (active mode, source port 20)"
@@ -8750,7 +8752,9 @@ libraries:
         name: 'TFTP 69'
         dst_range_start: 69
         dst_range_end: 69
-        comment: Trivial File Transfer Protocol
+        comment: 'Trivial File Transfer Protocol. A rule accepting it assigns the tftp connection tracking helper, which lets the transfer from the server''s new port through as RELATED.'
+        data:
+          conntrack_helper: 'tftp'
       - type: UDPService
         name: Thermo-Calc 6201
         comment: 'Thermo-Calc Software AB: Management of service nodes in a processing grid for thermodynamic calculations'

@@ -864,7 +864,10 @@ class DetectShadowing(BasicRuleProcessor):
         self.tmp_queue.append(rule)
 
         # Skip rules that shouldn't participate in shadowing checks
-        if rule.fallback or rule.hidden:
+        # A helper assignment accepts nothing and is no rule of the rule
+        # set: compared, its narrower service element would make an
+        # earlier rule "shadow" the rule it was copied from.
+        if rule.fallback or rule.hidden or rule.helper_assign:
             return True
         # Negated elements never participate in shadowing.  Cover both the
         # raw negation flag and the single_object_negation flag: a platform

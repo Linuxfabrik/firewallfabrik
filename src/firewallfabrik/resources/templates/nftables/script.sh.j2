@@ -471,6 +471,21 @@ NFT_RULES
 # refuses all of it over a single bad rule.  Asking first, while the running
 # ruleset is still in place, is what keeps a rejected ruleset from turning
 # into a firewall with no rules at all: the check touches nothing.
+{% if nat_helper_modules %}
+# A connection tracking helper that has to rewrite the addresses in the
+# payload of a translated connection - the PORT command of an FTP client
+# behind masquerading, say - needs its NAT module, which the kernel does
+# not load on its own (it loads the conntrack module when a rule names the
+# helper, net/netfilter/nf_conntrack_helper.c).  firewalld loads both the
+# same way.  A module that cannot be loaded costs the translated case, not
+# the activation.
+fwf_load_nat_helpers() {
+    for fwf_module in "$@"; do
+        modprobe -q "$fwf_module" 2>/dev/null || log "Warning: the kernel module $fwf_module could not be loaded; connection tracking helpers cannot follow translated connections."
+    done
+}
+
+{% endif %}
 check_ruleset() {
     nft_ruleset | $NFT --check -f /dev/stdin
 }
@@ -694,6 +709,9 @@ case "$cmd" in
 {% endif %}
 {% if address_table_file_checks %}
         check_address_table_files
+{% endif %}
+{% if nat_helper_modules %}
+        fwf_load_nat_helpers {{ nat_helper_modules }}
 {% endif %}
         check_ruleset || {
             log "Ruleset rejected by nft, keeping the running firewall"

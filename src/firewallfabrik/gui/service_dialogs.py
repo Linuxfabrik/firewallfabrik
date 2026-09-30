@@ -12,16 +12,53 @@
 
 """Editor panel dialogs for service objects."""
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Slot
 
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+from firewallfabrik.platforms.linux._conntrack_helpers import (
+    HELPERS,
+    helpers_for_protocol,
+    service_helper,
+)
 
 
 def _is_true(val):
     """Return True for bool True or the string a data file carries."""
     return option_is_true(val)
     return bool(val)
+
+
+_NO_HELPER = 'None'
+
+
+def _populate_helper(combo, service, protocol):
+    """Offer the helpers of *protocol* and select the one *service* names.
+
+    A value no helper of this protocol has - written by hand or by another
+    tool - is kept as an entry of its own, so that opening and saving the
+    object does not drop it; the compiler reports it.
+    """
+    combo.clear()
+    combo.addItem(_NO_HELPER, '')
+    for name in helpers_for_protocol(protocol):
+        combo.addItem(name, name)
+        caution = HELPERS[name].caution
+        if caution:
+            combo.setItemData(combo.count() - 1, caution, Qt.ItemDataRole.ToolTipRole)
+    current = service_helper(service)
+    if current and combo.findData(current) < 0:
+        combo.addItem(current, current)
+    combo.setCurrentIndex(max(combo.findData(current), 0))
+
+
+def _apply_helper(combo, data):
+    """Store the selected helper in *data*, or remove the key for none."""
+    helper = combo.currentData() or ''
+    if helper:
+        data['conntrack_helper'] = helper
+    else:
+        data.pop('conntrack_helper', None)
 
 
 _TCP_FLAGS = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
@@ -50,6 +87,7 @@ class TCPServiceDialog(BaseObjectDialog):
         self.de.setValue(self._obj.dst_range_end or 0)
         data = self._obj.data or {}
         self.established.setChecked(_is_true(data.get('established')))
+        _populate_helper(self.conntrack_helper, self._obj, 'tcp')
         flags = self._obj.tcp_flags or {}
         masks = self._obj.tcp_flags_masks or {}
         for flag in _TCP_FLAGS:
@@ -74,6 +112,7 @@ class TCPServiceDialog(BaseObjectDialog):
         self._obj.dst_range_end = self.de.value()
         data = dict(self._obj.data or {})
         data['established'] = self.established.isChecked()
+        _apply_helper(self.conntrack_helper, data)
         self._obj.data = data
         flags = {}
         masks = {}
@@ -112,6 +151,7 @@ class UDPServiceDialog(BaseObjectDialog):
         self.se.setValue(self._obj.src_range_end or 0)
         self.ds.setValue(self._obj.dst_range_start or 0)
         self.de.setValue(self._obj.dst_range_end or 0)
+        _populate_helper(self.conntrack_helper, self._obj, 'udp')
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
@@ -124,6 +164,9 @@ class UDPServiceDialog(BaseObjectDialog):
         self._obj.src_range_end = self.se.value()
         self._obj.dst_range_start = self.ds.value()
         self._obj.dst_range_end = self.de.value()
+        data = dict(self._obj.data or {})
+        _apply_helper(self.conntrack_helper, data)
+        self._obj.data = data
 
 
 class ICMPServiceDialog(BaseObjectDialog):

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Compiler (iptables, nftables): a TCP or UDP service can name a connection tracking helper, and a rule accepting it assigns the helper, so FTP, TFTP, SIP and the like work again on kernels since 4.7; the connections the helper expects are accepted between the rule's own ends only, and the standard FTP and TFTP services ask for their helper.
 * Compiler (iptables, nftables): an IPv6 reverse path filter in the host settings drops packets whose source address the firewall would not route back, strict or loose, which IPv6 has no kernel setting for.
 * Compiler (iptables, nftables): two runs of the generated script, such as an installation and a timer, no longer change the firewall at the same time; the second one waits up to a minute for the first.
 * Editor (iptables, nftables): "Lookup Version ..." next to the version list asks the firewall over SSH which releases it runs and picks the matching entry.

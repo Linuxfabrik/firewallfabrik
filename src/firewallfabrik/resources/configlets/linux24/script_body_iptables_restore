@@ -26,6 +26,11 @@ echo '*mangle'
 {{$mangle_script}}
 echo COMMIT
 {{endif}}
+{{if raw}}
+echo '*raw'
+{{$raw_script}}
+echo COMMIT
+{{endif}}
 {{if nat}}
 echo '*nat'
 {{$nat_script}}

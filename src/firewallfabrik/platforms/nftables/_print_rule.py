@@ -75,6 +75,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
     tos_problem,
 )
+from firewallfabrik.platforms.linux._conntrack_helpers import HELPERS
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     check_interface_name,
@@ -1023,6 +1024,10 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         chain = rule.ipt_chain or 'forward'
 
+        if rule.helper_assign:
+            self._print_helper_assignment(rule, chain)
+            return True
+
         # Build the rule first: one the compiler cannot express comes back
         # empty, and then not even its label belongs in the ruleset.
         cmd = self._build_rule(rule)
@@ -1044,6 +1049,87 @@ class PrintRule_nft(PolicyRuleProcessor):
         else:
             nft_comp.output.write(text)
         return True
+
+    def _print_helper_assignment(self, rule: CompRule, chain: str) -> None:
+        """Write what a ``SplitHelperAssignment`` copy asks for.
+
+        The assignment is a statement of its own in the rule's chain, in
+        front of the rule that accepts the connection: `ct helper set`
+        attaches the helper to a connection the kernel has not confirmed
+        yet, which is its first packet (net/netfilter/nft_ct.c,
+        nft_ct_helper_obj_eval), and the base chains run after the lookup
+        and after a DNAT, so the rule's own addresses are the right ones.
+        The helper is a `ct helper` object of the table, one per helper and
+        protocol.  The RELATED connections it expects are accepted between
+        the rule's source and destination, in either direction, in the
+        helper chain of the base chain the data connection passes.
+        """
+        name = rule.helper_assign
+        helper = HELPERS.get(name)
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        ipv6 = bool(nft_comp.ipv6_policy)
+        if helper is None:
+            self.compiler.warning(
+                rule,
+                f'The service asks for the connection tracking helper "{name}", '
+                'which the kernel does not have; the rule accepts the service '
+                'without it',
+            )
+            return
+        if not (helper.ipv6 if ipv6 else helper.ipv4):
+            self.compiler.warning(
+                rule,
+                f'The {name} connection tracking helper exists for IPv4 only; '
+                'the IPv6 rule accepts the service without it',
+            )
+            return
+        srv = rule.srv[0] if rule.srv else None
+        protocol = 'udp' if isinstance(srv, UDPService) else 'tcp'
+        obj = self._helper_object(rule)
+        nft_comp.helper_objects[obj] = (
+            f'    ct helper {obj} {{\n'
+            f'        type "{name}" protocol {protocol}\n'
+            f'    }}\n'
+        )
+        line = self._build_rule_line(rule)
+        if not line:
+            return
+        if chain in nft_comp.chain_rules:
+            nft_comp.chain_rules[chain].append(line)
+
+        if not nft_comp.uses_helper_chain():
+            return
+        base = chain if chain in nft_comp.HELPER_CHAINS else 'forward'
+        reverse_base = {'input': 'output', 'output': 'input'}.get(base, base)
+        af_prefix = self._get_af_prefix(rule, srv)
+        reverse = rule.clone()
+        reverse.src, reverse.dst = rule.dst, rule.src
+        reverse.src_single_object_negation = rule.dst_single_object_negation
+        reverse.dst_single_object_negation = rule.src_single_object_negation
+        for chain_of_packet, rule_ in ((base, rule), (reverse_base, reverse)):
+            src = self._print_src_addr(rule_, af_prefix)
+            dst = self._print_dst_addr(rule_, af_prefix)
+            if src is None or dst is None:
+                continue
+            match = ' '.join(f'ct helper "{name}" {src} {dst}'.split())
+            text = f'        {match} counter accept\n'
+            helper_chain = nft_comp.HELPER_CHAINS[chain_of_packet]
+            lines = nft_comp.chain_rules.setdefault(helper_chain, [])
+            if text not in lines:
+                lines.append(text)
+
+    @staticmethod
+    def _helper_object(rule: CompRule) -> str:
+        """Name the `ct helper` object of a copy: one per helper and protocol.
+
+        The kernel's helper names carry a dot (Q.931), which an nftables
+        object name does not.
+        """
+        srv = rule.srv[0] if rule.srv else None
+        protocol = 'udp' if isinstance(srv, UDPService) else 'tcp'
+        return 'fwf_' + re.sub(
+            r'[^A-Za-z0-9_]', '_', f'{rule.helper_assign}_{protocol}'
+        )
 
     def policy_rule_to_string(self, rule: CompRule) -> str:
         """Generate rule string for dedup."""
@@ -1220,6 +1306,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             # keyed on that mark stops working without saying so.
             return ''
         verdict = self._print_verdict(rule)
+        if rule.helper_assign and verdict is not None:
+            # An assignment accepts nothing: the rule behind it does.
+            verdict = f'ct helper set "{self._helper_object(rule)}"'
         if verdict is None:
             # The verdict cannot be built and the reason was reported.
             # Emitting the rule without one leaves a packet counter that

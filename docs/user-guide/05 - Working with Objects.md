@@ -1374,6 +1374,7 @@ TCP Service dialog provides the following controls:
 - **Name:** This is the name of the object
 - **Source port range:** These two controls define the start and end of the source port range. They accept values 0 through 65535.
 - **Destination port range:** These two controls define the start and end of the destination port range. They accept values 0 through 65535.
+- **Helper:** The connection tracking helper a rule accepting this service assigns to the connection, see [Connection Tracking Helpers](#connection-tracking-helpers). *None* assigns nothing.
 - **TCP Flags:** TCP flags and masks, see above. The Established checkbox causes the firewall to match packets in established sessions. Selecting this checkbox disables the other TCP flag controls.
 - **Comments:** This is a free-style text field used for comments.
 
@@ -1452,6 +1453,7 @@ The UDP Service dialog provides the following controls:
 - **Name:** This is the name of the object
 - **The Source port range:** These two controls define the start and the end of the source port range. They accept values 0 through 65535.
 - **The Destination port range:** These two controls define the start and the end of the destination port range. They accept values 0 through 65535.
+- **Helper:** The connection tracking helper a rule accepting this service assigns to the connection, see [Connection Tracking Helpers](#connection-tracking-helpers). *None* assigns nothing.
 - **Comments:** This is a free-style text field used for comments.
 
 #### Using UDP Service in Rules
@@ -1486,6 +1488,30 @@ Using this object in policy rule yields the following code for iptables:
 $IPTABLES -A FORWARD  -i + -p udp -m udp  --sport 1024:65535  -m state \
 --state NEW  -j ACCEPT
 ```
+
+### Connection Tracking Helpers
+
+Some protocols negotiate further connections inside the first one: FTP agrees on a port for every data transfer, TFTP answers from a new port, SIP announces the ports of its media streams. A firewall that drops by default lets those connections through only if it knows about them. A *connection tracking helper* of the kernel reads the negotiation and announces the connection it expects, which then counts as *RELATED* to the first one.
+
+Since Linux 4.7 the kernel no longer attaches a helper to a connection on its own. A TCP or UDP service therefore names the helper in its *Helper* field, and every rule that accepts the service assigns it: on iptables with `-j CT --helper` in the raw table, on nftables with `ct helper set` in front of the accept. In the Standard library, *FTP 21* asks for the `ftp` helper and *TFTP 69* for the `tftp` helper; every other service asks for none.
+
+The helper only reads the connections the rule accepts. The RELATED connections it expects are accepted between the rule's source and destination, in either direction, and every other RELATED connection of the same helpers is dropped - the recommendation of the netfilter developers for the safe use of helpers. RELATED connections without a helper, such as ICMP error messages, pass as before. This needs "Accept ESTABLISHED and RELATED packets before the first rule" in the firewall settings; without it only the assignment is written, and the RELATED connections have to be accepted by rules of your own.
+
+| Helper | Protocol | Families | Note |
+|---|---|---|---|
+| `amanda` | UDP | IPv4, IPv6 | Amanda backup |
+| `ftp` | TCP | IPv4, IPv6 | Passive and active FTP; FTPS cannot be read |
+| `irc` | TCP | IPv4 | IRC DCC; lets any source address connect to the client |
+| `netbios-ns` | UDP | IPv4 | Answers to NetBIOS name queries of the firewall itself |
+| `pptp` | TCP | IPv4 | PPTP is cryptographically broken |
+| `Q.931`, `RAS` | TCP, UDP | IPv4, IPv6 | H.323 |
+| `sane` | TCP | IPv4, IPv6 | Network scanners |
+| `sip` | TCP, UDP | IPv4, IPv6 | SIP media streams; SIP over TLS cannot be read |
+| `tftp` | UDP | IPv4, IPv6 | TFTP, for example PXE boot |
+
+A helper that exists for IPv4 only is reported in the IPv6 pass, and the IPv6 rule accepts the service without it. Where the firewall translates addresses, the script also loads the NAT module of every helper in use (`nf_nat_ftp` and so on), which rewrites the addresses inside the negotiation - without it active FTP from a masqueraded client fails. On iptables the assignment then names no destination, because the raw table sees a packet before a DNAT has translated it.
+
+Because a helper parses data an attacker can send, turn on reverse path filtering (see the Cookbook, "Reverse Path Filtering") on a firewall that uses one.
 
 ### User Service
 

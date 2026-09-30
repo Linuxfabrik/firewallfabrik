@@ -2064,6 +2064,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyMacAddresses` |
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyScriptLiterals` |
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyTimeIntervals` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:SplitHelperAssignment` |
 | `specialCasesWithCustomServices` | `platforms/iptables/_policy_compiler.py:SpecialCasesWithCustomServices` |
 | `separatePortRanges` | `platforms/iptables/_policy_compiler.py:SeparatePortRanges` |
 | `separateUserServices` | `compiler/processors/_service.py:SeparateUserServices` |
@@ -2395,6 +2396,7 @@ ResolveMultiAddress →
 RecursiveGroupsInRE(src/dst/srv) → EmptyGroupsInRE(src/dst/srv/itf) →
 ExpandGroups → DropRuleWithEmptyRE →
 EliminateDuplicatesInSRC/DST/SRV →
+SplitHelperAssignment →
 CheckForTCPEstablished →
 SplitRuleIfSrvAnyActionReject → FillActionOnReject → SplitServicesIfRejectWithTCPReset →
 FillActionOnReject(2) → SplitServicesIfRejectWithTCPReset(2) →

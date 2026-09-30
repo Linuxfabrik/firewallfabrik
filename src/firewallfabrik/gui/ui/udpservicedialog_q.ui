@@ -85,7 +85,24 @@
            </property>
           </widget>
          </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="conntrack_helper_label">
+           <property name="text">
+            <string>Helper:</string>
+           </property>
+          </widget>
+         </item>
          <item row="1" column="1">
+          <widget class="QComboBox" name="conntrack_helper">
+           <property name="toolTip">
+            <string>Connection tracking helper that a rule accepting this service
+assigns to the connection, so that the data connections the
+protocol negotiates (FTP, TFTP, SIP, ...) are let through as
+RELATED. Only the rule's own source and destination get them.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
           <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Orientation::Vertical</enum>

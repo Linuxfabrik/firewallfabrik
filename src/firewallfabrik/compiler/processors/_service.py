@@ -24,11 +24,13 @@ from firewallfabrik.core.objects import (
     CustomService,
     ICMPService,
     IPService,
+    PolicyAction,
     TagService,
     TCPService,
     UDPService,
     UserService,
 )
+from firewallfabrik.platforms.linux._conntrack_helpers import service_helper
 from firewallfabrik.platforms.linux._netfilter import custom_service_code
 
 
@@ -446,6 +448,68 @@ class VerifyIpProtocols(BasicRuleProcessor):
                     'Correct the service object.',
                 )
                 return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitHelperAssignment(BasicRuleProcessor):
+    """Add a helper assignment for every accepting rule with such a service.
+
+    A TCP or UDP service can name a connection tracking helper
+    (``data['conntrack_helper']``), which a rule accepting the service
+    has to attach to the connection: the kernel no longer does it on its
+    own (see ``platforms/linux/_conntrack_helpers.py``).  The assignment is
+    a copy of the rule with only the services of one helper, marked with
+    ``helper_assign``, which the print rules write as the assignment
+    (``-j CT --helper`` in the raw table, ``ct helper set``) and as the
+    matching RELATED accept.
+
+    The copy is made here, before negation, logging and the optimisations
+    move a rule into temporary chains whose rules no longer carry the
+    addresses or the service - an assignment derived from the finished
+    rule would be lost for every logged rule.  The copy carries no
+    logging, limit or state option: it accepts nothing itself.  A negated
+    source or destination is widened to "any" in the copy, because the
+    assignment only decides which connections the helper reads, and the
+    rule itself still decides which it accepts; a negated time window
+    goes the same way, for the same reason.  A negated service element
+    assigns nothing: "not FTP" is not a request for the FTP helper.
+
+    The copy goes in front of the rule: on nftables the assignment is a
+    statement of its own in the same chain, and it has to see the first
+    packet before the rule accepts it.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        helpers: dict[str, list] = {}
+        if (
+            rule.type == 'PolicyRule'
+            and rule.action == PolicyAction.Accept
+            and getattr(self.compiler, 'my_table', 'filter') == 'filter'
+            and not rule.get_neg('srv')
+            and not rule.srv_single_object_negation
+        ):
+            for srv in rule.srv:
+                if isinstance(srv, (TCPService, UDPService)):
+                    helper = service_helper(srv)
+                    if helper:
+                        helpers.setdefault(helper, []).append(srv)
+
+        for helper, services in helpers.items():
+            copy_rule = rule.clone()
+            copy_rule.srv = services
+            copy_rule.helper_assign = helper
+            copy_rule.options = {'stateless': True}
+            for slot in ('src', 'dst', 'when'):
+                if copy_rule.get_neg(slot):
+                    setattr(copy_rule, slot, [])
+                    copy_rule.negations[slot] = False
+            self.tmp_queue.append(copy_rule)
 
         self.tmp_queue.append(rule)
         return True

@@ -72,6 +72,7 @@ from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
     SeparateTCPWithFlags,
     SeparateUserServices,
+    SplitHelperAssignment,
     VerifyCustomServices,
     VerifyIcmpTypes,
     VerifyIpProtocols,
@@ -103,6 +104,7 @@ from firewallfabrik.platforms.iptables._utils import (
     single_negation_qualifies,
     version_compare,
 )
+from firewallfabrik.platforms.linux._conntrack_helpers import HELPERS
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     INVALID_STATE_LOG_PREFIX,
@@ -127,6 +129,18 @@ if TYPE_CHECKING:
     import sqlalchemy.orm
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
+
+# The chains the RELATED connections of the assigned connection tracking
+# helpers are sent through, one per built-in chain; the automatic rules
+# create them and jump to them, the print rule appends the accepts.  One
+# per chain keeps a rule about the firewall itself about the firewall: its
+# accept names no address of the firewall (RemoveFW has taken it out) and
+# stands in the chains of the firewall's own traffic only.
+HELPER_CHAINS = {
+    'INPUT': 'RELATED_HELPER_IN',
+    'OUTPUT': 'RELATED_HELPER_OUT',
+    'FORWARD': 'RELATED_HELPER_FWD',
+}
 
 # Chain names PrintRule must never try to create: the built-in chains and
 # every target the compiler can put into ``ipt_target``.  iptables refuses a
@@ -183,6 +197,14 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
+        # Connection tracking helpers: the names the accepting rules of the
+        # firewall assign (the driver scans for them before any rule set is
+        # compiled), whether the firewall translates addresses, the raw
+        # table lines of the restore form and the RELATED accepts written.
+        self.helpers_used: set[str] = set()
+        self.firewall_has_nat: bool = False
+        self.helper_raw_rules: list[str] = []
+        self.helper_related_lines: set[tuple[str, str]] = set()
         self.my_table: str = 'filter'
         self.minus_n_commands: dict[str, bool] | None = minus_n_commands
         self.bridge_count: int = 0
@@ -359,6 +381,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SrvNegation('process negation in Srv'))
 
         self.add(ExpandGroupsInSrv('expand groups in Srv'))
+        # Before negation, logging and the optimisations move a rule into
+        # temporary chains that no longer carry its addresses or services.
+        self.add(SplitHelperAssignment('split off connection tracking helpers'))
 
         self.add(CheckForTCPEstablished('check for TCP established flag'))
 
@@ -932,6 +957,26 @@ class PolicyCompiler_ipt(PolicyCompiler):
             '-j TCPMSS --clamp-mss-to-pmtu'
         )
 
+    def uses_helper_chain(self) -> bool:
+        """Whether RELATED connections go through the helper chain.
+
+        Only with the automatic accept of established connections, which
+        creates the chain and jumps to it; without it an accept written
+        into the chain would name one that does not exist and stop the
+        activation.  The helpers of the other family do not count.
+        """
+        helpers = getattr(self, 'helpers_used', set())
+        if not helpers or not self.fw.get_option('accept_established'):
+            return False
+        ipv6 = self.ipv6_policy
+        if ipv6 and version_compare(self.version, '1.3.5') < 0:
+            return False
+        return any(
+            HELPERS[name].ipv6 if ipv6 else HELPERS[name].ipv4
+            for name in helpers
+            if name in HELPERS
+        )
+
     def print_automatic_rules(self) -> str:
         """Generate automatic rules using the automatic_rules configlet."""
         from firewallfabrik.driver._configlet import Configlet
@@ -1009,10 +1054,26 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         conf.set_variable('create_drop_invalid_chain', create_cmd)
 
+        accept_established = stateful and self.fw.get_option('accept_established')
+        by_helper = accept_established and self.uses_helper_chain()
         conf.set_variable(
-            'accept_established',
-            1 if (stateful and self.fw.get_option('accept_established')) else 0,
+            'accept_established_plain', 1 if accept_established and not by_helper else 0
         )
+        conf.set_variable('accept_established_helper', 1 if by_helper else 0)
+        create = []
+        for builtin, suffix in (('INPUT', 'in'), ('OUTPUT', 'out'), ('FORWARD', 'fwd')):
+            helper_chain = HELPER_CHAINS[builtin]
+            helper_chain = f'{prefix}_{helper_chain}' if prefix else helper_chain
+            conf.set_variable(f'helper_chain_{suffix}', helper_chain)
+            create.append(
+                f'echo ":{helper_chain} - [0:0]"'
+                if use_restore
+                else f'{iptables_cmd} -N {helper_chain} 2>/dev/null'
+            )
+        conf.set_variable('create_helper_chains', '\n'.join(create))
+        # The empty name is an argument of its own; inside the echoed
+        # restore line the quotes have to survive the echo.
+        conf.set_variable('helper_any', '\\"\\"' if use_restore else '""')
 
         # The IPv6 pass has to ask the IPv6 setting: a host may route one
         # family and not the other, and reading the IPv4 switch here decided
@@ -3906,6 +3967,12 @@ class Optimize1(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # A helper assignment is written into the raw table as it is; a
+        # temporary chain or a cleared service would lose what it assigns.
+        if rule.helper_assign:
+            self.tmp_queue.append(rule)
+            return True
+
         srcn = len(rule.src)
         dstn = len(rule.dst)
         srvn = len(rule.srv)
@@ -4185,6 +4252,12 @@ class Optimize2(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # A helper assignment is written into the raw table as it is; a
+        # temporary chain or a cleared service would lose what it assigns.
+        if rule.helper_assign:
+            self.tmp_queue.append(rule)
+            return True
+
         if rule.final:
             ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
             if (
@@ -4323,7 +4396,7 @@ class Optimize3(PolicyRuleProcessor):
         # dropped right below.
         with self.compiler.muted():
             command = pr.policy_rule_to_string(rule)
-        rule_str = f'{rule.label} {command}'
+        rule_str = f'{rule.label} {rule.helper_assign} {command}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

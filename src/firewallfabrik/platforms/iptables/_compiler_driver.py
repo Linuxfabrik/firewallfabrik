@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import CompilerStatus
+from firewallfabrik.compiler._comp_rule import load_rules
 from firewallfabrik.compiler.processors._policy import (
     is_mangle_only_rule_set,
     rule_set_classifies,
@@ -51,6 +52,10 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
+from firewallfabrik.platforms.linux._conntrack_helpers import (
+    helpers_used,
+    nat_helper_modules,
+)
 from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
     mgmt_address_family,
@@ -98,6 +103,10 @@ class CompilerDriver_ipt(CompilerDriver):
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.have_nat: bool = False
+        # Connection tracking helpers, see where `run` sets them.
+        self._helpers_used: set[str] = set()
+        self._firewall_has_nat: bool = False
+        self._helper_raw_rules: list[str] = []
         # The chains each NAT rule set used, keyed by rule set name.  A rule
         # with the Branch action reads it to jump into the chain of the
         # branch that belongs to its own chain, instead of being copied into
@@ -308,6 +317,20 @@ class CompilerDriver_ipt(CompilerDriver):
                 # current.
                 self.resolve_branch_names(session, [*all_policies, *all_nat])
 
+                # The connection tracking helpers the accepting rules
+                # assign, known before any rule set is compiled: the
+                # automatic rules at the top of the chains send exactly
+                # their RELATED connections through the helper chain, and
+                # a branch rule set is compiled before the top one.  Whether
+                # the firewall translates addresses decides whether the
+                # assignment in the raw table can name a destination.
+                self._helpers_used = helpers_used(session, all_policies)
+                self._firewall_has_nat = any(
+                    not rule.disabled
+                    for nat_rs in all_nat
+                    for rule in load_rules(session, nat_rs)
+                )
+
                 have_ipv4 = False
                 have_ipv6 = False
 
@@ -424,6 +447,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     filter_rules_stream = io.StringIO()
                     mangle_rules_stream = io.StringIO()
                     nat_rules_stream = io.StringIO()
+                    # The raw table lines of the restore form, per family.
+                    self._helper_raw_rules = []
 
                     empty_output = True
 
@@ -608,6 +633,12 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
                 script_skeleton.set_variable(
                     'using_time_match', '1' if time_match_tools else '0'
+                )
+                script_skeleton.set_variable(
+                    'nat_helper_modules',
+                    nat_helper_modules(self._helpers_used)
+                    if self._firewall_has_nat
+                    else '',
                 )
                 script_skeleton.set_variable(
                     'time_match_tools', ' '.join(time_match_tools)
@@ -1162,6 +1193,9 @@ class CompilerDriver_ipt(CompilerDriver):
         )
 
         policy_compiler.automatic_rules = self._automatic_rules
+        policy_compiler.helpers_used = self._helpers_used
+        policy_compiler.firewall_has_nat = self._firewall_has_nat
+        policy_compiler.helper_raw_rules = self._helper_raw_rules
         policy_compiler.hashlimit_tables = self._hashlimit_tables
         policy_compiler.branch_chains = self._branch_chains
         policy_compiler.branch_loop_edges = self._branch_loop_edges
@@ -1319,6 +1353,15 @@ class CompilerDriver_ipt(CompilerDriver):
         wait = self._restore_wait_option(fw)
         conf.set_variable('restore_command', f'$IPTABLES_RESTORE{wait}{noflush}')
         conf.set_variable('restore6_command', f'$IP6TABLES_RESTORE{wait}{noflush}')
+
+        # The raw table: the helper assignments of the restore form, which
+        # the print rule collects because a restore stream holds one table
+        # after the other.  The shell form writes them inline.
+        raw_lines = list(dict.fromkeys(self._helper_raw_rules))
+        conf.set_variable('raw', 1 if raw_lines and use_iptables_restore else 0)
+        conf.set_variable(
+            'raw_script', '\n'.join(f'echo "-A {line}"' for line in raw_lines)
+        )
 
         conf.set_variable('filter', 1 if filter_script else 0)
         conf.set_variable('filter_or_auto', 1 if (have_auto or filter_script) else 0)

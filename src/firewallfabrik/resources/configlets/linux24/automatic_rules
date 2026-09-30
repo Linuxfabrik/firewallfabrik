@@ -52,11 +52,38 @@
 ## Need rules in FORWARD chain only if ip forwarding is on or set to
 ## "no change"
 
-{{if accept_established}}
+{{if accept_established_plain}}
 # accept established sessions
 {{$begin_rule}} {{$chain_input}}   -m {{$state_module_option}} ESTABLISHED,RELATED -j ACCEPT {{$end_rule}}
 {{$begin_rule}} {{$chain_output}}  -m {{$state_module_option}} ESTABLISHED,RELATED -j ACCEPT {{$end_rule}}
 {{$begin_rule}} {{$chain_forward}} -m {{$state_module_option}} ESTABLISHED,RELATED -j ACCEPT {{$end_rule}}
+{{endif}}
+## With connection tracking helpers in use, a RELATED connection that one
+## of them expects is accepted only where the rule that assigned the
+## helper says so: those rules append their accept to the helper chain,
+## and what it does not accept is dropped on its return.  The netfilter
+## developers ask for exactly that ("Secure use of iptables and connection
+## tracking helpers": every RELATED accept restricted to a helper and to
+## addresses).  "-m helper --helper" with an empty name matches every
+## connection whose master has a helper, and none without a master, so
+## ICMP errors, which are RELATED too, reach the plain accept below
+## (net/netfilter/xt_helper.c).  Verified with FTP (passive and active)
+## and TFTP over IPv4 and IPv6 on Rocky Linux 8 and 10 and Debian 12 and 13.
+{{if accept_established_helper}}
+# accept established sessions, and the related ones the helpers expect
+{{$create_helper_chains}}
+{{$begin_rule}} {{$chain_input}}   -m {{$state_module_option}} ESTABLISHED -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}  -m {{$state_module_option}} ESTABLISHED -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}} -m {{$state_module_option}} ESTABLISHED -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}   -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j {{$helper_chain_in}} {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}  -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j {{$helper_chain_out}} {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}} -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j {{$helper_chain_fwd}} {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}   -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j DROP {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}  -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j DROP {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}} -m {{$state_module_option}} RELATED -m helper --helper {{$helper_any}} -j DROP {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}   -m {{$state_module_option}} RELATED -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}  -m {{$state_module_option}} RELATED -j ACCEPT {{$end_rule}}
+{{$begin_rule}} {{$chain_forward}} -m {{$state_module_option}} RELATED -j ACCEPT {{$end_rule}}
 {{endif}}
 
 

@@ -61,6 +61,21 @@ check_time_match() {
 }
 {{endif}}
 
+{{if nat_helper_modules}}
+# A connection tracking helper that has to rewrite the addresses in the
+# payload of a translated connection - the PORT command of an FTP client
+# behind masquerading, say - needs its NAT module, which the kernel does
+# not load on its own (it loads the conntrack module when a rule names the
+# helper, net/netfilter/nf_conntrack_helper.c).  firewalld loads both the
+# same way.  A module that cannot be loaded costs the translated case, not
+# the activation.
+fwf_load_nat_helpers() {
+    for fwf_module in "$@"; do
+        "$MODPROBE" -q "$fwf_module" 2>/dev/null || log "Warning: the kernel module $fwf_module could not be loaded; connection tracking helpers cannot follow translated connections."
+    done
+}
+{{endif}}
+
 verify_interfaces() {
     :
     {{$verify_interfaces}}
@@ -275,7 +290,8 @@ case "$cmd" in
 ##      iptables-restore refuses the whole table over the one rule.
         load_run_time_address_table_files
         {{endif}}
-        load_modules "{{$load_modules_with_nat}} {{$load_modules_with_ipv6}}"{{if using_time_match}}
+        load_modules "{{$load_modules_with_nat}} {{$load_modules_with_ipv6}}"
+        {{if nat_helper_modules}}fwf_load_nat_helpers {{$nat_helper_modules}}{{endif}}{{if using_time_match}}
         check_time_match {{$time_match_tools}}{{endif}}
         configure_interfaces
         verify_interfaces

@@ -161,7 +161,32 @@ class OSConfigurator_nft(OSConfigurator):
 
         # Accept established/related connections. `counter` matches the
         # implicit per-rule counters of the equivalent iptables rules.
-        if self.fw.get_option('accept_established'):
+        # With connection tracking helpers in use, a RELATED connection one
+        # of them expects is accepted only where the rule that assigned the
+        # helper says so, in the helper chain of this base chain; what it
+        # does not accept is dropped on the return.  ICMP errors are RELATED
+        # too but have no master connection, so `ct helper` does not match
+        # them and they reach the plain accept (net/netfilter/nft_ct.c,
+        # NFT_CT_HELPER).  The iptables configlet does the same with
+        # `-m helper`.  Verified with FTP (passive and active) and TFTP over
+        # IPv4 and IPv6 on Rocky Linux 8 and 10 and Debian 12 and 13.
+        helper_names = getattr(self, 'helper_names', [])
+        if self.fw.get_option('accept_established') and helper_names:
+            names = ', '.join(f'"{name}"' for name in helper_names)
+            helper_chain = {
+                'input': 'related_helper_in',
+                'output': 'related_helper_out',
+                'forward': 'related_helper_fwd',
+            }[chain]
+            rules.append('        ct state established counter accept')
+            rules.append(
+                f'        ct state related ct helper {{ {names} }} jump {helper_chain}'
+            )
+            rules.append(
+                f'        ct state related ct helper {{ {names} }} counter drop'
+            )
+            rules.append('        ct state related counter accept')
+        elif self.fw.get_option('accept_established'):
             rules.append('        ct state established,related counter accept')
 
         # The rule that keeps the way in open, as early as possible and in

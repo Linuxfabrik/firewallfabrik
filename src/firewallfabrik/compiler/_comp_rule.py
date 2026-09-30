@@ -162,6 +162,11 @@ class CompRule:
     empty_re_family_only: bool = False
     empty_re_reason: str = ''
 
+    # A copy made by ``SplitHelperAssignment``: it assigns this connection
+    # tracking helper to the connections the rule accepts, and is printed
+    # as that assignment instead of as a rule of its own.
+    helper_assign: str = ''
+
     def clone(self) -> CompRule:
         """Create a deep copy of this rule.
 

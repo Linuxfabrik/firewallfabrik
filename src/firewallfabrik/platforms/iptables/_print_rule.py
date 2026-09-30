@@ -60,7 +60,10 @@ from firewallfabrik.core.objects import (
     normalize_mac_address,
     range_to_cidr,
 )
-from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
+from firewallfabrik.platforms.iptables._policy_compiler import (
+    HELPER_CHAINS,
+    STANDARD_CHAINS,
+)
 from firewallfabrik.platforms.iptables._utils import (
     MARK_MASK_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
@@ -76,6 +79,7 @@ from firewallfabrik.platforms.iptables._utils import (
     tos_dscp_matches,
     version_compare,
 )
+from firewallfabrik.platforms.linux._conntrack_helpers import HELPERS
 from firewallfabrik.platforms.linux._netfilter import (
     ANY_INTERFACE,
     bridge_port_match_needs_the_bridge,
@@ -323,6 +327,10 @@ class PrintRule(PolicyRuleProcessor):
         if ipt_comp.chain_usage_counter.get(chain, 0) <= 0:
             return True
 
+        if rule.helper_assign:
+            self.compiler.output.write(self._print_helper_assignment(rule))
+            return True
+
         # Build the command first: a rule the compiler cannot express yields
         # an empty one, and then not even its label belongs in the script.
         cmd = self._build_rule_command(rule)
@@ -339,6 +347,117 @@ class PrintRule(PolicyRuleProcessor):
         self.compiler.output.write(self._wrap_run_time(rule, cmd))
 
         return True
+
+    HELPER_CHAINS: ClassVar[dict[str, str]] = HELPER_CHAINS
+    # The chain a data connection in the other direction passes through.
+    _REVERSE_CHAIN: ClassVar[dict[str, str]] = {
+        'INPUT': 'OUTPUT',
+        'OUTPUT': 'INPUT',
+        'FORWARD': 'FORWARD',
+    }
+
+    def _print_helper_assignment(self, rule: CompRule) -> str:
+        """Write what a ``SplitHelperAssignment`` copy asks for.
+
+        Two things: the assignment in the raw table - the only table the CT
+        target works in, ahead of connection tracking - and the accept of
+        the RELATED connections the helper expects, between the rule's
+        source and destination in either direction, in the chain the
+        automatic rules send those connections through.  A data connection
+        can run either way: passive FTP from the client, active FTP and
+        TFTP from the server.
+
+        The raw table sees a packet before NAT, so on a firewall with NAT
+        rules the assignment leaves the destination out: after a DNAT the
+        rule names the translated address, which the packet does not carry
+        yet.  PREROUTING knows no outgoing interface and OUTPUT no incoming
+        one, so an interface match of the other kind is left out as well;
+        the accept below still names both ends.
+        """
+        name = rule.helper_assign
+        helper = HELPERS.get(name)
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        ipv6 = bool(ipt_comp.ipv6_policy)
+        if helper is None:
+            self.compiler.warning(
+                rule,
+                f'The service asks for the connection tracking helper "{name}", '
+                'which the kernel does not have; the rule accepts the service '
+                'without it',
+            )
+            return ''
+        if not (helper.ipv6 if ipv6 else helper.ipv4):
+            self.compiler.warning(
+                rule,
+                f'The {name} connection tracking helper exists for IPv4 only; '
+                'the IPv6 rule accepts the service without it',
+            )
+            return ''
+        if not self._chain_names_usable(rule):
+            return ''
+
+        raw_chain = 'OUTPUT' if rule.ipt_chain == 'OUTPUT' else 'PREROUTING'
+        iface = self._print_direction_and_interface(rule) or ''
+        wrong_direction = ' -o ' if raw_chain == 'PREROUTING' else ' -i '
+        if wrong_direction in f' {iface} ' or 'physdev' in iface:
+            iface = ''
+        srv = self._get_first_srv(rule)
+        protocol = self._print_protocol(srv) if srv else ''
+        ports = (
+            self._print_multiport(rule)
+            + self._print_src_service_from_rule(rule)
+            + self._print_dst_service_from_rule(rule)
+        )
+        src = self._print_src_addr_from_rule(rule)
+        dst = self._print_dst_addr_from_rule(rule)
+        if src is None or dst is None:
+            return ''
+        raw_dst = dst
+        if raw_chain == 'PREROUTING' and getattr(ipt_comp, 'firewall_has_nat', False):
+            raw_dst = ''
+        body = ' '.join(
+            f'{self._apply_chain_prefix(raw_chain)} {iface} {protocol} {src} '
+            f'{raw_dst} {ports} -j CT --helper {name}'.split()
+        )
+        result = ''
+        if ('raw', body) not in ipt_comp.helper_related_lines:
+            ipt_comp.helper_related_lines.add(('raw', body))
+            result = self._raw_rule_line(body)
+
+        if not ipt_comp.uses_helper_chain():
+            return result
+
+        reverse = rule.clone()
+        reverse.src, reverse.dst = rule.dst, rule.src
+        reverse.src_single_object_negation = rule.dst_single_object_negation
+        reverse.dst_single_object_negation = rule.src_single_object_negation
+        rsrc = self._print_src_addr_from_rule(reverse)
+        rdst = self._print_dst_addr_from_rule(reverse)
+        builtin = rule.ipt_chain if rule.ipt_chain in self.HELPER_CHAINS else 'FORWARD'
+        seen = ipt_comp.helper_related_lines
+        for chain_of_packet, a, b in (
+            (builtin, src, dst),
+            (self._REVERSE_CHAIN[builtin], rsrc or '', rdst or ''),
+        ):
+            chain = self._apply_chain_prefix(self.HELPER_CHAINS[chain_of_packet])
+            match = ' '.join(f'-m helper --helper {name} {a} {b}'.split())
+            key = (chain, match)
+            if key in seen:
+                continue
+            seen.add(key)
+            result += (
+                f'{self._start_rule_line()}{chain} {match} -j ACCEPT'
+                f'{self._end_rule_line()}'
+            )
+        return result
+
+    def _raw_rule_line(self, body: str) -> str:
+        """Return the raw table command for *body*, the part after ``-A``."""
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        tool = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
+        wait = get_wait_option(self.version)
+        wait = f'{wait} ' if wait else ''
+        return f'{tool} {wait}-t raw -A {body}\n'
 
     def _wrap_run_time(self, rule: CompRule, cmd: str) -> str:
         """Let the OS configurator add the run-time shell wrappers."""
@@ -2459,6 +2578,12 @@ class PrintRuleIptRstEcho(PrintRule):
         # stops after the label - the same shape the reference output has
         # (`firewall35.fw.orig:317`).
         return []
+
+    def _raw_rule_line(self, body: str) -> str:
+        # A restore stream is one table after the other, and this one is
+        # the filter table's; the driver writes the raw table's section.
+        cast('PolicyCompiler_ipt', self.compiler).helper_raw_rules.append(body)
+        return ''
 
     def _chain_declaration(self, chain: str) -> str:
         # This format builds the restore stream with `echo`, so the
