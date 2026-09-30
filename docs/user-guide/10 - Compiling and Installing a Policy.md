@@ -345,6 +345,19 @@ This is an example of a successful installation session. Installer records the s
 
 If you marked multiple firewall objects for installation on the first page of the installer wizard (the one with the list of firewalls), then the program will repeat the installation process for the next object from the list when you click Next. The Next button will be enabled if there are more firewalls to install to.
 
+### When the Activation Fails
+
+The activation empties the ruleset before it installs the new one. So that a rule the kernel or the tool refuses halfway through does not leave the firewall with DROP policies and only part of the new rules, the generated script saves the running ruleset right before it changes anything and puts it back when the activation fails:
+
+- **iptables:** the script saves the ruleset with `iptables-save` and `ip6tables-save` and restores both address families with `iptables-restore`, whichever form the rules are installed in. The script therefore needs these programs; it checks for them before it changes anything and stops with a message if one is missing. Their paths can be set in Host OS Settings, "Path" tab. Kernel variables, interface addresses and ipsets are not rolled back.
+- **nftables:** the script checks the ruleset with `nft --check` first and loads it in one transaction, so a refused ruleset never replaces the running one.
+
+In either case the script ends with a non-zero exit code and says what failed; the installer reports the installation as failed.
+
+### Only One Activation at a Time
+
+Two runs of the generated script at the same time, for example an installation and a timer, or `reload_address_table` from cron during an activation, would interleave their commands. Every command that changes the firewall therefore takes a lock on `/run/fwf.lock` first and waits up to a minute for it; `status`, `test_interfaces` and `test_address_table` only look and do not take it. A command that still finds the lock held after a minute stops with a message and changes nothing. The environment variable `FWF_LOCK_FILE` names another lock file. On a machine without `flock` (part of util-linux) the script runs without the lock.
+
 ### Batch install
 
 FirewallFabrik can help you manage the configuration of multiple firewalls if they all use the same user name and password for authentication. To update the policy on multiple firewalls in one operation, use the batch mode of the built-in installer. When you start the installer by clicking "Install" button in the toolbar or using main menu *"Rules/Install"*, the program opens the first page of the built-in installer where it lists all firewall objects.

@@ -472,13 +472,14 @@ Leave empty to use the system default.</string>
          <item row="6" column="1">
           <widget class="QCheckBox" name="ipv6NeighborDiscovery">
            <property name="toolTip">
-            <string>Compiler will automatically generate rules to permit ICMP6 packets used in IPv6
-Neighbor Discovery after the rules that accept ESTABLISHED,RELATE and before
-the rule that drops packets in state INVALID.</string>
+            <string>Compiler will automatically generate rules to permit the ICMPv6 packets used
+in IPv6 Neighbor Discovery and Multicast Listener Discovery, link-local only,
+after the rules that accept ESTABLISHED,RELATED and before the rule that drops
+packets in state INVALID.</string>
            </property>
            <property name="text">
             <string>Add rules to accept IPv6 Neighbor Discovery
-packets to IPv6 policies</string>
+and MLD packets to IPv6 policies</string>
            </property>
           </widget>
          </item>
