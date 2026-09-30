@@ -111,6 +111,57 @@ FirewallFabrik is closed and is never written to disk.</string>
     </widget>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="rollbackLayout">
+     <item>
+      <widget class="QCheckBox" name="rollback">
+       <property name="toolTip">
+        <string>The installer activates the policy, then confirms it over a new SSH
+connection. When that connection cannot be made in time, the firewall puts
+back the ruleset that was running before and keeps booting with the script
+it had, so a policy that locks the installer out undoes itself.</string>
+       </property>
+       <property name="text">
+        <string>Roll back unless the firewall can be reached again within</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="rollbackTimeout">
+       <property name="toolTip">
+        <string>Seconds from the end of the activation until the firewall puts back
+the ruleset that was running before. Allow for the time a new SSH login
+takes, including sudo.</string>
+       </property>
+       <property name="suffix">
+        <string> s</string>
+       </property>
+       <property name="minimum">
+        <number>10</number>
+       </property>
+       <property name="maximum">
+        <number>3600</number>
+       </property>
+       <property name="value">
+        <number>60</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="rollbackSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QLabel" name="batchInstallText">
      <property name="text">
       <string>Check this option to install all remaining firewalls automatically using the same user name and parameters. This only works if the same credentials are used for all firewalls.</string>
@@ -188,6 +239,8 @@ FirewallFabrik is closed and is never written to disk.</string>
   <tabstop>verbose</tabstop>
   <tabstop>quiet</tabstop>
   <tabstop>copyFWB</tabstop>
+  <tabstop>rollback</tabstop>
+  <tabstop>rollbackTimeout</tabstop>
   <tabstop>batchInstall</tabstop>
   <tabstop>okButton</tabstop>
   <tabstop>cancelButton</tabstop>
@@ -256,6 +309,22 @@ FirewallFabrik is closed and is never written to disk.</string>
     <hint type="destinationlabel">
      <x>275</x>
      <y>200</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rollback</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>rollbackTimeout</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>290</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>420</x>
+     <y>290</y>
     </hint>
    </hints>
   </connection>

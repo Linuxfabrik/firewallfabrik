@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     RuleSet,
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
+from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.linux._automatic_rules import AutomaticRules
 from firewallfabrik.platforms.linux._conntrack_helpers import (
@@ -1560,6 +1561,8 @@ class CompilerDriver_nft(CompilerDriver):
                 filter_family, filter_table, mangle_table, nat_table
             ),
             'runtime_nat_code': self._runtime_nat_load_commands(nat_table),
+            # "try", "confirm" and "rollback", shared with iptables.
+            'rollback_timer': Configlet('linux24', 'rollback_timer').expand(),
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')

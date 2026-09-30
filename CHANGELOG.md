@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this.
+**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this. An installation that locks you out of a remote firewall now undoes itself: unless the firewall answers a new SSH login within 60 seconds, it goes back to the ruleset it had and keeps booting with its old script.
 
 ### Added
 
+* Compiler (iptables, nftables), Editor: an installation puts the previous ruleset back unless the firewall answers a new SSH login within 60 seconds, and the firewall keeps booting with its old script; the generated script offers the same as `try` and `confirm`.
 * Compiler (iptables, nftables): a TCP or UDP service can name a connection tracking helper, and a rule accepting it assigns the helper, so FTP, TFTP, SIP and the like work again on kernels since 4.7; the connections the helper expects are accepted between the rule's own ends only, and the standard FTP and TFTP services ask for their helper; the compiler warns while the reverse path filter is off.
 * Compiler (iptables, nftables): an IPv6 reverse path filter in the host settings drops packets whose source address the firewall would not route back, strict or loose, which IPv6 has no kernel setting for.
 * Compiler (iptables, nftables): two runs of the generated script, such as an installation and a timer, no longer change the firewall at the same time; the second one waits up to a minute for the first.

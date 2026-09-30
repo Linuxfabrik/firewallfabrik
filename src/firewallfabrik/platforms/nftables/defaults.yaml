@@ -283,6 +283,28 @@ options:
     description: >-
       Arguments passed to the custom installation script.
 
+  install_rollback:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: ~
+    description: >-
+      Install with a rollback timer: the installer activates the policy
+      with "try", then confirms it over a new SSH connection.  When that
+      connection cannot be made within install_rollback_timeout seconds,
+      the firewall puts back the ruleset that was running before, and it
+      keeps booting with the script it had.  Set in the install dialog.
+
+  install_rollback_timeout:
+    type: 'int'
+    default: 60
+    supported: true
+    widget: ~
+    description: >-
+      Seconds the firewall waits for the installer to confirm the
+      activation over a new SSH connection before it puts back the
+      ruleset that was running before.  Set in the install dialog.
+
   ip_path:
     type: 'str'
     default: 'ip'

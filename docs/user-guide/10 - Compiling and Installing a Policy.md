@@ -326,7 +326,11 @@ Other installer parameters do the following:
 - *Verbose*: this checkbox has the opposite action: it makes the installer print a lot of debugging information, including ssh client debug output.
 - *Store a copy of object file on the firewall*: if this checkbox is on, the installer will copy not only generated firewall configuration files to the directory on the firewall machine that is configured in the "installer" tab of the firewall object dialog, but also the original object file (.fwf or .fwb) as well. *Use of this option is discouraged if you manage many firewalls from the same object file because distributing the file that contains the security policy of multiple firewalls to all of them is a bad idea.*
 
+- *Roll back unless the firewall can be reached again within ... s*: on by default. The installer copies the script to `<script>.new` next to the one the firewall boots with, activates it with `try`, and then confirms it over a new SSH connection. When that connection cannot be made within the given number of seconds, the firewall puts back the ruleset that was running before and keeps booting with the script it had, so a policy that locks the installer out undoes itself. Only after the confirmation does `<script>.new` replace the script the firewall boots with. The setting is kept per firewall. It is not available with a custom activation command or installation script, which activate the policy their own way. See [Trying a Policy with a Rollback Timer](12%20-%20Integration%20with%20OS%20Running%20on%20the%20Firewall%20Machine.md#trying-a-policy-with-a-rollback-timer) for what is put back and what is not.
+
 After all parameters are set and the password entered, click OK to start installation.
+
+When the confirmation fails, the installer reports it as an install error and says that the firewall puts back its previous ruleset. The new script stays on the firewall as `<script>.new` for inspection.
 
 If this is the first time your management machine is logging in to the firewall via ssh, it will find out that ssh host key of the firewall is unknown to it and will present you with a dialog:
 

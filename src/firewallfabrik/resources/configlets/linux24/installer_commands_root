@@ -13,14 +13,33 @@
 ##  {{$fwbpromp}}   -- "magic" prompt that installer uses to detect when it is logged in
 ##  {{$fwdir}}      -- directory on the firewall
 ##  {{$fwscript}}   -- script name on the firewall
-##  {{$rbtimeout}}  -- rollback timeout
+##  {{$rbtimeout}}  -- rollback timeout, seconds the firewall waits for
+##                     the confirmation before it puts back the ruleset
+##                     that was running before
 ##
 ##  {{$firewall_name}} -- the name of the firewall object
 ##
+##  run            -- activate the script
+##  with_rollback  -- activate the script copied to <script>.new with a
+##                    rollback timer
+##  confirm        -- confirm that activation, sent over a new connection,
+##                    and make <script>.new the script the firewall boots
+##                    with
 
 
 {{if run}}
 echo '{{$fwbprompt}}';
 chmod +x {{$fwdir}}/{{$fwscript}};
 sh {{$fwdir}}/{{$fwscript}} && echo 'Policy activated'
+{{endif}}
+
+{{if with_rollback}}
+echo '{{$fwbprompt}}';
+chmod +x {{$fwdir}}/{{$fwscript}}.new;
+sh {{$fwdir}}/{{$fwscript}}.new try {{$rbtimeout}} && echo 'Policy activated, waiting for confirmation'
+{{endif}}
+
+{{if confirm}}
+echo '{{$fwbprompt}}';
+sh {{$fwdir}}/{{$fwscript}}.new confirm && mv -f {{$fwdir}}/{{$fwscript}}.new {{$fwdir}}/{{$fwscript}} && echo 'Policy confirmed'
 {{endif}}

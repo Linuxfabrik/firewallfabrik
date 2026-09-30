@@ -65,6 +65,19 @@ class InstallOptionsDialog(QDialog):
         self.quiet.setChecked(config.quiet)
         self.copyFWB.setChecked(config.copy_fwb)
         self.batchInstall.setChecked(config.batch_install)
+        self.rollback.setChecked(config.rollback)
+        self.rollbackTimeout.setValue(config.rollback_timeout)
+        self.rollbackTimeout.setEnabled(config.rollback)
+
+        # A custom activation command or installation script activates
+        # the policy its own way, and the timer cannot be put around it.
+        if config.activation_cmd or config.install_script:
+            self.rollback.setChecked(False)
+            self.rollback.setEnabled(False)
+            self.rollbackTimeout.setEnabled(False)
+            self.rollback.setToolTip(
+                'Not available with a custom activation command or installation script.'
+            )
 
         # Pre-fill password from session cache or config.
         cached = _password_cache.get((fw_name, config.user), '')
@@ -99,6 +112,9 @@ class InstallOptionsDialog(QDialog):
         self._config.quiet = self.quiet.isChecked()
         self._config.copy_fwb = self.copyFWB.isChecked()
         self._config.batch_install = self.batchInstall.isChecked()
+        if self.rollback.isEnabled():
+            self._config.rollback = self.rollback.isChecked()
+            self._config.rollback_timeout = self.rollbackTimeout.value()
         self._save_password()
         return self._config
 

@@ -1,0 +1,175 @@
+## -*- mode: shell-script; -*-
+##
+## Double "##" comments are removed during processing but single "#"
+## comments are retained and appear in the generated script.
+##
+## The rollback timer of "try", "confirm" and "rollback", shared by the
+## iptables and the nftables script.  What is saved and how it is put back
+## differs per packet filter, so each script defines fwf_timer_save and
+## fwf_timer_restore next to this block; both take the directory the state
+## lives in.
+##
+## The ideas are Shorewall's "try" and ferm's "--interactive", with three
+## differences, each for a way those two lock the administrator out:
+##
+## * The timer is not a process of the session that started it.  Both of
+##   them wait in the foreground, and a session the new rules close - a
+##   REJECT with a TCP reset ends it at once - takes the timer with it
+##   (SIGHUP), so nothing is ever put back.  systemd-run makes the timer a
+##   unit of its own, which also survives logind's KillUserProcesses=yes;
+##   setsid is the fallback where there is no systemd.
+## * The saved ruleset is checked for whether it can be loaded again before
+##   anything is changed.  A timer that cannot put back what it saved is a
+##   promise the script cannot keep.
+## * A second "try" before the first is confirmed keeps the ruleset from
+##   before the first one.  Saving again would make the unconfirmed ruleset
+##   the one to go back to.
+##
+## The state directory holds a copy of the script that saved the ruleset
+## (restore.sh), and the timer runs that copy: the saved files and the
+## program that can read them belong together, whatever is installed over
+## the script meanwhile.  restore.sh is copied last and is the marker for a
+## pending activation.  "token" names the timer that may still act: a timer
+## that was replaced but not stopped finds another token and does nothing.
+
+# "try" activates the policy and puts back the ruleset that was running
+# before it unless "confirm" follows within the given number of seconds.
+# The saved state is in /run, which is gone after a reboot, like the timer.
+FWF_ROLLBACK_DIR=${FWF_ROLLBACK_DIR:-/run/fwf-rollback}
+
+fwf_timer_stop() {
+    case "$1" in
+        systemd:*) systemctl stop "${1#systemd:}.timer" >/dev/null 2>&1 ;;
+        [0-9]*) kill "$1" >/dev/null 2>&1 ;;
+    esac
+    return 0
+}
+
+## The token goes into the unit name, so a new timer never collides with
+## one systemd still knows.  FWF_LOCKED is emptied for the setsid timer and
+## lock descriptor 9 closed: inheriting either would make the rollback skip
+## the lock, or hold it until the timer runs out.  systemd-run starts the
+## timer with a clean environment and no inherited descriptors.
+fwf_timer_arm() {
+    fwf_token="$(date +%s)-$$"
+    echo "$fwf_token" >"$FWF_ROLLBACK_DIR/token" || return 1
+    if test -d /run/systemd/system && command -v systemd-run >/dev/null 2>&1 &&
+        systemd-run --quiet --no-ask-password --collect \
+            --unit="fwf-rollback-$fwf_token" --on-active="$1" \
+            --timer-property=AccuracySec=1s \
+            --setenv=FWF_LOCK_FILE="$FWF_LOCK_FILE" \
+            --setenv=FWF_ROLLBACK_DIR="$FWF_ROLLBACK_DIR" \
+            /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$fwf_token" >/dev/null 2>&1; then
+        echo "systemd:fwf-rollback-$fwf_token" >"$FWF_ROLLBACK_DIR/timer"
+        return 0
+    fi
+    command -v setsid >/dev/null 2>&1 || return 1
+    FWF_LOCKED='' setsid /bin/sh -c 'trap "" HUP; sleep "$1"; exec /bin/sh "$2" rollback "$3"' \
+        fwf-rollback "$1" "$FWF_ROLLBACK_DIR/restore.sh" "$fwf_token" \
+        </dev/null >/dev/null 2>&1 9>&- &
+    echo "$!" >"$FWF_ROLLBACK_DIR/timer"
+}
+
+## Arm the new timer before the old one is stopped, so there is no moment
+## without one.
+fwf_timer_rearm() {
+    fwf_old_timer=$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)
+    fwf_timer_arm "$1" || return 1
+    fwf_timer_stop "$fwf_old_timer"
+}
+
+fwf_try() {
+    case "$1" in
+        '' | *[!0-9]* | 0)
+            log "Error: \"try\" needs the number of seconds to wait for \"confirm\", such as \"$0 try 60\". Nothing was changed."
+            return 1
+            ;;
+    esac
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh"; then
+        log "An earlier activation is still waiting for confirmation; the ruleset from before it stays the one to go back to."
+    else
+        rm -rf "$FWF_ROLLBACK_DIR"
+        mkdir -m 700 "$FWF_ROLLBACK_DIR" || {
+            log "Error: cannot create $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+        fwf_timer_save "$FWF_ROLLBACK_DIR" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: the running ruleset cannot be saved in a form that can be loaded again, so it could not be put back. Nothing was changed."
+            return 1
+        }
+        cp "$0" "$FWF_ROLLBACK_DIR/restore.sh" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: cannot write to $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+    fi
+##  Armed before the activation, so a session that dies halfway through it
+##  still leaves a timer behind, and armed again afterwards, so the seconds
+##  count from the end of an activation that took long.
+    fwf_timer_rearm "$1" || {
+        log "Error: neither systemd-run nor setsid can start a timer. Nothing was changed."
+        fwf_timer_expire
+        return 1
+    }
+##  The activation runs to its end even if the session that started it is
+##  closed by the new rules.
+    trap '' HUP
+    FWF_TRYING=1 /bin/sh "$0" start
+    fwf_status=$?
+    if test "$fwf_status" -ne 0; then
+        log "Error: the activation failed. The ruleset from before it is put back now."
+        fwf_timer_expire
+        return "$fwf_status"
+    fi
+    fwf_timer_rearm "$1"
+    log "Activated. Run \"$0 confirm\" within $1 seconds, or the ruleset from before it is put back."
+}
+
+fwf_confirm() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || {
+        log "Error: no activation is waiting for confirmation. It was put back when its time ran out, or it was not started with \"try\"."
+        return 1
+    }
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "Activation confirmed."
+}
+
+## Called with the token by the timer, and without it by hand.  The timer
+## does not stop itself: it has run out, and systemd removes its unit.
+fwf_timer_expire() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    if test -n "$1" && test "$1" != "$(cat "$FWF_ROLLBACK_DIR/token" 2>/dev/null)"; then
+        return 0
+    fi
+    test -z "$1" && fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    if fwf_timer_restore "$FWF_ROLLBACK_DIR"; then
+        log "The activation was not confirmed. The ruleset from before it is back in place."
+        fwf_status=0
+    else
+        log "Error: the activation was not confirmed, and the ruleset from before it could not be put back."
+        fwf_status=1
+    fi
+    rm -rf "$FWF_ROLLBACK_DIR"
+    return "$fwf_status"
+}
+
+## "rollback" by hand runs the copy that saved the ruleset, which may be a
+## script for the other packet filter.  The lock stays held across the exec.
+fwf_rollback() {
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh" && test "$0" != "$FWF_ROLLBACK_DIR/restore.sh"; then
+        exec /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$1"
+    fi
+    fwf_timer_expire "$1"
+}
+
+## A plain start or stop is an activation of its own: the pending timer
+## would put back the ruleset from before the "try" and undo it.
+fwf_timer_cancel() {
+    test -n "$FWF_TRYING" && return 0
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "An activation started with \"try\" was waiting for confirmation. This run replaces it, so its rollback timer is stopped."
+}

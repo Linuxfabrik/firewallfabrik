@@ -12,6 +12,7 @@
 
 """Compile/install dialog — 2-page wizard using compileinstalldialog_q.ui."""
 
+import copy
 import os
 import re
 import shutil
@@ -92,6 +93,14 @@ def _set_check(item, col, checked):
     item.setCheckState(
         col, Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
     )
+
+
+def _rollback_timeout(fw):
+    """The rollback timeout of *fw* in seconds, the default if unreadable."""
+    try:
+        return int(fw.get_option('install_rollback_timeout'))
+    except (TypeError, ValueError):
+        return 60
 
 
 def _format_epoch(value):
@@ -1004,9 +1013,13 @@ class CompileDialog(QDialog):
         from firewallfabrik.gui.install_options_dialog import InstallOptionsDialog
 
         # Load options from the firewall object.
+        rollback, rollback_timeout = True, 60
         with self._db_manager.session() as session:
             fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
             options = (fw.options or {}) if fw else {}
+            if fw is not None:
+                rollback = fw.get_option('install_rollback')
+                rollback_timeout = _rollback_timeout(fw)
 
         config = InstallConfig(
             user=options.get('admUser', '') or 'root',
@@ -1021,6 +1034,8 @@ class CompileDialog(QDialog):
             fwb_file=str(self._current_file),
             working_dir=str(self._dest_dir),
             alt_address=options.get('altAddress', ''),
+            rollback=rollback,
+            rollback_timeout=rollback_timeout,
         )
 
         # Determine the compiled script path.
@@ -1053,6 +1068,8 @@ class CompileDialog(QDialog):
             config.copy_fwb = self._batch_config.copy_fwb
             config.password = self._batch_config.password
             config.quiet = self._batch_config.quiet
+            config.rollback = self._batch_config.rollback
+            config.rollback_timeout = self._batch_config.rollback_timeout
             config.user = self._batch_config.user
             config.verbose = self._batch_config.verbose
             return config
@@ -1063,6 +1080,7 @@ class CompileDialog(QDialog):
 
         if result == QDialog.DialogCode.Accepted:
             config = dlg.get_config()
+            self._store_rollback_choice(fw_uuid_str, config)
             if config.batch_install:
                 self._batch_config = config
             return config
@@ -1073,6 +1091,22 @@ class CompileDialog(QDialog):
         else:
             # Skip this firewall
             return None
+
+    def _store_rollback_choice(self, fw_uuid_str, config):
+        """Keep the rollback setting of the install dialog on the firewall."""
+        with self._db_manager.session() as session:
+            fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
+            if fw is None:
+                return
+            if (
+                fw.get_option('install_rollback') == config.rollback
+                and _rollback_timeout(fw) == config.rollback_timeout
+            ):
+                return
+            options = copy.deepcopy(fw.options or {})
+            options['install_rollback'] = config.rollback
+            options['install_rollback_timeout'] = str(config.rollback_timeout)
+            fw.options = options
 
     @Slot(str)
     def _on_install_log(self, msg):

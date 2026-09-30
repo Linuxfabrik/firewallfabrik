@@ -1,6 +1,6 @@
 # Integration with OS Running on the Firewall Machine
 
-FirewallFabrik generates firewall scripts for iptables and nftables tailored for integration with modern Linux systems running systemd. The generated script supports command-line arguments `start`, `stop`, `status`, `block`, `reload`, `interfaces`, and `test_interfaces`. The script can be integrated with systemd using a custom service unit.
+FirewallFabrik generates firewall scripts for iptables and nftables tailored for integration with modern Linux systems running systemd. The generated script supports command-line arguments `start`, `stop`, `status`, `block`, `reload`, `try`, `confirm`, `rollback`, `interfaces`, and `test_interfaces`. The script can be integrated with systemd using a custom service unit.
 
 The iptables script is assembled from configlets located in `resources/configlets/linux24/` (starting from `script_skeleton`). The nftables script is rendered from the Jinja2 template `resources/templates/nftables/script.sh.j2`. You can modify both following the instructions in [13 - Configlets](13%20-%20Configlets.md).
 
@@ -220,6 +220,26 @@ Cover it deliberately with a rule naming the firewall object as Source. The reve
 | To the firewall | Any | Inbound | `container-networks` | the firewall object | the ports in question | Accept |
 
 The first rule is compiled into the `output` chain, the second into the `input` chain. Name the services in the second one rather than leaving them at Any, otherwise every port of the firewall is open to whatever runs in a container.
+
+## Trying a Policy with a Rollback Timer
+
+A policy that blocks the management connection locks the administrator out of a remote firewall. The generated script can activate a policy on probation:
+
+``` bash
+sudo /etc/fwf.sh try 60      # activate, and put the old ruleset back in 60 s
+sudo /etc/fwf.sh confirm     # from a NEW login: keep the new policy
+sudo /etc/fwf.sh rollback    # put the old ruleset back right away
+```
+
+`try` saves the running ruleset, checks that it can be loaded again, starts a timer and activates the policy. The seconds count from the end of the activation. Unless `confirm` follows in time, the timer puts the saved ruleset back and logs it to the journal. Run `confirm` from a new SSH login, not from the session that ran `try`: connection tracking keeps an established session alive even under a policy that refuses every new one, so only a new login proves that the firewall can still be reached.
+
+- The timer runs as a transient systemd unit (`fwf-rollback-*`), outside the login session, so it also fires when the session that started it is closed, including by the new rules themselves. Without systemd it runs detached with `setsid`.
+- A second `try` before the first is confirmed keeps the ruleset from before the first one.
+- A plain `start` or `stop` replaces an activation that is waiting for confirmation and stops its timer, so a deployment by other means is not undone later.
+- Only the packet filter ruleset is put back, the whole of it: with nftables every table, with iptables every table of the address families the script installs rules for. Routes, kernel variables, interface addresses and ipsets stay as the new script left them. Changes other tools such as fail2ban made to the ruleset during the waiting time are lost.
+- The saved state lives in `/run/fwf-rollback`, so a reboot while the timer runs activates whatever the boot unit starts. The built-in installer therefore activates `<script>.new` and replaces the boot script only after the confirmation.
+
+With Ansible, deploy the script to a separate path, run `try`, then `ansible.builtin.meta: 'reset_connection'`, and confirm in the next task. Without `reset_connection`, Ansible reuses its multiplexed SSH connection, and the confirmation proves nothing. Move the script into place only after `confirm` succeeded.
 
 ## Restarting the Policy when an Interface Address Changes
 

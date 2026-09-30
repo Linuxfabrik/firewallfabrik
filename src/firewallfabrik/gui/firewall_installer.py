@@ -47,6 +47,7 @@ def _esc(text):
 class JobType(IntEnum):
     COPY_FILE = auto()
     ACTIVATE_POLICY = auto()
+    CONFIRM_POLICY = auto()
     RUN_EXTERNAL_SCRIPT = auto()
 
 
@@ -73,6 +74,8 @@ class InstallConfig:
     quiet: bool = False
     copy_fwb: bool = False
     batch_install: bool = False
+    rollback: bool = True
+    rollback_timeout: int = 60
     # Set by the dialog / caller before running jobs.
     script_path: str = ''
     remote_script: str = ''
@@ -127,8 +130,22 @@ def read_manifest(script_path: str) -> dict[str, str]:
     return result
 
 
-def get_activation_cmd(config: InstallConfig) -> str:
-    """Build the remote activation command using configlet templates."""
+def uses_rollback(config: InstallConfig) -> bool:
+    """Whether this installation activates with the rollback timer.
+
+    A custom activation command or installation script says itself how
+    the policy is activated, so the timer cannot be put around it.
+    """
+    return config.rollback and not config.activation_cmd and not config.install_script
+
+
+def get_activation_cmd(config: InstallConfig, confirm: bool = False) -> str:
+    """Build the remote activation command using configlet templates.
+
+    With the rollback timer this is the ``try`` of the script copied to
+    ``<script>.new``, and with *confirm* the ``confirm`` that follows it
+    over a new connection.
+    """
     if config.activation_cmd:
         return config.activation_cmd
 
@@ -138,6 +155,7 @@ def get_activation_cmd(config: InstallConfig) -> str:
         else 'installer_commands_reg_user'
     )
     configlet = Configlet('linux24', template_name)
+    configlet.collapse_empty_strings(True)
     configlet.set_variable('fwbprompt', '___INSTALL_DONE___')
     configlet.set_variable('fwdir', config.firewall_dir)
 
@@ -151,7 +169,11 @@ def get_activation_cmd(config: InstallConfig) -> str:
 
     configlet.set_variable('fwscript', script_name)
     configlet.set_variable('firewall_name', config.firewall_name)
-    configlet.set_variable('run', True)
+    rollback = uses_rollback(config)
+    configlet.set_variable('run', not rollback)
+    configlet.set_variable('with_rollback', rollback and not confirm)
+    configlet.set_variable('confirm', rollback and confirm)
+    configlet.set_variable('rbtimeout', config.rollback_timeout)
     return configlet.expand().strip()
 
 
@@ -173,17 +195,26 @@ def build_job_list(config: InstallConfig) -> list[InstallJob]:
         )
         return jobs
 
+    # With the rollback timer the script goes to <script>.new and becomes
+    # the one the firewall boots with only once the activation is
+    # confirmed, so a firewall that put the old ruleset back does not
+    # load the new one again on its next reboot.
+    staged = '.new' if uses_rollback(config) else ''
+
     # Read manifest from the compiled script.
     manifest = read_manifest(config.script_path)
     if not manifest:
         # Fallback: copy the script itself.
         local = config.script_path
         remote = config.remote_script or f'{config.firewall_dir}/{Path(local).name}'
-        jobs.append(InstallJob(JobType.COPY_FILE, local, remote))
+        jobs.append(InstallJob(JobType.COPY_FILE, local, remote + staged))
     else:
         script_dir = str(Path(config.script_path).parent)
+        script_name = Path(config.script_path).name
         for local_name, remote_name in manifest.items():
             local_path = str(Path(script_dir) / local_name)
+            if local_name == script_name:
+                remote_name += staged
             jobs.append(InstallJob(JobType.COPY_FILE, local_path, remote_name))
 
     # Optionally copy the .fwf database file.
@@ -196,6 +227,12 @@ def build_job_list(config: InstallConfig) -> list[InstallJob]:
     cmd = get_activation_cmd(config)
     if cmd:
         jobs.append(InstallJob(JobType.ACTIVATE_POLICY, cmd, ''))
+    if uses_rollback(config):
+        jobs.append(
+            InstallJob(
+                JobType.CONFIRM_POLICY, get_activation_cmd(config, confirm=True), ''
+            )
+        )
 
     return jobs
 
@@ -227,6 +264,7 @@ class FirewallInstaller(QObject):
         self._jobs: list[InstallJob] = []
         self._process: QProcess | None = None
         self._output_buf = ''
+        self._confirming = False
         self._askpass_dir: tempfile.TemporaryDirectory | None = None
         self._askpass_wrapper: Path | None = None
         self.job_finished.connect(self._cleanup_askpass)
@@ -295,6 +333,8 @@ class FirewallInstaller(QObject):
             self._copy_file(job.arg1, job.arg2)
         elif job.job_type == JobType.ACTIVATE_POLICY:
             self._activate_policy(job.arg1)
+        elif job.job_type == JobType.CONFIRM_POLICY:
+            self._confirm_policy(job.arg1)
         elif job.job_type == JobType.RUN_EXTERNAL_SCRIPT:
             self._run_external_script(job.arg1, job.arg2)
 
@@ -310,6 +350,35 @@ class FirewallInstaller(QObject):
             f'<b>Activating policy on {_esc(self._config.mgmt_address)}</b>'
         )
         args = self._pack_ssh_args(cmd)
+        self._start_process(args[0], args[1:], env=self._ssh_environment())
+
+    def _confirm_policy(self, cmd: str) -> None:
+        """Confirm the activation over a connection of its own.
+
+        The session that activated the policy proves nothing about the
+        new rules: connection tracking lets an established session
+        through that a new one may no longer get.  So the confirmation
+        opens a new TCP connection - no multiplexed channel of an
+        existing one - and gives up well before the firewall's timer
+        runs out.
+        """
+        self.log_message.emit(
+            f'<b>Confirming the activation over a new connection to'
+            f' {_esc(self._config.mgmt_address)}</b>'
+        )
+        self._confirming = True
+        connect_timeout = max(5, self._config.rollback_timeout // 2)
+        args = self._pack_ssh_args(
+            cmd,
+            extra=[
+                '-o',
+                'ControlMaster=no',
+                '-o',
+                'ControlPath=none',
+                '-o',
+                f'ConnectTimeout={connect_timeout}',
+            ],
+        )
         self._start_process(args[0], args[1:], env=self._ssh_environment())
 
     def _run_external_script(self, script: str, script_args: str) -> None:
@@ -375,13 +444,23 @@ class FirewallInstaller(QObject):
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
         output = self._output_buf
+        confirming = self._confirming
         self._process = None
         self._output_buf = ''
+        self._confirming = False
         if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
             self._run_next()
             return
         message = f'Process exited with code {exit_code}'
-        if 'Host key verification failed' in output:
+        if confirming:
+            message += (
+                '. The activation could not be confirmed over a new'
+                ' connection, so the firewall puts back the ruleset that was'
+                f' running before, at the latest {self._config.rollback_timeout}'
+                ' seconds after the activation, and keeps the script it'
+                ' boots with.'
+            )
+        elif 'Host key verification failed' in output:
             message += (
                 '. The host key of the firewall is not known yet: connect'
                 ' once with ssh from a terminal, check and accept the key,'
@@ -391,11 +470,13 @@ class FirewallInstaller(QObject):
             message += '. The firewall rejected the user name or password.'
         self.job_failed.emit(message)
 
-    def _pack_ssh_args(self, cmd: str) -> list[str]:
+    def _pack_ssh_args(self, cmd: str, extra: list[str] | None = None) -> list[str]:
         """Build SSH command line arguments.
 
         Reads the SSH path and timeout from global preferences
-        (``Preferences > Installer`` tab).
+        (``Preferences > Installer`` tab).  *extra* options go in front
+        of the user's own, so that ssh, which takes the first value of an
+        option, lets them win.
         """
         settings = QSettings()
         ssh_path = settings.value(
@@ -411,6 +492,7 @@ class FirewallInstaller(QObject):
             '-t',
             '-t',
         ]
+        args.extend(extra or [])
         args.extend(self._batch_mode_args(self._config.ssh_args))
         if self._config.ssh_args:
             args.extend(self._config.ssh_args.split())

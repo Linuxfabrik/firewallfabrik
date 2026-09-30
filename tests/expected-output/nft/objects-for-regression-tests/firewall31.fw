@@ -414,6 +414,22 @@ check_ruleset() {
     nft_ruleset | $NFT --check -f /dev/stdin
 }
 
+# The two halves the rollback timer needs from this packet filter (see
+# "try" below).  The saved ruleset goes back in one transaction with the
+# flush in front of it, so there is no moment without rules.  It is
+# checked that way before anything is changed: a listing nft cannot load
+# again - one with rules of iptables-nft, say - would leave the timer
+# nothing to put back.
+fwf_timer_save() {
+    check_tools
+    $NFT list ruleset >"$1/nft" || return 1
+    { echo 'flush ruleset'; cat "$1/nft"; } | $NFT --check -f /dev/stdin
+}
+
+fwf_timer_restore() {
+    { echo 'flush ruleset'; cat "$1/nft"; } | $NFT -f /dev/stdin
+}
+
 script_body() {
     nft_ruleset | $NFT -f /dev/stdin
 }
@@ -550,6 +566,130 @@ fwf_lock() {
     export FWF_LOCKED
 }
 
+# "try" activates the policy and puts back the ruleset that was running
+# before it unless "confirm" follows within the given number of seconds.
+# The saved state is in /run, which is gone after a reboot, like the timer.
+FWF_ROLLBACK_DIR=${FWF_ROLLBACK_DIR:-/run/fwf-rollback}
+
+fwf_timer_stop() {
+    case "$1" in
+        systemd:*) systemctl stop "${1#systemd:}.timer" >/dev/null 2>&1 ;;
+        [0-9]*) kill "$1" >/dev/null 2>&1 ;;
+    esac
+    return 0
+}
+
+fwf_timer_arm() {
+    fwf_token="$(date +%s)-$$"
+    echo "$fwf_token" >"$FWF_ROLLBACK_DIR/token" || return 1
+    if test -d /run/systemd/system && command -v systemd-run >/dev/null 2>&1 &&
+        systemd-run --quiet --no-ask-password --collect \
+            --unit="fwf-rollback-$fwf_token" --on-active="$1" \
+            --timer-property=AccuracySec=1s \
+            --setenv=FWF_LOCK_FILE="$FWF_LOCK_FILE" \
+            --setenv=FWF_ROLLBACK_DIR="$FWF_ROLLBACK_DIR" \
+            /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$fwf_token" >/dev/null 2>&1; then
+        echo "systemd:fwf-rollback-$fwf_token" >"$FWF_ROLLBACK_DIR/timer"
+        return 0
+    fi
+    command -v setsid >/dev/null 2>&1 || return 1
+    FWF_LOCKED='' setsid /bin/sh -c 'trap "" HUP; sleep "$1"; exec /bin/sh "$2" rollback "$3"' \
+        fwf-rollback "$1" "$FWF_ROLLBACK_DIR/restore.sh" "$fwf_token" \
+        </dev/null >/dev/null 2>&1 9>&- &
+    echo "$!" >"$FWF_ROLLBACK_DIR/timer"
+}
+
+fwf_timer_rearm() {
+    fwf_old_timer=$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)
+    fwf_timer_arm "$1" || return 1
+    fwf_timer_stop "$fwf_old_timer"
+}
+
+fwf_try() {
+    case "$1" in
+        '' | *[!0-9]* | 0)
+            log "Error: \"try\" needs the number of seconds to wait for \"confirm\", such as \"$0 try 60\". Nothing was changed."
+            return 1
+            ;;
+    esac
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh"; then
+        log "An earlier activation is still waiting for confirmation; the ruleset from before it stays the one to go back to."
+    else
+        rm -rf "$FWF_ROLLBACK_DIR"
+        mkdir -m 700 "$FWF_ROLLBACK_DIR" || {
+            log "Error: cannot create $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+        fwf_timer_save "$FWF_ROLLBACK_DIR" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: the running ruleset cannot be saved in a form that can be loaded again, so it could not be put back. Nothing was changed."
+            return 1
+        }
+        cp "$0" "$FWF_ROLLBACK_DIR/restore.sh" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: cannot write to $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+    fi
+    fwf_timer_rearm "$1" || {
+        log "Error: neither systemd-run nor setsid can start a timer. Nothing was changed."
+        fwf_timer_expire
+        return 1
+    }
+    trap '' HUP
+    FWF_TRYING=1 /bin/sh "$0" start
+    fwf_status=$?
+    if test "$fwf_status" -ne 0; then
+        log "Error: the activation failed. The ruleset from before it is put back now."
+        fwf_timer_expire
+        return "$fwf_status"
+    fi
+    fwf_timer_rearm "$1"
+    log "Activated. Run \"$0 confirm\" within $1 seconds, or the ruleset from before it is put back."
+}
+
+fwf_confirm() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || {
+        log "Error: no activation is waiting for confirmation. It was put back when its time ran out, or it was not started with \"try\"."
+        return 1
+    }
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "Activation confirmed."
+}
+
+fwf_timer_expire() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    if test -n "$1" && test "$1" != "$(cat "$FWF_ROLLBACK_DIR/token" 2>/dev/null)"; then
+        return 0
+    fi
+    test -z "$1" && fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    if fwf_timer_restore "$FWF_ROLLBACK_DIR"; then
+        log "The activation was not confirmed. The ruleset from before it is back in place."
+        fwf_status=0
+    else
+        log "Error: the activation was not confirmed, and the ruleset from before it could not be put back."
+        fwf_status=1
+    fi
+    rm -rf "$FWF_ROLLBACK_DIR"
+    return "$fwf_status"
+}
+
+fwf_rollback() {
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh" && test "$0" != "$FWF_ROLLBACK_DIR/restore.sh"; then
+        exec /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$1"
+    fi
+    fwf_timer_expire "$1"
+}
+
+fwf_timer_cancel() {
+    test -n "$FWF_TRYING" && return 0
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "An activation started with \"try\" was waiting for confirmation. This run replaces it, so its rollback timer is stopped."
+}
+
 # See how we were called.
 # For backwards compatibility missing argument is equivalent to 'start'
 
@@ -566,6 +706,7 @@ esac
 case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
+        fwf_timer_cancel
         check_tools
         prolog_commands
         configure_interfaces
@@ -582,6 +723,7 @@ case "$cmd" in
         ;;
 
     stop)
+        fwf_timer_cancel
         check_tools
         stop_action
         RETVAL=$?
@@ -604,6 +746,21 @@ case "$cmd" in
         RETVAL=$?
         ;;
 
+    try)
+        fwf_try "$2"
+        RETVAL=$?
+        ;;
+
+    confirm)
+        fwf_confirm
+        RETVAL=$?
+        ;;
+
+    rollback)
+        fwf_rollback "$2"
+        RETVAL=$?
+        ;;
+
     interfaces)
         check_tools
         configure_interfaces
@@ -618,7 +775,7 @@ case "$cmd" in
         ;;
 
     *)
-        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        echo "Usage $0 [start|stop|status|block|reload|try|confirm|rollback|interfaces|test_interfaces]"
         RETVAL=1
         ;;
 

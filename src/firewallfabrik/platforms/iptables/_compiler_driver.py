@@ -953,6 +953,11 @@ class CompilerDriver_ipt(CompilerDriver):
                 status_action.set_variable('table_name', table_name)
                 script_skeleton.set_variable('status_action', status_action.expand())
 
+                # "try", "confirm" and "rollback", shared with nftables.
+                script_skeleton.set_variable(
+                    'rollback_timer', Configlet('linux24', 'rollback_timer').expand()
+                )
+
                 # Top comment configlet
                 top_comment = Configlet('linux24', 'top_comment')
                 top_comment.set_variable('version', __compiler_version__)

@@ -24,12 +24,21 @@ from .conftest import _find_fixture
 
 
 def test_no_flush_ruleset(compile_nft, tmp_path):
-    """Generated script must not contain 'flush ruleset'."""
+    """The activation must not contain 'flush ruleset'.
+
+    The rollback timer puts back the whole ruleset it saved before a
+    "try", in one transaction with the flush in front of it; that is the
+    only place the script may say it.
+    """
     fixture_path = _find_fixture('basic_accept_deny')
     output_path = compile_nft(fixture_path, 'fw-test', tmp_path)
     script = output_path.read_text()
 
-    assert 'flush ruleset' not in script
+    ruleset = script.split("<<'NFT_RULES'\n", 1)[1].split('\nNFT_RULES', 1)[0]
+    assert 'flush ruleset' not in ruleset
+    for line in script.splitlines():
+        if 'flush ruleset' in line:
+            assert '{ echo \'flush ruleset\'; cat "$1/nft"; }' in line, line
 
 
 def test_filter_table_uses_named_table(compile_nft, tmp_path):
