@@ -982,6 +982,7 @@ class FWWindow(QMainWindow):
         self.installAction.setEnabled(False)
         self.libImportAction.setEnabled(False)
         self.libExportAction.setEnabled(False)
+        self.policyImportAction.setEnabled(False)
         self.ruleColorMenu.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
         self.UpdateStandardLibraryAction.setEnabled(False)
@@ -1063,6 +1064,7 @@ class FWWindow(QMainWindow):
         self.installAction.setEnabled(True)
         self.libImportAction.setEnabled(True)
         self.libExportAction.setEnabled(True)
+        self.policyImportAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
         self.UpdateStandardLibraryAction.setEnabled(True)
         undo_visible = settings.value('View/UndoStack', False, type=bool)
@@ -1404,6 +1406,45 @@ class FWWindow(QMainWindow):
     def fileImport(self):
         """Import libraries from a .fwf or .fwb file into the current project."""
         import_library(self, self._db_manager, self._object_tree.reload)
+
+    @Slot()
+    def importPolicy(self):
+        """Build a firewall from a running ruleset (fwbuilder FWWindow::importPolicy)."""
+        from firewallfabrik.gui.import_firewall_wizard import ImportFirewallWizard
+
+        library_id = self._library_for_import()
+        if library_id is None:
+            QMessageBox.warning(
+                self,
+                'FirewallFabrik',
+                self.tr('There is no library the firewall could be added to.'),
+            )
+            return
+        self._flush_editor_changes()
+        wizard = ImportFirewallWizard(self._db_manager, library_id, self)
+        wizard.exec()
+        if wizard.fw_id is not None:
+            self._on_tree_changed(str(wizard.fw_id), 'Firewall')
+            self._object_tree.select_object(wizard.fw_id)
+
+    def _library_for_import(self):
+        """The library of the tree's selection, or the first writable one."""
+        item = self._object_tree._tree.currentItem()
+        if item is not None and not self._object_tree._get_library_ro(item):
+            library_id = self._object_tree._get_item_library_id(item)
+            if library_id is not None:
+                return library_id
+        with self._db_manager.session() as session:
+            libraries = session.scalars(
+                sqlalchemy.select(Library).order_by(Library.name)
+            ).all()
+            for library in libraries:
+                if not library.ro and library.name not in (
+                    'Standard',
+                    'Deleted Objects',
+                ):
+                    return library.id
+        return None
 
     @Slot()
     def fileExport(self):

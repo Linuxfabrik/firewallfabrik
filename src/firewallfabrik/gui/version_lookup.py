@@ -127,7 +127,12 @@ def parse(output: str) -> Lookup:
 
 
 def ssh_args(
-    address: str, user: str, extra_args: str, ssh_path: str = '', timeout: int = 10
+    address: str,
+    user: str,
+    extra_args: str,
+    ssh_path: str = '',
+    timeout: int = 10,
+    remote: str = _REMOTE,
 ) -> list[str]:
     """The ssh command line, the way the installer builds it."""
     args = [
@@ -137,7 +142,7 @@ def ssh_args(
     ]
     if extra_args:
         args.extend(shlex.split(extra_args))
-    args.extend(['-l', user, address, _REMOTE])
+    args.extend(['-l', user, address, remote])
     return args
 
 
@@ -158,13 +163,34 @@ def run(  # nosec B107
     from a helper (see ``_ssh_askpass``) that prints an environment
     variable, so it appears neither on a command line nor in a file.
     """
+    return parse(
+        run_remote(address, user, _REMOTE, extra_args, password, ssh_path, timeout)
+    )
+
+
+# The empty default means "no password given, use the key or the agent".
+def run_remote(  # nosec B107
+    address: str,
+    user: str,
+    remote: str,
+    extra_args: str = '',
+    password: str = '',
+    ssh_path: str = '',
+    timeout: int = 10,
+) -> str:
+    """Run *remote* on the firewall at *address* and return what it printed.
+
+    The login works the way :func:`run` describes; *remote* is a fixed
+    command line of the caller, never something read from the firewall
+    object.
+    """
     if not address:
         raise LookupFailed(
             'the firewall has no management address: set "Alternative '
             'address" in its installer settings or mark an interface as '
             'management interface'
         )
-    args = ssh_args(address, user, extra_args, ssh_path, timeout)
+    args = ssh_args(address, user, extra_args, ssh_path, timeout, remote)
     env = dict(os.environ)
     helper_dir = None
     if password:
@@ -203,4 +229,4 @@ def run(  # nosec B107
         if 'Permission denied' in message[0] and not password:
             raise AuthenticationRequired(message[0])
         raise LookupFailed(message[0])
-    return parse(proc.stdout)
+    return proc.stdout

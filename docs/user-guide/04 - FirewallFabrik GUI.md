@@ -92,6 +92,7 @@ The File menu provides standard file management options.
 | Save | Saves the current file. Files are always saved in the FirewallFabrik YAML format (.fwf), even if the original file was a Firewall Builder XML file (.fwb). |
 | Save As... | Opens a "file" dialog that lets you save the object file under a new name. |
 | Close | Closes the current file. If there are unsaved changes, you are prompted to save, discard, or cancel. All panels are hidden and the workspace returns to its initial empty state. |
+| Import Firewall... | Builds a firewall object from the ruleset of a running firewall, read from `iptables-save` or `nft -j list ruleset` output or over SSH. See [06 - Network Discovery](06%20-%20Network%20Discovery.md#importing-an-existing-firewall-configuration). |
 | Exit | Closes FirewallFabrik. |
 
 File Menu

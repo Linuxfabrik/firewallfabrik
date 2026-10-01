@@ -615,11 +615,20 @@ class CompilerDriver(BaseCompiler):
         imported: list = []
         seen: set = set()
 
-        def follow(rule_set, reached: dict) -> None:
-            count = reached.get(rule_set.id, 0) + 1
-            reached[rule_set.id] = count
-            if count > 1:
+        def follow(rule_set, reached: dict, path: set, loops: set) -> None:
+            # A rule set on the path that led here is a loop.  One reached a
+            # second time along another path is not: two branches into one
+            # rule set - firewalld reaches a zone's chains that way - are a
+            # diamond, and counting arrivals called that a loop.
+            if rule_set.id in path:
+                loops.add(rule_set.id)
                 return
+            if rule_set.id in reached:
+                return
+            # A dict, not a set: the warnings come out in the order the
+            # rule sets were reached.
+            reached[rule_set.id] = True
+            path.add(rule_set.id)
             # Several rules of one rule set may branch to the same target;
             # that is not a loop, so it is followed once
             # (`local_branch_ruleset_counters` in the C++).
@@ -629,7 +638,8 @@ class CompilerDriver(BaseCompiler):
                 if target is None or target.id in followed:
                     continue
                 followed.add(target.id)
-                follow(target, reached)
+                follow(target, reached, path, loops)
+            path.discard(rule_set.id)
 
         for rule_set in rule_sets:
             for rule in rule_set.rules:
@@ -637,12 +647,13 @@ class CompilerDriver(BaseCompiler):
                 if target is None:
                     continue
                 reached: dict = {}
-                follow(target, reached)
-                for target_id, count in reached.items():
+                loops: set = set()
+                follow(target, reached, set(), loops)
+                for target_id in reached:
                     candidate = session.get(RuleSet, target_id)
                     if candidate is None:
                         continue
-                    if count > 1:
+                    if target_id in loops:
                         self.warning(
                             f'{fw.name}: rule {rule.position} of rule set '
                             f'"{rule_set.name}" branches to rule set '

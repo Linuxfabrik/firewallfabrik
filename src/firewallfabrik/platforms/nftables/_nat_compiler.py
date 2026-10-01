@@ -1300,6 +1300,13 @@ class SplitNATBranchRule(NATRuleProcessor):
 
         mapping = nat_comp.branch_ruleset_to_chain_mapping or {}
         chains = mapping.get(nft_object_name(branch_name))
+        if chains == []:
+            # The rule set was compiled and filled no chain for this
+            # address family - an inet table's "meta nfproto ipv4 ... dnat"
+            # (firewalld) leaves the IPv6 run nothing.  A jump into nothing
+            # does nothing, so there is no rule to install; iptables leaves
+            # it out the same way (SplitNATBranchRule there).
+            return True
         if not chains:
             self.compiler.error(
                 rule,

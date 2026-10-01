@@ -129,8 +129,8 @@ Objects are permanently deleted. Use Git to recover accidentally deleted objects
 No SNMP discovery  
 The SNMP-based network discovery feature has been removed. Create objects manually or import from a `.fwb` file.
 
-No policy import  
-Firewall Builder could parse the output of `iptables-save` and create firewall objects and rule sets from it. This feature required a complex ANTLR parser (~47,000 lines of code) and produced a flat, unsorted rule list that needed extensive manual cleanup to be usable. In practice, building a firewall from scratch in the GUI is faster than cleaning up an imported configuration. FirewallFabrik does not include this feature.
+Policy import of iptables and nftables  
+Firewall Builder could parse the output of `iptables-save` and create firewall objects and rule sets from it, with an ANTLR grammar. FirewallFabrik reads `iptables-save`, `ip6tables-save` and `nft -j list ruleset`, from files or over SSH, and maps the rules the way Firewall Builder did (File \> Import Firewall...). The import of Cisco and PF configurations is not available. See [06 - Network Discovery](06%20-%20Network%20Discovery.md#importing-an-existing-firewall-configuration).
 
 ULOG removed, NFLOG supported  
 The ULOG logging target was removed from the Linux kernel in 3.17, replaced by NFLOG ([Linux 3.17 release notes](https://kernelnewbies.org/Linux_3.17)). The `use_ULOG` firewall option is no longer part of the FirewallFabrik schema; if your `.fwb` file had it enabled, it is silently migrated to the standard LOG target during import. Both compilers fully support NFLOG: the iptables compiler generates `-j NFLOG` rules with `--nflog-group`, `--nflog-prefix`, `--nflog-range`, and `--nflog-threshold` parameters; the nftables compiler generates `log group N` statements. Enable NFLOG via the "Use NFLOG" option in the firewall settings dialog.

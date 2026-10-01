@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImportContentPage_q</class>
+ <widget class="QWizardPage" name="ImportContentPage_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WizardPage</string>
+  </property>
+  <property name="title">
+   <string>Choose the tables to import</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="summary">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QListWidget" name="tables">
+     <property name="toolTip">
+      <string>Each checked table becomes rule sets of the new firewall. A table written by
+iptables-nft is better imported from the iptables-save output, which keeps
+the matches nft can only list as "xt".</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="platformLayout">
+     <item>
+      <widget class="QLabel" name="platformLabel">
+       <property name="text">
+        <string>Firewall platform:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="platform">
+       <property name="toolTip">
+        <string>The packet filter the new firewall is compiled for. It does not have to be
+the one the ruleset was read from.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="platformSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,697 @@
+{
+ "nftables": [
+  {
+   "metainfo": {
+    "version": "1.1.6",
+    "release_name": "Commodore Bullmoose #7",
+    "json_schema_version": 1
+   }
+  },
+  {
+   "table": {
+    "family": "inet",
+    "name": "t",
+    "handle": 1
+   }
+  },
+  {
+   "chain": {
+    "family": "inet",
+    "table": "t",
+    "name": "input",
+    "handle": 1,
+    "type": "filter",
+    "hook": "input",
+    "prio": 0,
+    "policy": "drop"
+   }
+  },
+  {
+   "chain": {
+    "family": "inet",
+    "table": "t",
+    "name": "svc",
+    "handle": 2
+   }
+  },
+  {
+   "set": {
+    "family": "inet",
+    "name": "admins",
+    "table": "t",
+    "type": "ipv4_addr",
+    "handle": 3,
+    "flags": [
+     "interval"
+    ],
+    "elem": [
+     {
+      "prefix": {
+       "addr": "192.0.2.0",
+       "len": 24
+      }
+     },
+     "198.51.100.7"
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 4,
+    "expr": [
+     {
+      "match": {
+       "op": "in",
+       "left": {
+        "ct": {
+         "key": "state"
+        }
+       },
+       "right": [
+        "established",
+        "related"
+       ]
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 5,
+    "expr": [
+     {
+      "match": {
+       "op": "in",
+       "left": {
+        "ct": {
+         "key": "state"
+        }
+       },
+       "right": "invalid"
+      }
+     },
+     {
+      "drop": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 6,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "iifname"
+        }
+       },
+       "right": "lo"
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 7,
+    "comment": "ssh admins",
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "ip",
+         "field": "saddr"
+        }
+       },
+       "right": "@admins"
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "tcp",
+         "field": "dport"
+        }
+       },
+       "right": 22
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 10,
+    "expr": [
+     {
+      "match": {
+       "op": "!=",
+       "left": {
+        "payload": {
+         "protocol": "ip",
+         "field": "saddr"
+        }
+       },
+       "right": {
+        "set": [
+         {
+          "prefix": {
+           "addr": "10.0.0.0",
+           "len": 8
+          }
+         },
+         {
+          "range": [
+           "172.16.0.1",
+           "172.16.0.9"
+          ]
+         }
+        ]
+       }
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "tcp",
+         "field": "dport"
+        }
+       },
+       "right": {
+        "set": [
+         80,
+         443,
+         {
+          "range": [
+           8000,
+           8080
+          ]
+         }
+        ]
+       }
+      }
+     },
+     {
+      "match": {
+       "op": "in",
+       "left": {
+        "ct": {
+         "key": "state"
+        }
+       },
+       "right": "new"
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 11,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "ip6",
+         "field": "saddr"
+        }
+       },
+       "right": {
+        "prefix": {
+         "addr": "2001:db8::",
+         "len": 32
+        }
+       }
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "udp",
+         "field": "sport"
+        }
+       },
+       "right": 53
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 12,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "icmp",
+         "field": "type"
+        }
+       },
+       "right": "echo-request"
+      }
+     },
+     {
+      "limit": {
+       "rate": 5,
+       "burst": 5,
+       "per": "second"
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 14,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "icmpv6",
+         "field": "type"
+        }
+       },
+       "right": {
+        "set": [
+         "echo-request",
+         "nd-neighbor-solicit"
+        ]
+       }
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 16,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "l4proto"
+        }
+       },
+       "right": {
+        "set": [
+         "tcp",
+         "udp"
+        ]
+       }
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "th",
+         "field": "dport"
+        }
+       },
+       "right": 53
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 17,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "&": [
+         {
+          "payload": {
+           "protocol": "tcp",
+           "field": "flags"
+          }
+         },
+         {
+          "|": [
+           "fin",
+           "syn",
+           "rst",
+           "ack"
+          ]
+         }
+        ]
+       },
+       "right": "syn"
+      }
+     },
+     {
+      "counter": {
+       "packets": 0,
+       "bytes": 0
+      }
+     },
+     {
+      "jump": {
+       "target": "svc"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 18,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "iifname"
+        }
+       },
+       "right": "eth*"
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "oifname"
+        }
+       },
+       "right": "ppp0"
+      }
+     },
+     {
+      "drop": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 19,
+    "expr": [
+     {
+      "log": {
+       "prefix": "IN drop ",
+       "level": "info"
+      }
+     },
+     {
+      "drop": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 20,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "l4proto"
+        }
+       },
+       "right": "tcp"
+      }
+     },
+     {
+      "reject": {
+       "type": "tcp reset"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "input",
+    "handle": 21,
+    "expr": [
+     {
+      "reject": {
+       "type": "icmpx",
+       "expr": "admin-prohibited"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "svc",
+    "handle": 22,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "ip",
+         "field": "protocol"
+        }
+       },
+       "right": "gre"
+      }
+     },
+     {
+      "accept": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "inet",
+    "table": "t",
+    "chain": "svc",
+    "handle": 23,
+    "expr": [
+     {
+      "return": null
+     }
+    ]
+   }
+  },
+  {
+   "table": {
+    "family": "ip",
+    "name": "n",
+    "handle": 2
+   }
+  },
+  {
+   "chain": {
+    "family": "ip",
+    "table": "n",
+    "name": "pre",
+    "handle": 1,
+    "type": "nat",
+    "hook": "prerouting",
+    "prio": -100,
+    "policy": "accept"
+   }
+  },
+  {
+   "chain": {
+    "family": "ip",
+    "table": "n",
+    "name": "post",
+    "handle": 2,
+    "type": "nat",
+    "hook": "postrouting",
+    "prio": 100,
+    "policy": "accept"
+   }
+  },
+  {
+   "rule": {
+    "family": "ip",
+    "table": "n",
+    "chain": "pre",
+    "handle": 3,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "ip",
+         "field": "daddr"
+        }
+       },
+       "right": "198.51.100.1"
+      }
+     },
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "tcp",
+         "field": "dport"
+        }
+       },
+       "right": 80
+      }
+     },
+     {
+      "dnat": {
+       "addr": "192.168.1.10",
+       "port": 8080
+      }
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "ip",
+    "table": "n",
+    "chain": "post",
+    "handle": 4,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "meta": {
+         "key": "oifname"
+        }
+       },
+       "right": "eth0"
+      }
+     },
+     {
+      "masquerade": null
+     }
+    ]
+   }
+  },
+  {
+   "rule": {
+    "family": "ip",
+    "table": "n",
+    "chain": "post",
+    "handle": 5,
+    "expr": [
+     {
+      "match": {
+       "op": "==",
+       "left": {
+        "payload": {
+         "protocol": "ip",
+         "field": "saddr"
+        }
+       },
+       "right": {
+        "prefix": {
+         "addr": "10.0.0.0",
+         "len": 8
+        }
+       }
+      }
+     },
+     {
+      "snat": {
+       "addr": "198.51.100.2"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

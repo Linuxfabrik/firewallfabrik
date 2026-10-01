@@ -37,6 +37,7 @@ not.
 | `compare-address-families.py` | is compiling one address family alone the same as half a dual-stack run? | state carried from one address-family pass into the other, or a decision taken on the wrong family |
 | `compare-output.py` | which firewalls does this change actually affect? | the blast radius of a fix, before a release |
 | `compare-verdicts.py` | and does any packet notice? | a rewrite of the rules - addresses folded into a set, a limit moved, rules reordered - that lets through or stops a packet the old rules did not |
+| `roundtrip-import.py` | does a ruleset read back and imported decide packets as the original? | an import that changes what a rule matches - a chain left to the wrong hook, a match dropped, a negation lost |
 
 ## Running them
 
@@ -375,6 +376,29 @@ It probes IPv4 and the nftables output only, and needs Python 3.12 or
 newer for `os.setns`.  Named sets the script fills after loading stay
 empty on both sides.  A ruleset the kernel refuses is reported and
 skipped; `load-nft.sh` is the oracle for that.
+
+## Importing what the compilers wrote
+
+The import (File > Import Firewall) reads a running ruleset back into a
+firewall object.  `roundtrip-import.py` loads every nftables ruleset of a
+compiled corpus into a namespace, reads it back with
+`nft -j list ruleset`, imports it into a fresh data file and compiles the
+result again, in the layout `compare-verdicts.py` reads:
+
+```bash
+python tools/compiler-audit/compile-corpus.py /tmp/rt-before
+python tools/compiler-audit/roundtrip-import.py /tmp/rt-before /tmp/rt-after
+python tools/compiler-audit/compare-verdicts.py /tmp/rt-before /tmp/rt-after
+```
+
+With `--from iptables` it runs the iptables scripts instead, reads them
+back with `iptables-save` and `ip6tables-save` and compiles the import for
+nftables, so the comparison is with the nftables compile of the same
+firewall.  `roundtrip.json` beside the output counts the rules each
+firewall imported disabled and says why.  A packet decided differently
+by a firewall that imported every rule is an importer bug; one decided
+differently where a rule came across disabled is the gap the report
+already names.
 
 ## Using your own corpus
 

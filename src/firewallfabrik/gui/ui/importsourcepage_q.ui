@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImportSourcePage_q</class>
+ <widget class="QWizardPage" name="ImportSourcePage_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>520</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WizardPage</string>
+  </property>
+  <property name="title">
+   <string>Choose the ruleset to import</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QRadioButton" name="fromFile">
+     <property name="toolTip">
+      <string>The output of "iptables-save", "ip6tables-save" or "nft -j list ruleset",
+saved to a file. Select several files to import the IPv4 and the IPv6
+ruleset together.</string>
+     </property>
+     <property name="text">
+      <string>From files saved on the firewall</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="fileLayout">
+     <item>
+      <widget class="QLabel" name="fileNameLabel">
+       <property name="text">
+        <string>File names:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="fileName">
+       <property name="toolTip">
+        <string>One or more files, separated by ";".</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="browse">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Browse...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="spacerBetween">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>12</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QRadioButton" name="fromFirewall">
+     <property name="toolTip">
+      <string>Log in over SSH and read the running ruleset and the addresses of the
+interfaces. The user has to be root, or be allowed "sudo" without a
+password for nft, iptables-save and ip6tables-save. Nothing on the
+firewall is changed.</string>
+     </property>
+     <property name="text">
+      <string>From the running firewall, over SSH</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="sshLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="addressLabel">
+       <property name="text">
+        <string>Address:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="address"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="userLabel">
+       <property name="text">
+        <string>User name:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="user">
+       <property name="text">
+        <string>root</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="passwordLabel">
+       <property name="text">
+        <string>Password or passphrase:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="password">
+       <property name="toolTip">
+        <string>Leave empty to log in with a key or the SSH agent.</string>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::EchoMode::Password</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="spacerBeforeText">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>24</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="importNote">
+     <property name="text">
+      <string>The import reads the ruleset and keeps its logic as closely as it can. A ruleset can say things FirewallFabrik has no object or option for; a rule the importer cannot carry over exactly is imported disabled and colored red, and its comment holds the original rule and the reason. Always compare the imported policy with the original before you install it.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="spacerBottom">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>browse</sender>
+   <signal>clicked()</signal>
+   <receiver>ImportSourcePage_q</receiver>
+   <slot>selectFiles()</slot>
+  </connection>
+ </connections>
+ <slots>
+  <slot>selectFiles()</slot>
+ </slots>
+</ui>

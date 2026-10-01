@@ -96,14 +96,34 @@ PACKET_OUTGOING = 4
 
 RULESET_RE = re.compile(r"<<\s*'?NFT_RULES'?\n(.*?)^NFT_RULES$", re.M | re.S)
 IPV4_RE = re.compile(r'(?<![\d.:])(\d{1,3}(?:\.\d{1,3}){3})(?:/(\d{1,2}))?(?![\d.:])')
-PORT_RE = re.compile(r'\b[ds]port\s+(?:!=\s*)?(\{[^}]*\}|\S+)')
-IFACE_RE = re.compile(r'\b(?:iifname|oifname|iif|oif)\s+(?:!=\s*)?(\{[^}]*\}|\S+)')
+PORT_RE = re.compile(
+    r'(?:\b[ds]port\s+(?:!=\s*)?(\{[^}]*\}|\S+))|(?:--[ds]ports?\s+(\S+))'
+)
+IFACE_RE = re.compile(
+    r'(?:\b(?:iifname|oifname|iif|oif)\s+(?:!=\s*)?(\{[^}]*\}|\S+))'
+    r'|(?:(?:^|\s)-[io]\s+(\S+))',
+    re.M,
+)
 
 
 def ruleset(path: Path) -> str:
-    """Return the ruleset the script loads, or '' when it has none."""
-    match = RULESET_RE.search(path.read_text(errors='replace'))
+    """Return the ruleset the script loads, or '' when it has none.
+
+    A ``.nft`` file is an nft ruleset as ``nft list ruleset`` prints it,
+    and an ``.ipt`` file the output of ``iptables-save``: a ruleset that
+    was not written by FirewallFabrik, such as the original an import is
+    compared with.
+    """
+    text = path.read_text(errors='replace')
+    if path.suffix in ('.nft', '.ipt'):
+        return text
+    match = RULESET_RE.search(text)
     return match.group(1) if match else ''
+
+
+def kind(path: Path) -> str:
+    """How the sandbox loads the ruleset of *path*: 'nft' or 'ipt'."""
+    return 'ipt' if path.suffix == '.ipt' else 'nft'
 
 
 def rules_only(text: str) -> list[str]:
@@ -145,9 +165,10 @@ def addresses(text: str) -> list[str]:
 def ports(text: str) -> list[int]:
     """Every port a rule names, both ends of a range."""
     found = set()
-    for value in PORT_RE.findall(text):
+    for groups in PORT_RE.findall(text):
+        value = ''.join(groups)
         for part in re.split(r'[\s,{}]+', value):
-            for number in part.split('-'):
+            for number in re.split(r'[-:]', part):
                 if number.isdigit() and 0 < int(number) < 65536:
                     found.add(int(number))
     return sorted(found)
@@ -156,9 +177,10 @@ def ports(text: str) -> list[int]:
 def interfaces(text: str) -> list[str]:
     """Every interface a rule names; a wildcard becomes one name it matches."""
     found = set()
-    for value in IFACE_RE.findall(text):
+    for groups in IFACE_RE.findall(text):
+        value = ''.join(groups)
         for part in re.split(r'[\s,{}]+', value):
-            name = part.strip('"')
+            name = part.strip('"').replace('+', '*')
             if not name or name == 'lo' or not re.fullmatch(r'[\w.*-]+', name):
                 continue
             name = name.replace('*', '0')
@@ -461,18 +483,27 @@ def known_accounts(rules: str) -> None:
             sh(f'mount --bind {copy.name} {path}')
 
 
-def run_sandbox(rules: str | None, probes: list[dict]) -> dict:
-    """Send *probes* through *rules* (None: no ruleset); return what arrived."""
+def run_sandbox(rules: str | None, probes: list[dict], loader: str = 'nft') -> dict:
+    """Send *probes* through *rules* (None: no ruleset); return what arrived.
+
+    *loader* is 'nft' for an nft ruleset and 'ipt' for iptables-save output,
+    which iptables-restore loads.
+    """
     ifaces = sorted(({p['iin'] for p in probes} | {p['iout'] for p in probes}) - {''})
     box = Sandbox(ifaces)
     try:
         if rules is not None:
             known_accounts(rules)
-            with tempfile.NamedTemporaryFile('w', suffix='.nft') as handle:
+            with tempfile.NamedTemporaryFile('w', suffix='.rules') as handle:
                 handle.write(rules)
                 handle.flush()
+                command = (
+                    ['iptables-restore', handle.name]
+                    if loader == 'ipt'
+                    else ['nft', '--file', handle.name]
+                )
                 result = subprocess.run(  # nosec B603 B607
-                    ['nft', '--file', handle.name], capture_output=True, text=True
+                    command, capture_output=True, text=True
                 )
             if result.returncode:
                 # nft prints the offending line and a caret under it; the
@@ -543,10 +574,10 @@ def run_sandbox(rules: str | None, probes: list[dict]) -> dict:
 # -- Driving it -------------------------------------------------------------
 
 
-def sandbox(rules: str | None, probes: list[dict]) -> dict:
+def sandbox(rules: str | None, probes: list[dict], loader: str = 'nft') -> dict:
     """Run one sandbox in a private namespace of its own."""
     with tempfile.NamedTemporaryFile('w', suffix='.json') as handle:
-        json.dump({'rules': rules, 'probes': probes}, handle)
+        json.dump({'rules': rules, 'probes': probes, 'loader': loader}, handle)
         handle.flush()
         try:
             result = subprocess.run(  # nosec B603 B607
@@ -565,6 +596,7 @@ def sandbox(rules: str | None, probes: list[dict]) -> dict:
 def compare(before_path: Path, after_path: Path, limit: int) -> tuple[str, list[str]]:
     """Return a status word and the report lines for one firewall."""
     before, after = ruleset(before_path), ruleset(after_path)
+    loaders = {'before': kind(before_path), 'after': kind(after_path)}
     if not before or not after:
         return 'skipped', []
     if rules_only(before) == rules_only(after):
@@ -582,7 +614,7 @@ def compare(before_path: Path, after_path: Path, limit: int) -> tuple[str, list[
 
     runs = {}
     for label, text in (('before', before), ('after', after)):
-        runs[label] = sandbox(text, probes)
+        runs[label] = sandbox(text, probes, loaders[label])
         if 'error' in runs[label]:
             return 'refused', [
                 f'{label}: the kernel refused the ruleset: {runs[label]["error"]}'
@@ -601,8 +633,8 @@ def compare(before_path: Path, after_path: Path, limit: int) -> tuple[str, list[
     confirmed = []
     for probe in differ:
         alone = [dict(probe, id=1)]
-        again_before = 1 in sandbox(before, alone).get('arrived', [])
-        again_after = 1 in sandbox(after, alone).get('arrived', [])
+        again_before = 1 in sandbox(before, alone, loaders['before']).get('arrived', [])
+        again_after = 1 in sandbox(after, alone, loaders['after']).get('arrived', [])
         if again_before != again_after:
             confirmed.append((probe, again_before, again_after))
     if not confirmed:
@@ -622,12 +654,30 @@ def main() -> int:
     )
     parser.add_argument('--only', default='', help='compare only paths containing this')
     parser.add_argument('--sandbox', type=Path, help=argparse.SUPPRESS)
+    parser.add_argument(
+        '--pair',
+        nargs=2,
+        type=Path,
+        metavar=('BEFORE', 'AFTER'),
+        help='compare two files: a compiled script, an nft ruleset (.nft) or '
+        'iptables-save output (.ipt)',
+    )
     args = parser.parse_args()
 
     if args.sandbox:
         job = json.loads(args.sandbox.read_text())
-        print(json.dumps(run_sandbox(job['rules'], job['probes'])))
+        print(
+            json.dumps(
+                run_sandbox(job['rules'], job['probes'], job.get('loader', 'nft'))
+            )
+        )
         return 0
+    if args.pair:
+        status, lines = compare(args.pair[0], args.pair[1], args.probes)
+        print(f'=== {status}')
+        for line in lines:
+            print(f'  {line}')
+        return 1 if status in ('differ', 'broken', 'refused') else 0
     if not args.before or not args.after:
         parser.error('two compiled trees are needed')
 

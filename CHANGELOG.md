@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this. An installation that locks you out of a remote firewall now undoes itself: unless the firewall answers a new SSH login within 60 seconds, it goes back to the ruleset it had and keeps booting with its old script.
+**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this. An installation that locks you out of a remote firewall now undoes itself: unless the firewall answers a new SSH login within 60 seconds, it goes back to the ruleset it had and keeps booting with its old script. An existing Linux firewall can be taken over with File > Import Firewall, from its iptables, nftables or firewalld ruleset; what cannot be carried over exactly is marked and blocks rather than lets through.
 
 ### Added
 
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
 * Editor (iptables, nftables): the reverse path filter offers loose mode, for firewalls with several uplinks or policy routing, which strict mode breaks.
 * Editor (iptables, nftables): the rollback timer of the installer can be set per firewall in its settings, and for new firewalls in the preferences.
+* Editor: File > Import Firewall builds a firewall from the ruleset a Linux firewall runs, read from iptables-save or `nft -j list ruleset` output or over SSH; a rule it cannot carry over exactly errs on the side of blocking and is marked ([#160](https://github.com/Linuxfabrik/firewallfabrik/issues/160)).
 * Editor: the compile and install dialog shows each firewall's platform and release, and so does the object tree.
 * Standard library: services for Amanda, gpsd, IRC over TLS, Jellyfin, Mumble, NSCA, NUT, Plex, SANE, Subversion, Syncthing, TeamSpeak and USB/IP; existing files get them with "Update Standard Library".
 
@@ -36,11 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a rate limit that applies only above the rate is compiled instead of left out.
 * Compiler (iptables, nftables): `reload_address_table <table> <file> -6` reloads the IPv6 addresses of a run-time address table instead of failing, so a changed IPv6 prefix reaches the rules without recompiling.
 * Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
+* Compiler (iptables, nftables): two branches into the same rule set no longer draw a warning about a branching loop.
 * Compiler (iptables): a firewall with time-of-day rules no longer loses its rules on a kernel without the time match, such as RHEL 8 to 10; the script stops before changing anything and says why.
 * Compiler (iptables): a warning about the automatic rules of the mangle table, such as MSS clamping on an old ip6tables, is shown instead of lost.
 * Compiler (iptables): an activation that fails halfway puts back the ruleset that was running before it, instead of leaving the firewall with DROP policies and part of the new rules; the script now needs `iptables-save` and `ip6tables-save`, whose paths can be set in the host settings.
 * Compiler (nftables): a firewall set to the nftables release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04, instead of being refused as a whole.
 * Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
+* Compiler (nftables): a NAT rule branching into a rule set that only translates the other address family, such as an IPv4 port forward, is no longer reported as an error.
 * Compiler (nftables): rate limits kept per source, destination or port load on nftables before 1.1.0 instead of taking the whole ruleset down.
 * Editor: a cluster member compiled from the compile and install dialog gets the script it is installed from, instead of the installer picking up an outdated or missing one ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
 * Editor: a new firewall or cluster starts with an empty Policy, NAT and Routing rule set, and a new cluster with its state sync group, as in Firewall Builder.

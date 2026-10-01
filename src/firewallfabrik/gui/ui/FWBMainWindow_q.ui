@@ -1242,6 +1242,8 @@
     <addaction name="fileReloadAction" />
     <addaction name="fileCloseAction" />
     <addaction name="separator" />
+    <addaction name="policyImportAction" />
+    <addaction name="separator" />
     <addaction name="libImportAction" />
     <addaction name="libExportAction" />
     <addaction name="separator" />
@@ -1765,6 +1767,21 @@
    </property>
    <property name="toolTip">
     <string>Show all policy and NAT rules that reference the selected object</string>
+   </property>
+  </action>
+  <action name="policyImportAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Import &amp;Firewall...</string>
+   </property>
+   <property name="iconText">
+    <string>Import Firewall</string>
+   </property>
+   <property name="toolTip">
+    <string>Build a firewall object from the ruleset of a running firewall, read from
+iptables-save or "nft -j list ruleset" output or over SSH</string>
    </property>
   </action>
   <action name="libImportAction">
@@ -2719,6 +2736,22 @@ FirewallFabrik. User libraries and firewall rules are preserved.</string>
    </hints>
   </connection>
   <connection>
+   <sender>policyImportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>importPolicy()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>libImportAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2932,6 +2965,7 @@ FirewallFabrik. User libraries and firewall rules are preserved.</string>
   <slot>fileExport()</slot>
   <slot>fileImport()</slot>
   <slot>fileProp()</slot>
+  <slot>importPolicy()</slot>
   <slot>showChangelog()</slot>
   <slot>toggleViewObjectTree()</slot>
   <slot>toggleViewRules()</slot>
