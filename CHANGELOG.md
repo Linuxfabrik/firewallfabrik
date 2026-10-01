@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
 * Editor (iptables, nftables): the reverse path filter offers loose mode, for firewalls with several uplinks or policy routing, which strict mode breaks.
 * Editor (iptables, nftables): the rollback timer of the installer can be set per firewall in its settings, and for new firewalls in the preferences.
-* Editor: File > Import Firewall builds a firewall from the ruleset a Linux firewall runs, read from iptables-save or `nft -j list ruleset` output or over SSH; a rule it cannot carry over exactly errs on the side of blocking and is marked ([#160](https://github.com/Linuxfabrik/firewallfabrik/issues/160)).
+* Editor: File > Import Firewall builds a firewall from the ruleset a Linux firewall runs, read from iptables-save or `nft -j list ruleset` output or over SSH, and over SSH from its configured routes as well; a rule it cannot carry over exactly errs on the side of blocking and is marked ([#160](https://github.com/Linuxfabrik/firewallfabrik/issues/160)).
 * Editor: the compile and install dialog shows each firewall's platform and release, and so does the object tree.
 * Standard library: services for Amanda, gpsd, IRC over TLS, Jellyfin, Mumble, NSCA, NUT, Plex, SANE, Subversion, Syncthing, TeamSpeak and USB/IP; existing files get them with "Update Standard Library".
 

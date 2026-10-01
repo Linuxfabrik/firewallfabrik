@@ -53,8 +53,12 @@ def plan_import(
     deduplicate=True,
     table_filter=None,
     interface_addresses=None,
+    routes=None,
 ):
-    """Build the plan for importing *rulesets* as firewall *fw_name*."""
+    """Build the plan for importing *rulesets* as firewall *fw_name*.
+
+    *routes* are the parsed ``ip -j route`` listings, one per family.
+    """
     with db_manager.session() as session:
         library = session.get(objects.Library, library_id)
         if library is None:
@@ -79,7 +83,7 @@ def plan_import(
         existing,
         interface_addresses=interface_addresses,
     )
-    return builder.build(rulesets, table_filter=table_filter)
+    return builder.build(rulesets, table_filter=table_filter, routes=routes)
 
 
 def apply_plan(db_manager, library_id, plan, group_paths=None):

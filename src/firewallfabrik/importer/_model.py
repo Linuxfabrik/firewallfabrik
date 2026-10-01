@@ -154,3 +154,33 @@ class Ruleset:
     # severity 'error' or 'warning'.
     messages: list[tuple[str, str]] = dataclasses.field(default_factory=list)
     version: str = ''  # the release that wrote the input, where it says
+
+
+@dataclasses.dataclass
+class NextHop:
+    """Where a route sends a packet: a gateway, an interface, or both."""
+
+    gateway: Address | None = None
+    dev: str = ''
+    weight: int = 1
+
+
+@dataclasses.dataclass
+class Route:
+    """One route of the main routing table, as ``ip -j route`` lists it."""
+
+    raw: str  # the route as the listing wrote it, for comments and messages
+    family: int  # 4 or 6
+    dst: Address | None = None  # None for the default route
+    # One next hop, or several for an equal-cost multi path route.
+    next_hops: list[NextHop] = dataclasses.field(default_factory=list)
+    metric: int = 0  # 0 where the route names none
+    unsupported: list[str] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
+class Routes:
+    """The routes one ``ip -j route`` listing holds, and what was left out."""
+
+    routes: list[Route] = dataclasses.field(default_factory=list)
+    messages: list[tuple[str, str]] = dataclasses.field(default_factory=list)

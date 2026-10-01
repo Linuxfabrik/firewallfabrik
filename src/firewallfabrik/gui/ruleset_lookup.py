@@ -14,10 +14,10 @@
 
 It logs in the way "Lookup Version ..." does (``version_lookup``) and
 runs commands that read and change nothing: ``nft -j list ruleset``,
-``iptables-save``, ``ip6tables-save`` and ``ip -j addr``, plus what the
-version lookup asks.  Listing a ruleset needs CAP_NET_ADMIN, so a user
-other than root runs them through ``sudo -n``, which fails instead of
-asking for a password nobody could type.
+``iptables-save``, ``ip6tables-save``, ``ip -j addr`` and ``ip -j route``,
+plus what the version lookup asks.  Listing a ruleset needs
+CAP_NET_ADMIN, so a user other than root runs them through ``sudo -n``,
+which fails instead of asking for a password nobody could type.
 
 Nothing here needs Qt.
 """
@@ -36,6 +36,9 @@ _REMOTE = (
     'echo "@@RS_IPT4"; $S iptables-save 2>/dev/null; '
     'echo "@@RS_IPT6"; $S ip6tables-save 2>/dev/null; '
     'echo "@@RS_ADDR"; ip -j addr 2>/dev/null; '
+    # Without -4 or -6, "table all" lists both families at once.
+    'echo "@@RS_ROUTE4"; ip -4 -j route show table all 2>/dev/null; '
+    'echo "@@RS_ROUTE6"; ip -6 -j route show table all 2>/dev/null; '
     'echo "@@RS_HOST"; hostname 2>/dev/null; '
 ) + version_lookup._REMOTE
 
@@ -48,6 +51,8 @@ class RemoteRuleset:
     iptables_save: str = ''
     ip6tables_save: str = ''
     ip_addr_json: str = ''
+    ip_route4_json: str = ''
+    ip_route6_json: str = ''
     hostname: str = ''
     lookup: version_lookup.Lookup | None = None
 
@@ -77,6 +82,8 @@ def parse(output: str) -> RemoteRuleset:
         iptables_save='\n'.join(sections.get('IPT4', [])),
         ip6tables_save='\n'.join(sections.get('IPT6', [])),
         ip_addr_json='\n'.join(sections.get('ADDR', [])).strip(),
+        ip_route4_json='\n'.join(sections.get('ROUTE4', [])).strip(),
+        ip_route6_json='\n'.join(sections.get('ROUTE6', [])).strip(),
         hostname='\n'.join(sections.get('HOST', [])).strip(),
         lookup=version_lookup.parse(output),
     )

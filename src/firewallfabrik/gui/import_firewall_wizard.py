@@ -43,6 +43,7 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 from firewallfabrik.importer import (
     apply_plan,
     parse_ip_addr_json,
+    parse_ip_route_json,
     parse_iptables_save,
     parse_nft_json,
     plan_import,
@@ -125,6 +126,7 @@ class _SourcePage(QWizardPage):
         wizard = self._wizard
         wizard.inputs = []
         wizard.interface_addresses = None
+        wizard.routes = []
         wizard.suggested_name = ''
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -182,6 +184,14 @@ class _SourcePage(QWizardPage):
                 wizard.interface_addresses = parse_ip_addr_json(remote.ip_addr_json)
             except ValueError:
                 wizard.interface_addresses = None
+        wizard.routes = [
+            parse_ip_route_json(text, family)
+            for text, family in (
+                (remote.ip_route4_json, 4),
+                (remote.ip_route6_json, 6),
+            )
+            if text
+        ]
         wizard.lookup = remote.lookup
         wizard.suggested_name = remote.hostname.split('.')[0]
         if not wizard.inputs:
@@ -242,9 +252,38 @@ class _ContentPage(QWizardPage):
                 )
                 entry.setData(Qt.ItemDataRole.UserRole, (index, id(table)))
                 self.tables.addItem(entry)
+        routes = sum(len(r.routes) for r in wizard.routes)
+        if routes:
+            entry = QListWidgetItem(
+                self.tr(f'ip route: the main routing table ({routes} routes)')
+            )
+            entry.setFlags(entry.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            # The script that installs them deletes every other route of the
+            # main table but the kernel's; checked only where that loses
+            # nothing.
+            lossless = not any(
+                severity == 'warning'
+                for listing in wizard.routes
+                for severity, _text in listing.messages
+            )
+            entry.setCheckState(
+                Qt.CheckState.Checked if lossless else Qt.CheckState.Unchecked
+            )
+            entry.setData(Qt.ItemDataRole.UserRole, ('routes', None))
+            self.tables.addItem(entry)
+            if not lossless:
+                notes.append('routes')
         text = self.tr(
             f'{len(wizard.inputs)} input(s) read. Check the tables to import.'
         )
+        if 'routes' in notes:
+            notes.remove('routes')
+            text += self.tr(
+                ' The routes are not checked: the main table also holds routes'
+                ' of DHCP, router advertisements, a routing daemon or a type a'
+                ' routing rule cannot hold, and a firewall script that installs'
+                ' routes deletes those.'
+            )
         if notes:
             text += self.tr(
                 ' Tables written by iptables-nft list their matches only as "xt"'
@@ -260,10 +299,16 @@ class _ContentPage(QWizardPage):
 
     def validatePage(self):
         picked = set()
+        self._wizard.import_routes = False
         for i in range(self.tables.count()):
             entry = self.tables.item(i)
-            if entry.checkState() == Qt.CheckState.Checked:
-                picked.add(entry.data(Qt.ItemDataRole.UserRole)[1])
+            if entry.checkState() != Qt.CheckState.Checked:
+                continue
+            kind, table_id = entry.data(Qt.ItemDataRole.UserRole)
+            if kind == 'routes':
+                self._wizard.import_routes = True
+            else:
+                picked.add(table_id)
         self._wizard.picked_tables = picked
         self._wizard.platform = self.platform.currentData()
         return True
@@ -357,6 +402,8 @@ class ImportFirewallWizard(QWizard):
         self.library_id = library_id
         self.inputs = []
         self.interface_addresses = None
+        self.routes = []
+        self.import_routes = False
         self.lookup = None
         self.suggested_name = ''
         self.picked_tables = set()
@@ -395,6 +442,7 @@ class ImportFirewallWizard(QWizard):
                 deduplicate=self.deduplicate,
                 table_filter=lambda table: id(table) in self.picked_tables,
                 interface_addresses=self.interface_addresses,
+                routes=self.routes if self.import_routes else None,
             )
             for severity, text in plan.messages:
                 log(severity, text)
@@ -413,5 +461,6 @@ class ImportFirewallWizard(QWizard):
             f'Firewall "{self.fw_name}" created: {plan.imported_rules} rules imported, '
             f'{plan.unsupported_rules} imported disabled, '
             f'{plan.widened_rules} blocking more than the original, '
-            f'{len(plan.objects)} new objects.',
+            f'{plan.imported_routes} routes ({plan.marked_routes} without part of '
+            f'what they said), {len(plan.objects)} new objects.',
         )

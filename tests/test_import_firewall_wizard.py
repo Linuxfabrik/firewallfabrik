@@ -82,3 +82,44 @@ def test_the_name_of_an_existing_firewall_is_refused(wizard, monkeypatch):
     wizard.next()
     wizard.currentPage().firewallName.setText('dup')
     assert wizard.currentPage().validatePage() is False
+
+
+def test_the_routes_read_over_ssh_become_the_routing_rule_set(wizard, monkeypatch):
+    from firewallfabrik.core.objects import Firewall
+    from firewallfabrik.gui import ruleset_lookup
+
+    def run(*_args, **_kwargs):
+        return ruleset_lookup.RemoteRuleset(
+            nft_json=(IMPORT_DIR / 'sample-nft.json').read_text(),
+            ip_addr_json=(IMPORT_DIR / 'sample-routes-addr.json').read_text(),
+            ip_route4_json=(IMPORT_DIR / 'sample-routes4.json').read_text(),
+            ip_route6_json=(IMPORT_DIR / 'sample-routes6.json').read_text(),
+            hostname='gw.example.com',
+        )
+
+    monkeypatch.setattr(ruleset_lookup, 'run', run)
+    source = wizard.currentPage()
+    source.fromFirewall.setChecked(True)
+    source.address.setText('192.0.2.1')
+    wizard.next()
+    content = wizard.currentPage()
+    routes = next(
+        content.tables.item(i)
+        for i in range(content.tables.count())
+        if content.tables.item(i).text().startswith('ip route')
+    )
+    # The listing has a DHCP route and a blackhole, which the script would
+    # delete: the routes wait for a deliberate check.
+    assert routes.checkState() == Qt.CheckState.Unchecked
+    assert 'deletes those' in content.summary.text()
+    routes.setCheckState(Qt.CheckState.Checked)
+    wizard.next()
+    assert wizard.currentPage().firewallName.text() == 'gw'
+    wizard.next()
+    assert wizard.fw_id is not None
+    with wizard.db_manager.session() as session:
+        fw = session.get(Firewall, wizard.fw_id)
+        routing = next(rs for rs in fw.rule_sets if type(rs).__name__ == 'Routing')
+        # Six IPv4 routes, the multi path one as two rules, and two IPv6
+        # routes.
+        assert len(routing.rules) == 9

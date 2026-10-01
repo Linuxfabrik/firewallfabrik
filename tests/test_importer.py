@@ -47,6 +47,8 @@ from firewallfabrik.gui.object_tree_data import (
 )
 from firewallfabrik.importer import (
     apply_plan,
+    parse_ip_addr_json,
+    parse_ip_route_json,
     parse_iptables_save,
     parse_nft_json,
     plan_import,
@@ -1010,3 +1012,108 @@ def test_an_ipv4_port_forward_in_an_inet_table_compiles(tmp_path, platform):
     driver, script = _compile(db_manager, 'imported', tmp_path, platform)
     assert driver.all_errors == []
     assert '10.10.0.10' in script.read_text()
+
+
+# -- routes --
+
+
+def _routes():
+    return [
+        parse_ip_route_json(_text('sample-routes4.json'), 4),
+        parse_ip_route_json(_text('sample-routes6.json'), 6),
+    ]
+
+
+def test_ip_route_reads_what_an_administrator_configured():
+    """iproute2 leaves out type unicast, proto boot, table main, scope global."""
+    v4, v6 = _routes()
+    by_dst = {r.dst.text if r.dst else 'default': r for r in v4.routes}
+    assert sorted(by_dst) == [
+        '10.1.0.0/16',
+        '10.2.0.0/16',
+        '10.3.0.5',
+        '10.4.0.0/16',
+        '10.5.0.0/16',
+        'default',
+    ]
+    assert by_dst['default'].metric == 100
+    assert [h.gateway.text for h in by_dst['10.4.0.0/16'].next_hops] == [
+        '192.0.2.20',
+        '198.51.100.20',
+    ]
+    assert by_dst['10.3.0.5'].unsupported == ['mtu 1400', 'source address 192.0.2.1']
+    assert by_dst['10.5.0.0/16'].unsupported == ['flag onlink']
+    left_out = ' '.join(text for _severity, text in v4.messages)
+    for what in ('proto dhcp', 'table 100', 'type blackhole'):
+        assert what in left_out
+    # The kernel's own and the IPv6 router preference are no loss, and the
+    # metric the kernel gives an IPv6 route that names none is no metric.
+    assert [
+        (r.dst.text if r.dst else 'default', r.metric, r.unsupported) for r in v6.routes
+    ] == [
+        ('2001:db8:5::/48', 0, []),
+        ('default', 0, []),
+    ]
+
+
+def test_ip_route_without_a_family_lists_both_and_counts_each_once():
+    mixed = (
+        '[{"dst":"10.1.0.0/16","gateway":"192.0.2.254","dev":"eth0","flags":[]},'
+        '{"dst":"2001:db8:5::/48","gateway":"2001:db8::5","dev":"eth0",'
+        '"metric":1024,"flags":[],"pref":"medium"}]'
+    )
+    assert [r.family for r in parse_ip_route_json(mixed).routes] == [4, 6]
+    assert [r.family for r in parse_ip_route_json(mixed, 4).routes] == [4]
+
+
+@pytest.mark.parametrize('platform', ['ipt', 'nft'])
+def test_imported_routes_compile_into_the_route_commands(tmp_path, platform):
+    db_manager, _fw, plan = _import(
+        [],
+        'nftables',
+        routes=_routes(),
+        interface_addresses=parse_ip_addr_json(_text('sample-routes-addr.json')),
+    )
+    assert (plan.imported_routes, plan.marked_routes, plan.unsupported_rules) == (
+        8,
+        1,
+        1,
+    )
+    driver, script = _compile(db_manager, 'imported', tmp_path, platform)
+    assert (driver.all_errors, driver.all_warnings) == ([], [])
+    commands = [
+        ' '.join(line.split())
+        for line in script.read_text().splitlines()
+        if line.strip().startswith(('$IP route add', '$IP -6 route add', 'nexthop'))
+    ]
+    assert commands == [
+        '$IP route add default metric 100 via 192.0.2.254 dev eth0 \\',
+        '$IP route add 10.1.0.0/16 via 198.51.100.254 dev eth1 \\',
+        '$IP route add 10.2.0.0/16 dev eth1 \\',
+        '$IP route add 10.3.0.5 via 192.0.2.10 dev eth0 \\',
+        '$IP -6 route add 2001:db8:5::/48 via 2001:db8::5 dev eth0 \\',
+        '$IP -6 route add default via fe80::1 dev eth0 \\',
+        '$IP route add 10.4.0.0/16 \\',
+        'nexthop via 192.0.2.20 dev eth0 \\',
+        'nexthop via 198.51.100.20 dev eth1 \\',
+    ]
+
+
+def test_a_route_through_a_gateway_off_the_link_is_imported_disabled():
+    """The compiler refuses an unreachable gateway, and the activation stops."""
+    db_manager, fw_id, _plan = _import([], 'nftables', routes=_routes())
+    rules = _rules(db_manager, fw_id, 'Routing')
+    marked = [(options, comment) for options, comment, _rows in rules if comment]
+    onlink = [o for o, c in marked if 'onlink' in c]
+    assert onlink and onlink[0].get('disabled') is True
+    mtu = [o for o, c in marked if 'mtu 1400' in c]
+    assert mtu and not mtu[0].get('disabled') and mtu[0].get('color')
+
+
+def test_an_imported_firewall_has_the_rule_sets_a_new_one_has():
+    _db, _fw, plan = _import([], 'nftables')
+    assert sorted(rs['type'] for rs in plan.firewall['rule_sets'] if rs['top']) == [
+        'NAT',
+        'Policy',
+        'Routing',
+    ]

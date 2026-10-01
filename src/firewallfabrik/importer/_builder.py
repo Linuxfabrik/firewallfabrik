@@ -146,6 +146,8 @@ class ImportPlan:
     unsupported_rules: int = 0  # imported disabled
     widened_rules: int = 0  # blocking rules imported without a condition
     imported_rules: int = 0
+    imported_routes: int = 0
+    marked_routes: int = 0  # routes imported without part of what they said
 
 
 def address_signature(address):
@@ -211,6 +213,8 @@ class Builder:
         self.messages = []
         self.options = dict(_NEUTRAL_OPTIONS)
         self.unsupported_rules = 0
+        self.imported_routes = 0
+        self.imported_routes_marked = 0
         self.fw_hosts = []
         self.widened_rules = 0
         self.imported_rules = 0
@@ -220,8 +224,12 @@ class Builder:
 
     # -- entry point --
 
-    def build(self, rulesets, table_filter=None):
-        """Build from *rulesets*; *table_filter(table)* picks the tables."""
+    def build(self, rulesets, table_filter=None, routes=None):
+        """Build from *rulesets*; *table_filter(table)* picks the tables.
+
+        *routes* are the :class:`Routes` of ``ip -j route``, one per
+        address family, for the Routing rule set.
+        """
         selected = [
             (ruleset, table)
             for ruleset in rulesets
@@ -240,6 +248,8 @@ class Builder:
         self._local_addresses([table for _rs, table in selected])
         for ruleset, table in selected:
             self._table(ruleset, table)
+        self._routing(routes or [])
+        self._empty_top_rule_sets()
         firewall = {
             'type': 'Firewall',
             'name': self.fw_name,
@@ -259,7 +269,100 @@ class Builder:
             unsupported_rules=self.unsupported_rules,
             widened_rules=self.widened_rules,
             imported_rules=self.imported_rules,
+            imported_routes=self.imported_routes,
+            marked_routes=self.imported_routes_marked,
         )
+
+    # -- routing --
+
+    def _routing(self, route_lists):
+        """Turn the routes into the rules of the Routing rule set.
+
+        A route of several next hops becomes one rule per hop, with the
+        destination and the metric they share; the compiler writes such
+        rules as one equal-cost multi path route.  A route with something
+        a routing rule cannot hold is imported all the same, colored and
+        with the original in its comment: the route without it still
+        reaches its destination.  Only a gateway the interface cannot
+        reach by itself ("onlink") is imported disabled, because the
+        compiler refuses it and the activation would stop.
+        """
+        rules = []
+        for routes in route_lists:
+            self.messages.extend(routes.messages)
+            for route in routes.routes:
+                rules.extend(self._routing_rules(route))
+        if rules:
+            self._add_routing_rule_set(rules)
+
+    def _routing_rules(self, route):
+        problems = list(route.unsupported)
+        rdst = []
+        if route.dst is not None:
+            try:
+                rdst = [self._address_ref(route.dst)]
+            except ValueError:
+                problems.append(f'destination {route.dst.text}')
+        elif route.family == 6:
+            # An empty destination is the default route, and iproute2 takes
+            # the family of such a route from the gateway; one out of a
+            # device alone would come out as IPv4.
+            rdst = [self._address_ref(Address(family=6, text='::/0'))]
+        rules = []
+        for hop in route.next_hops:
+            rule = {'type': 'RoutingRule', 'options': {}}
+            if rdst:
+                rule['rdst'] = rdst
+            if hop.gateway is not None:
+                try:
+                    rule['rgtw'] = [self._address_ref(hop.gateway)]
+                except ValueError:
+                    problems.append(f'gateway {hop.gateway.text}')
+            if hop.dev:
+                rule['ritf'] = [self._interface_ref(hop.dev)]
+            if route.metric:
+                rule['options']['metric'] = route.metric
+            rules.append(rule)
+        comment = []
+        if problems:
+            comment.append('Imported without: ' + '; '.join(problems) + '.')
+            comment.append(f'Original: {route.raw}')
+        disabled = any(p.endswith('onlink') for p in problems)
+        for rule in rules:
+            if problems:
+                rule['options']['color'] = UNSUPPORTED_COLOR
+                rule['comment'] = '\n'.join(comment)
+            if disabled:
+                rule['options']['disabled'] = True
+        where = f'IPv{route.family} route {route.dst.text if route.dst else "default"}'
+        if disabled:
+            self.unsupported_rules += 1
+            self.messages.append(
+                ('warning', f'{where}: imported disabled: ' + '; '.join(problems))
+            )
+        elif problems:
+            self.imported_routes_marked += 1
+            self.messages.append(
+                ('warning', f'{where}: imported without ' + '; '.join(problems))
+            )
+        self.imported_routes += 1
+        return rules
+
+    def _add_routing_rule_set(self, rules):
+        rule_set = {'type': 'Routing', 'name': 'Routing', 'top': True, 'rules': []}
+        for position, rule in enumerate(rules):
+            rule['position'] = position
+            rule_set['rules'].append(rule)
+        self.rule_sets.append(rule_set)
+
+    def _empty_top_rule_sets(self):
+        """Give the firewall the rule sets a new one starts with."""
+        present = {rs['type'] for rs in self.rule_sets if rs.get('top')}
+        for rs_type in ('Policy', 'NAT', 'Routing'):
+            if rs_type not in present:
+                self.rule_sets.append(
+                    {'type': rs_type, 'name': rs_type, 'top': True, 'rules': []}
+                )
 
     # -- the rules FirewallFabrik writes by itself --
 

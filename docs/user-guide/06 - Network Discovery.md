@@ -12,8 +12,8 @@ File \> Import Firewall... builds a firewall object, its interfaces, the address
 
 The wizard has four steps.
 
-1. **Choose the ruleset to import.** Either select one or more files saved on the firewall, for example `iptables-save > v4.txt`, `ip6tables-save > v6.txt` or `nft -j list ruleset > ruleset.json`, or let FirewallFabrik read the running firewall over SSH. Over SSH it also reads the addresses of the interfaces (`ip -j addr`) and the packet filter release. The user has to be root, or be allowed to run nft, iptables-save and ip6tables-save with `sudo` without a password. Nothing on the firewall is changed.
-2. **Choose the tables to import.** Every table of the input is listed; the filter and nat tables with rules are checked. A table written by iptables-nft shows its matches only as `xt` in the nftables listing, so it is better imported from the iptables-save output. Choose the platform the new firewall is compiled for; it does not have to be the one the ruleset was read from.
+1. **Choose the ruleset to import.** Either select one or more files saved on the firewall, for example `iptables-save > v4.txt`, `ip6tables-save > v6.txt` or `nft -j list ruleset > ruleset.json`, or let FirewallFabrik read the running firewall over SSH. Over SSH it also reads the addresses of the interfaces (`ip -j addr`), the routes (`ip -j route`) and the packet filter release. The user has to be root, or be allowed to run nft, iptables-save and ip6tables-save with `sudo` without a password. Nothing on the firewall is changed.
+2. **Choose the tables to import.** Every table of the input is listed; the filter and nat tables with rules are checked. A table written by iptables-nft shows its matches only as `xt` in the nftables listing, so it is better imported from the iptables-save output. Read over SSH, the main routing table is listed as well (see below). Choose the platform the new firewall is compiled for; it does not have to be the one the ruleset was read from.
 3. **Enter firewall object name.** With "Find and use existing objects" checked, an address or service the data file already has, the Standard library included, is used instead of a copy.
 4. **Import.** The log lists every rule that could not be carried over exactly. The new firewall opens in the editor.
 
@@ -31,6 +31,14 @@ How the ruleset is mapped:
 | A named nftables set of addresses | A group of address objects |
 
 The addresses of the interfaces are not part of a ruleset. Read from a file, every interface the rules name is a dynamic interface, whose addresses the generated script finds when it runs, and every address an input rule names as destination, or an output rule as source, goes on an interface named "imported", because a packet in those chains is addressed to or sent by the firewall itself. Move those addresses to the interfaces they belong to. Read over SSH, the interfaces carry the addresses the machine has.
+
+The routes become the rules of the Routing rule set. A firewall script with routing rules takes over the main routing table: when it starts, it deletes every route of that table it does not install, except the routes the kernel makes for the addresses of the interfaces and, while it installs none of its own, the default route. So the importer takes the routes an administrator configured, which the kernel marks `proto boot` (`ip route add`, ifupdown) or `proto static` (NetworkManager, systemd-networkd). It leaves out and reports:
+
+- routes of DHCP, router advertisements or a routing daemon, which belong to that program
+- `blackhole`, `unreachable`, `prohibit` and the other route types a routing rule cannot hold
+- routes of other tables, which the script leaves alone
+
+Where the main table holds such a route, the routes are not checked in step 2, because installing them would delete it. ifupdown's DHCP client (`dhclient`, Debian 11 and 12) installs the default route with `ip route add`, which the kernel marks `proto boot` like a configured one; it is imported as a fixed route to the gateway the lease named, so remove it from the Routing rule set where the gateway can change. A route with several next hops becomes one rule per hop, which the compiler installs as one multi path route. A route with something a routing rule cannot hold, such as a preferred source address (`src`) or an MTU, is imported colored and with the original in its comment; one through a gateway that is not on the network of its interface (`onlink`) is imported disabled.
 
 The imported firewall has the options that add rules of their own switched off, unless the ruleset showed them: it is meant to do what the old firewall did and nothing more.
 
