@@ -287,23 +287,26 @@ options:
     type: 'bool'
     default: true
     supported: true
-    widget: ~
+    widget: 'installRollback'
     description: >-
-      Install with a rollback timer: the installer activates the policy
-      with "try", then confirms it over a new SSH connection.  When that
-      connection cannot be made within install_rollback_timeout seconds,
-      the firewall puts back the ruleset that was running before, and it
-      keeps booting with the script it had.  Set in the install dialog.
+      The installer activates the policy, then confirms it over a new SSH
+      connection.  When that connection cannot be made in time, the
+      firewall puts back the ruleset that was running before and keeps
+      booting with the script it had, so a policy that locks the installer
+      out undoes itself.  A new firewall takes the value from Preferences >
+      Installer.  Not used with a custom activation command or install
+      script.
 
   install_rollback_timeout:
     type: 'int'
     default: 60
     supported: true
-    widget: ~
+    widget: 'installRollbackTimeout'
     description: >-
-      Seconds the firewall waits for the installer to confirm the
-      activation over a new SSH connection before it puts back the
-      ruleset that was running before.  Set in the install dialog.
+      Seconds from the end of the activation until the firewall puts back
+      the ruleset that was running before, unless the installer has
+      confirmed the activation over a new SSH connection.  Allow for the
+      time a new SSH login takes, including sudo.
 
   ip_path:
     type: 'str'

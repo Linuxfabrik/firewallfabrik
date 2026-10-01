@@ -778,6 +778,58 @@ installation.</string>
             </item>
            </layout>
           </item>
+          <item row="6" column="0" colspan="2">
+           <layout class="QHBoxLayout" name="installRollbackLayout">
+            <item>
+             <widget class="QCheckBox" name="installRollback">
+              <property name="toolTip">
+               <string>The installer activates the policy, then confirms it over a new SSH
+connection. When that connection cannot be made in time, the firewall puts
+back the ruleset that was running before and keeps booting with the script
+it had, so a policy that locks the installer out undoes itself. Not used
+with a custom activation command or install script.</string>
+              </property>
+              <property name="text">
+               <string>Roll back unless the firewall can be reached again within</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="installRollbackTimeout">
+              <property name="toolTip">
+               <string>Seconds from the end of the activation until the firewall puts back the
+ruleset that was running before. Allow for the time a new SSH login takes,
+including sudo.</string>
+              </property>
+              <property name="suffix">
+               <string> s</string>
+              </property>
+              <property name="minimum">
+               <number>10</number>
+              </property>
+              <property name="maximum">
+               <number>3600</number>
+              </property>
+              <property name="value">
+               <number>60</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="installRollbackSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1775,6 +1827,8 @@ for debugging only.</string>
   <tabstop>activationCmd</tabstop>
   <tabstop>sshArgs</tabstop>
   <tabstop>scpArgs</tabstop>
+  <tabstop>installRollback</tabstop>
+  <tabstop>installRollbackTimeout</tabstop>
   <tabstop>installScript</tabstop>
   <tabstop>installScriptArgs</tabstop>
   <tabstop>prolog_script</tabstop>
@@ -1845,6 +1899,22 @@ for debugging only.</string>
     <hint type="destinationlabel">
      <x>20</x>
      <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>installRollback</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>installRollbackTimeout</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>400</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>450</x>
+     <y>400</y>
     </hint>
    </hints>
   </connection>

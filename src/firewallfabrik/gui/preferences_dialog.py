@@ -26,6 +26,11 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
+from firewallfabrik.gui.firewall_installer import (
+    ROLLBACK_SETTING,
+    ROLLBACK_TIMEOUT_SETTING,
+    rollback_options_for_new_firewalls,
+)
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
     get_label_color,
@@ -138,6 +143,10 @@ class PreferencesDialog(QDialog):
         self.sshTimeout.setValue(
             settings.value('SSH/SSHTimeout', 10, type=int),
         )
+        rollback = rollback_options_for_new_firewalls()
+        self.installRollback.setChecked(rollback['install_rollback'])
+        self.installRollbackTimeout.setValue(int(rollback['install_rollback_timeout']))
+        self.installRollbackTimeout.setEnabled(rollback['install_rollback'])
 
         # Appearance tab.
         self._rules_font = _load_font(settings, 'UI/Fonts/RulesFont')
@@ -213,6 +222,8 @@ class PreferencesDialog(QDialog):
         self.sshPath.setText(shutil.which('ssh') or 'ssh')
         self.scpPath.setText(shutil.which('scp') or 'scp')
         self.sshTimeout.setValue(10)
+        self.installRollback.setChecked(True)
+        self.installRollbackTimeout.setValue(60)
 
         # Reset appearance defaults.
         self._rules_font = QFont()
@@ -419,6 +430,8 @@ class PreferencesDialog(QDialog):
         settings.setValue('SSH/SSHPath', self.sshPath.text())
         settings.setValue('SSH/SCPPath', self.scpPath.text())
         settings.setValue('SSH/SSHTimeout', self.sshTimeout.value())
+        settings.setValue(ROLLBACK_SETTING, self.installRollback.isChecked())
+        settings.setValue(ROLLBACK_TIMEOUT_SETTING, self.installRollbackTimeout.value())
 
         # Persist label colors and texts.
         for key in LABEL_KEYS:

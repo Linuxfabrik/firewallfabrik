@@ -17,6 +17,7 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDialog, QMessageBox
 
+from firewallfabrik.gui.firewall_installer import rollback_options_for_new_firewalls
 from firewallfabrik.gui.platform_settings import (
     get_enabled_os,
     get_enabled_platforms,
@@ -104,7 +105,11 @@ class NewDeviceDialog(QDialog):
         platform = self.platform.currentData() or ''
         return name, {
             'host_OS': self.hostOS.currentData() or '',
-            'options': get_default_values(platform) if platform else {},
+            'options': (
+                get_default_values(platform) | rollback_options_for_new_firewalls()
+                if platform
+                else {}
+            ),
             'platform': platform,
             # The newest entry, written out: a firewall that names no release
             # makes the compiler warn, and one that names the newest keeps it

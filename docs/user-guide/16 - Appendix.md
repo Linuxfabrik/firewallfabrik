@@ -165,8 +165,8 @@ The following tables list every setting from the firewall settings dialogs and t
 | Compiler | Ignore empty groups in rules | `ignore_empty_groups` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Installer | Policy install script (using built-in installer if this field is blank): | `installScript` | string | `''` | iptables, nftables |
 | Installer | Command line options for the script: | `installScriptArgs` | string | `''` | iptables, nftables |
-| Install options | Roll back unless the firewall can be reached again within | `install_rollback` | on/off (`true` / `false`) | `true` | iptables, nftables |
-| Install options | Roll back unless the firewall can be reached again within ... s | `install_rollback_timeout` | integer (seconds) | `60` | iptables, nftables |
+| Installer | Roll back unless the firewall can be reached again within | `install_rollback` | on/off (`true` / `false`) | `true` | iptables, nftables |
+| Installer | Roll back unless the firewall can be reached again within ... s | `install_rollback_timeout` | integer (seconds) | `60` | iptables, nftables |
 | IPv6 | The order in which ipv4 and ipv6 rules should be generated: | `ipv4_6_order` | one of: `ipv4_first`, `ipv6_first` | `ipv4_first` | iptables, nftables |
 | Logging | Logging limit: | `limit_suffix` | one of: ``, `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables, nftables |
 | Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `10` | iptables, nftables |

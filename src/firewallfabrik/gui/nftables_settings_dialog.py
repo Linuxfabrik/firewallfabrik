@@ -225,6 +225,15 @@ class NftablesSettingsDialog(QDialog):
             int(opts.get('ulog_nlgroup', _SCHEMA['ulog_nlgroup']['default'])),
         )
 
+        # Rollback timer of the built-in installer
+        default_timeout = _SCHEMA['install_rollback_timeout']['default']
+        try:
+            timeout = int(opts.get('install_rollback_timeout', default_timeout))
+        except (ValueError, TypeError):
+            timeout = int(default_timeout)
+        self.installRollbackTimeout.setValue(timeout)
+        self.installRollbackTimeout.setEnabled(self.installRollback.isChecked())
+
         # IPv4 before IPv6 combo
         if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_first':
             self.ipv4before.setCurrentIndex(1)
@@ -278,6 +287,9 @@ class NftablesSettingsDialog(QDialog):
         opts['ulog_cprange'] = str(self.cprange.value())
         opts['ulog_qthreshold'] = str(self.qthreshold.value())
         opts['ulog_nlgroup'] = str(self.nlgroup.value())
+
+        # Rollback timer of the built-in installer
+        opts['install_rollback_timeout'] = str(self.installRollbackTimeout.value())
 
         # IPv4/IPv6 order
         opts['ipv4_6_order'] = (

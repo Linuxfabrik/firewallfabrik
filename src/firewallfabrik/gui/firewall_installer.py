@@ -88,6 +88,23 @@ class InstallConfig:
     job_list: list[InstallJob] = field(default_factory=list)
 
 
+# Preferences > Installer: the rollback setting a new firewall starts with.
+# A firewall keeps its own copy in its options afterwards.
+ROLLBACK_SETTING = 'Installer/RollbackForNewFirewalls'
+ROLLBACK_TIMEOUT_SETTING = 'Installer/RollbackTimeoutForNewFirewalls'
+
+
+def rollback_options_for_new_firewalls() -> dict[str, bool | str]:
+    """The rollback options a new firewall is created with."""
+    settings = QSettings()
+    return {
+        'install_rollback': settings.value(ROLLBACK_SETTING, True, type=bool),
+        'install_rollback_timeout': str(
+            settings.value(ROLLBACK_TIMEOUT_SETTING, 60, type=int)
+        ),
+    }
+
+
 # Manifest marker prefix used by compilers.
 _MANIFEST_PREFIX = '# files: '
 
