@@ -77,6 +77,40 @@ def _without_obsolete_keys(data):
     return {k: v for k, v in data.items() if k not in _OBSOLETE_DATA_KEYS}
 
 
+def _mark_top_rule_sets(device, rule_sets):
+    """Mark the rule sets a data file from before 2.0 meant as the top ones.
+
+    Only a top rule set fills the built-in chains; every other one becomes
+    a chain that runs where a Branch rule jumps into it.  The data files of
+    FirewallFabrik 1.x carry no "top" at all, because the nftables compiler
+    of that time put a firewall's rule sets into the built-in chains
+    whatever they said; since 2.0 such a file compiles into chains nothing
+    reaches, and with the default policies into a script that drops
+    everything - with a warning and exit code 0.
+
+    A device none of whose rule sets is marked top is such a file: the
+    editor writes the flag for the rule sets a new firewall starts with.
+    Its rule sets named after their type - "Policy", "NAT", "Routing" - are
+    the top ones, which is exactly how Firewall Builder upgraded its own
+    files when it introduced the flag (``FWObjectDatabase_9.xslt``, data
+    version 9 to 10).  Only those holding rules: an empty one compiles to
+    the same script either way, and a Firewall Builder cluster member keeps
+    its own empty rule sets deliberately out of the top (cluster-tests.fwb).
+    """
+    if not rule_sets or any(rs.top for rs in rule_sets):
+        return
+    for rs in rule_sets:
+        if rs.name == type(rs).__name__ and rs.rules:
+            rs.top = True
+            logger.info(
+                '%s "%s": rule set "%s" is the top one; the data file predates '
+                'the flag',
+                type(device).__name__,
+                device.name,
+                rs.name,
+            )
+
+
 class YamlReader:
     """Parses a single YAML file into a ParseResult compatible with DatabaseManager.load()."""
 
@@ -382,8 +416,11 @@ class YamlReader:
             self._parse_interface(iface_data, None, dev, dev_path)
 
         # Rule sets
-        for rs_data in data.get('rule_sets', []):
+        rule_sets = [
             self._parse_ruleset(rs_data, dev, dev_path)
+            for rs_data in data.get('rule_sets', [])
+        ]
+        _mark_top_rule_sets(dev, rule_sets)
 
         # A Cluster owns its state sync group.
         for child_data in data.get('children', []):

@@ -8727,6 +8727,7 @@ libraries:
               - type: 'Policy'
                 name: 'Policy'
                 ipv4: true
+                top: true
                 rules:
                   - type: 'PolicyRule'
                     options:
@@ -9083,6 +9084,7 @@ libraries:
               - type: 'NAT'
                 name: 'NAT'
                 ipv4: true
+                top: true
                 rules:
                   - type: 'NATRule'
                     options:
@@ -9123,6 +9125,7 @@ libraries:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:firewall/Interface:eth0'
               - type: 'Policy'
                 name: 'Policy'
+                top: true
                 options:
                   mangle_only_rule_set: false
                 ipv4: true
@@ -9657,6 +9660,7 @@ libraries:
             rule_sets:
               - type: 'Policy'
                 name: 'Policy'
+                top: true
                 options:
                   mangle_only_rule_set: false
                 ipv4: true
@@ -10013,6 +10017,7 @@ libraries:
             rule_sets:
               - type: 'Policy'
                 name: 'Policy'
+                top: true
                 options:
                   mangle_only_rule_set: false
                 ipv4: true
@@ -10356,6 +10361,7 @@ libraries:
               - type: 'Policy'
                 name: 'Policy'
                 ipv4: true
+                top: true
                 rules:
                   - type: 'PolicyRule'
                     options:

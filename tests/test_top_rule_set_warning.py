@@ -88,3 +88,74 @@ def test_a_firewall_without_rule_sets_is_left_alone():
     driver.warn_about_missing_top_rule_sets(_firewall(), [], [])
 
     assert driver.all_warnings == []
+
+
+_FILE = """\
+name: 'top flags'
+libraries:
+  - name: 'User'
+    children:
+      - type: 'Firewall'
+        name: 'old'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            rules:
+              - type: 'PolicyRule'
+                action: 'Accept'
+          - type: 'Policy'
+            name: 'mail_in'
+            rules:
+              - type: 'PolicyRule'
+                action: 'Accept'
+          - type: 'NAT'
+            name: 'NAT'
+            rules:
+              - type: 'NATRule'
+          - type: 'Routing'
+            name: 'Routing'
+      - type: 'Firewall'
+        name: 'new'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+          - type: 'NAT'
+            name: 'NAT'
+            top: true
+"""
+
+
+def _top_flags(tmp_path):
+    path = tmp_path / 'top.fwf'
+    path.write_text(_FILE)
+    db = DatabaseManager()
+    db.load(path)
+    with db.session() as session:
+        return {
+            (fw.name, rs.name): rs.top
+            for fw in session.query(Firewall)
+            for rs in fw.rule_sets
+        }
+
+
+def test_a_data_file_from_before_the_flag_gets_its_top_rule_sets(tmp_path):
+    """FirewallFabrik 1.x wrote no "top"; 2.0 compiled such a file to nothing.
+
+    The rule sets named after their type are the top ones, the way Firewall
+    Builder upgraded its files when it introduced the flag.
+    """
+    flags = _top_flags(tmp_path)
+    assert flags[('old', 'Policy')] is True
+    assert flags[('old', 'NAT')] is True
+    assert flags[('old', 'mail_in')] is False
+    # An empty one compiles the same either way, and a Firewall Builder
+    # cluster member keeps its own empty ones out of the top on purpose.
+    assert flags[('old', 'Routing')] is False
+
+
+def test_a_data_file_that_has_the_flag_is_read_as_it_says(tmp_path):
+    """One top rule set shows the file knows the flag; the others stay."""
+    flags = _top_flags(tmp_path)
+    assert flags[('new', 'Policy')] is False
+    assert flags[('new', 'NAT')] is True
