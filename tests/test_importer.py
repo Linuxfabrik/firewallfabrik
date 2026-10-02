@@ -34,6 +34,7 @@ pytest.importorskip('PySide6')
 
 from firewallfabrik.core._database import DatabaseManager
 from firewallfabrik.core.objects import (
+    Address,
     CustomService,
     Firewall,
     FWObjectDatabase,
@@ -1044,8 +1045,10 @@ def test_ip_route_reads_what_an_administrator_configured():
     assert by_dst['10.3.0.5'].unsupported == ['mtu 1400', 'source address 192.0.2.1']
     assert by_dst['10.5.0.0/16'].unsupported == ['flag onlink']
     left_out = ' '.join(text for _severity, text in v4.messages)
-    for what in ('proto dhcp', 'table 100', 'type blackhole'):
+    for what in ('proto dhcp', 'table 100'):
         assert what in left_out
+    # A blackhole is no routing rule, but policy rules (see below).
+    assert [(r.kind, r.dst.text) for r in v4.blocking] == [('blackhole', '10.9.0.0/16')]
     # The kernel's own and the IPv6 router preference are no loss, and the
     # metric the kernel gives an IPv6 route that names none is no metric.
     assert [
@@ -1117,3 +1120,102 @@ def test_an_imported_firewall_has_the_rule_sets_a_new_one_has():
         'Policy',
         'Routing',
     ]
+
+
+@pytest.mark.parametrize(
+    ('kind', 'platform', 'verdict'),
+    [
+        ('blackhole', 'nft', 'drop'),
+        ('blackhole', 'ipt', '-j DROP'),
+        ('unreachable', 'nft', 'reject with icmp host-unreachable'),
+        ('unreachable', 'ipt', '--reject-with icmp-host-unreachable'),
+        ('prohibit', 'nft', 'reject with icmp admin-prohibited'),
+        ('prohibit', 'ipt', '--reject-with icmp-admin-prohibited'),
+    ],
+)
+def test_a_route_that_stops_packets_becomes_policy_rules(
+    tmp_path, kind, platform, verdict
+):
+    """The script would delete it; the Policy stops what it stopped.
+
+    What a more specific route sends on, and the firewall's own address,
+    are not stopped.
+    """
+    listing = json.dumps(
+        [
+            {'type': kind, 'dst': '10.0.0.0/8', 'flags': []},
+            {
+                'dst': '10.1.0.0/16',
+                'gateway': '192.0.2.254',
+                'dev': 'eth0',
+                'flags': [],
+            },
+            {
+                'dst': '10.10.0.0/24',
+                'dev': 'eth1',
+                'protocol': 'kernel',
+                'scope': 'link',
+                'prefsrc': '10.10.0.1',
+                'flags': [],
+            },
+        ]
+    )
+    db_manager, fw_id, _plan = _import(
+        [],
+        'nftables',
+        routes=[parse_ip_route_json(listing, 4)],
+        interface_addresses={'eth0': ['192.0.2.1/24'], 'eth1': ['10.10.0.1/24']},
+    )
+    policy = _rules(db_manager, fw_id, 'Policy')
+    with db_manager.session() as session:
+        fw = session.get(Firewall, fw_id)
+        branch = next(rs for rs in fw.rule_sets if rs.name == f'route_{kind}')
+        branch_id = str(branch.id)
+    # One rule for what the firewall forwards, one for what it sends.
+    assert [options.get('branch_id') for options, _c, _r in policy] == [
+        branch_id,
+        branch_id,
+    ]
+    inner = _rules(db_manager, fw_id, f'route_{kind}')
+    with db_manager.session() as session:
+        returned = {session.get(Address, target).name for _slot, target in inner[0][2]}
+    assert returned == {'net-10.1.0.0/16', 'net-10.10.0.0/24', 'h-10.10.0.1'}
+    driver, script = _compile(db_manager, 'imported', tmp_path, platform)
+    assert driver.all_errors == []
+    assert verdict in script.read_text()
+
+
+@pytest.mark.parametrize(
+    ('platform', 'no_nat'),
+    [
+        ('ipt', '-A POSTROUTING -o wan0 -j ACCEPT'),
+        ('nft', 'oifname "wan0" counter accept'),
+    ],
+)
+def test_a_goto_by_outgoing_interface_in_the_nat_base_chain_compiles(
+    tmp_path, platform, no_nat
+):
+    """The return behind the branch translates nothing and names wan0.
+
+    It belongs in postrouting only; a copy in prerouting, where a packet
+    has no outgoing interface yet, was reported as an error.
+    """
+    ruleset = parse_iptables_save(
+        '*nat\n:PREROUTING ACCEPT [0:0]\n:POSTROUTING ACCEPT [0:0]\n:wan - [0:0]\n'
+        '-A POSTROUTING -o wan0 -g wan\n'
+        '-A POSTROUTING -s 10.0.0.0/8 -j SNAT --to-source 192.0.2.99\n'
+        '-A wan -s 10.1.0.0/16 -j MASQUERADE\nCOMMIT\n',
+        4,
+    )
+    db_manager, _fw, _plan = _import(
+        [ruleset],
+        'iptables',
+        interface_addresses={'wan0': ['192.0.2.1/24'], 'lan0': ['10.1.0.1/16']},
+    )
+    driver, script = _compile(db_manager, 'imported', tmp_path, platform)
+    assert driver.all_errors == []
+    lines = [' '.join(line.split()) for line in script.read_text().splitlines()]
+    # Before the SNAT that would otherwise translate what went to wan0.
+    accept = next(i for i, line in enumerate(lines) if no_nat in line)
+    snat = next(i for i, line in enumerate(lines) if '192.0.2.99' in line)
+    assert accept < snat

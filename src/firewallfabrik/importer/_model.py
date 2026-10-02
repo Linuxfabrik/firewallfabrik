@@ -175,6 +175,9 @@ class Route:
     # One next hop, or several for an equal-cost multi path route.
     next_hops: list[NextHop] = dataclasses.field(default_factory=list)
     metric: int = 0  # 0 where the route names none
+    # 'unicast', or 'blackhole', 'unreachable' or 'prohibit' for a route
+    # that stops what it matches instead of sending it on.
+    kind: str = 'unicast'
     unsupported: list[str] = dataclasses.field(default_factory=list)
 
 
@@ -183,4 +186,11 @@ class Routes:
     """The routes one ``ip -j route`` listing holds, and what was left out."""
 
     routes: list[Route] = dataclasses.field(default_factory=list)
+    # The routes of the main table that stop what they match, which no
+    # routing rule can hold and the builder turns into policy rules.
+    blocking: list[Route] = dataclasses.field(default_factory=list)
+    # The destinations of every unicast route of the main table, the
+    # kernel's and DHCP's included: a more specific one inside a blocking
+    # route is routed on, not stopped.
+    prefixes: list[Address] = dataclasses.field(default_factory=list)
     messages: list[tuple[str, str]] = dataclasses.field(default_factory=list)

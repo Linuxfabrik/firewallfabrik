@@ -21,8 +21,10 @@ marks ``proto boot`` (``ip route add``, ifupdown) or ``proto static``
 (NetworkManager, systemd-networkd).  A route the kernel made for an
 address is put back by the kernel; one from DHCP, router advertisements or
 a routing daemon belongs to that program, which an imported copy would
-pin down; one of another table or of a type other than unicast is nothing
-a routing rule can hold.  Those are reported instead.
+pin down; one of another table is none of the script's business.  Those
+are reported instead.  A blackhole, unreachable or prohibit route stops
+what it matches, which no routing rule can do and the script would undo;
+the builder turns it into policy rules.
 
 ``print_route`` in iproute2's ``ip/iproute.c`` leaves out what is the
 default: ``type`` for unicast, ``protocol`` for boot, ``table`` for main
@@ -48,6 +50,13 @@ _CONFIGURED = {'boot', 'static'}
 # information iproute2 adds.
 _IGNORED = {'dst', 'gateway', 'dev', 'metric', 'protocol', 'scope', 'flags'}
 _IGNORED_V6 = {'pref', 'expires', 'error', 'used', 'age', 'users', 'cache'}
+
+# The route types that stop a packet instead of sending it on, which the
+# kernel answers with nothing, "host unreachable" (IPv6: "no route") and
+# "communication administratively prohibited" (fib_props in
+# net/ipv4/fib_semantics.c, ip_error in net/ipv4/route.c,
+# ip6_pkt_discard and ip6_pkt_prohibit in net/ipv6/route.c).
+_BLOCKING = {'blackhole', 'unreachable', 'prohibit'}
 
 # The metric the kernel gives an IPv6 route that names none
 # (IP6_RT_PRIO_USER in include/net/ip6_route.h); writing it out would only
@@ -81,8 +90,18 @@ def parse_ip_route_json(text, family=None):
         table = entry.get('table', 'main')
         protocol = entry.get('protocol', 'boot')
         kind = entry.get('type', 'unicast')
+        if table == 'main' and kind == 'unicast':
+            prefix = _address(entry.get('dst', 'default'))
+            if prefix is not None:
+                result.prefixes.append(prefix)
         if table == 'local' or protocol == 'kernel':
             continue  # the kernel's own, which it puts back by itself
+        if table == 'main' and kind in _BLOCKING:
+            # Whoever made it: the script deletes it either way.
+            route = _route(entry, entry_family)
+            route.kind = kind
+            result.blocking.append(route)
+            continue
         if table != 'main':
             left_out[entry_family, f'table {table}'] += 1
             continue

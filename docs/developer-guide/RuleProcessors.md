@@ -1278,7 +1278,7 @@ Converts DNAT rules to Redirect when TDst matches the firewall. After `PortTrans
 
 #### `SplitNONATRule` — Split
 
-Splits NONAT rules into two: one for `POSTROUTING` and one for `PREROUTING` (or `OUTPUT` if OSrc is the firewall). NONAT rules need ACCEPT in both chains to prevent accidental translation by other rules. When OSrc is the firewall, the second copy goes to OUTPUT with OSrc cleared.
+Splits NONAT rules into two: one for `POSTROUTING` and one for `PREROUTING` (or `OUTPUT` if OSrc is the firewall). NONAT rules need ACCEPT in both chains to prevent accidental translation by other rules. When OSrc is the firewall, the second copy goes to OUTPUT with OSrc cleared. A copy is made only for a chain that can match the rule's interfaces - a rule naming an outgoing interface gets no PREROUTING copy - unless no chain can, which `VerifyRules3` then reports. The C++ makes both copies and aborts on the one that cannot match.
 
 > **C++**: `NATCompiler_ipt::splitNONATRule`
 

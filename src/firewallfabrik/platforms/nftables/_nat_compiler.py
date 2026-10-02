@@ -1338,6 +1338,11 @@ class SplitNONATRule(NATRuleProcessor):
 
     NONAT rules need accept in both chains to prevent accidental
     translation by other rules. Uses nftables lowercase chain names.
+
+    A copy goes only into a chain that can match the rule's interfaces,
+    as on iptables (see the iptables `SplitNONATRule`): one naming an
+    outgoing interface has nothing to say in prerouting.  A rule no chain
+    can match keeps both copies, so that `VerifyRules3` reports it.
     """
 
     def process_next(self) -> bool:
@@ -1352,7 +1357,6 @@ class SplitNONATRule(NATRuleProcessor):
             # First copy: postrouting
             r = rule.clone()
             r.ipt_chain = 'postrouting'
-            self.tmp_queue.append(r)
 
             # Second copy: output (if OSrc is fw) or prerouting
             if osrc_is_fw:
@@ -1360,7 +1364,18 @@ class SplitNONATRule(NATRuleProcessor):
                 rule.osrc = []
             else:
                 rule.ipt_chain = 'prerouting'
-            self.tmp_queue.append(rule)
+            copies = [r, rule]
+            matchable = [
+                c
+                for c in copies
+                if not nat_interface_problem(
+                    c.ipt_chain,
+                    has_itf_inb=bool(c.itf_inb),
+                    has_itf_outb=bool(c.itf_outb),
+                    iif_in_postrouting=True,
+                )
+            ]
+            self.tmp_queue.extend(matchable or copies)
         else:
             self.tmp_queue.append(rule)
 

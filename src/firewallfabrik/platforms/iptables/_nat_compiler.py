@@ -957,6 +957,13 @@ class SplitNONATRule(NATRuleProcessor):
     Corresponds to C++ NATCompiler_ipt::splitNONATRule.
     NONAT rules need ACCEPT in both chains to prevent accidental
     translation by other rules.
+
+    A copy goes only into a chain that can match the rule's interfaces:
+    one naming an outgoing interface has nothing to say in PREROUTING,
+    where the packet has none yet, and the copy there would be reported
+    and left out by `VerifyRules3` while the POSTROUTING one does the job.
+    The C++ makes both copies and aborts on the second.  A rule no chain
+    can match keeps both, so that `VerifyRules3` reports it.
     """
 
     def process_next(self) -> bool:
@@ -971,7 +978,6 @@ class SplitNONATRule(NATRuleProcessor):
             # First copy: POSTROUTING
             r = rule.clone()
             r.ipt_chain = 'POSTROUTING'
-            self.tmp_queue.append(r)
 
             # Second copy: OUTPUT (if OSrc is fw) or PREROUTING
             if osrc_is_fw:
@@ -979,11 +985,24 @@ class SplitNONATRule(NATRuleProcessor):
                 rule.osrc = []
             else:
                 rule.ipt_chain = 'PREROUTING'
-            self.tmp_queue.append(rule)
+            copies = [r, rule]
+            matchable = [c for c in copies if not self._interface_problem(c)]
+            self.tmp_queue.extend(matchable or copies)
         else:
             self.tmp_queue.append(rule)
 
         return True
+
+    def _interface_problem(self, rule) -> str:
+        # The question `VerifyRules3` asks of the chain the copy is in.
+        return nat_interface_problem(
+            rule.ipt_chain,
+            has_itf_inb=bool(rule.itf_inb) and rule.nat_iface_in != 'nil',
+            has_itf_outb=bool(rule.itf_outb) and rule.nat_iface_out != 'nil',
+            iif_in_postrouting=bridge_port_matches_inbound_in_postrouting(
+                self.compiler, rule.itf_inb[0] if rule.itf_inb else None
+            ),
+        )
 
 
 class ReplaceFirewallObjectsODst(NATRuleProcessor):

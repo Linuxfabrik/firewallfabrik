@@ -46,6 +46,7 @@ with a rule that says so.
 import copy
 import dataclasses
 import ipaddress
+import itertools
 import socket
 
 from firewallfabrik.core._util import escape_obj_name
@@ -250,6 +251,7 @@ class Builder:
             self._table(ruleset, table)
         self._routing(routes or [])
         self._empty_top_rule_sets()
+        self._blocking_routes(routes or [])
         firewall = {
             'type': 'Firewall',
             'name': self.fw_name,
@@ -348,6 +350,181 @@ class Builder:
         self.imported_routes += 1
         return rules
 
+    def _blocking_routes(self, route_lists):
+        """Turn blackhole, unreachable and prohibit routes into policy rules.
+
+        No routing rule holds such a route, and a script that installs
+        routes deletes it with every other route of the main table but the
+        kernel's - which would let through what the route stopped.  So
+        each one becomes rules at the top of the Policy, where they come
+        before anything the filter decides, as the route decision does:
+        one for the packets the firewall forwards and one for those it
+        sends itself.  A more specific route inside it, and an address of
+        the firewall, is routed on rather than stopped; those go first,
+        in a rule set the rules branch into, and return.
+        """
+        added = []
+        for routes in route_lists:
+            for route in routes.blocking:
+                added.extend(self._blocking_route_rules(route, routes.prefixes))
+        if not added:
+            return
+        for family, rules in itertools.groupby(added, key=lambda item: item[0]):
+            rule_set = self._top_policy(family)
+            rule_set['rules'][:0] = [rule for _family, rule in rules]
+            for position, rule in enumerate(rule_set['rules']):
+                rule['position'] = position
+
+    def _blocking_route_rules(self, route, prefixes):
+        what = route.dst.text if route.dst else 'default'
+        if route.kind == 'blackhole':
+            action, reject = 'Deny', ''
+        elif route.kind == 'prohibit':
+            action, reject = 'Reject', 'ICMP admin prohibited'
+        else:
+            # Only the token says "no route" for IPv6; reject_type_token
+            # passes it through.
+            action = 'Reject'
+            reject = 'icmp6-no-route' if route.family == 6 else 'ICMP host unreachable'
+        network = (
+            ipaddress.ip_network(route.dst.text, strict=False)
+            if route.dst
+            else ipaddress.ip_network('::/0' if route.family == 6 else '0.0.0.0/0')
+        )
+        dst = (
+            [self._address_ref(route.dst)]
+            if route.dst
+            else [self._address_ref(Address(family=6, text='::/0'))]
+            if route.family == 6
+            else []
+        )
+        inside = []
+        for prefix in prefixes:
+            try:
+                other = ipaddress.ip_network(prefix.text, strict=False)
+            except ValueError:
+                continue
+            if (
+                other.version == network.version
+                and other != network
+                and other.subnet_of(network)
+            ):
+                inside.append(prefix)
+        hosts = [
+            Address(family=host.version, text=str(host))
+            for host in self.fw_hosts
+            if host.version == network.version and host in network
+        ]
+        options = {'stateless': True, 'color': UNSUPPORTED_COLOR}
+        if reject:
+            options['action_on_reject'] = reject
+        comment = (
+            f'The route "{route.kind} {what}" of the main table, which no routing '
+            f'rule can hold and the firewall script would delete; this rule '
+            f'stops what the route stopped.'
+        )
+        excluded = []
+        for address in [*inside, *hosts]:
+            ref = self._address_ref(address)
+            if ref not in excluded:
+                excluded.append(ref)
+        if excluded:
+            name = self._unique_rule_set_name('Policy', f'route_{route.kind}', None)
+            self.rule_sets.append(
+                {
+                    'type': 'Policy',
+                    'name': name,
+                    'ipv4': route.family == 4,
+                    'ipv6': route.family == 6,
+                    'top': False,
+                    'comment': comment,
+                    'rules': [
+                        {
+                            'type': 'PolicyRule',
+                            'position': 0,
+                            'direction': 'Both',
+                            'dst': excluded,
+                            'action': 'Return',
+                            'options': {'stateless': True},
+                            'comment': 'Routed on by a more specific route, or '
+                            'addressed to the firewall.',
+                        },
+                        {
+                            'type': 'PolicyRule',
+                            'position': 1,
+                            'direction': 'Both',
+                            'action': action,
+                            'options': dict(options),
+                        },
+                    ],
+                }
+            )
+            body = {
+                'action': 'Branch',
+                'options': {
+                    'stateless': True,
+                    'color': UNSUPPORTED_COLOR,
+                    'branch_id': self._rule_set_path('Policy', name),
+                },
+            }
+        else:
+            body = {'action': action, 'options': options}
+        rules = []
+        for src, direction in (([], 'Both'), ([self.fw_path], 'Outbound')):
+            rule = {
+                'type': 'PolicyRule',
+                'direction': direction,
+                'comment': comment,
+                **{k: (dict(v) if isinstance(v, dict) else v) for k, v in body.items()},
+            }
+            if src:
+                rule['src'] = src
+            if dst:
+                rule['dst'] = dst
+            rules.append((route.family, rule))
+        self.messages.append(
+            (
+                'info',
+                f'IPv{route.family} route "{route.kind} {what}" became rules at '
+                'the top of the Policy that stop what it stopped.',
+            )
+        )
+        return rules
+
+    def _top_policy(self, family):
+        """The top Policy rule set the rules of *family* go into.
+
+        One of that family alone, or one of both.  The empty one a firewall
+        without filter rules starts with takes the family on; any other is
+        left as it is, because the family flag would change what its own
+        rules match, and the rules get a top rule set of their own.
+        """
+        candidates = [
+            rs for rs in self.rule_sets if rs['type'] == 'Policy' and rs.get('top')
+        ]
+        key = 'ipv6' if family == 6 else 'ipv4'
+        other = 'ipv4' if family == 6 else 'ipv6'
+        for wanted in ((True, False), (True, True)):
+            for rs in candidates:
+                if (rs.get(key, False), rs.get(other, False)) == wanted:
+                    return rs
+        for rs in candidates:
+            if not rs['rules']:
+                rs[key] = True
+                return rs
+        rule_set = {
+            'type': 'Policy',
+            'name': self._unique_rule_set_name(
+                'Policy', f'Policy IPv{family}', None, top=True
+            ),
+            key: True,
+            other: False,
+            'top': True,
+            'rules': [],
+        }
+        self.rule_sets.append(rule_set)
+        return rule_set
+
     def _add_routing_rule_set(self, rules):
         rule_set = {'type': 'Routing', 'name': 'Routing', 'top': True, 'rules': []}
         for position, rule in enumerate(rules):
@@ -360,8 +537,9 @@ class Builder:
         present = {rs['type'] for rs in self.rule_sets if rs.get('top')}
         for rs_type in ('Policy', 'NAT', 'Routing'):
             if rs_type not in present:
+                name = self._unique_rule_set_name(rs_type, rs_type, None, top=True)
                 self.rule_sets.append(
-                    {'type': rs_type, 'name': rs_type, 'top': True, 'rules': []}
+                    {'type': rs_type, 'name': name, 'top': True, 'rules': []}
                 )
 
     # -- the rules FirewallFabrik writes by itself --
@@ -608,7 +786,11 @@ class Builder:
             limit = _NAT_NAME_LIMIT if rs_type == 'NAT' else _CHAIN_NAME_LIMIT
             if len(candidate) > limit:
                 candidate = candidate[: limit - 3]
-        if (rs_type, candidate) in self.rule_set_names and table.family == 6:
+        if (
+            (rs_type, candidate) in self.rule_set_names
+            and table is not None
+            and table.family == 6
+        ):
             candidate = f'{candidate}_v6' if top else f'{candidate[:-3]}_v6'
         n = 2
         base = candidate
