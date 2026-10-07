@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.3.0] - 2026-10-07
+
 **Highlights:** Rate limits apply to a rule as a whole. A failed iptables activation keeps the previous ruleset, and an installation that locks you out rolls itself back after 60 seconds. File > Import Firewall takes over an existing iptables, nftables or firewalld setup.
 
 ### Added
@@ -676,7 +681,8 @@ Editor:
 Initial public beta pre-release: compile and install for iptables and nftables, with the Firewall Builder GUI.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.3.0...HEAD
+[v3.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.2.0...v3.3.0
 [v3.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.1.0...v3.2.0
 [v3.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...v3.1.0
 [v3.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v2.0.0...v3.0.0
