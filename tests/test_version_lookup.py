@@ -22,6 +22,7 @@ kernel build anyway, because the set element expressions arrived with
 
 import pytest
 
+from firewallfabrik.core.objects import Firewall, Interface, IPv4, IPv6, PhysAddress
 from firewallfabrik.gui import version_lookup
 from firewallfabrik.platforms import _versions
 
@@ -120,3 +121,51 @@ def test_the_login_is_the_installers_and_needs_no_shell():
 def test_no_management_address_is_said_before_ssh_is_tried():
     with pytest.raises(version_lookup.LookupFailed, match='management address'):
         version_lookup.run('', 'root')
+
+
+def _firewall(*addresses, management='True', alt_address=''):
+    # Real model objects, not stand-ins: a stand-in that has whatever
+    # attribute the code asks for is how the lookup came to ask for one
+    # the model does not have.
+    fw = Firewall(name='fw', options={'altAddress': alt_address})
+    iface = Interface(name='eth0', data={'management': management})
+    fw.interfaces.append(iface)
+    iface.addresses.extend(addresses)
+    return fw
+
+
+def _mac():
+    return PhysAddress(name='mac', inet_addr_mask={'address': '00:00:5e:00:53:01'})
+
+
+def _v4():
+    return IPv4(name='v4', inet_addr_mask={'address': '192.0.2.1', 'netmask': '24'})
+
+
+def _v6():
+    return IPv6(name='v6', inet_addr_mask={'address': '2001:db8::1', 'netmask': '64'})
+
+
+def test_the_management_address_is_the_interfaces_ipv4_address():
+    assert version_lookup.resolve_mgmt_address(_firewall(_mac(), _v6(), _v4())) == (
+        '192.0.2.1'
+    )
+
+
+def test_the_management_address_falls_back_to_ipv6():
+    assert version_lookup.resolve_mgmt_address(_firewall(_mac(), _v6())) == (
+        '2001:db8::1'
+    )
+
+
+def test_a_mac_address_is_no_management_address():
+    assert version_lookup.resolve_mgmt_address(_firewall(_mac())) == ''
+
+
+def test_an_interface_not_marked_management_is_not_used():
+    assert version_lookup.resolve_mgmt_address(_firewall(_v4(), management='')) == ''
+
+
+def test_the_alternative_address_wins():
+    fw = _firewall(_v4(), alt_address='198.51.100.1')
+    assert version_lookup.resolve_mgmt_address(fw) == '198.51.100.1'

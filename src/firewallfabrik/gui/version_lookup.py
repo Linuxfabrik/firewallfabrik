@@ -84,7 +84,10 @@ def resolve_mgmt_address(fw):
     """Return the management address for a firewall, the installer's.
 
     Checks ``fw.options['altAddress']`` first, then scans interfaces
-    for one flagged as management and returns its first address.
+    for one flagged as management and returns its first IPv4 address,
+    or its first IPv6 address when it has none.  Firewall Builder
+    (``Host::getManagementAddress``) takes IPv4 only; the IPv6 fallback
+    is FirewallFabrik's, so an IPv6-only firewall can be reached too.
     """
     options = fw.options or {}
     alt = options.get('altAddress', '')
@@ -92,9 +95,14 @@ def resolve_mgmt_address(fw):
         return alt
     for iface in fw.interfaces:
         iface_data = iface.data or {}
-        if str(iface_data.get('management', '')).lower() in ('true', '1'):
+        if str(iface_data.get('management', '')).lower() not in ('true', '1'):
+            continue
+        # The interface also holds its MAC address (PhysAddress), which
+        # ssh cannot connect to.
+        for addr_type in ('IPv4', 'IPv6'):
             for addr in iface.addresses:
-                return str(addr.address) if hasattr(addr, 'address') else addr.name
+                if addr.type == addr_type and addr.get_address():
+                    return addr.get_address()
     return ''
 
 
