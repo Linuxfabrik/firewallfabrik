@@ -138,6 +138,22 @@ def test_a_network_is_not_the_firewall_unless_it_is_asked_to_be(firewall):
     assert not _kept(firewall, rule)
 
 
+@pytest.mark.parametrize('netmask', ['255.255.255.255', '32'])
+def test_a_network_with_a_host_mask_is_the_firewall(firewall, netmask):
+    """The exception to the guard above (``isHostMask``).
+
+    A network object covering the firewall's address alone is the
+    firewall, so outbound to it is a rule no packet reaches: one addressed
+    to the firewall goes into the input chain and is never forwarded.
+    """
+    rule = _Rule(
+        firewall.interfaces[0],
+        _address(IPv4, '198.51.100.7', '255.255.255.255'),
+        _address(Network, '192.168.1.1', netmask, 'fw-as-network'),
+    )
+    assert not _kept(firewall, rule)
+
+
 def test_a_bridging_firewall_forwards_a_broadcast(firewall):
     rule = _Rule(
         firewall.interfaces[0],

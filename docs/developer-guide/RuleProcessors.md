@@ -946,11 +946,14 @@ After `specialCaseWithFW1`, expands Src and Dst to interface addresses
 **including loopback**. The standard `_expand_addr` skips loopback, but
 firewall-to-firewall traffic (e.g. a service listening on localhost) needs it.
 
-#### `specialCaseWithFWInDstAndOutbound` (h:645 / cpp:2761) — Split
+#### `specialCaseWithFWInDstAndOutbound` (h:645 / cpp:2761) — Filter
 
-Splits if the firewall is in Dst with a specific interface and direction
-Outbound. This is an impossible combination (outbound to self?) — splits
-into an INPUT rule instead.
+Drops a rule with direction Outbound on one of the firewall's interfaces,
+outside the OUTPUT chain, whose Dst is the firewall and whose Src is not.
+Such a packet goes into INPUT and is never forwarded, so the rule would
+never see it. A broadcast or multicast Dst on a bridging firewall, a
+negated Src, and - with "assume firewall is part of any and networks"
+off - a network object whose mask is not a host mask keep the rule.
 
 ### Multi-address and interface expansion
 

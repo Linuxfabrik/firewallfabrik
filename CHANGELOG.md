@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): `reload_address_table <table> <file> -6` reloads the IPv6 addresses of a run-time address table instead of failing, so a changed IPv6 prefix reaches the rules without recompiling.
 * Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
 * Compiler (iptables, nftables): a NAT rule that names an outgoing interface and translates nothing is no longer reported as an error.
+* Compiler (iptables, nftables): an outbound forwarding rule to a /32 or /128 network object holding the firewall's own address is left out as in Firewall Builder, since no packet ever reaches it.
 * Compiler (iptables, nftables): two branches into the same rule set no longer draw a warning about a branching loop.
 * Compiler (iptables): a firewall with time-of-day rules no longer loses its rules on a kernel without the time match, such as RHEL 8 to 10; the script stops before changing anything and says why.
 * Compiler (iptables): a warning about the automatic rules of the mangle table, such as MSS clamping on an old ip6tables, is shown instead of lost.

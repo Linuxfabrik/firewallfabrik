@@ -37,6 +37,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PhysAddress,
     PolicyAction,
+    max_prefix_length,
     netmask_prefix_length,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -998,6 +999,20 @@ class KeepMangleTableRules(PolicyRuleProcessor):
         return True
 
 
+def _has_host_mask(obj) -> bool:
+    """Does *obj*'s netmask cover a single address (``isHostMask``)?
+
+    ``InetAddr::isHostMask`` is all ones in the address family of the
+    object: /32 for IPv4, /128 for IPv6, in whichever spelling the
+    netmask is stored.
+    """
+    if not isinstance(obj, Address):
+        return False
+    address = obj.get_address()
+    prefix = netmask_prefix_length(address, obj.get_netmask())
+    return prefix is not None and prefix == max_prefix_length(address)
+
+
 class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
     """Drop an outbound forwarding rule whose destination is the firewall.
 
@@ -1055,7 +1070,7 @@ class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        rule_afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        rule_afpa = assumes_fw_is_part_of_any(rule)
 
         src_matches = (
             self.compiler.complex_match(src, self.compiler.fw)
@@ -1072,14 +1087,14 @@ class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
             not rule_afpa
             and src is not None
             and (rule.is_src_any() or isinstance(src, (Network, NetworkIPv6)))
-            and not (hasattr(src, 'is_host_mask') and src.is_host_mask())
+            and not _has_host_mask(src)
         ):
             src_matches = False
         if (
             not rule_afpa
             and dst is not None
             and (rule.is_dst_any() or isinstance(dst, (Network, NetworkIPv6)))
-            and not (hasattr(dst, 'is_host_mask') and dst.is_host_mask())
+            and not _has_host_mask(dst)
         ):
             dst_matches = False
 
