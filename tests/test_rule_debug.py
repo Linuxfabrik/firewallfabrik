@@ -20,6 +20,7 @@ shadowing pass and the routing compiler did that, and every `--xp` and
 `--xr` run printed the same trace forever.
 """
 
+import os
 import pathlib
 import subprocess  # nosec B404
 import sys
@@ -27,6 +28,9 @@ import sys
 import pytest
 
 FIXTURES = pathlib.Path(__file__).parent / 'fixtures'
+# The package is never installed for the tests (pyproject.toml), and the
+# `pythonpath` setting there reaches pytest's own process only.
+SRC = pathlib.Path(__file__).parent.parent / 'src'
 
 
 @pytest.mark.parametrize('platform', ['ipt', 'nft'])
@@ -39,6 +43,10 @@ FIXTURES = pathlib.Path(__file__).parent / 'fixtures'
     ],
 )
 def test_a_debugged_compile_finishes(tmp_path, platform, flag, fixture, processor):
+    env = dict(os.environ)
+    env['PYTHONPATH'] = os.pathsep.join(
+        p for p in (str(SRC), env.get('PYTHONPATH', '')) if p
+    )
     result = subprocess.run(  # nosec B603
         [
             sys.executable,
@@ -54,6 +62,7 @@ def test_a_debugged_compile_finishes(tmp_path, platform, flag, fixture, processo
         ],
         capture_output=True,
         check=False,
+        env=env,
         text=True,
         timeout=120,
     )
