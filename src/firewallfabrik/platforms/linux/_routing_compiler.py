@@ -30,6 +30,7 @@ from firewallfabrik.compiler.processors._generic import (
     ExpandGroups,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
+    SimplePrintProgress,
     VerifyAddressRanges,
 )
 from firewallfabrik.core._options import option_is_true
@@ -119,6 +120,9 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.add(NoteIPv6Routes('note whether an IPv6 route is installed'))
 
         self.add(RoutingPrintRule('generate ip route commands'))
+        # Ends the chain so that --xr does not end it with a Debug processor,
+        # which never stops answering True; see run_shadowing_pass.
+        self.add(SimplePrintProgress())
         self.run_rule_processors()
 
     def epilog(self) -> None:

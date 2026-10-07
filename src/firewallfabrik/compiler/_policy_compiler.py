@@ -34,6 +34,7 @@ from firewallfabrik.compiler.processors._generic import (
     EliminateDuplicatesInSRC,
     EliminateDuplicatesInSRV,
     ExpandGroups,
+    SimplePrintProgress,
 )
 from firewallfabrik.compiler.processors._policy import (
     ExpandMultipleAddresses,
@@ -225,6 +226,12 @@ class PolicyCompiler(Compiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements', quiet=True))
         self.add(ConvertToAtomic('convert to atomic rules'))
         self.add(DetectShadowing('Detect shadowing'))
+        # Not for the progress line: with --xp, add() puts a Debug processor
+        # behind every processor but this one, and a Debug at the end of the
+        # chain answers True for as long as it holds rules, so
+        # run_rule_processors() never returns.  The C++ ends the pass the
+        # same way (PolicyCompiler_ipt::compile).
+        self.add(SimplePrintProgress())
 
         self.run_rule_processors()
 

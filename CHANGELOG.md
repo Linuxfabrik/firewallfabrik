@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Compiler (iptables): a rate limit that applies only above the rate is compiled instead of left out.
+* Compiler (iptables, nftables): `--xp` and `--xr` finish after tracing the rule instead of running forever.
 * Compiler (iptables, nftables): `reload_address_table <table> <file> -6` reloads the IPv6 addresses of a run-time address table instead of failing, so a changed IPv6 prefix reaches the rules without recompiling.
 * Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
 * Compiler (iptables, nftables): a NAT rule that names an outgoing interface and translates nothing is no longer reported as an error.
