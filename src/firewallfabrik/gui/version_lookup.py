@@ -94,7 +94,11 @@ def resolve_mgmt_address(fw):
         iface_data = iface.data or {}
         if str(iface_data.get('management', '')).lower() in ('true', '1'):
             for addr in iface.addresses:
-                return str(addr.address) if hasattr(addr, 'address') else addr.name
+                if addr.type not in ('IPv4', 'IPv6'):
+                    continue  # e.g. the interface's MAC (PhysAddress)
+                ip = (addr.inet_addr_mask or {}).get('address')
+                if ip:
+                    return ip
     return ''
 
 
