@@ -8,55 +8,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** Rate limits on a rule now apply to the rule as a whole on both iptables and nftables, however many addresses or chains it covers, and traffic the rule does not match no longer uses them up. An iptables firewall whose activation fails halfway now keeps the ruleset it had before, instead of being left with DROP policies and only part of the new rules; the script needs `iptables-save` for this. An installation that locks you out of a remote firewall now undoes itself: unless the firewall answers a new SSH login within 60 seconds, it goes back to the ruleset it had and keeps booting with its old script. An existing Linux firewall can be taken over with File > Import Firewall, from its iptables, nftables or firewalld ruleset; what cannot be carried over exactly is marked and blocks rather than lets through.
+**Highlights:** Rate limits apply to a rule as a whole. A failed iptables activation keeps the previous ruleset, and an installation that locks you out rolls itself back after 60 seconds. File > Import Firewall takes over an existing iptables, nftables or firewalld setup.
 
 ### Added
 
-* Compiler (iptables, nftables), Editor: an installation puts the previous ruleset back unless the firewall answers a new SSH login within 60 seconds, and the firewall keeps booting with its old script; the generated script offers the same as `try` and `confirm`.
-* Compiler (iptables, nftables): a TCP or UDP service can name a connection tracking helper, and a rule accepting it assigns the helper, so FTP, TFTP, SIP and the like work again on kernels since 4.7; the connections the helper expects are accepted between the rule's own ends only, and the standard FTP and TFTP services ask for their helper; the compiler warns while the reverse path filter is off.
-* Compiler (iptables, nftables): an IPv6 reverse path filter in the host settings drops packets whose source address the firewall would not route back, strict or loose, which IPv6 has no kernel setting for.
-* Compiler (iptables, nftables): two runs of the generated script, such as an installation and a timer, no longer change the firewall at the same time; the second one waits up to a minute for the first.
-* Editor (iptables, nftables): "Lookup Version ..." next to the version list asks the firewall over SSH which releases it runs and picks the matching entry.
-* Editor (iptables, nftables): each entry of the version list names the distributions and point releases it is right for.
-* Editor (iptables, nftables): the reverse path filter offers loose mode, for firewalls with several uplinks or policy routing, which strict mode breaks.
-* Editor (iptables, nftables): the rollback timer of the installer can be set per firewall in its settings, and for new firewalls in the preferences.
-* Editor: File > Import Firewall builds a firewall from the ruleset a Linux firewall runs, read from iptables-save or `nft -j list ruleset` output or over SSH, and over SSH from its configured routes as well; a rule it cannot carry over exactly errs on the side of blocking and is marked ([#160](https://github.com/Linuxfabrik/firewallfabrik/issues/160)).
-* Editor: the compile and install dialog shows each firewall's platform and release, and so does the object tree.
-* Standard library: services for Amanda, gpsd, IRC over TLS, Jellyfin, Mumble, NSCA, NUT, Plex, SANE, Subversion, Syncthing, TeamSpeak and USB/IP; existing files get them with "Update Standard Library".
+Compiler:
+
+* connection tracking helpers: a TCP or UDP service can name one, so FTP, TFTP, SIP and the like work again on kernels since 4.7; the standard FTP and TFTP services use theirs
+* IPv6 reverse path filter, strict or loose
+* rollback timer: an installation goes back to the previous ruleset unless the firewall answers a new SSH login within 60 seconds; the script offers the same as `try` and `confirm`
+* two runs of the generated script, such as an installation and a timer, no longer change the firewall at the same time
+
+Editor:
+
+* File > Import Firewall takes over a running Linux firewall from its iptables, nftables or firewalld ruleset and its routes, from a file or over SSH; what cannot be carried over exactly blocks rather than lets through, and is marked ([#160](https://github.com/Linuxfabrik/firewallfabrik/issues/160))
+* "Lookup Version ..." asks the firewall over SSH which iptables and nftables releases it runs
+* the compile and install dialog and the object tree show each firewall's platform and release
+* the reverse path filter offers loose mode, for firewalls with several uplinks or policy routing
+* the rollback timeout can be set per firewall and, for new firewalls, in the preferences
+* the version list names the distributions each entry is right for
+
+Standard library:
+
+* services for Amanda, gpsd, IRC over TLS, Jellyfin, Mumble, NSCA, NUT, Plex, SANE, Subversion, Syncthing, TeamSpeak and USB/IP ("Update Standard Library")
 
 ### Changed
 
-* Compiler (iptables, nftables): a firewall without a release set is compiled for the newest one and the compiler says so.
-* Compiler (iptables, nftables): the option that permits IPv6 neighbour discovery also permits Multicast Listener Discovery, without which a switch that snoops MLD cuts neighbour discovery off.
-* Editor (iptables, nftables): the version list shows exact release ranges, newest first, instead of "or later" and "any", and a new firewall starts with the newest release.
-* Editor: cluster members can no longer be marked as master, which had no effect on iptables or nftables output and was lost on the next load.
-* Standard library: the ICMP object for type 11 code 1 is named "time exceeded in reassembly", which is what the code means, instead of "time exceeded in transit"; existing files get the name with "Update Standard Library".
+Compiler:
+
+* a firewall without a release set is compiled for the newest one, with a warning
+* permitting IPv6 neighbour discovery also permits Multicast Listener Discovery, which switches with MLD snooping need
+
+Editor:
+
+* cluster members can no longer be marked as master, which had no effect on iptables or nftables
+* the version list shows exact release ranges, newest first, and a new firewall starts with the newest
+
+Standard library:
+
+* ICMP type 11 code 1 is named "time exceeded in reassembly" ("Update Standard Library")
 
 ### Fixed
 
-* Compiler (iptables): a rate limit that applies only above the rate is compiled instead of left out.
-* Compiler (iptables, nftables): `--xp` and `--xr` finish after tracing the rule instead of running forever.
-* Compiler (iptables, nftables): `reload_address_table <table> <file> -6` reloads the IPv6 addresses of a run-time address table instead of failing, so a changed IPv6 prefix reaches the rules without recompiling.
-* Compiler (iptables, nftables): a rule's rate limit applies to the rule as a whole, however many addresses or chains it covers, and traffic the rule does not match no longer uses it up.
-* Compiler (iptables, nftables): a NAT rule that names an outgoing interface and translates nothing is no longer reported as an error.
-* Compiler (iptables, nftables): an outbound forwarding rule to a /32 or /128 network object holding the firewall's own address is left out as in Firewall Builder, since no packet ever reaches it.
-* Compiler (iptables, nftables): two branches into the same rule set no longer draw a warning about a branching loop.
-* Compiler (iptables): a firewall with time-of-day rules no longer loses its rules on a kernel without the time match, such as RHEL 8 to 10; the script stops before changing anything and says why.
-* Compiler (iptables): a warning about the automatic rules of the mangle table, such as MSS clamping on an old ip6tables, is shown instead of lost.
-* Compiler (iptables): an activation that fails halfway puts back the ruleset that was running before it, instead of leaving the firewall with DROP policies and part of the new rules; the script now needs `iptables-save` and `ip6tables-save`, whose paths can be set in the host settings.
-* Compiler (nftables): a firewall set to the nftables release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04, instead of being refused as a whole.
-* Compiler (nftables): a logged rule with a rate limit logs only the packets the limit lets through.
-* Compiler (nftables): a NAT rule branching into a rule set that only translates the other address family, such as an IPv4 port forward, is no longer reported as an error.
-* Compiler (nftables): rate limits kept per source, destination or port load on nftables before 1.1.0 instead of taking the whole ruleset down.
-* Editor, Compiler: a data file of FirewallFabrik 1.x, whose rule sets carry no top flag, compiles to its policy again instead of a script that drops everything.
-* Editor: a cluster member compiled from the compile and install dialog gets the script it is installed from, instead of the installer picking up an outdated or missing one ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
-* Editor: a new firewall or cluster starts with an empty Policy, NAT and Routing rule set, and a new cluster with its state sync group, as in Firewall Builder.
-* Editor: duplicating a firewall with sub-interfaces no longer fails, a duplicated cluster keeps its failover and state sync groups, and a duplicated rule branching into its own firewall's rule set points at the copy.
-* Editor: installing and "Lookup Version ..." connect to the IP address of the firewall's management interface instead of failing when no alternative address is set ([#187](https://github.com/Linuxfabrik/firewallfabrik/pull/187)).
-* Editor: installing with a password no longer hangs, also on Windows and on RHEL 8 with the GUI started from a terminal, and a wrong password or an unknown host key is reported ([#181](https://github.com/Linuxfabrik/firewallfabrik/pull/181)).
-* Editor: the install dialog lists each cluster with its members below it and ticks the members for install when the cluster is compiled ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
-* Editor: the New Cluster wizard creates the cluster interfaces with their failover groups, protocols and addresses, so a new cluster has members, and it can take over the rules of one member, as in Firewall Builder ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180)).
-* Standard library: the IPSEC service group includes the key exchange (UDP 500) and NAT traversal (UDP 4500), so a rule using it lets a tunnel come up; existing files get it with "Update Standard Library".
+Compiler:
+
+* a NAT rule that names an outgoing interface and translates nothing is no longer reported as an error
+* a rule's rate limit applies to the rule as a whole and is no longer used up by traffic the rule does not match
+* an outbound forwarding rule to a /32 or /128 network holding the firewall's own address is left out, as in Firewall Builder
+* `reload_address_table` with `-6` reloads the IPv6 addresses of a run-time address table
+* two branches into the same rule set no longer draw a loop warning
+* iptables: a failed activation puts back the previous ruleset instead of leaving DROP policies and half the new rules; the script needs `iptables-save` and `ip6tables-save` for this
+* iptables: a rate limit that applies only above the rate is compiled instead of left out
+* iptables: on a kernel without the time match, such as RHEL 8 to 10, a script with time-of-day rules stops before it changes anything and says why
+* iptables: warnings about the automatic mangle rules, such as MSS clamping, are shown
+* nftables: a firewall set to the release it runs loads on Debian 11 and 12, openSUSE Leap 15.5, RHEL 8 and 9 and Ubuntu 22.04 and 24.04
+* nftables: a logged rule with a rate limit logs only the packets the limit lets through
+* nftables: a NAT branch into a rule set of the other address family is no longer an error
+* nftables: per-source, per-destination and per-port rate limits load before nftables 1.1.0
+
+CLI:
+
+* `--xp` and `--xr` no longer run forever
+
+Data file:
+
+* a FirewallFabrik 1.x file compiles to its policy again instead of a script that drops everything
+
+Editor:
+
+* a new firewall or cluster starts with empty Policy, NAT and Routing rule sets, and a cluster with its state sync group
+* clusters: the New Cluster wizard creates members that work and can take over the rules of one member, the install dialog lists the members under their cluster, and each member is installed with its own script ([#180](https://github.com/Linuxfabrik/firewallfabrik/issues/180))
+* duplicating a firewall with sub-interfaces, a cluster or a rule branching into its own firewall works
+* installing and "Lookup Version ..." use the IP address of the management interface when no alternative address is set ([#187](https://github.com/Linuxfabrik/firewallfabrik/pull/187))
+* installing with a password no longer hangs, and a wrong password or an unknown host key is reported ([#181](https://github.com/Linuxfabrik/firewallfabrik/pull/181))
+
+Standard library:
+
+* the IPSEC group includes IKE (UDP 500) and NAT traversal (UDP 4500), so tunnels come up ("Update Standard Library")
 
 
 ## [v3.2.0] - 2026-09-25
@@ -65,70 +93,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Editor: Time objects can have a start and an end date.
+Editor:
+
+* Time objects can have a start and an end date
 
 ### Fixed
 
-* Compiler (iptables, nftables): run-time address tables of a firewall imported from Firewall Builder find the Data directory set there.
-* Editor (iptables, nftables): "Accept TCP sessions opened prior to firewall restart" is no longer inverted, and settings you did not touch stay as they are on save ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177), [#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178)).
-* Editor (iptables, nftables): Rule Options keep the interface, hashlimit mode and "firewall is part of any" setting of a rule.
-* Editor: a Custom Service for IPv4 and IPv6 stays that way when edited.
-* Editor: a failover group without a known protocol falls back to VRRP, as in Firewall Builder.
-* Editor: the interface settings no longer turn an "unknown" sub-interface of a bridge or bond into one of its ports.
-* Editor: the Time editor shows the weekdays of intervals from older Firewall Builder files.
+Compiler:
+
+* run-time address tables of a firewall imported from Firewall Builder find its Data directory
+
+Editor:
+
+* a Custom Service for IPv4 and IPv6 stays that way when edited
+* a failover group without a known protocol falls back to VRRP
+* "Accept TCP sessions opened prior to firewall restart" is no longer inverted, and untouched settings stay as they are on save ([#177](https://github.com/Linuxfabrik/firewallfabrik/issues/177), [#178](https://github.com/Linuxfabrik/firewallfabrik/issues/178))
+* Rule Options keep the interface, hashlimit mode and "firewall is part of any" setting
+* the interface settings no longer turn an "unknown" sub-interface of a bridge or bond into a port
+* the Time editor shows the weekdays of intervals from older Firewall Builder files
 
 
 ## [v3.1.0] - 2026-09-22
 
-**Highlights:** Packets that belong to no known connection are now dropped and logged by default as "INVALID state -- DENY", at no more than 10 messages per second, so fail2ban no longer mistakes them for connection attempts. Block lists work at any size, and nftables can update them at run time. Negated services on nftables compile to what the rule says. IPv6 routing works on dual-stack firewalls, and a script compiled on Windows runs on Linux.
+**Highlights:** Invalid packets are dropped and logged by default. Block lists work at any size and can be updated at run time on nftables too. IPv6 routing works on dual-stack firewalls.
 
 ### Added
 
-* Compiler (nftables): Custom actions with TCPMSS, MARK, CONNMARK, CLASSIFY, NFQUEUE, NOTRACK or TRACE are compiled instead of left out.
-* Compiler (nftables): rules that match the ToS byte are compiled instead of left out.
-* Compiler (nftables): the generated script can reload, add to, remove from and test address tables at run time, like the iptables script.
-* Editor, Compiler (iptables, nftables): a Custom action keeps one statement per packet filter, so switching a firewall between iptables and nftables no longer breaks it ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161)).
+Compiler:
+
+* nftables: Custom actions with TCPMSS, MARK, CONNMARK, CLASSIFY, NFQUEUE, NOTRACK or TRACE, and rules matching the ToS byte
+* nftables: the script can reload, add to, remove from and test address tables at run time
+
+Editor:
+
+* a Custom action keeps one statement per packet filter, so switching a firewall between iptables and nftables no longer breaks it ([#161](https://github.com/Linuxfabrik/firewallfabrik/issues/161))
 
 ### Changed
 
-* Compiler (iptables, nftables): packets in conntrack state INVALID are dropped and logged as "INVALID state -- DENY" by default, also on firewalls that never saved this setting. Stateless rules no longer accept them.
-* Compiler (iptables, nftables): the logging limit defaults to 10 messages per second on firewalls that never saved it. Set it to 0 to log without a limit.
+Compiler:
+
+* packets in state INVALID are dropped and logged as "INVALID state -- DENY" by default, and stateless rules no longer accept them
+* the logging limit defaults to 10 messages per second; 0 logs without a limit
 
 ### Fixed
 
-* Compiler (iptables): a dual-stack firewall checks for `ip6tables` before it installs rules, so a missing tool no longer leaves IPv6 open.
-* Compiler (iptables): a firewall pinned below ip6tables 1.2.8 no longer comes up without any rules.
-* Compiler (iptables): a NAT rule that translates to a DNS name resolved on the firewall is reported instead of aborting the activation with every policy at DROP.
-* Compiler (iptables): adding, removing and testing IPv6 addresses of a run-time address table works.
-* Compiler (iptables): address tables with more than 65536 addresses are loaded completely.
-* Compiler (iptables): the "stop" command no longer opens IPv6 or reports a failure on a firewall without IPv6 rules.
-* Compiler (iptables): the run-time address table commands report errors in their exit code, and `test_address_table` gives the right answer.
-* Compiler (iptables, nftables): a Branch rule still works after its target rule set has been renamed.
-* Compiler (iptables, nftables): a failed activation also restores routes with several next hops.
-* Compiler (iptables, nftables): a firewall that installs a default route for one address family keeps the existing default route of the other.
-* Compiler (iptables, nftables): a firewall that routes both address families out of one interface gets an IPv6 default route too.
-* Compiler (iptables, nftables): a firewall with an IPv6 route can be activated more than once.
-* Compiler (iptables, nftables): a routing rule with an IPv6 link-local gateway is installed instead of left out.
-* Compiler (iptables, nftables): a rule whose ToS value no packet can match is reported instead of installed as a rule that never matches.
-* Compiler (iptables, nftables): a script compiled on Windows runs on the Linux host ([#175](https://github.com/Linuxfabrik/firewallfabrik/issues/175)).
-* Compiler (iptables, nftables): an Address Table or DNS Name set to compile time is no longer resolved on the firewall, whichever way the data file spells the setting.
-* Compiler (iptables, nftables): NAT rules that match the ToS byte or a DiffServ code point are compiled instead of left out.
-* Compiler (nftables): a failed reload of an address table keeps the addresses that were loaded.
-* Compiler (nftables): a firewall pinned to nftables 0.9.0 gets a ruleset that release can load; connection-limit rules are reported there instead.
-* Compiler (nftables): a NAT rule of a cluster on an interface without a fixed address translates with the member's interface instead of doing nothing.
-* Compiler (nftables): a NAT rule that excludes a list of addresses no longer adds those addresses to a firewall interface.
-* Compiler (nftables): a rule with a negated address element no longer matches every packet when it logs.
-* Compiler (nftables): address tables with more than about 11,000 addresses, or with a note behind an address, are loaded instead of left empty.
-* Compiler (nftables): negated service elements compile to what the rule says, in policy and NAT rules, instead of being left out or matching every packet.
-* Compiler (nftables): on a dual-stack firewall, a saved and reloaded ruleset no longer applies IPv4 rules to IPv6 traffic and the other way round.
-* Compiler (nftables): Tag, Classify and connection-mark rules for traffic the firewall sends itself trigger policy routing, as on iptables.
-* Data file: a `.fwf` file saved on Windows keeps Unix line endings.
-* Data file: rules of a hand-written `.fwf` file without positions are numbered in file order instead of all being rule 0.
+Compiler:
+
+* a Branch rule still works after its target rule set was renamed
+* a script compiled on Windows runs on Linux ([#175](https://github.com/Linuxfabrik/firewallfabrik/issues/175))
+* an Address Table or DNS Name set to compile time is no longer resolved on the firewall
+* IPv6 routing on dual-stack firewalls: link-local gateways, default routes per address family, multipath routes in the rollback, and repeated activations work
+* NAT rules matching the ToS byte or a DiffServ code point are compiled, and a ToS value no packet can carry is reported
+* iptables: "stop" no longer opens IPv6 or fails on a firewall without IPv6 rules
+* iptables: a dual-stack firewall checks for `ip6tables` before installing rules, so a missing tool no longer leaves IPv6 open
+* iptables: a firewall pinned below ip6tables 1.2.8 comes up with its rules
+* iptables: a NAT rule translating to a DNS name resolved on the firewall is reported instead of aborting the activation at DROP
+* iptables: run-time address tables load beyond 65536 addresses, handle IPv6 and report errors in their exit code
+* nftables: a cluster NAT rule on an interface without a fixed address translates with the member's interface
+* nftables: a failed address table reload keeps the loaded addresses, and tables beyond about 11,000 addresses or with comments load
+* nftables: a firewall pinned to nftables 0.9.0 gets a ruleset that release loads
+* nftables: a NAT rule excluding a list of addresses no longer adds them to a firewall interface
+* nftables: a saved and reloaded dual-stack ruleset keeps IPv4 and IPv6 rules apart
+* nftables: negated addresses and services match what the rule says, in policy and NAT rules
+* nftables: Tag, Classify and connection-mark rules for the firewall's own traffic trigger policy routing, as on iptables
+
+Data file:
+
+* a `.fwf` file saved on Windows keeps Unix line endings
+* rules of a hand-written `.fwf` file without positions are numbered in file order
 
 
 ## [v3.0.0] - 2026-09-04
 
-**Highlights:** Clusters are supported: compiling a cluster compiles each of its members, with the cluster's interfaces, addresses, rule sets and routes, and each member permits the failover protocol and the state sync link it needs, so a default-drop cluster no longer has both members thinking they are master. The nftables compiler catches up with the iptables one on what it was still missing: negated elements, Custom Services, custom actions, translating to a DHCP or PPP address, and "Use SNAT instead of MASQUERADE". A large group of fixes is about rules that quietly matched something other than what they say, most of them around negation, and about activations that stopped half-way with the firewall already at DROP while reporting success. Configurations that used to be compiled from unusable data are now refused. Recompile and review your rulesets after updating, and read the breaking changes first.
+**Highlights:** Clusters are supported, and the nftables compiler catches up with iptables. Many rules that silently matched something else, mostly around negation, now match what they say, and unusable configurations are refused. Recompile, review, and read the breaking changes first.
 
 ### Breaking Changes
 
@@ -139,75 +176,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Compiler (iptables, nftables): a cluster member permits the failover protocol and the state sync link it needs, and leaves the shared address to the failover daemon ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Compiler (iptables, nftables): a rule can name an "Attached Networks" object, whose subnets are worked out on every compile ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
-* Compiler (iptables, nftables): compiling a cluster compiles each of its members, with the cluster's interfaces, addresses, rule sets and routes ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84)).
-* Compiler (nftables): a Custom Service that matches the connection state, TCP flags, the socket owner or the IPv6 routing header compiles instead of being left out.
-* Compiler (nftables): a logged rule keeps its own connection or rate limit beside the firewall's log rate.
-* Compiler (nftables): a NAT rule translates to the address of a DHCP or PPP interface, and "Use SNAT instead of MASQUERADE" names that address instead of masquerading.
-* Compiler (nftables): a negated time restriction that names both hours and weekdays compiles.
-* Compiler (nftables): a rule the pinned nftables release cannot parse is reported and left out instead of costing the whole ruleset.
-* Compiler (nftables): a rule with a Custom action writes its statement into the ruleset.
-* Editor: a cluster has an editor of its own, and a failover or state sync group can be created where it belongs, with its address, port and mode ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84), [#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
-* Editor: an "Attached Networks" object can be created on an interface and has an editor of its own ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
-* Editor: the Branch action can be set on a rule again, and the rule set it jumps into is chosen by dragging it out of the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
-* Editor: the firewall panel offers the iptables and nftables releases a firewall can be compiled for.
-* Standard library: the "ESTABLISHED" custom services carry nftables code.
+Compiler:
+
+* "Attached Networks" objects in rules ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85))
+* clusters: compiling a cluster compiles each member with the cluster's interfaces, addresses, rule sets and routes, and permits the failover protocol and the state sync link ([#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84))
+* nftables: a rule the pinned release cannot parse is reported and left out instead of costing the whole ruleset
+* nftables: Custom Services for connection state, TCP flags, socket owner and IPv6 routing header, Custom actions, negated time restrictions, translation to a DHCP or PPP address, and "Use SNAT instead of MASQUERADE"
+
+Editor:
+
+* a cluster editor, and failover and state sync groups with address, port and mode ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78), [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84))
+* "Attached Networks" objects on interfaces ([#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85))
+* the Branch action, with the target rule set dragged from the object tree ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90))
+* the firewall panel offers the iptables and nftables releases to compile for
+
+Standard library:
+
+* the "ESTABLISHED" custom services carry nftables code
 
 ### Fixed
 
-* Compiler (iptables): "Clamp MSS to MTU" reaches the generated script again on a firewall pinned to an older iptables release.
-* Compiler (iptables): a firewall that keeps other tools' rules honours the setting when it activates through `iptables-restore`, and no longer gains a copy of its clamping and connection-mark rules on every activation ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-* Compiler (iptables): a firewall using ipsets fills them before it installs the rules that name them, so the first activation after a reboot no longer loses every rule about an address table while reporting success.
-* Compiler (iptables): a masquerading rule with a negated element no longer produces a command iptables refuses.
-* Compiler (iptables): a rate limit gets a table of its own per rule set, and a name too long for iptables is cut and reported instead of shared by accident.
-* Compiler (iptables): a rule that excludes a single host is written with one "!" instead of a temporary chain, so a NAT rule translating to that host configures its address again.
-* Compiler (iptables): a rule with two negated elements matches what it says and is compiled into the rules Firewall Builder writes for it; an "outside business hours" rule used to match around the clock.
-* Compiler (iptables): a time-based rule on a firewall pinned to an iptables older than 1.4.11 says that it matches in UTC.
-* Compiler (iptables): an IPv6-capable firewall hardens its IPv6 stack even when all its IPv6 rules were dropped.
-* Compiler (iptables, nftables): "clear IP addresses of unknown interfaces" recognises an interface named with a wildcard and never takes the loopback down.
-* Compiler (iptables, nftables): "reload" no longer stops the firewall first, which left the machine unprotected until the second command finished.
-* Compiler (iptables, nftables): a branch into a rule set of another firewall or cluster, and a NAT rule set branching into another one, compile that rule set into the script with chains of their own ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156)).
-* Compiler (iptables, nftables): a branch rule that leads back to where it started is reported as a loop, in FirewallFabrik's own file format as well.
-* Compiler (iptables, nftables): a bridge configured below another interface is reported instead of being silently left unbuilt.
-* Compiler (iptables, nftables): a cluster group keeps its rules when its failover or state sync address is IPv6, instead of losing them without a word, and a port that is not a number is reported.
-* Compiler (iptables, nftables): a cluster whose interface gets its address by DHCP translates to it again, instead of losing every NAT rule that names it.
-* Compiler (iptables, nftables): a firewall that configures its own bridges creates them before their addresses, attaches every port including one named with a wildcard, and leaves the bridges of Docker, podman and libvirt alone.
-* Compiler (iptables, nftables): a firewall that names a VLAN or bonding interface is warned that the script does not create it, instead of stopping the activation before the first rule with no word about why ([#95](https://github.com/Linuxfabrik/firewallfabrik/issues/95)).
-* Compiler (iptables, nftables): a firewall whose conntrack limits are left unset no longer sets them to zero on activation, which made the kernel refuse every new connection.
-* Compiler (iptables, nftables): a generated script reports the activation as failed when any of its commands was refused, and answers "status" with "Firewall is active" once its rules are installed.
-* Compiler (iptables, nftables): a NAT rule that translates to an address none of the firewall's interfaces is on says so, instead of failing silently because nobody answers ARP for it.
-* Compiler (iptables, nftables): a routing rule that fails puts the previous routing table back and stops the activation unless it is marked "non-critical"; a route two rules install the same way is installed once, and an unreachable gateway is reported.
-* Compiler (iptables, nftables): a rule assigned to several interfaces is compiled for each of them, so a dual-stack rule no longer disappears from one address family.
-* Compiler (iptables, nftables): a rule matching a MAC address or the socket owner is judged by the hook its chain hangs off, so the kernel no longer refuses a command in the middle of an activation.
-* Compiler (iptables, nftables): a rule naming a host that has only an IPv4 address, or one address table per address family, compiles in a dual-stack rule set instead of stopping the firewall from compiling.
-* Compiler (iptables, nftables): a rule naming an interface covers every address it carries and the VLANs below it, instead of the first address alone.
-* Compiler (iptables, nftables): a rule that names a packet mark, a connection owner or a custom service beside an ordinary service installs the two in the order Firewall Builder installs them.
-* Compiler (iptables, nftables): a rule whose group, interface group or address table turns out to be empty is reported instead of applying to every address or every interface the firewall has.
-* Compiler (iptables, nftables): a rule written for "any interface except these" leaves out a dedicated failover link and is no longer reported as shadowing an unrelated rule.
-* Compiler (iptables, nftables): an address object whose address and netmask are both zero matches every address, and is reported as being equivalent to "any".
-* Compiler (iptables, nftables): an ICMP service, an IP protocol number, a time object or a routing metric that is empty or impossible is reported instead of breaking the compile or matching everything.
-* Compiler (iptables, nftables): an interface whose name is longer than an interface name can be is reported instead of stopping every activation before the first rule.
-* Compiler (iptables, nftables): the address and netmask of a VLAN interface or a bridge port is checked the way the firewall's own interfaces are; a netmask of /0 one level down used to make every rule naming it match everything.
-* Compiler (iptables, nftables): the half of a rule that sets a traffic class stays in the chain the qdisc reads, instead of one where the kernel refuses it.
-* Compiler (nftables): "Log all rules" also logs the rules that tag or classify.
-* Compiler (nftables): a negated service the compiler cannot say in one rule gets a chain of its own, the way iptables writes it, or is reported - no part of it is left behind matching what it excludes.
-* Compiler (nftables): a rule naming a dynamic interface of the firewall's own cluster is compiled instead of being left out.
-* Compiler (nftables): a rule naming a TCP service that inspects the TCP flags beside the matching UDP service keeps the flag inspection, instead of applying to every packet on that port.
-* Compiler (nftables): a rule naming an unnumbered interface or a bridge port is left out instead of matching every address there is.
-* Compiler (nftables): a rule whose source, destination or service is negated matches what it says; several of them matched every packet, so a Deny rule blocked all traffic and an Accept rule let all of it through.
-* Compiler (nftables): a tagging or classifying rule is left out on a firewall configured not to forward packets, the way the iptables compiler leaves it out.
-* Compiler (nftables): a time-based rule on a firewall that uses the kernel timezone writes dates nftables accepts, instead of ones that make it refuse the whole ruleset.
-* Compiler (nftables): an accounting rule that logs counts every packet once.
-* Compiler (nftables): the generated script finds `nft` and `ip` wherever the distribution puts them, and checks that its tools are there before it touches the firewall.
-* Compiler (nftables): the old rules are removed after the new ones are in place, so an activation no longer leaves the machine without a firewall in between.
-* Editor: a failover group is shown below its cluster interface and a state sync group below its cluster, and each is checked against the cluster it belongs to ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78)).
-* Editor: a rule branching into a rule set of another firewall keeps pointing at it after the file is saved and reopened.
-* Editor: changing or deleting an object marks every firewall whose rules name it as needing a recompile ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159)).
-* Editor: opening the action parameters of a NAT rule no longer risks clearing the rule's other settings, and names the NAT rule set a Branch action asks for.
-* Editor: renaming an interface or its firewall also renames the failover group and the "Attached Networks" object below it.
-* Editor: the conntrack limits and the two TCP timeouts of the Linux host settings can be left at the kernel default again.
-* Editor: the iptables settings offer "use kernel timezone" and the ipset match only on a firewall pinned to a release that has them.
+Compiler:
+
+* activation: a refused command fails the activation, "status" reports an active firewall, and "reload" no longer stops the firewall first
+* branches into rule sets of other firewalls or clusters compile, and loops are reported ([#156](https://github.com/Linuxfabrik/firewallfabrik/issues/156))
+* bridges, VLANs and bonds: bridges are built with all their ports and Docker, podman and libvirt bridges are left alone; interfaces the script cannot create are reported ([#95](https://github.com/Linuxfabrik/firewallfabrik/issues/95))
+* clusters: groups with IPv6 addresses keep their rules, and DHCP cluster interfaces keep their NAT rules
+* conntrack limits left unset no longer drop to zero, which made the kernel refuse every new connection
+* routing: a failing route puts the previous table back and stops the activation unless marked non-critical, and an unreachable gateway is reported
+* rules match what they name: empty groups and address tables, zero addresses, impossible service, time or metric values and over-long interface names are reported instead of matching everything or breaking the activation
+* rules naming an interface cover all its addresses and VLANs, and rules on several interfaces are compiled for each
+* iptables: ipsets are filled before the rules that use them, which lost every address-table rule on the first activation after a reboot
+* iptables: keeping other tools' rules works with `iptables-restore`, without duplicating rules on every activation ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42))
+* iptables: rules with two negated elements match what they say; an "outside business hours" rule matched around the clock
+* nftables: negated sources, destinations and services match what they say; several matched every packet
+* nftables: the old rules are removed only after the new ones are in place, so an activation no longer leaves the machine unprotected
+* nftables: the script finds `nft` and `ip` wherever the distribution puts them and checks its tools before touching the firewall
+
+Editor:
+
+* changing or deleting an object marks every firewall using it for recompile ([#159](https://github.com/Linuxfabrik/firewallfabrik/issues/159))
+* failover and state sync groups are shown below their cluster objects and checked against them ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78))
+* renaming an interface or firewall renames its failover group and "Attached Networks" object
+* the conntrack limits and TCP timeouts can be left at the kernel default
+* the NAT action parameters no longer clear other rule settings
 
 
 ## [v2.0.0] - 2026-08-24
@@ -221,13 +233,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Compiler (iptables, nftables): the "Limit matching rate" options that count per source, destination or port ([#121](https://github.com/Linuxfabrik/firewallfabrik/issues/121)).
-* Compiler (iptables, nftables): the "Limit number of simultaneous connections" rule option ([#120](https://github.com/Linuxfabrik/firewallfabrik/issues/120)).
+Compiler:
+
+* "Limit number of simultaneous connections" and the per-source, per-destination and per-port rate limits ([#120](https://github.com/Linuxfabrik/firewallfabrik/issues/120), [#121](https://github.com/Linuxfabrik/firewallfabrik/issues/121))
 
 ### Changed
 
-* FirewallFabrik installs on Python 3.11 and newer, so current distributions no longer need a custom Python build.
-* The nftables firewall settings no longer show three options that only ever applied to iptables.
+* FirewallFabrik runs on Python 3.11 and newer.
+* The nftables firewall settings no longer show three iptables-only options.
 
 ### Removed
 
@@ -235,366 +248,432 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Compiler (iptables): "Clear all rules" clears them on current distributions.
-* Compiler (iptables): a firewall activating through `iptables-restore` loads its ruleset and keeps its rule comments and log prefixes.
-* Compiler (iptables): a firewall pinned to an older iptables release gets rules that release can load; a firewall pinning nothing is compiled for current iptables.
-* Compiler (iptables): a firewall that keeps other tools' rules manages its NAT and packet-marking rules the same way as its filter rules.
-* Compiler (iptables): a name carrying shell syntax, whether of a rule set, branch, interface, address table or log prefix, is refused at compile time instead of running as a command on the firewall.
-* Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking an unattended rollout forever.
-* Compiler (iptables, nftables): "Add virtual addresses for NAT" and "Add rules to permit IPv6 Neighbor Discovery" generate their rules ([#143](https://github.com/Linuxfabrik/firewallfabrik/issues/143)).
-* Compiler (iptables, nftables): "Always permit SSH access from the management workstation" installs that rule in the ruleset, not only in `block` and `stop`.
-* Compiler (iptables, nftables): "MAC address matching" on a host takes effect, and a MAC match is reported or dropped where the packet no longer carries one.
-* Compiler (iptables, nftables): a Branch rule jumps into the rule set it names, including packet-marking rule sets, NAT branches and branches imported from a `.fwb` file.
-* Compiler (iptables, nftables): a compile the compiler refuses writes no script, says so and exits non-zero.
-* Compiler (iptables, nftables): a dual-stack firewall keeps each single-stack rule in the address family it names.
-* Compiler (iptables, nftables): a Reject rule sends the ICMP message its reject type names, and falls back to the default type where a TCP reset cannot apply.
-* Compiler (iptables, nftables): a rule about the firewall's own addresses, its networks, broadcast and multicast traffic or its bridged paths lands in the chains that traffic really takes.
-* Compiler (iptables, nftables): a rule limited to a calendar window keeps that window.
-* Compiler (iptables, nftables): a rule naming a host or interface whose address comes from DHCP or PPP matches the address the machine has.
-* Compiler (iptables, nftables): a rule the compiler cannot express is reported and left out instead of being installed without that condition.
-* Compiler (iptables, nftables): a rule whose source, destination or service resolves to nothing is left out instead of matching every address or every protocol.
-* Compiler (iptables, nftables): a rule written for "any interface except these" no longer produces rules on loopback, unprotected, bridge-port and cluster interfaces.
-* Compiler (iptables, nftables): an address table whose file is empty or unreadable no longer matches every address, and the file is checked before the running ruleset is replaced.
-* Compiler (iptables, nftables): an IPv6 rule written for a whole network no longer matches a single address, and a value that is no netmask is reported at compile time ([#154](https://github.com/Linuxfabrik/firewallfabrik/issues/154)).
-* Compiler (iptables, nftables): log prefixes, log levels and the NFLOG "Copy range" and "Queue threshold" settings reach the generated ruleset, and an over-long prefix is reported instead of cut.
-* Compiler (iptables, nftables): NAT rules translate what the editor shows, among them port-only translations, one-to-one network maps, load balancing over several backends, MASQUERADE and exclusions.
-* Compiler (iptables, nftables): rate limits and connection limits are enforced at the rate the editor names, and values the packet filter cannot take are reported at compile time.
-* Compiler (iptables, nftables): routing rules install the routes they name; several rules for one destination become one route with several next hops, and an unreachable gateway is reported.
-* Compiler (iptables, nftables): rules that tag packets, assign a traffic class or match a tag do so, and a Tag Service survives saving and reopening the file ([#122](https://github.com/Linuxfabrik/firewallfabrik/issues/122)).
-* Compiler (iptables, nftables): the check for rules hidden by an earlier rule reports each finding once and names its rule set ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
-* Compiler (iptables, nftables): the kernel-hardening, connection-tracking and packet-forwarding settings take effect, and a setting the file does not carry takes the default the dialog shows.
-* Compiler (nftables): a negated address, service, interface or time restriction matches the opposite of what it names.
-* Compiler (nftables): a rule matching a DNS name, a dynamic interface or an address table read on the firewall is filled in at activation time instead of being left out.
-* Compiler (nftables): a rule set or object whose name collides with an nftables keyword or a chain name is renamed and the rename reported.
-* Compiler (nftables): a ruleset nftables refuses leaves the running rules in place instead of the host with none.
-* Compiler (nftables): generated rules carry a counter, so `nft list ruleset` shows per-rule hit counts.
-* Compiler (nftables): the generated activation script reports success when the ruleset loaded.
-* Editor: a netmask or an address the compilers cannot read is refused where it is typed.
-* GUI: deleting an object disables the rules whose last source, destination or service it was.
-* GUI: File > Import Library works.
-* GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor.
-* Import: an object imported from a Firewall Builder file keeps its tags.
-* Installing `firewallfabrik[gui]` resolves its Qt dependency again.
+Compiler:
+
+* a compile the compiler refuses writes no script and exits non-zero
+* a rule the compiler cannot express, or whose elements resolve to nothing, is reported and left out instead of matching every address, service or interface
+* Branch rules, NAT rules, Reject types, tagging, classification, rate and connection limits, routing rules, calendar windows and log settings compile to what the editor shows ([#122](https://github.com/Linuxfabrik/firewallfabrik/issues/122))
+* firewall options such as "Add virtual addresses for NAT", "Permit IPv6 Neighbor Discovery", "Always permit SSH access from the management workstation", kernel hardening and connection tracking take effect ([#143](https://github.com/Linuxfabrik/firewallfabrik/issues/143))
+* IPv6 networks no longer match a single address, and invalid netmasks are reported ([#154](https://github.com/Linuxfabrik/firewallfabrik/issues/154))
+* rules about the firewall's own addresses, networks, broadcast, multicast or bridged traffic land in the right chains, and dual-stack rules stay in their address family
+* rules naming DHCP or PPP addresses match the machine's current address
+* the shadowing check reports each finding once ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136))
+* iptables: "Clear all rules" works on current distributions, `iptables-restore` loads the ruleset, and an older pinned release gets rules it can load
+* iptables: names carrying shell syntax are refused instead of running as commands on the firewall
+* iptables: the script waits at most five seconds for the iptables lock
+* nftables: a refused ruleset leaves the running rules in place, and success is reported only when the ruleset loaded
+* nftables: DNS names, dynamic interfaces and run-time address tables are filled in at activation time
+* nftables: names colliding with nftables keywords are renamed, with a warning
+* nftables: rules carry counters
+
+Editor:
+
+* deleting an object disables the rules it was the last source, destination or service of
+* File > Import Library works
+* invalid netmasks and addresses are refused where they are typed
+* the firewall settings offer the same reject types as the rule action editor
+
+Import:
+
+* objects imported from Firewall Builder keep their tags
+
+Installation:
+
+* `firewallfabrik[gui]` resolves its Qt dependency again
 
 
 ## [v1.9.0] - 2026-07-12
 
 ### Added
 
-* CLI: `fwf-upgrade` converts a Firewall Builder `.fwb` file and brings an older `.fwf` file to the current format without opening the GUI ([#132](https://github.com/Linuxfabrik/firewallfabrik/issues/132)).
+CLI:
+
+* `fwf-upgrade` converts a Firewall Builder `.fwb` file or an older `.fwf` file without opening the GUI ([#132](https://github.com/Linuxfabrik/firewallfabrik/issues/132))
 
 
 ## [v1.8.1] - 2026-07-01
 
 ### Fixed
 
-* GUI: FirewallFabrik no longer crashes when the object tree is rebuilt while a search is open.
+Editor:
+
+* no crash when the object tree is rebuilt while a search is open
 
 
 ## [v1.8.0] - 2026-06-29
 
 ### Added
 
-* Compiler (iptables, nftables): the "Accept ICMP redirects" and "Accept source-routed packets" hardening settings also apply to IPv6.
-* Compiler (nftables): the kernel-hardening and conntrack tuning settings of the firewall's Host OS settings are applied by the generated script.
+Compiler:
+
+* the ICMP redirect and source routing hardening settings also apply to IPv6
+* nftables: the kernel hardening and conntrack tuning settings of the Host OS are applied
 
 ### Deprecated
 
-* Host OS setting "TCP fack": the Linux kernel dropped FACK loss detection, so the setting has no effect on any supported release.
+* Host OS setting "TCP fack": the kernel dropped FACK, so it has no effect.
 
 ### Fixed
 
-* Compiler (iptables): the conntrack tuning settings reach the kernel.
-* Compiler (nftables): switching a firewall from iptables to nftables removes the leftover iptables rules on activation, which could shadow the new ones.
-* Compiler (nftables): the backup SSH access rule of the "block" action is generated, which could lock an administrator out.
-* GUI: the "Update Standard Library" preview lists the affected firewalls and rules.
+Compiler:
+
+* iptables: the conntrack tuning settings reach the kernel
+* nftables: switching from iptables removes the leftover iptables rules on activation
+* nftables: the "block" action keeps the backup SSH access rule
+
+Editor:
+
+* the "Update Standard Library" preview lists the affected firewalls and rules
 
 
 ## [v1.7.0] - 2026-06-18
 
 ### Added
 
-* GUI: "Collapse", "Collapse All", "Expand" and "Expand All" in the object tree context menu.
+Editor:
+
+* "Collapse", "Collapse All", "Expand" and "Expand All" in the object tree
 
 ### Fixed
 
-* GUI: editing a standalone IPv4 or IPv6 address no longer shows a Netmask field. On an interface address, where it matters, it still appears.
-* GUI: selecting a predefined Any object shows what Any matches in a rule instead of an editable form with meaningless values.
+Editor:
+
+* a standalone IPv4 or IPv6 address no longer shows a Netmask field
+* the predefined Any object shows what it matches instead of an editable form
 
 
 ## [v1.6.0] - 2026-05-07
 
 ### Added
 
-* Compiler (iptables): the "Use kernel timezone" setting is honoured on time-restricted rules.
-* Compiler (iptables, nftables): the "Log IP options", "Log TCP options" and "Log TCP sequence numbers" settings are honoured on logging rules.
+Compiler:
+
+* "Log IP options", "Log TCP options" and "Log TCP sequence numbers"
+* iptables: "Use kernel timezone" on time-restricted rules
 
 ### Changed
 
-* GUI: File > Open Recent tells entries apart by their differing path segments.
+Editor:
+
+* File > Open Recent tells entries apart by their path
 
 ### Fixed
 
-* GUI: the iptables and nftables firewall settings no longer mark options as unsupported that the compiler does honour, among them "Drop new TCP sessions without SYN", "Log all rules" and "Clamp MSS to MTU".
-* GUI: the nftables firewall settings grey out the options the nftables compiler does not implement. They accepted clicks and had no effect.
+Editor:
+
+* the firewall settings mark the options correctly that each compiler supports
 
 
 ## [v1.5.1] - 2026-05-07
 
 ### Fixed
 
-* GUI: opening the Platform Settings dialog of an nftables firewall no longer crashes.
+Editor:
+
+* the Platform Settings dialog of an nftables firewall no longer crashes
 
 
 ## [v1.5.0] - 2026-04-29
 
 ### Added
 
-* GUI: renaming a firewall, host or interface that has child objects offers to rename the children along the standard naming scheme.
-* GUI: the Install options dialog takes a password or passphrase, so a passphrase-protected SSH key or password authentication works from the dialog ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72)).
+Editor:
+
+* renaming a firewall, host or interface offers to rename its child objects
+* the Install dialog takes a password or key passphrase ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 
 ### Changed
 
-* Compiler (iptables, nftables): an address range that covers an exact CIDR block is compiled to the short CIDR form.
-* GUI: Dynamic Groups combine their criteria with AND instead of OR, which closes a class of overly permissive rules. A per-group selector switches back to OR ([#82](https://github.com/Linuxfabrik/firewallfabrik/issues/82)).
-* GUI: the interface context menu no longer offers "New Attached Networks" or "New Failover Group". Both return with the cluster support ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78), [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84), [#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85)).
-* GUI: the Policy and NAT action menus no longer offer "Branch". It returns with full branch support ([#83](https://github.com/Linuxfabrik/firewallfabrik/issues/83), [#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
+Compiler:
+
+* an address range that is an exact CIDR block is compiled as such
+
+Editor:
+
+* "Branch", "New Attached Networks" and "New Failover Group" are hidden until they are supported ([#78](https://github.com/Linuxfabrik/firewallfabrik/issues/78), [#83](https://github.com/Linuxfabrik/firewallfabrik/issues/83), [#84](https://github.com/Linuxfabrik/firewallfabrik/issues/84), [#85](https://github.com/Linuxfabrik/firewallfabrik/issues/85), [#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90))
+* Dynamic Groups combine their criteria with AND instead of OR, which closes a class of overly permissive rules; a per-group selector switches back ([#82](https://github.com/Linuxfabrik/firewallfabrik/issues/82))
 
 ### Fixed
 
-* CLI: `fwf-ipt --all` and `fwf-nft --all` skip firewalls flagged inactive ([#89](https://github.com/Linuxfabrik/firewallfabrik/issues/89)).
-* Compiler (iptables): a firewall used as source or destination expands to one rule per own address, so an anti-spoofing rule covers the other own addresses too.
-* Compiler (iptables): recompiling an unchanged policy produces a byte-identical script, so CI pipelines no longer see phantom changes.
-* Compiler (iptables): the "TCP fin timeout" and "TCP keepalive interval" settings left at their default are no longer pushed into the kernel as 0.
-* Compiler (iptables): with "Use iptables-restore" the rules are written in the form iptables-restore accepts, which it used to reject ([#77](https://github.com/Linuxfabrik/firewallfabrik/issues/77)).
-* Compiler (iptables, nftables): a custom service that has code for the target platform is recognised instead of aborting the compile ([#71](https://github.com/Linuxfabrik/firewallfabrik/issues/71)).
-* Compiler (iptables, nftables): a firewall interface with address 0.0.0.0 or :: or with netmask /0 aborts with a clear error instead of producing dead rules.
-* Compiler (iptables, nftables): Custom, Tag and User Services reach the generated rules. Their code was dropped, so an established/related rule became a bare accept ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72)).
-* Compiler (iptables, nftables): IPv6 reject rules use the IPv6 reject types, so the IPv6 script loads on the firewall.
-* Compiler (iptables, nftables): no more spurious shadowing warnings for rules whose source or destination is "any" and for TCP services that inspect TCP flags ([#73](https://github.com/Linuxfabrik/firewallfabrik/issues/73)).
-* Compiler (iptables, nftables): rules that use an address range land in the right chains and are matched instead of being dropped, which produced permissive masquerading and missing rules.
-* Compiler (nftables): a Reject rule with "TCP RST" on non-TCP services falls back to the configured reject action, and a rule mixing both is split.
-* Compiler (nftables): an MSS clamping rule is generated when "Clamp MSS to path MTU" is set, matching iptables.
-* Generated script: "stop" resets the built-in chain policies to ACCEPT after flushing. They stayed at DROP, so the firewall kept blocking all traffic after a stop.
-* Generated script: every action checks for the tool it needs and aborts with a clear message.
-* GUI: File > Reload works for native `.fwf` files and imported `.fwb` files alike.
-* GUI: the Install rules destination path is no longer built by concatenating the local output path with the remote directory, which aborted the copy ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72)).
+Compiler:
+
+* address ranges land in the right chains, which produced permissive masquerading and missing rules
+* an interface with address 0.0.0.0, :: or netmask /0 is reported
+* Custom, Tag and User Services reach the generated rules; an established/related rule used to become a bare accept ([#71](https://github.com/Linuxfabrik/firewallfabrik/issues/71), [#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
+* IPv6 reject rules use IPv6 reject types
+* no more spurious shadowing warnings for "any" and TCP flag services ([#73](https://github.com/Linuxfabrik/firewallfabrik/issues/73))
+* "stop" resets the chain policies to ACCEPT instead of leaving them at DROP
+* the script checks for the tools it needs
+* iptables: "Use iptables-restore" produces rules iptables-restore accepts ([#77](https://github.com/Linuxfabrik/firewallfabrik/issues/77))
+* iptables: a firewall in source or destination covers all its own addresses
+* iptables: an unchanged policy compiles to a byte-identical script
+* iptables: TCP timeouts left at their default are no longer set to 0
+* nftables: "Clamp MSS to path MTU" and Reject with TCP RST on non-TCP services work
+
+CLI:
+
+* `--all` skips inactive firewalls ([#89](https://github.com/Linuxfabrik/firewallfabrik/issues/89))
+
+Editor:
+
+* File > Reload works for `.fwf` and `.fwb` files
+* installing copies to the right remote path ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 
 ### Removed
 
-* The legacy "Use ULOG" firewall option. The Linux kernel removed the ULOG target years ago; a `.fwb` file that still carries it is migrated to LOG on import.
-* The nftables firewall settings no longer expose iptables-only options the nftables compiler cannot act on.
+* iptables-only options in the nftables firewall settings.
+* The "Use ULOG" option; a `.fwb` file carrying it is migrated to LOG.
 
 ### Security
 
-* The Firewall Builder `.fwb` importer is hardened against malformed and malicious input files. Regular files import unchanged.
+* The `.fwb` importer is hardened against malformed and malicious files.
 
 
 ## [v1.4.6] - 2026-04-09
 
 ### Fixed
 
-* GUI: all popup dialogs have a visible border on GNOME/Wayland.
-* GUI: the Options column of the Policy, NAT and Routing editors shows the "Options" icon when non-default rule options are set.
+Editor:
+
+* popup dialogs have a visible border on GNOME/Wayland
+* the Options column shows its icon when non-default rule options are set
 
 
 ## [v1.4.5] - 2026-04-09
 
 ### Changed
 
-* GUI: the Compile dialog groups each firewall under its own heading and reports "Compiled with Warnings" or "Compile Error" in the progress column.
+Editor:
+
+* the Compile dialog groups the output per firewall and shows warnings and errors in the progress column
 
 ### Fixed
 
-* Compiler (iptables): the generated scripts are POSIX sh compliant and pass shellcheck without warnings ([#36](https://github.com/Linuxfabrik/firewallfabrik/issues/36)).
-* Compiler (iptables, nftables): a compiler warning no longer makes the compilation report as failed; the exit code stays 0.
-* GUI: the Delete key works on selected elements in the policy editor.
-* GUI: the scrollbars in the object tree and policy editor are visible on every desktop theme.
+Compiler:
+
+* a warning no longer makes the compile report as failed
+* iptables: the scripts are POSIX sh and pass shellcheck ([#36](https://github.com/Linuxfabrik/firewallfabrik/issues/36))
+
+Editor:
+
+* scrollbars are visible on every desktop theme
+* the Delete key works in the policy editor
 
 
 ## [v1.4.4] - 2026-04-08
 
 ### Fixed
 
-* GUI: no more sporadic crash when rebuilding the object tree after compilation or when closing and creating files ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
-* GUI: the Custom Service editor remembers the selected platform instead of resetting to nftables ([#61](https://github.com/Linuxfabrik/firewallfabrik/issues/61)).
+Editor:
+
+* no sporadic crash when rebuilding the object tree or when closing and creating files ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57))
+* the Custom Service editor keeps the selected platform ([#61](https://github.com/Linuxfabrik/firewallfabrik/issues/61))
 
 
 ## [v1.4.2] - 2026-04-08
 
 ### Fixed
 
-* GUI: the object tree attribute column is wide enough on first use when "Show object attributes in the tree" is enabled ([#60](https://github.com/Linuxfabrik/firewallfabrik/issues/60)).
+Editor:
+
+* the attribute column of the object tree is wide enough on first use ([#60](https://github.com/Linuxfabrik/firewallfabrik/issues/60))
 
 
 ## [v1.4.1] - 2026-04-08
 
 ### Fixed
 
-* GUI: `pyside6-rcc` is found when FirewallFabrik is installed with `uv tool install` ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-* GUI: FirewallFabrik starts on Wayland-only systems such as GNOME without X11 ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-* GUI: no more sporadic crash when opening a rule editor while another editor has unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
+Editor:
+
+* FirewallFabrik starts on Wayland-only systems and with `uv tool install` ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58))
+* no sporadic crash when opening a rule editor while another has unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57))
 
 
 ## [v1.4.0] - 2026-03-29
 
 ### Added
 
-* Compiler (iptables, nftables): "Flush entire ruleset". With the option off, FirewallFabrik only manages its own tables and chains and leaves rules created by Docker, CrowdSec or fail2ban untouched.
+Compiler:
+
+* "Flush entire ruleset": switched off, FirewallFabrik manages only its own tables and chains and leaves those of Docker, CrowdSec or fail2ban alone
 
 ### Changed
 
-* Defaults: output file name `fwf.sh` instead of the firewall object name, script directory `/etc` instead of `/etc/fw`, table and chain prefix `fwf` instead of `linuxfabrik`.
+* Defaults: script `fwf.sh` in `/etc`, table and chain prefix `fwf`.
 
 ### Fixed
 
-* Compiler (iptables, nftables): compiler messages name the rule position instead of the colour label.
-* Compiler (iptables, nftables): IPv6 rules are generated from the rule set's address family setting instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-* Generated script: "stop" keeps the chain policies at DROP, so the host is not left wide open after a stop.
-* Generated script: the script aborts on failure instead of continuing with an incomplete ruleset.
-* Generated script: with "Flush entire ruleset" off, "status" detects whether the firewall is active even when other tools create additional chains.
-* Generated script: with "Flush entire ruleset" off, "stop" removes all FirewallFabrik chains and jump rules, including sub-chains and the iptables-nft backend, and restores the chain policies to ACCEPT so other tools keep working ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-* GUI: FirewallFabrik no longer crashes when Ctrl+C is pressed in the terminal.
-* GUI: IPv6 address and network dialogs accept prefix lengths 0 to 128 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
+Compiler:
+
+* IPv6 rules follow the rule set's address family setting ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42))
+* messages name the rule position
+* the script aborts on failure, "stop" no longer leaves the host open, and with "Flush entire ruleset" off "status" and "stop" handle other tools' chains ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42))
+
+Editor:
+
+* IPv6 dialogs accept prefix lengths 0 to 128 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50))
+* no crash on Ctrl+C in the terminal
 
 
 ## [v1.3.0] - 2026-03-17
 
 ### Added
 
-* Compiler (iptables, nftables): bridge interfaces are configured through iproute2, and bridge ports are detected from the parent interface type.
-* GUI: `Alt+Return` opens the editor for the selected object.
-* GUI: Advanced Interface Settings dialog for device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
-* GUI: Appearance tab in Preferences for fonts, direction and action text, comment clipping and toolbar labels.
-* GUI: Installer tab in Preferences for SSH and SCP paths, timeout and password caching.
-* GUI: Rules menu with insert, move, copy, cut, paste, remove, disable and enable.
+Compiler:
+
+* bridge interfaces are configured with iproute2
+
+Editor:
+
+* a Rules menu
+* advanced interface settings for ethernet, VLAN, bridge and bonding
+* `Alt+Return` opens the editor of the selected object
+* Appearance and Installer tabs in the preferences
 
 ### Changed
 
-* Compiler (iptables, nftables): timestamps are gone from the generated scripts, so a deployment is idempotent.
-* GUI: default label colours use the Solarized palette; "Purple" is now "Cluster" and "Gray" is now "Maintenance".
-* GUI: FirewallFabrik runs natively on Wayland; the XCB fallback is gone.
-* GUI: the "Unprotected interface" checkbox is gone from the interface editor, as it does not apply to iptables or nftables.
+Compiler:
+
+* no timestamps in the generated scripts, so a deployment is idempotent
+
+Editor:
+
+* label colours use the Solarized palette; "Purple" is "Cluster" and "Gray" is "Maintenance"
+* runs natively on Wayland
+* the "Unprotected interface" checkbox is gone
 
 ### Fixed
 
-* Compiler (iptables, nftables): shadowing detection reports a warning instead of aborting the compilation, and no longer treats an address range as "any".
+Compiler:
+
+* shadowing is a warning instead of an abort, and an address range is no longer treated as "any"
 
 
 ## [v1.2.0] - 2026-03-17
 
 ### Added
 
-* Compiler (iptables, nftables): full Firewall Builder compiler parity, NFLOG as a logging target, and nftables load balancing and address set merging (closes #18, #22, #23, #24).
-* GUI: a compile log error is clickable and scrolls to the firewall section it belongs to (closes #15).
-* GUI: Cluster Member Management dialog to add and remove firewalls and view interface mappings (closes #26).
-* GUI: Import Addresses from File, Library Import from `.fwf` or `.fwb`, and Library Export to a separate `.fwf` file (closes #12, #27).
-* GUI: Inspect Rules shows all rules referencing the selected object (closes #28).
-* GUI: Preferences dialog with DNS Name, Address Table, Policy Rules and Interface tabs, and Restore Defaults.
-* Standard service library: Bareos, Keycloak, Kibana, Libvirt, Logstash, OpenSearch.
+Compiler:
+
+* Firewall Builder compiler parity, NFLOG, nftables load balancing and set merging ([#18](https://github.com/Linuxfabrik/firewallfabrik/issues/18), [#22](https://github.com/Linuxfabrik/firewallfabrik/issues/22), [#23](https://github.com/Linuxfabrik/firewallfabrik/issues/23), [#24](https://github.com/Linuxfabrik/firewallfabrik/issues/24))
+
+Editor:
+
+* a Preferences dialog
+* clickable compile errors ([#15](https://github.com/Linuxfabrik/firewallfabrik/issues/15))
+* Cluster Member Management ([#26](https://github.com/Linuxfabrik/firewallfabrik/issues/26))
+* Import Addresses, Library Import and Export ([#12](https://github.com/Linuxfabrik/firewallfabrik/issues/12), [#27](https://github.com/Linuxfabrik/firewallfabrik/issues/27))
+* Inspect Rules lists the rules using an object ([#28](https://github.com/Linuxfabrik/firewallfabrik/issues/28))
+
+Standard library:
+
+* Bareos, Keycloak, Kibana, Libvirt, Logstash, OpenSearch
 
 ### Changed
 
-* Compiler (iptables): the generated script runs `nft flush ruleset` on systems where `nft` is available.
+Compiler:
+
+* iptables: the script runs `nft flush ruleset` where `nft` is available
 
 ### Fixed
 
-* Compiler (iptables): the generated script carries the actual package version.
-* Compiler (iptables, nftables): multiport rules were broken because the TCP flag check matched all TCP services (fixes #21).
-* Compiler (iptables, nftables): no more false-positive shadowing errors.
-* GUI: MAC address edits are saved instead of being silently ignored (fixes #14).
-* GUI: opening an object for editing no longer marks the file as modified when nothing changed (fixes #25).
+Compiler:
+
+* multiport rules work ([#21](https://github.com/Linuxfabrik/firewallfabrik/issues/21))
+* no more false shadowing errors
+
+Editor:
+
+* MAC address edits are saved ([#14](https://github.com/Linuxfabrik/firewallfabrik/issues/14))
+* opening an object no longer marks the file as modified ([#25](https://github.com/Linuxfabrik/firewallfabrik/issues/25))
 
 
 ## [v1.1.0] - 2026-03-16
 
 ### Added
 
-* Compiler (iptables): DSCP symbolic class names such as `AF11`, `EF` or `CS3`, and version-aware `ipv4options` formatting for releases before and after iptables 1.4.3.
-* Compiler (iptables): fragment matching and IPv4 option matching in the filter compiler, which only the NAT compiler had.
-* Compiler (iptables, nftables): the router-alert IP option.
-* Compiler (nftables): DiffServ matching through `ip dscp` and `ip tos`.
+Compiler:
+
+* the router-alert IP option
+* iptables: DSCP class names, fragment and IPv4 option matching in policy rules
+* nftables: DiffServ matching
 
 ### Changed
 
-* GUI: the DiffServ default is DSCP instead of TOS.
+Editor:
+
+* DiffServ defaults to DSCP
 
 ### Fixed
 
-* Compiler (iptables): TCP flag matching.
-* Compiler (iptables, nftables): ICMP type and code matching in NAT rules.
-* Compiler (iptables, nftables): no more shadowing false positives for IP services such as VRRP.
+Compiler:
+
+* ICMP matching in NAT rules, and no shadowing false positives for IP services such as VRRP
+* iptables: TCP flag matching
 
 
 ## [v1.0.1] - 2026-03-11
 
 ### Fixed
 
-* The platform YAML defaults are part of the pip package again.
+* The platform defaults are part of the pip package again.
 
 
 ## [v1.0.0] - 2026-03-08
 
 ### Added
 
-* CLI: `fwf-ipt` and `fwf-nft` accept several firewall names and `--all`.
-* GUI: "Resolve Name" in the IPv4 and IPv6 address dialogs.
-* GUI: a confirm-delete dialog for objects that are still in use.
-* GUI: DynamicGroup editor with criteria table and matched-objects preview.
-* GUI: File > Reload re-reads the current file from disk.
-* GUI: NAT and Routing rule display, title bar dirty-state indicator, and a Window menu.
-* GUI: parallel compilation of several firewalls, with ordered log output.
-* GUI: subfolder paste, drag and drop, and nested object creation in the object tree.
-* GUI: system theme icons (Breeze, Adwaita and others) for the toolbar and menus.
-* MIME type definitions for `.fwf` and `.fwb` files.
-* Standard service library: Collabora Online, FreeIPA, Icinga, Nextcloud notify_push, WinRM.
+CLI:
+
+* `fwf-ipt` and `fwf-nft` take several firewall names and `--all`
+
+Editor:
+
+* Dynamic Group editor, NAT and Routing rule display, File > Reload, a Window menu
+* MIME types for `.fwf` and `.fwb`
+* parallel compilation of several firewalls
+* "Resolve Name" in the address dialogs, and a warning before deleting objects in use
+
+Standard library:
+
+* Collabora Online, FreeIPA, Icinga, Nextcloud notify_push, WinRM
 
 ### Fixed
 
-* Compiler (iptables, nftables): a firewall imported from a `.fwb` file compiles and installs without a prior save, and its Linux host settings reach the compiler.
-* Compiler (iptables, nftables): rule shadowing detection is on by default, and its messages name the rule position.
-* Compiler (nftables): `tcp flags != syn ct state new drop` is generated when "Accept new TCP with no SYN" is off.
-* GUI: `.fwb` import detects the legacy Firewall Builder compiler paths and offers to clear them, so FirewallFabrik uses its built-in compiler.
-* GUI: a new object created from the toolbar menu lands in the selected custom folder.
-* GUI: dead menu entries are gone (File Compare, SNMP Discovery, Policy Import, Print, Help Contents and Index).
-* GUI: deleting an object works regardless of how it is referenced.
-* GUI: DynamicGroup, AddressTable and DNSName objects are allowed in rule source and destination cells.
-* GUI: Find and Replace scope, tree filter and element display.
-* GUI: the last active rule set is remembered by name, which survives an import.
+Compiler:
+
+* a firewall imported from a `.fwb` file compiles and installs without a prior save
+* shadowing detection is on by default
+* nftables: "Accept new TCP with no SYN" off generates its drop rule
+
+Editor:
+
+* `.fwb` import offers to clear the legacy Firewall Builder compiler paths
+* dead menu entries are gone
+* deleting, Find and Replace and creating objects in custom folders work
+* Dynamic Groups, Address Tables and DNS Names are allowed in rules
 
 
 ## [v0.5.0rc1] - 2026-02-13
 
 ### Added
 
-* GUI: an asterisk in the title bar when the file has unsaved changes.
-* GUI: CIDR notation in the IPv4 and IPv6 editor dialogs.
-* GUI: firewalls needing recompilation are shown in bold in the object tree.
-* GUI: input validation in all editor dialogs.
-* GUI: RuleSet editor dialog for Policy, NAT and Routing.
+Editor:
+
+* firewalls needing a recompile are shown in bold
+* Rule Set editor, CIDR notation, input validation, and an unsaved-changes marker
 
 ### Fixed
 
-* GUI: Compile, Install and Save are disabled when no file is loaded.
-* GUI: saving an imported `.fwb` warns before overwriting an existing `.fwf`.
-* GUI: the Host OS and Platform Settings dialogs disable the options the compiler does not support.
-* Installer: the remote paths and file names are correct.
+Editor:
+
+* saving an imported `.fwb` warns before overwriting an existing `.fwf`
+* the installer uses the right remote paths
 
 
 ## [v0.5.0b1] - 2026-02-13
 
-Initial public beta pre-release.
-
-### Added
-
-* Compile and install workflow for iptables and nftables.
-* GUI: detailed object tooltips in the rule editor.
-* GUI: host wizard and group dialog ported from Firewall Builder.
-* GUI: MDI rule set windows with multi-select drag, clipboard, delete and context menu.
-* GUI: nftables settings dialog.
-* GUI: object tree with library folder structure and nested group placement.
-* GUI: single-rule compile for the target platform.
-* Standard service library expanded with the Wikipedia multi-service ports.
+Initial public beta pre-release: compile and install for iptables and nftables, with the Firewall Builder GUI.
 
 
 [Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.2.0...HEAD
