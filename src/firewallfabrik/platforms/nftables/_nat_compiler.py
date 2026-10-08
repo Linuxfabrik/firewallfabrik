@@ -68,6 +68,7 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    TagService,
     TCPUDPService,
     UserService,
 )
@@ -1486,6 +1487,20 @@ class VerifyRules2(NATRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        # "TagService is not allowed in translated service"
+        # (RuleElementTSrv::validateChild, fwbuilder5 RuleElement.cpp:569).
+        # A packet mark is no port to translate to, and neither print rule
+        # has anything to write for it, so the rule would translate without
+        # the service the editor shows.
+        tags = [obj for obj in rule.tsrv if isinstance(obj, TagService)]
+        if tags:
+            self.compiler.error(
+                rule,
+                f'Tag Service "{tags[0].name}" cannot be a translated '
+                f'service; the rule is left out',
+            )
+            return True
 
         if rule.nat_rule_type != NATRuleType.Return:
             osrv_any = not rule.osrv
