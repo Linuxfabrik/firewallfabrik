@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+Compiler:
+
+* a rule that still holds the "Dummy" placeholder is left out with a warning instead of matching any address, and an object called "Any" or "Dummy" is no longer dropped from rules
 
 
 ## [v3.3.0] - 2026-10-07

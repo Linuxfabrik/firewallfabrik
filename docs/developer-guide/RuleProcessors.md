@@ -1681,10 +1681,19 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   generated script sets.  There is nothing to write down at compile time
   for such an interface, so fwf reports the object and leaves the rule
   out.
-- `Begin` — does not skip a rule that references a deleted object.  Firewall
-  Builder leaves a "dummy" reference behind and warns; fwf has no deleted
-  objects of its own and no `.fwb` of the corpus carries one, so such a rule
-  is compiled as a rule about 255.255.255.255.
+- `Begin` — leaves out a rule that names a "Dummy" placeholder of the
+  Standard library and warns ("Rule contains dummy object and is not
+  parsed."), the way `Compiler::Begin` does in fwbuilder 5.  Firewall
+  Builder asks this of policy rules only (`PolicyRule::isDummyRule`) and
+  compiles the placeholder of a NAT or routing rule as 255.255.255.255;
+  fwf leaves those out as well.  A placeholder is recognised by where it
+  is - directly in the Standard library - and not by its name
+  (`core.objects.placeholder_kind`): Firewall Builder compares fixed ids,
+  which fwf regenerates on every load, and a user object called "Any" or
+  "Dummy" is an ordinary object.  File > Import Library brings the other
+  file's Standard library along as a copy, and
+  `redirect_placeholder_copies` points its rules at this file's
+  placeholders again.
 
 ### Reporting
 

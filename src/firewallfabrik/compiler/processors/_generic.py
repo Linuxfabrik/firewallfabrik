@@ -120,6 +120,15 @@ class Begin(BasicRuleProcessor):
             for rule in self.compiler.rules:
                 if rule.disabled:
                     continue
+                if rule.has_dummy:
+                    # fwbuilder5 Compiler.cpp:744 asks this of policy rules
+                    # only (PolicyRule::isDummyRule); a NAT or routing rule
+                    # there compiles the placeholder as 255.255.255.255.
+                    # Leaving the rule out is the safe reading of both.
+                    self.compiler.warning(
+                        rule, 'Rule contains dummy object and is not parsed.'
+                    )
+                    continue
                 self.tmp_queue.append(rule.clone() if self._clone else rule)
             self._init = True
             return bool(self.tmp_queue)

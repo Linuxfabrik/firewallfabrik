@@ -36,8 +36,11 @@ from ._base import (
     enable_sqlite_fks,
 )
 from ._database import (
+    STANDARD_LIBRARY_NAME,
     FWObjectDatabase,
     Library,
+    placeholder_kind,
+    redirect_placeholder_copies,
 )
 from ._devices import (
     Cluster,
@@ -110,6 +113,7 @@ from ._types import (
 
 __all__ = [
     'NAT',
+    'STANDARD_LIBRARY_NAME',
     'Address',
     'AddressRange',
     'AddressTable',
@@ -180,7 +184,9 @@ __all__ = [
     'normalize_mac_address',
     'packet_mark_clear_mask',
     'parse_tos',
+    'placeholder_kind',
     'range_to_cidr',
+    'redirect_placeholder_copies',
     'rule_elements',
     'tos_problem',
 ]

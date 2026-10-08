@@ -289,6 +289,10 @@ class DatabaseManager:
                 self._load_yaml(path)
             case _:
                 raise ValueError(f'Unsupported file extension: {path}')
+        # A file saved after File > Import Library may name the placeholders
+        # of the copied Standard library; see redirect_placeholder_copies.
+        with self.session() as session:
+            objects.redirect_placeholder_copies(session)
         self.save_state('Load file')
         self._saved_index = self._current_index
         return path

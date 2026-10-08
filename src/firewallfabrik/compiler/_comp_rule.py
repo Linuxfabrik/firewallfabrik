@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     RuleSet,
     Service,
     group_membership,
+    placeholder_kind,
     rule_elements,
 )
 
@@ -161,6 +162,11 @@ class CompRule:
     # is not compiled, because then the rule is gone from the firewall.
     empty_re_family_only: bool = False
     empty_re_reason: str = ''
+    # The rule names a "Dummy" placeholder of the Standard library: a new
+    # rule whose preferences start an element with it, waiting for the
+    # administrator to fill it in.  ``Begin`` leaves such a rule out with a
+    # warning, the way ``Compiler::Begin`` does (fwbuilder5 Compiler.cpp:744).
+    has_dummy: bool = False
 
     # A copy made by ``SplitHelperAssignment``: it assigns this connection
     # tracking helper to the connections the rule accepts, and is printed
@@ -318,13 +324,18 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
     elements_by_rule: dict[uuid.UUID, dict[str, list]] = defaultdict(
         lambda: defaultdict(list),
     )
+    rules_with_dummy: set[uuid.UUID] = set()
     for row in elem_rows:
         obj = obj_map.get(row.target_id)
         if obj is not None:
-            # Skip "Any" and "Dummy" sentinel objects — they represent
-            # "match anything" and should not appear in element lists.
-            obj_name = getattr(obj, 'name', '')
-            if obj_name in ('Any', 'Dummy'):
+            # The "Any" placeholder is what an empty element list says
+            # already.  "Dummy" stands for an element still to be filled
+            # in; dropping it as well would turn the element into "any"
+            # and widen the rule, so the rule is marked instead.
+            kind = placeholder_kind(obj)
+            if kind == 'Dummy':
+                rules_with_dummy.add(row.rule_id)
+            if kind:
                 continue
             elements_by_rule[row.rule_id][row.slot].append(obj)
 
@@ -388,6 +399,7 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             fallback=rule.fallback,
             hidden=rule.hidden,
             compiler_message=rule.compiler_message or '',
+            has_dummy=rule.id in rules_with_dummy,
         )
         comp_rules.append(comp_rule)
 

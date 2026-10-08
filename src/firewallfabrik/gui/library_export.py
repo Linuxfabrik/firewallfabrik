@@ -503,6 +503,9 @@ def _do_import_library(db_manager, file_path):
                 db_manager.ref_index.update(reader._ref_index)
                 unresolved.extend(reader.unresolved_refs)
                 imported += 1
+            # The imported rules name the "Any" and "Dummy" of the copied
+            # Standard library; they mean this file's own.
+            objects.redirect_placeholder_copies(cur_session)
     finally:
         import_mgr.engine.dispose()
 

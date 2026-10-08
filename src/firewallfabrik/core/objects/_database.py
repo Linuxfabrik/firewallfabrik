@@ -31,6 +31,132 @@ if TYPE_CHECKING:
     from ._services import Interval, Service
 
 
+STANDARD_LIBRARY_NAME = 'Standard'
+
+# Tables that hold the Standard library's placeholder objects: the "Any"
+# network, IP service and interval, and the "Dummy" network, IP service
+# and interface.
+_PLACEHOLDER_TABLES = frozenset({'addresses', 'interfaces', 'intervals', 'services'})
+
+# Columns that put an object below something other than its library.
+_PARENT_COLUMNS = ('device_id', 'group_id', 'interface_id', 'parent_interface_id')
+
+
+def placeholder_kind(obj) -> str:
+    """Return ``'Any'`` or ``'Dummy'`` for a Standard library placeholder.
+
+    Firewall Builder recognises its placeholders by their fixed ids:
+    ``RuleElement::isAny`` compares the reference with
+    ``getAnyElementId()`` and ``RuleElement*::isDummy`` with
+    ``DUMMY_ADDRESS_ID`` and its siblings (fwbuilder5 RuleElement.cpp:138,
+    :198).  FirewallFabrik gives every object a new id on each load, so it
+    asks where the object is instead: directly in the Standard library,
+    in no folder and below no device or interface, which is where both
+    Firewall Builder and ``standard.fwf`` keep them.  The name alone is
+    not enough - a user object called "Any" or "Dummy" is an ordinary
+    object.  Returns ``''`` for every other object.
+    """
+    name = getattr(obj, 'name', None)
+    if name not in ('Any', 'Dummy'):
+        return ''
+    if getattr(type(obj), '__tablename__', None) not in _PLACEHOLDER_TABLES:
+        return ''
+    if any(getattr(obj, column, None) is not None for column in _PARENT_COLUMNS):
+        return ''
+    library = getattr(obj, 'library', None)
+    if library is None or library.name != STANDARD_LIBRARY_NAME:
+        return ''
+    return name
+
+
+def _is_standard_copy(library) -> bool:
+    """A library File > Import Library brought along: "Standard-1", ..."""
+    prefix = f'{STANDARD_LIBRARY_NAME}-'
+    name = library.name or ''
+    return name.startswith(prefix) and name[len(prefix) :].isdigit()
+
+
+def redirect_placeholder_copies(session) -> int:
+    """Point references to a copied Standard library's placeholders at the real ones.
+
+    File > Import Library takes the other file's Standard library along as
+    an editable copy under a free name ("Standard-1"), and the rules of the
+    firewalls it brings name that copy's "Any" and "Dummy".  Firewall
+    Builder gives the placeholders one fixed id in every file, so there an
+    imported rule names the database's own "Any".  Here the copy's objects
+    are no placeholders (:func:`placeholder_kind` asks for the Standard
+    library), and a rule naming one would compile "any" as the network
+    0.0.0.0/0, which the IPv6 pass then drops.  This restores the Firewall
+    Builder reading for every reference, rule elements and group members
+    alike.  Returns how many references were moved.
+    """
+    from ._addresses import Address
+    from ._devices import Interface
+    from ._groups import group_membership
+    from ._rules import rule_elements
+    from ._services import Interval, Service
+
+    libraries = session.scalars(sqlalchemy.select(Library)).all()
+    standard = next(
+        (lib for lib in libraries if lib.name == STANDARD_LIBRARY_NAME), None
+    )
+    copies = [lib for lib in libraries if _is_standard_copy(lib)]
+    if standard is None or not copies:
+        return 0
+
+    moved = 0
+    for cls in (Address, Interface, Interval, Service):
+        real = {}
+        for obj in session.scalars(
+            sqlalchemy.select(cls).where(cls.library_id == standard.id)
+        ):
+            kind = placeholder_kind(obj)
+            if kind:
+                real[(getattr(obj, 'type', cls.__name__), kind)] = obj.id
+        for copy in copies:
+            for obj in session.scalars(
+                sqlalchemy.select(cls).where(cls.library_id == copy.id)
+            ):
+                if obj.name not in ('Any', 'Dummy'):
+                    continue
+                if any(getattr(obj, c, None) is not None for c in _PARENT_COLUMNS):
+                    continue
+                target = real.get((getattr(obj, 'type', cls.__name__), obj.name))
+                if target is None:
+                    continue
+                moved += _redirect(session, rule_elements, 'target_id', obj.id, target)
+                moved += _redirect(
+                    session, group_membership, 'member_id', obj.id, target
+                )
+    return moved
+
+
+def _redirect(session, table, column, old_id, new_id) -> int:
+    """Move every reference in *table* from *old_id* to *new_id*.
+
+    A container that holds both keeps one reference.
+    """
+    owner = 'rule_id' if column == 'target_id' else 'group_id'
+    rows = session.execute(
+        sqlalchemy.select(table).where(table.c[column] == old_id)
+    ).all()
+    for row in rows:
+        same = [table.c[owner] == row._mapping[owner]]
+        if 'slot' in table.c:
+            same.append(table.c.slot == row._mapping['slot'])
+        holds_new = session.execute(
+            sqlalchemy.select(table.c[column]).where(*same, table.c[column] == new_id)
+        ).first()
+        where = [*same, table.c[column] == old_id]
+        if holds_new is not None:
+            session.execute(sqlalchemy.delete(table).where(*where))
+        else:
+            session.execute(
+                sqlalchemy.update(table).where(*where).values({column: new_id})
+            )
+    return len(rows)
+
+
 class FWObjectDatabase(Base):
     """Root of the object tree / database."""
 

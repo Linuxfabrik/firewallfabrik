@@ -39,6 +39,7 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
+    placeholder_kind,
 )
 from firewallfabrik.gui.object_usage import (
     containment_chain,
@@ -169,14 +170,9 @@ def _system_any_message(obj, obj_type):
 
     The predefined Any Network/IPService/Interval objects live in the
     read-only Standard library and are named "Any".  Returns an empty
-    string for every other object.
+    string for every other object, including a user object called "Any".
     """
-    if getattr(obj, 'name', None) != 'Any':
-        return ''
-    read_only = getattr(obj, 'ro', False) or getattr(
-        getattr(obj, 'library', None), 'ro', False
-    )
-    if not read_only:
+    if placeholder_kind(obj) != 'Any':
         return ''
     return _ANY_TREE_MESSAGES.get(obj_type, '')
 
