@@ -1349,13 +1349,13 @@ class PolicyTreeModel(QAbstractItemModel):
         rule set it jumps into came along with its firewall, while inside
         that copied firewall the same branch is pointed at the copy.
 
-        fwf copies the tag service with the rule's other references and
-        points a branch at a rule set that was copied along, the way
-        Firewall Builder does inside the copied firewall.  A branch into a
-        rule set that was not copied loses its target, ``branch_name``
-        included: kept, the name would send the rule into whatever rule
-        set of that name this firewall has, where Firewall Builder's rule
-        has no target and the compiler reports it.
+        fwf follows both like the rule's other references: the tag service
+        is copied, and the rule set a branch jumps into comes along with
+        its firewall, the way an interface address of it does, so the copy
+        branches where the original did.  Only a branch whose rule set
+        does not exist in the other file either loses its target,
+        ``branch_name`` included: kept, the name would send the rule into
+        whatever rule set of that name this firewall has.
         """
         str_map = {str(old): str(new) for old, new in id_map.items()}
         for key in OPTION_REF_KEYS:

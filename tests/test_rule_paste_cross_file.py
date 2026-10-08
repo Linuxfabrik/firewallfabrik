@@ -221,12 +221,35 @@ def test_a_branch_into_a_rule_set_copied_along_follows_it(qt_app):
         assert options['branch_name'] == rule_set.name
 
 
-def test_a_branch_into_a_rule_set_left_behind_has_no_target(qt_app):
-    """The way Firewall Builder shows it: "Branch" and no rule set.
+def test_a_branch_into_another_firewall_brings_that_firewall_along(qt_app):
+    """Firewall Builder leaves the branch without a target; fwf copies it.
 
-    Keeping the name would send the rule into a rule set of that name on
-    the target firewall - "Policy" is the name of every top rule set.
+    The rule set belongs to a firewall nothing else in the rule names, so
+    only the branch can bring it.
     """
+    names = []
+
+    def branching(session, rule_set_id):
+        own_device = session.get(RuleSet, rule_set_id).device_id
+        other = next(
+            rs
+            for rs in session.scalars(sqlalchemy.select(RuleSet))
+            if rs.device_id != own_device and rs.type == 'Policy'
+        )
+        names.append((other.name, other.device.name))
+        return {'branch_id': str(other.id), 'branch_name': other.name}
+
+    target, options = _paste_with_options(branching)
+
+    with target.session() as session:
+        rule_set = session.get(RuleSet, uuid.UUID(options['branch_id']))
+        assert rule_set is not None, 'the copy, not the original'
+        assert options['branch_name'] == rule_set.name == names[0][0]
+        assert rule_set.device.name.startswith(names[0][1])
+
+
+def test_a_branch_into_a_rule_set_that_does_not_exist_has_no_target(qt_app):
+    """Keeping the name would send it into this firewall's rule set of that name."""
     _target, options = _paste_with_options(
         lambda _session, _rs: {'branch_id': str(uuid.uuid4()), 'branch_name': 'Policy'}
     )

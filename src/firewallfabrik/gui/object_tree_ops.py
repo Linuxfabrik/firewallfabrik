@@ -219,11 +219,12 @@ def _exists(session, obj_id):
 def _rule_references(session, rules):
     """Return the ids of the objects *rules* name, in order.
 
-    The rule elements, and the tag object a tagging rule marks with: the
-    rule keeps that one in its options (``PolicyRule::setTagObject``), and
-    a copy without it marks nothing.  The rule set a branch rule jumps
-    into is not followed - it belongs to a firewall, and
-    ``recursivelyCopySubtree`` does not follow it either.
+    The rule elements, and the two objects a rule keeps in its options:
+    the tag service a tagging rule marks with (``PolicyRule::setTagObject``)
+    and the rule set a branch rule jumps into (``setBranch``).
+    ``recursivelyCopySubtree`` follows neither, so in Firewall Builder the
+    copy marks nothing and branches nowhere; here the rule set comes along
+    with its firewall, the way an interface address does.
     """
     wanted = []
     for rule in rules:
@@ -234,17 +235,20 @@ def _rule_references(session, rules):
                 )
             )
         )
-        tag_id = (rule.options or {}).get('tagobject_id')
-        if tag_id:
-            with contextlib.suppress(ValueError):
-                wanted.append(uuid.UUID(str(tag_id)))
+        for key in OPTION_REF_KEYS:
+            ref = (rule.options or {}).get(key)
+            if ref:
+                with contextlib.suppress(ValueError):
+                    wanted.append(uuid.UUID(str(ref)))
     return wanted
 
 
 def _primary_object(obj):
     """Return the object *obj* is copied with: the host of an interface."""
     while True:
-        if isinstance(obj, Address) and obj.interface is not None:
+        if isinstance(obj, RuleSet) and obj.device is not None:
+            obj = obj.device
+        elif isinstance(obj, Address) and obj.interface is not None:
             obj = obj.interface
         elif isinstance(obj, Interface) and (obj.parent_interface or obj.device):
             obj = obj.parent_interface or obj.device
@@ -1074,9 +1078,9 @@ class TreeOperations:
         """
         to_copy = []
         for ref_id in dict.fromkeys(wanted):
-            if ref_id in id_map or load_object(own, ref_id) is not None:
+            if ref_id in id_map or _exists(own, ref_id):
                 continue
-            ref = load_object(source, ref_id)
+            ref = load_object(source, ref_id) or source.get(RuleSet, ref_id)
             if ref is None:
                 continue
             kind = placeholder_kind(ref)
@@ -1148,11 +1152,24 @@ class TreeOperations:
         makes "one more pass to fix references" for the same reason
         (fwbuilder5 FWObjectDatabase_tree_ops.cpp:509).  The ids of the
         other file exist nowhere in this one, so every row naming one is a
-        reference to fix.
+        reference to fix - and so is a rule option naming one, the branch
+        of a rule into a rule set of a firewall copied after it.
         """
         if not id_map:
             return
+        str_map = {str(old): str(new) for old, new in id_map.items()}
         with self._db_manager.session('Paste (cross-file)') as session:
+            for rule in session.scalars(sqlalchemy.select(Rule)):
+                options = rule.options or {}
+                if any(options.get(key) in str_map for key in OPTION_REF_KEYS):
+                    rule.options = {
+                        **options,
+                        **{
+                            key: str_map[options[key]]
+                            for key in OPTION_REF_KEYS
+                            if options.get(key) in str_map
+                        },
+                    }
             for old_id, new_id in id_map.items():
                 session.execute(
                     rule_elements.update()

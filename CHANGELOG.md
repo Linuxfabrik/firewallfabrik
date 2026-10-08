@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** Groups of interfaces work again in rules and group editors, and every place that inserts an object now checks it the way Firewall Builder does. Several rules that silently lost a gateway, an interface, a tag or a whole routing rule set are now reported instead.
+**Highlights:** Groups of interfaces work again in rules and group editors, and every place that inserts an object now checks it the way Firewall Builder does. Several rules that silently lost a gateway, an interface, a tag or a whole routing rule set are now reported instead. Rules can be copied from one open data file into another and bring every object they use along, the rule sets they branch into included.
 
 ### Added
 
