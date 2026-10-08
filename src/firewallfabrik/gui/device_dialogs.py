@@ -243,6 +243,35 @@ class FirewallDialog(BaseObjectDialog):
         _set_data_key(data, 'inactive', self.inactive.isChecked(), False)
         if data != old_data:
             self._obj.data = data
+        if data['platform'] != old_data.get('platform'):
+            self._clear_compiler_path()
+
+    def _clear_compiler_path(self):
+        """Forget the alternative compiler binary of the previous platform.
+
+        `FirewallDialog::applyChanges` clears the "compiler" option when the
+        platform changes, because the path names the compiler of the old one:
+        the compile dialog runs it instead of `fwf-ipt` / `fwf-nft`, so a
+        firewall switched to nftables would still be compiled by `fwf-ipt`.
+        `ClusterDialog::applyChanges` does not, but a cluster's members are
+        compiled with the cluster's option the same way, so fwf clears it
+        there as well.
+
+        The rest of `Resources::setDefaultTargetOptions`, which the same
+        branch calls, is left out on purpose: it writes the defaults of the
+        new platform over every option the platform's resource file lists.
+        In Firewall Builder that is a switch to a packet filter with other
+        options; between iptables and nftables the options mean the same
+        and have the same defaults (`defaults.yaml`), so it would only throw
+        away the administrator's settings.  Measured with Firewall Builder
+        5.3.7 on Fedora 38: iptables to PF and back clears "compiler",
+        keeps "cmdline", and puts a log prefix and "accept established"
+        the administrator had set back to the defaults.
+        """
+        options = dict(self._obj.options or {})
+        if options.get('compiler'):
+            options['compiler'] = ''
+            self._obj.options = options
 
     def _update_settings_buttons(self):
         self.fwAdvanced.setEnabled(self.platform.currentText() in PLATFORMS.values())

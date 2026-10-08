@@ -44,6 +44,7 @@ Editor:
 * pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along
 * pasting onto a group adds the object to the group instead of copying it there
 * rule fields accept only objects they can hold, and the cursor shows it while dragging
+* switching a firewall between iptables and nftables clears an alternative compiler path, so the new platform's compiler runs
 * the parameters of a cluster group refuse an empty VRRP secret and an address that is none
 * "Where used" also finds branch targets, tag services and cluster members
 
