@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.4.0] - 2026-10-08
+
 **Highlights:** Groups of interfaces work again in rules and group editors, and every place that inserts an object now checks it the way Firewall Builder does. Several rules that silently lost a gateway, an interface, a tag or a whole routing rule set are now reported instead. Rules can be copied from one open data file into another and bring every object they use along, the rule sets they branch into included.
 
 ### Added
@@ -42,7 +47,7 @@ Editor:
 * groups show their members in the tree and the group editor, interfaces included
 * interfaces can be group members, and a group of interfaces can be a rule's interface ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
 * locked firewalls, groups and libraries also protect the objects inside them
-* pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along once and takes Standard library objects from that file
+* pasting an interface keeps its addresses, and an object pasted into another file brings the objects it uses along, without copying them twice or copying the Standard library's
 * pasting onto a group adds the object to the group instead of copying it there
 * rule fields accept only objects they can hold, and the cursor shows it while dragging
 * switching a firewall between iptables and nftables clears an alternative compiler path, so the new platform's compiler runs
@@ -720,7 +725,8 @@ Editor:
 Initial public beta pre-release: compile and install for iptables and nftables, with the Firewall Builder GUI.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.4.0...HEAD
+[v3.4.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.3.0...v3.4.0
 [v3.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.2.0...v3.3.0
 [v3.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.1.0...v3.2.0
 [v3.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.0.0...v3.1.0
