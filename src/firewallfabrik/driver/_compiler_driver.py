@@ -58,6 +58,10 @@ FAILOVER_PROTOCOLS = frozenset({'heartbeat', 'none', 'openais', 'vrrp'})
 STATE_SYNC_PROTOCOLS = frozenset({'conntrack'})
 
 
+def _name(obj) -> str:
+    return obj.name
+
+
 def _as_uuid(value):
     """Accept either a UUID or its string spelling."""
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
@@ -557,6 +561,34 @@ class CompilerDriver(BaseCompiler):
                 continue
             merged[merged.index(own)] = rule_set
         return merged
+
+    def routing_rule_set(self, fw, routing_rule_sets):
+        """Return the one routing rule set to compile, or None.
+
+        A firewall has one routing table and so one routing rule set:
+        ``Firewall::validateChild`` refuses a second one ("there can be
+        only one", fwbuilder5 Firewall.cpp:208) and the driver compiles
+        ``getFirstByType(Routing::TYPENAME)``.  A data file can still hold
+        more - an older editor offered "New Routing Rule Set", and a
+        cluster member brings its own beside the cluster's - and taking
+        one of them would leave the routes of the others out of the
+        script without a word.  So more than one with rules is an error;
+        of several empty ones it does not matter which is taken.
+        """
+        if not routing_rule_sets:
+            return None
+        with_rules = [rs for rs in routing_rule_sets if rs.rules]
+        if len(with_rules) > 1:
+            names = ', '.join(f'"{rs.name}"' for rs in sorted(with_rules, key=_name))
+            self.error(
+                f'{fw.name}: {len(with_rules)} routing rule sets hold rules '
+                f'({names}), but a firewall installs one routing table. Move '
+                f'the routes into one rule set and delete the others'
+            )
+            return None
+        if with_rules:
+            return with_rules[0]
+        return min(routing_rule_sets, key=_name)
 
     def warn_about_missing_top_rule_sets(self, fw, policies, nats) -> None:
         """Say when the firewall has rule sets but none of them is the top one.

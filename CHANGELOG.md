@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Compiler:
 
+* a firewall with two routing rule sets holding rules is refused instead of installing the routes of one of them
 * a rule that still holds the "Dummy" placeholder is left out with a warning instead of matching any address, and an object called "Any" or "Dummy" is no longer dropped from rules
 
 

@@ -571,7 +571,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 routing_output = ''
-                routing_rs = all_routing[0] if all_routing else None
+                routing_rs = self.routing_rule_set(fw, all_routing)
 
                 if routing_rs:
                     routing_compiler = RoutingCompilerLinux(session, fw, False)
