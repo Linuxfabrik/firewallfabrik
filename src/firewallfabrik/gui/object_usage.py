@@ -31,8 +31,10 @@ import uuid
 
 import sqlalchemy
 
+from firewallfabrik.core._util import OPTION_REF_KEYS
 from firewallfabrik.core.objects import (
     Address,
+    Cluster,
     Firewall,
     Host,
     Interface,
@@ -123,6 +125,12 @@ def find_referencing_firewalls(session, target):
             .where(rule_elements.c.target_id.in_(search_ids)),
         ).all()
     )
+    # A rule also names a rule set it branches into and a Tag Service it
+    # tags with, in its options rather than in an element.
+    for rule, _key in find_option_references(session, search_ids):
+        rule_set = session.get(RuleSet, rule.rule_set_id)
+        if rule_set is not None:
+            device_ids.add(rule_set.device_id)
 
     firewalls = []
     for did in device_ids:
@@ -130,3 +138,39 @@ def find_referencing_firewalls(session, target):
         if isinstance(fw, Firewall):
             firewalls.append(fw)
     return firewalls
+
+
+def find_option_references(session, obj_ids):
+    """Return ``[(rule, key)]`` for every rule naming one of *obj_ids* in its options.
+
+    Besides its rule elements a rule names the rule set a Branch rule
+    jumps into (``branch_id``) and the Tag Service a tagging rule marks
+    with (``tagobject_id``).  ``FWObjectDatabase::findWhereObjectIsUsed``
+    counts both (fwbuilder5 FWObjectDatabase_search.cpp:186), so changing
+    either object concerns the firewall the rule belongs to.
+    """
+    wanted = {str(i) for i in obj_ids}
+    result = []
+    for rule in session.scalars(
+        sqlalchemy.select(Rule).where(Rule.options.is_not(None))
+    ):
+        options = rule.options or {}
+        for key in OPTION_REF_KEYS:
+            if options.get(key) in wanted:
+                result.append((rule, key))
+    return result
+
+
+def find_clusters_of(session, fw):
+    """Return the clusters *fw* is a member of.
+
+    ``findWhereObjectIsUsed`` lists a cluster as a user of its member
+    firewalls (FWObjectDatabase_search.cpp:186).
+    """
+    if not isinstance(fw, Firewall) or isinstance(fw, Cluster):
+        return []
+    return [
+        cluster
+        for cluster in session.scalars(sqlalchemy.select(Cluster))
+        if any(member.id == fw.id for member in cluster.get_members_list())
+    ]

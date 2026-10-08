@@ -23,19 +23,20 @@ exactly.
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMenu
 
+from firewallfabrik.gui.iface_opts_dialog import SUBINTERFACE_TYPES
 from firewallfabrik.gui.object_tree_data import (
     CATEGORY_ICON,
     COMPILABLE_TYPES,
     ICON_MAP,
     LOCKABLE_TYPES,
-    NEW_TYPES_FOR_FOLDER,
-    NEW_TYPES_FOR_GROUP_NODE,
     NEW_TYPES_FOR_PARENT,
     NO_COPY_TYPES,
     NO_DUPLICATE_TYPES,
     NO_MOVE_TYPES,
     RULE_SET_TYPES,
     SUBFOLDER_TYPES,
+    path_allows_subfolder,
+    path_new_types,
 )
 
 
@@ -55,88 +56,54 @@ def _set_expanded_recursive(item, expanded):
             stack.append(node.child(i))
 
 
-def _get_new_object_types(item, obj_type):
+def _get_new_object_types(item, obj_type, interface_state=None):
     """Return a list of ``(type_name, display_name)`` for the New menu.
 
-    Matches fwbuilder's context menu logic strictly:
-
-    - Devices (Cluster/Firewall/Host) -> fixed child types only.
-    - Interface -> dynamic list (addresses, subinterface, etc.).
-    - Rule sets (Policy/NAT/Routing) -> no "New" items.
-    - Library -> no "New" items (only subfolder, handled elsewhere).
-    - Group types -> folder-based items matching the group name.
-    - Objects in category folders -> folder-based items.
-    - Objects under devices/interfaces -> no "New" items.
+    Matches fwbuilder's context menu: the entries of a device or an
+    interface, then those ``addSubfolderActions`` derives from the item's
+    path (``path_new_types``).
     """
-    # Devices: fixed child types only.
+    # Device and interface entries come first, the way
+    # contextMenuRequested adds them before addSubfolderActions.
     if obj_type in ('Cluster', 'Firewall', 'Host'):
-        return list(NEW_TYPES_FOR_PARENT.get(obj_type, []))
-
-    # Interface: dynamic list based on parent and existing children.
-    if obj_type == 'Interface':
-        return _get_interface_new_types(item)
-
-    # Rule sets and Library: no "New" items.
-    if obj_type in ('Library', *RULE_SET_TYPES):
-        return []
-
-    # Group types: offer new items based on (group_type, group_name).
-    if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-        name = item.text(0)
-        types = NEW_TYPES_FOR_GROUP_NODE.get((obj_type, name))
-        if types is not None:
-            return list(types)
-        # Fall back to folder-name-only lookup.
-        types = NEW_TYPES_FOR_FOLDER.get(name, [])
-        if types:
-            return list(types)
-
-    # All other objects: only get folder-based items if they live
-    # directly under a category folder or group.
-    folder_info = _find_folder_context(item)
-    if folder_info is not None:
-        folder_name, folder_type = folder_info
-        if folder_type is not None:
-            types = NEW_TYPES_FOR_GROUP_NODE.get((folder_type, folder_name))
-            if types is not None:
-                return list(types)
-        return list(NEW_TYPES_FOR_FOLDER.get(folder_name, []))
-
-    return []
+        result = list(NEW_TYPES_FOR_PARENT.get(obj_type, []))
+    elif obj_type == 'Interface':
+        result = _get_interface_new_types(item, interface_state)
+    else:
+        result = []
+    # getMenuState turns every entry of AddObjectActions off for an
+    # interface that carries no address of its own - dynamic, unnumbered
+    # or a bridge port (fwbuilder5 ObjectManipulator.cpp:1166); the path
+    # entries are among them.
+    path_enabled = (interface_state or {}).get('takes_addresses', True)
+    offered = {entry[0] for entry in result}
+    for type_name, label in path_new_types(item_path(item)):
+        if type_name not in offered:
+            result.append((type_name, label, path_enabled))
+            offered.add(type_name)
+    return result
 
 
-def _find_folder_context(item):
-    """Walk up the tree to find the enclosing category folder or group.
+def item_path(item):
+    """Return *item*'s path below its library, like ``getPath(true)``.
 
-    Returns ``(folder_name, group_type)`` where *group_type* is the
-    STI discriminator (e.g. ``'ObjectGroup'``, ``'ServiceGroup'``)
-    for real group folders, or ``None`` for virtual category folders.
-    Returns ``None`` if the item lives under a device or interface
-    (where no folder-based "New" items are offered).
+    "Objects/Hosts" for the standard folder, "Objects/Hosts/web" for a host
+    in it, '' for the library itself.  ``None`` when the item is not inside
+    a library.
     """
     from PySide6.QtCore import Qt
 
-    current = item.parent()
+    parts = []
+    current = item
     while current is not None:
-        current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
-        if current_type is None:
-            # Virtual category folder (no obj_id/obj_type).
-            return (current.text(0), None)
-        if current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-            # Real group acting as a folder container.
-            return (current.text(0), current_type)
-        if current_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
-            # Under a device or interface — no folder-based items.
-            return None
-        if current_type == 'Library':
-            # Directly under library without a category folder.
-            return None
+        if current.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
+            return '/'.join(reversed(parts))
+        parts.append(current.text(0))
         current = current.parent()
-
     return None
 
 
-def _get_interface_new_types(item):
+def _get_interface_new_types(item, interface_state=None):
     """Build the dynamic "New" list for an Interface item.
 
     Matches fwbuilder's ``contextMenuRequested()`` for the parts that are
@@ -163,14 +130,23 @@ def _get_interface_new_types(item):
     parent = item.parent()
     parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) if parent else None
 
-    # Subinterface: only for Firewall interfaces.
-    if parent_type == 'Firewall':
+    state = interface_state or {}
+
+    # Subinterface: only on an interface of a Firewall whose type can have
+    # sub-interfaces (``getSubInterfaceTypes``, linux24.xml
+    # ``subinterfaces``: ethernet, bridge and bonding, not a VLAN).
+    if parent_type == 'Firewall' and SUBINTERFACE_TYPES.get(
+        state.get('type') or 'ethernet'
+    ):
         result.append(('Interface', 'Interface'))
 
-    # Standard address types — always offered.
-    result.append(('IPv4', 'Address'))
-    result.append(('IPv6', 'Address IPv6'))
-    result.append(('PhysAddress', 'MAC Address'))
+    # The addresses and the MAC address are turned off on an interface
+    # that carries no address of its own (getMenuState,
+    # ObjectManipulator.cpp:1166).
+    takes_addresses = state.get('takes_addresses', True)
+    result.append(('IPv4', 'Address', takes_addresses))
+    result.append(('IPv6', 'Address IPv6', takes_addresses))
+    result.append(('PhysAddress', 'MAC Address', takes_addresses))
 
     # One per interface, the way `ObjectManipulator::contextMenuRequested`
     # offers it only while `getFirstByType(AttachedNetworks)` finds none.
@@ -207,6 +183,7 @@ def build_object_context_menu(
     selected_tags,
     sibling_interfaces,
     writable_libraries,
+    interface_state=None,
 ):
     """Build context menu for an object item.
 
@@ -337,13 +314,10 @@ def build_object_context_menu(
 
     # ── 8. New [Type] + New Subfolder (single-select only) ────────────
     if not multi:
-        new_types = _get_new_object_types(item, obj_type)
-        show_subfolder = obj_type == 'Library' or obj_type in SUBFOLDER_TYPES
-        # Path exception: user ObjectGroup under "Groups" → no subfolder.
-        if show_subfolder and obj_type == 'ObjectGroup' and not is_sys:
-            folder_info = _find_folder_context(item)
-            if folder_info is not None and folder_info[0] == 'Groups':
-                show_subfolder = False
+        new_types = _get_new_object_types(item, obj_type, interface_state)
+        show_subfolder = obj_type in SUBFOLDER_TYPES and path_allows_subfolder(
+            item_path(item)
+        )
         if new_types or show_subfolder:
             menu.addSeparator()
         for entry in new_types:
@@ -441,42 +415,6 @@ def build_object_context_menu(
     return menu, handlers
 
 
-def _resolve_category_folder(item):
-    """Resolve the effective system folder name for a category item.
-
-    If the item itself is a known system folder (e.g. "Firewalls"),
-    return its name directly.  Otherwise walk up the tree to find the
-    enclosing system group or category folder whose name appears in
-    ``NEW_TYPES_FOR_FOLDER``.  This lets user-created subfolders
-    inherit the "New [Type]" actions from their parent system folder,
-    matching fwbuilder's ``path.find("Firewalls") == 0`` logic.
-    """
-    from PySide6.QtCore import Qt
-
-    # Check the item's own name first.
-    name = item.text(0)
-    if name in NEW_TYPES_FOR_FOLDER:
-        return name
-
-    # Walk up to find the enclosing system folder / group.
-    current = item.parent()
-    while current is not None:
-        current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
-        if current_type is None:
-            # Another virtual folder — check its name.
-            parent_name = current.text(0)
-            if parent_name in NEW_TYPES_FOR_FOLDER:
-                return parent_name
-        elif current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-            parent_name = current.text(0)
-            if parent_name in NEW_TYPES_FOR_FOLDER:
-                return parent_name
-        elif current_type == 'Library':
-            break
-        current = current.parent()
-    return None
-
-
 def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_selection):
     """Build context menu for a user subfolder item.
 
@@ -487,10 +425,8 @@ def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_sel
     """
     from PySide6.QtCore import Qt
 
-    effective_folder = _resolve_category_folder(item)
-    new_types = (
-        NEW_TYPES_FOR_FOLDER.get(effective_folder, []) if effective_folder else []
-    )
+    path = item_path(item)
+    new_types = path_new_types(path)
 
     # Determine read-only state from parent library.
     effective_ro = False
@@ -543,8 +479,9 @@ def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_sel
         act.setEnabled(not effective_ro)
         handlers[act] = ('_ctx_new_object', item, type_name)
 
-    act = menu.addAction(QIcon(CATEGORY_ICON), 'New Subfolder')
-    act.setEnabled(not effective_ro)
-    handlers[act] = ('_ctx_new_subfolder', item)
+    if path_allows_subfolder(path):
+        act = menu.addAction(QIcon(CATEGORY_ICON), 'New Subfolder')
+        act.setEnabled(not effective_ro)
+        handlers[act] = ('_ctx_new_subfolder', item)
 
     return menu, handlers

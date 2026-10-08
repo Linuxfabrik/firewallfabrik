@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
 from firewallfabrik.core.objects import (
     Group,
     Host,
+    Interface,
     Library,
     group_membership,
 )
@@ -54,8 +55,7 @@ from firewallfabrik.gui.object_tree_data import (
     MODEL_MAP,
     NON_DRAGGABLE_TYPES,
     RULE_SET_TYPES,
-    SYSTEM_ROOT_FOLDERS,
-    SYSTEM_SUB_FOLDERS,
+    STANDARD_FOLDER_PATHS,
     create_library_folder_structure,
     is_inactive,
     needs_compile,
@@ -69,6 +69,7 @@ from firewallfabrik.gui.object_tree_data import (
 from firewallfabrik.gui.object_tree_menu import (
     build_category_context_menu,
     build_object_context_menu,
+    item_path,
 )
 from firewallfabrik.gui.object_tree_ops import TreeOperations
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
@@ -204,7 +205,7 @@ class _DraggableTree(QTreeWidget):
             event.ignore()
             return
         dest = self.itemAt(event.position().toPoint())
-        if dest is None:
+        if dest is None or not self._drop_fits(dest, self._drop_entries(event)):
             event.ignore()
             return
         event.acceptProposedAction()
@@ -214,17 +215,79 @@ class _DraggableTree(QTreeWidget):
             event.ignore()
             return
         dest = self.itemAt(event.position().toPoint())
-        if dest is None:
-            event.ignore()
-            return
-        data = event.mimeData().data(FWF_MIME_TYPE).data()
-        try:
-            entries = json.loads(data)
-        except (ValueError, TypeError):
+        entries = self._drop_entries(event)
+        if dest is None or not self._drop_fits(dest, entries):
             event.ignore()
             return
         event.acceptProposedAction()
         self.items_dropped.emit(dest, entries)
+
+    @staticmethod
+    def _drop_entries(event):
+        try:
+            entries = json.loads(event.mimeData().data(FWF_MIME_TYPE).data())
+        except (ValueError, TypeError):
+            return []
+        if isinstance(entries, dict):
+            entries = [entries]
+        return (
+            [e for e in entries if isinstance(e, dict)]
+            if isinstance(entries, list)
+            else []
+        )
+
+    @staticmethod
+    def _filed_in(item):
+        """Return the real object *item* is filed in, skipping user subfolders."""
+        current = item.parent()
+        while (
+            current is not None
+            and current.data(0, Qt.ItemDataRole.UserRole + 1) is None
+        ):
+            current = current.parent()
+        return current
+
+    def _drop_fits(self, dest, entries):
+        """Return True if dropping the dragged objects on *dest* sorts them.
+
+        Ports ``isValidDropTarget`` (fwbuilder5 ObjectTreeView.cpp:482): a
+        drag in the tree only sorts an object into a user subfolder of the
+        container it is filed in, or back to that container - onto the
+        container, a subfolder of it, or an object filed there.  An
+        interface, anything inside an interface and a rule set are never
+        dragged around, and a drop that would leave every object where it
+        is is no drop.
+        """
+        ids = {e.get('id') for e in entries}
+        dragged = [
+            it
+            for it in self.selectedItems()
+            if it.data(0, Qt.ItemDataRole.UserRole) in ids
+        ]
+        if not dragged:
+            return False
+        dest_is_folder = dest.data(0, Qt.ItemDataRole.UserRole + 1) is None
+        moves = False
+        for item in dragged:
+            obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            parent = item.parent()
+            if obj_type in ('Interface', 'NAT', 'Policy', 'Routing') or (
+                parent is not None
+                and parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Interface'
+            ):
+                return False
+            container = self._filed_in(item)
+            if dest_is_folder:
+                if self._filed_in(dest) is not container:
+                    return False
+            elif dest is not container and self._filed_in(dest) is not container:
+                return False
+            target_parent = (
+                dest if (dest_is_folder or dest is container) else dest.parent()
+            )
+            if target_parent is not parent:
+                moves = True
+        return moves
 
 
 class ObjectTree(QWidget):
@@ -1061,17 +1124,7 @@ class ObjectTree(QWidget):
         # Gather sibling interfaces for "Make subinterface of ...".
         sibling_interfaces = self._get_sibling_interfaces(item, obj_type)
 
-        resolved = self._actions._resolve_paste_item(item)
-        allowed = self._actions._get_allowed_paste_types(resolved)
-        compat_clip = (
-            [
-                cb
-                for cb in self._actions._clipboard_store.tree_entries
-                if allowed is None or cb['type'] in allowed
-            ]
-            if self._actions._clipboard_store.tree_entries is not None
-            else None
-        ) or None
+        compat_clip = self._actions.pasteable_entries(item)
 
         menu, handlers = build_object_context_menu(
             self,
@@ -1088,6 +1141,7 @@ class ObjectTree(QWidget):
             selected_tags=selected_tags,
             sibling_interfaces=sibling_interfaces,
             writable_libraries=writable_libraries,
+            interface_state=self._interface_state(item, obj_type),
         )
 
         triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
@@ -1116,16 +1170,7 @@ class ObjectTree(QWidget):
             if it is not item
         )
 
-        allowed = self._actions._get_allowed_paste_types(item)
-        compat_clip = (
-            [
-                cb
-                for cb in self._actions._clipboard_store.tree_entries
-                if allowed is None or cb['type'] in allowed
-            ]
-            if self._actions._clipboard_store.tree_entries is not None
-            else None
-        ) or None
+        compat_clip = self._actions.pasteable_entries(item)
 
         menu, handlers = build_category_context_menu(
             self,
@@ -1355,22 +1400,52 @@ class ObjectTree(QWidget):
             current = current.parent()
         return None, None, None
 
+    def _interface_state(self, item, obj_type):
+        """Return what the "New" entries of an interface depend on, or None."""
+        if obj_type != 'Interface' or self._db_manager is None:
+            return None
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if not obj_id:
+            return None
+        with self._db_manager.session() as session:
+            iface = session.get(Interface, uuid.UUID(obj_id))
+            if iface is None:
+                return None
+            return {
+                'takes_addresses': not (
+                    iface.is_dynamic()
+                    or iface.is_unnumbered()
+                    or iface.is_bridge_port()
+                ),
+                'type': (iface.options or {}).get('type') or 'ethernet',
+            }
+
     @staticmethod
     def _is_system_group(item):
-        """Return True if *item* represents a system-structure group."""
+        """Return True if *item* is one of the standard folders of a library.
+
+        ``FWBTree::isStandardFolder`` asks the path of the object
+        (FWBTree.cpp:392), so a user group that happens to be called
+        "Hosts" in Objects/Groups is a user group.
+        """
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
         if obj_type not in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
             return False
-        name = item.text(0)
-        parent = item.parent()
-        if parent is None:
-            return False
-        parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-        if parent_type == 'Library' and name in SYSTEM_ROOT_FOLDERS:
-            return True
-        parent_name = parent.text(0)
-        if parent_type in ('ObjectGroup', 'ServiceGroup'):
-            allowed = SYSTEM_SUB_FOLDERS.get(parent_name)
-            if allowed and name in allowed:
-                return True
-        return False
+        return item_path(item) in STANDARD_FOLDER_PATHS
+
+    @staticmethod
+    def _standard_folder_path(item):
+        """Return the path of the standard folder *item* is or lies in.
+
+        A user subfolder belongs to the standard folder above it.  ``None``
+        when there is none, at the root of a library for example.
+        """
+        current = item
+        while current is not None:
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type == 'Library':
+                return None
+            if obj_type is not None and ObjectTree._is_system_group(current):
+                return item_path(current)
+            current = current.parent()
+        return None

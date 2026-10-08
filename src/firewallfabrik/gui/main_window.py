@@ -264,6 +264,18 @@ def _build_library_path_map(session, library):
 
         _walk_ifaces(dev.interfaces, dev_path)
 
+    # 6. Interfaces filed in the library itself, such as the Standard
+    # library's "Dummy" interface.  Without a path the update deletes it and
+    # inserts it again under a new id, and a rule naming it loses it.
+    for iface in session.scalars(
+        sqlalchemy.select(Interface).where(
+            Interface.library_id == library.id,
+            Interface.device_id.is_(None),
+            Interface.parent_interface_id.is_(None),
+        ),
+    ).all():
+        path_map[f'{lib_path}/Interface:{escape_obj_name(iface.name)}'] = iface.id
+
     return path_map
 
 

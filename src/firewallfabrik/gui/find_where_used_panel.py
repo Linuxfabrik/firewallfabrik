@@ -38,6 +38,7 @@ from firewallfabrik.core.objects import (
     group_membership,
     rule_elements,
 )
+from firewallfabrik.gui.object_usage import find_clusters_of, find_option_references
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 logger = logging.getLogger(__name__)
@@ -186,6 +187,8 @@ class FindWhereUsedPanel(QWidget):
                 self._find_in_containers(session, search_id, obj_name, obj_icon)
                 self._find_in_groups(session, search_id, obj_name, obj_icon)
                 self._find_in_rules(session, search_id, obj_name, obj_icon)
+                self._find_in_rule_options(session, search_id, obj_name, obj_icon)
+                self._find_in_clusters(session, search_id, obj_name, obj_icon)
 
         for col in range(self.resListView.columnCount()):
             self.resListView.resizeColumnToContents(col)
@@ -266,6 +269,33 @@ class FindWhereUsedPanel(QWidget):
             item.setData(0, _ROLE_SLOT, slot)
             self.resListView.addTopLevelItem(item)
 
+    def _find_in_rule_options(self, session, obj_id, obj_name, obj_icon):
+        """Find rules branching into obj_id or tagging with it."""
+        for rule, key in find_option_references(session, [obj_id]):
+            rs = session.get(RuleSet, rule.rule_set_id)
+            if rs is None:
+                continue
+            what = 'Branch' if key == 'branch_id' else 'Tag'
+            device = rs.device
+            item = QTreeWidgetItem()
+            item.setIcon(0, obj_icon)
+            item.setText(0, obj_name)
+            item.setIcon(1, _icon_for_type(device.type if device else ''))
+            item.setText(1, device.name if device else '')
+            item.setText(2, f"{rs.type} '{rs.name}' / Rule #{rule.position} / {what}")
+            item.setData(0, _ROLE_RULE_SET_ID, str(rs.id))
+            item.setData(0, _ROLE_RULE_ID, str(rule.id))
+            item.setData(0, _ROLE_SLOT, 'action')
+            self.resListView.addTopLevelItem(item)
+
+    def _find_in_clusters(self, session, obj_id, obj_name, obj_icon):
+        """Find the clusters a firewall is a member of."""
+        fw = session.get(Host, obj_id)
+        for cluster in find_clusters_of(session, fw):
+            self._add_container_item(
+                obj_name, obj_icon, cluster.name, cluster.type, str(cluster.id)
+            )
+
     def _collect_descendants(self, session, obj_id):
         """Collect obj_id plus all descendant IDs for include-children mode.
 
@@ -330,20 +360,38 @@ class FindWhereUsedPanel(QWidget):
             self._collect_device_descendants(session, did, ids)
 
     def _collect_device_descendants(self, session, device_id, ids):
-        """Collect interfaces and their addresses for a device."""
+        """Collect interfaces, their children and the groups of a device."""
         for (iface_id,) in session.execute(
-            sqlalchemy.select(Interface.id).where(Interface.device_id == device_id)
+            sqlalchemy.select(Interface.id).where(
+                Interface.device_id == device_id,
+                Interface.parent_interface_id.is_(None),
+            )
         ).all():
             ids.append(iface_id)
             self._collect_interface_descendants(session, iface_id, ids)
+        for (gid,) in session.execute(
+            sqlalchemy.select(Group.id).where(Group.device_id == device_id)
+        ).all():
+            ids.append(gid)
 
-    @staticmethod
-    def _collect_interface_descendants(session, iface_id, ids):
-        """Collect addresses belonging to an interface."""
+    @classmethod
+    def _collect_interface_descendants(cls, session, iface_id, ids):
+        """Collect the addresses, groups and sub-interfaces of an interface."""
         for (aid,) in session.execute(
             sqlalchemy.select(Address.id).where(Address.interface_id == iface_id)
         ).all():
             ids.append(aid)
+        for (gid,) in session.execute(
+            sqlalchemy.select(Group.id).where(Group.interface_id == iface_id)
+        ).all():
+            ids.append(gid)
+        for (sub_id,) in session.execute(
+            sqlalchemy.select(Interface.id).where(
+                Interface.parent_interface_id == iface_id
+            )
+        ).all():
+            ids.append(sub_id)
+            cls._collect_interface_descendants(session, sub_id, ids)
 
     def _resolve_name_and_type(self, obj_id):
         """Look up an object's name and type from the tree widget."""

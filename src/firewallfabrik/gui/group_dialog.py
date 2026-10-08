@@ -32,20 +32,20 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
 )
 
+from firewallfabrik.core._dynamic_groups import object_type_name
+from firewallfabrik.core._validation import group_accepts, load_object
 from firewallfabrik.core.objects import (
-    Address,
     Group,
-    Host,
-    Interval,
-    Service,
     group_membership,
 )
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.platform_settings import HOST_OS
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 
-# Allowed child types per group class, matching fwbuilder's
-# getAllowedTypesOfChildren() (minus reference types).  Alphabetical.
+# Types offered by the "Create new object" button per group class, matching
+# fwbuilder's getAllowedTypesOfChildren() (minus reference types).  This is
+# the "New" menu only: what may become a member is group_accepts(), the port
+# of validateChild().  Alphabetical.
 _ALLOWED_NEW_TYPES = {
     'IntervalGroup': [
         ('Interval', 'Time Interval'),
@@ -73,16 +73,6 @@ _ALLOWED_NEW_TYPES = {
         ('UserService', 'User Service'),
     ],
 }
-
-# Set of type discriminators accepted as members for each group class.
-# Built from _ALLOWED_NEW_TYPES plus the group type itself (groups can
-# contain sub-groups of the same kind).  Matches fwbuilder's
-# Group::validateChild() / getAllowedTypesOfChildren().
-_ALLOWED_MEMBER_TYPES: dict[str, frozenset[str]] = {}
-for _gtype, _entries in _ALLOWED_NEW_TYPES.items():
-    _types = frozenset({t for t, _ in _entries} | {_gtype})
-    _ALLOWED_MEMBER_TYPES[_gtype] = _types
-
 
 # ------------------------------------------------------------------
 # Droppable view widgets
@@ -360,36 +350,8 @@ class GroupObjectDialog(BaseObjectDialog):
         self._icon_view.clear()
         self._list_view.clear()
 
-        session = sqlalchemy.orm.object_session(self._obj)
-        if session is None:
-            return
-
-        # Query member IDs in position order.
-        rows = session.execute(
-            sqlalchemy.select(group_membership.c.member_id)
-            .where(group_membership.c.group_id == self._obj.id)
-            .order_by(group_membership.c.position)
-        ).all()
-
-        member_ids = [row.member_id for row in rows]
-        if not member_ids:
-            return
-
-        # Look up members across all object tables.
-        member_map = {}
-        for cls in (Address, Group, Host, Interval, Service):
-            for obj in (
-                session.scalars(sqlalchemy.select(cls).where(cls.id.in_(member_ids)))
-                .unique()
-                .all()
-            ):
-                member_map[obj.id] = obj
-
-        # Add members in their original order.
-        for mid in member_ids:
-            member = member_map.get(mid)
-            if member is not None:
-                self._add_member(member)
+        for member in self._obj.get_member_objects():
+            self._add_member(member)
 
         # Auto-size list view columns.
         self._list_view.resizeColumnToContents(0)
@@ -397,7 +359,7 @@ class GroupObjectDialog(BaseObjectDialog):
 
     def _add_member(self, obj):
         """Add a single member to both icon and list views."""
-        type_str = getattr(obj, 'type', '')
+        type_str = object_type_name(obj)
         name = getattr(obj, 'name', '')
         icon = QIcon(f':/Icons/{type_str}/icon')
         obj_id = str(obj.id)
@@ -457,8 +419,6 @@ class GroupObjectDialog(BaseObjectDialog):
         if session is None:
             return
 
-        group_type = getattr(self._obj, 'type', '')
-        allowed = _ALLOWED_MEMBER_TYPES.get(group_type, frozenset())
         existing = self._get_existing_member_ids()
 
         # Determine next position value.
@@ -472,24 +432,21 @@ class GroupObjectDialog(BaseObjectDialog):
         added = False
         for entry in entries:
             obj_id_str = entry.get('id', '')
-            obj_type = entry.get('type', '')
-
-            if not obj_id_str or not obj_type:
-                continue
-
-            # Type validation: only accept types allowed for this group.
-            if obj_type not in allowed:
+            try:
+                member_id = uuid.UUID(obj_id_str)
+            except (TypeError, ValueError):
                 continue
 
             # Duplicate check: skip if already a member.
             if obj_id_str in existing:
                 continue
 
-            # Prevent adding the group to itself.
-            if obj_id_str == str(self._obj.id):
+            # ``GroupObjectDialog::insertObject`` asks the group's
+            # validateChild (GroupObjectDialog.cpp:343), which also keeps
+            # a group out of itself.
+            obj = load_object(session, member_id)
+            if obj is None or not group_accepts(self._obj, obj):
                 continue
-
-            member_id = uuid.UUID(obj_id_str)
             session.execute(
                 group_membership.insert().values(
                     group_id=self._obj.id,

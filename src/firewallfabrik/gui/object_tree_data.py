@@ -183,8 +183,8 @@ RULE_SET_TYPES = frozenset({'NAT', 'Policy', 'Routing'})
 # Types that cannot be dragged (structural / container items).
 # A rule set is draggable: the Branch action's drop area is what it is
 # dragged to, and a drag out of the tree is reference-only (see
-# `ObjectTree.startDrag`), so nothing in the tree moves.  A rule set is in
-# no `VALID_TYPES_BY_SLOT` set, so a rule element still refuses it.
+# `ObjectTree.startDrag`), so nothing in the tree moves.  A rule element
+# still refuses it (`core._validation.rule_element_refusal`).
 NON_DRAGGABLE_TYPES = frozenset({'Library'})
 
 # Types for which "Duplicate ..." is not offered (structural / internal).
@@ -265,6 +265,17 @@ SYSTEM_SUB_FOLDERS = {
     ),
 }
 
+# Paths of the standard folders below a library, the way
+# ``FWBTree::isStandardFolder`` lists them (``standardFolders``).
+STANDARD_FOLDER_PATHS = frozenset(
+    SYSTEM_ROOT_FOLDERS
+    | {
+        f'{parent}/{child}'
+        for parent, children in SYSTEM_SUB_FOLDERS.items()
+        for child in children
+    }
+)
+
 # Service object types used to detect group type for "Group" action.
 SERVICE_OBJ_TYPES = frozenset(
     {
@@ -291,20 +302,34 @@ DEFAULT_CLUSTER_GROUP_PROTOCOL = {
     'StateSyncClusterGroup': 'conntrack',
 }
 
+
+def group_contents(group) -> list:
+    """Return what a group holds: the objects filed in it and its members.
+
+    ``FWObjectPropertiesFactory`` counts ``g->size()`` (fwbuilder5
+    FWObjectPropertiesFactory.cpp:167), the children of the group.  For a
+    folder those are the objects filed in it, for a user group the
+    references to its members; here the first are the relationships and
+    the second ``group_membership``, so both are asked.
+    """
+    filed = []
+    for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
+        filed.extend(getattr(group, attr, None) or [])
+    return filed + list(group.get_member_objects())
+
+
 # New object types offered for device context (sorted alphabetically).
 NEW_TYPES_FOR_PARENT = {
     'Cluster': [
         ('Interface', 'Interface'),
         ('NAT', 'NAT Rule Set'),
         ('Policy', 'Policy Rule Set'),
-        ('Routing', 'Routing Rule Set'),
         ('StateSyncClusterGroup', 'State Sync Group'),
     ],
     'Firewall': [
         ('Interface', 'Interface'),
         ('NAT', 'NAT Rule Set'),
         ('Policy', 'Policy Rule Set'),
-        ('Routing', 'Routing Rule Set'),
     ],
     'Host': [
         ('Interface', 'Interface'),
@@ -372,94 +397,38 @@ NEW_TYPES_FOR_FOLDER = {
     ],
 }
 
-# Context menu "New [Type]" entries for real group nodes, keyed by
-# ``(group_type, group_name)``.  This disambiguates folders with the
-# same name under different parents (e.g. "Groups" under Objects vs.
-# under Services) and provides correct entries for top-level groups.
-# Mirrors fwbuilder's ``ObjectManipulator::addSubfolderActions()`` logic.
-NEW_TYPES_FOR_GROUP_NODE = {
-    ('IntervalGroup', 'Time'): [
-        ('Interval', 'Time Interval'),
-    ],
-    ('ObjectGroup', 'Address Ranges'): [
-        ('AddressRange', 'Address Range'),
-    ],
-    ('ObjectGroup', 'Address Tables'): [
-        ('AddressTable', 'Address Table'),
-    ],
-    ('ObjectGroup', 'Addresses'): [
-        ('IPv4', 'Address'),
-        ('IPv6', 'Address IPv6'),
-    ],
-    ('ObjectGroup', 'Clusters'): [
-        ('Cluster', 'Cluster'),
-    ],
-    ('ObjectGroup', 'DNS Names'): [
-        ('DNSName', 'DNS Name'),
-    ],
-    ('ObjectGroup', 'Firewalls'): [
-        ('Firewall', 'Firewall'),
-    ],
-    ('ObjectGroup', 'Groups'): [
-        ('DynamicGroup', 'Dynamic Group'),
-        ('ObjectGroup', 'Object Group'),
-    ],
-    ('ObjectGroup', 'Hosts'): [
-        ('Host', 'Host'),
-    ],
-    ('ObjectGroup', 'Networks'): [
-        ('Network', 'Network'),
-        ('NetworkIPv6', 'Network IPv6'),
-    ],
-    ('ObjectGroup', 'Objects'): [
-        ('AddressRange', 'Address Range'),
-        ('AddressTable', 'Address Table'),
-        ('DNSName', 'DNS Name'),
-        ('DynamicGroup', 'Dynamic Group'),
-        ('Host', 'Host'),
-        ('IPv4', 'Address'),
-        ('IPv6', 'Address IPv6'),
-        ('Network', 'Network'),
-        ('NetworkIPv6', 'Network IPv6'),
-        ('ObjectGroup', 'Object Group'),
-    ],
-    ('ServiceGroup', 'Custom'): [
-        ('CustomService', 'Custom Service'),
-    ],
-    ('ServiceGroup', 'Groups'): [
-        ('ServiceGroup', 'Service Group'),
-    ],
-    ('ServiceGroup', 'ICMP'): [
-        ('ICMP6Service', 'ICMP6 Service'),
-        ('ICMPService', 'ICMP Service'),
-    ],
-    ('ServiceGroup', 'IP'): [
-        ('IPService', 'IP Service'),
-    ],
-    ('ServiceGroup', 'Services'): [
-        ('CustomService', 'Custom Service'),
-        ('ICMP6Service', 'ICMP6 Service'),
-        ('ICMPService', 'ICMP Service'),
-        ('IPService', 'IP Service'),
-        ('ServiceGroup', 'Service Group'),
-        ('TCPService', 'TCP Service'),
-        ('TagService', 'Tag Service'),
-        ('UDPService', 'UDP Service'),
-        ('UserService', 'User Service'),
-    ],
-    ('ServiceGroup', 'TCP'): [
-        ('TCPService', 'TCP Service'),
-    ],
-    ('ServiceGroup', 'TagServices'): [
-        ('TagService', 'Tag Service'),
-    ],
-    ('ServiceGroup', 'UDP'): [
-        ('UDPService', 'UDP Service'),
-    ],
-    ('ServiceGroup', 'Users'): [
-        ('UserService', 'User Service'),
-    ],
-}
+# "New [Type]" entries by the path of the item the menu is opened on,
+# exactly ``ObjectManipulator::addSubfolderActions`` (fwbuilder5
+# ObjectManipulator.cpp:409): an entry is offered when the item's path
+# below its library starts with the folder, so a standard folder, a user
+# subfolder in it and every object filed there offer the same entries,
+# and a user group called "Hosts" in Objects/Groups offers the Groups ones.
+NEW_TYPES_BY_PATH = (
+    ('Firewalls', [('Firewall', 'Firewall')]),
+    ('Clusters', [('Cluster', 'Cluster')]),
+    ('Objects/Addresses', [('IPv4', 'Address'), ('IPv6', 'Address IPv6')]),
+    ('Objects/DNS Names', [('DNSName', 'DNS Name')]),
+    ('Objects/Address Tables', [('AddressTable', 'Address Table')]),
+    ('Objects/Address Ranges', [('AddressRange', 'Address Range')]),
+    ('Objects/Hosts', [('Host', 'Host')]),
+    ('Objects/Networks', [('Network', 'Network'), ('NetworkIPv6', 'Network IPv6')]),
+    (
+        'Objects/Groups',
+        [('ObjectGroup', 'Object Group'), ('DynamicGroup', 'Dynamic Group')],
+    ),
+    ('Services/Custom', [('CustomService', 'Custom Service')]),
+    ('Services/IP', [('IPService', 'IP Service')]),
+    (
+        'Services/ICMP',
+        [('ICMPService', 'ICMP Service'), ('ICMP6Service', 'ICMP6 Service')],
+    ),
+    ('Services/TCP', [('TCPService', 'TCP Service')]),
+    ('Services/UDP', [('UDPService', 'UDP Service')]),
+    ('Services/TagServices', [('TagService', 'Tag Service')]),
+    ('Services/Groups', [('ServiceGroup', 'Service Group')]),
+    ('Services/Users', [('UserService', 'User Service')]),
+    ('Time', [('Interval', 'Time Interval')]),
+)
 
 # Types for which Compile / Install are offered in the context menu.
 COMPILABLE_TYPES = frozenset({'Cluster', 'Firewall'})
@@ -487,7 +456,33 @@ LOCKABLE_TYPES = frozenset(
 # Types that DO get "New Subfolder" in their context menu.
 # Matches fwbuilder's addSubfolderActions() exclusion list (lines 420-444):
 # types NOT listed there get addSubfolder=true.
+# Objects "New Subfolder" is offered on.  ``addSubfolderActions`` offers it
+# on everything but real objects, the library and the service folders
+# (ObjectManipulator.cpp:420-445); a rule set, a MAC address, an Attached
+# Networks object and a cluster group would get it too, but hold nothing a
+# folder could sort, so fwf leaves them out.  A user subfolder always
+# offers it.
 SUBFOLDER_TYPES = frozenset({'Interface', 'IntervalGroup', 'ObjectGroup'})
+
+
+def path_new_types(path) -> list:
+    """Return the "New [Type]" entries for an item at *path* below its library."""
+    if path is None:
+        return []
+    result = []
+    for folder, entries in NEW_TYPES_BY_PATH:
+        if path.startswith(folder):
+            result.extend(entries)
+    return result
+
+
+def path_allows_subfolder(path) -> bool:
+    """No subfolder inside a group in Objects/Groups (ObjectManipulator.cpp:497)."""
+    return not (
+        path is not None
+        and path.startswith('Objects/Groups')
+        and path != 'Objects/Groups'
+    )
 
 
 # ------------------------------------------------------------------
@@ -695,14 +690,15 @@ def obj_brief_attrs(obj, under_interface=False):
             parts.append(','.join(flags))
         return ' '.join(parts)
 
+    # -- Cluster groups: the protocol, as getObjectPropertiesBrief writes it
+    # (fwbuilder5 FWObjectPropertiesFactory.cpp:166).
+    if type_str in ('FailoverClusterGroup', 'StateSyncClusterGroup'):
+        protocol = obj.get_protocol()
+        return f'type: {protocol}' if protocol else ''
+
     # -- Groups --
     if type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-        count = 0
-        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
-            val = getattr(obj, attr, None)
-            if val:
-                count += len(val)
-        return f'{count} objects'
+        return f'{len(group_contents(obj))} objects'
 
     # -- Library --
     if type_str == 'Library':

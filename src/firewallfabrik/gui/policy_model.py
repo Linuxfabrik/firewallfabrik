@@ -23,6 +23,7 @@ import sqlalchemy
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
+from firewallfabrik.core._validation import load_object, rule_element_refusal
 from firewallfabrik.core.objects import (
     Address,
     Direction,
@@ -39,6 +40,7 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
+    placeholder_kind,
     rule_elements,
 )
 from firewallfabrik.gui.label_settings import (
@@ -406,7 +408,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 return
 
             rule_ids = [r.id for r in rules]
-            name_map = self._build_name_map(session)
+            name_map, any_ids = self._build_name_map(session)
 
             # Gather all rule_elements for these rules in one query.
             slot_map: dict[uuid.UUID, dict[str, list[tuple[uuid.UUID, str]]]] = {}
@@ -419,8 +421,10 @@ class PolicyTreeModel(QAbstractItemModel):
             ).all()
             for rule_id, slot, target_id in re_rows:
                 name, obj_type, tip = name_map.get(target_id, (str(target_id), '', ''))
-                # Skip "Any" sentinel objects — empty element list = "any".
-                if name == 'Any':
+                # The "Any" placeholder is what an empty element shows
+                # already; a user object that happens to be called "Any"
+                # is an ordinary object and stays.
+                if target_id in any_ids:
                     continue
                 quad = (target_id, name, obj_type, tip)
                 slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(quad)
@@ -595,16 +599,20 @@ class PolicyTreeModel(QAbstractItemModel):
         """Build a {uuid: (display_name, type, tooltip)} lookup from all name-bearing tables.
 
         For objects that carry a ``data['label']`` (e.g. Interface), the
-        label is preferred as display name when it is non-empty.
+        label is preferred as display name when it is non-empty.  Also
+        returns the ids of the Standard library's "Any" placeholders.
         """
         name_map = {}
+        any_ids = set()
         for cls in _NAME_CLASSES:
             for obj in session.scalars(sqlalchemy.select(cls)):
                 obj_type = getattr(obj, 'type', None) or cls.__name__
                 data = getattr(obj, 'data', None) or {}
                 display = data.get('label') or obj.name
                 name_map[obj.id] = (display, obj_type, obj_tooltip(obj))
-        return name_map
+                if placeholder_kind(obj) == 'Any':
+                    any_ids.add(obj.id)
+        return name_map, any_ids
 
     # ------------------------------------------------------------------
     # Qt model interface (QAbstractItemModel overrides)
@@ -1159,9 +1167,16 @@ class PolicyTreeModel(QAbstractItemModel):
             model = type_model_map.get(obj_type)
             if model is None:
                 continue
-            dummy = session.scalars(
-                sqlalchemy.select(model).where(model.name == 'Dummy')
-            ).first()
+            dummy = next(
+                (
+                    obj
+                    for obj in session.scalars(
+                        sqlalchemy.select(model).where(model.name == 'Dummy')
+                    )
+                    if placeholder_kind(obj) == 'Dummy'
+                ),
+                None,
+            )
             if dummy is None:
                 continue
             session.execute(
@@ -1585,11 +1600,51 @@ class PolicyTreeModel(QAbstractItemModel):
                 rule.options = opts
         self.reload()
 
-    def add_element(self, index, slot, target_id):
-        """Add *target_id* to element *slot* of the rule at *index*."""
+    def element_refusal(self, index, slot, target_id, ignore_source=None):
+        """Return why *target_id* may not go into *slot* of the rule at *index*.
+
+        Returns '' when it may.  The answer is ``rule_element_refusal``,
+        the port of ``RuleSetView::validateForInsertion``, so a drop, a
+        paste and the drag cursor all say the same thing.  *ignore_source*
+        is a ``(rule_id, slot)`` pair whose copy of the object is about to
+        be moved away and so does not count as a duplicate.
+        """
         row_data = self.get_row_data(index)
         if row_data is None:
-            return
+            return 'There is no rule here.'
+        with self._db_manager.session() as session:
+            obj = load_object(session, target_id)
+            if obj is None:
+                return 'The object no longer exists.'
+            if placeholder_kind(obj):
+                return f'"{obj.name}" is a placeholder.'
+            current = []
+            for (tid,) in session.execute(
+                sqlalchemy.select(rule_elements.c.target_id).where(
+                    rule_elements.c.rule_id == row_data.rule_id,
+                    rule_elements.c.slot == slot,
+                ),
+            ):
+                if ignore_source == (row_data.rule_id, slot) and tid == target_id:
+                    continue
+                member = load_object(session, tid)
+                if member is not None and placeholder_kind(member) != 'Any':
+                    current.append(member)
+            rule_set = session.get(RuleSet, self._rule_set_id)
+            fw = rule_set.device if rule_set is not None else None
+            return rule_element_refusal(slot, obj, fw, current)
+
+    def add_element(self, index, slot, target_id):
+        """Add *target_id* to element *slot* of the rule at *index*.
+
+        Returns '' on success, or why the object was refused.
+        """
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return 'There is no rule here.'
+        refusal = self.element_refusal(index, slot, target_id)
+        if refusal:
+            return refusal
         with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} {self._slot_label(slot)}'),
         ) as session:
@@ -1602,7 +1657,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 ),
             ).first()
             if existing is not None:
-                return
+                return 'The object is already in this field.'
             # Determine next position in this slot.
             max_pos = session.scalar(
                 sqlalchemy.select(
@@ -1623,14 +1678,26 @@ class PolicyTreeModel(QAbstractItemModel):
                 ),
             )
         self.reload()
+        return ''
 
     def move_element(
         self, source_rule_id, source_slot, target_index, target_slot, target_id
     ):
-        """Move *target_id* from *source_rule_id*/*source_slot* to the rule at *target_index*."""
+        """Move *target_id* from *source_rule_id*/*source_slot* to the rule at *target_index*.
+
+        Returns '' on success, or why the object was refused.
+        """
         target_row_data = self.get_row_data(target_index)
         if target_row_data is None:
-            return
+            return 'There is no rule here.'
+        refusal = self.element_refusal(
+            target_index,
+            target_slot,
+            target_id,
+            ignore_source=(source_rule_id, source_slot),
+        )
+        if refusal:
+            return refusal
         with self._mutation_session(
             self._desc(
                 f'Move element to rule {target_row_data.position} {self._slot_label(target_slot)}'
@@ -1645,7 +1712,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 ),
             ).first()
             if existing is not None:
-                return
+                return 'The object is already in this field.'
             # Delete from source.
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -1674,6 +1741,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 ),
             )
         self.reload()
+        return ''
 
     def remove_element(self, index, slot, target_id):
         """Remove *target_id* from element *slot* of the rule at *index*."""

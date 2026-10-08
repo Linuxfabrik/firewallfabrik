@@ -18,6 +18,11 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMessageBox
 
+from firewallfabrik.core._validation import (
+    incompatible,
+    load_object,
+    tree_child_refusal,
+)
 from firewallfabrik.core.objects import Address, Host, Interface, Library, RuleSet
 from firewallfabrik.gui.confirm_delete_dialog import ConfirmDeleteDialog
 from firewallfabrik.gui.object_tree_data import (
@@ -25,7 +30,6 @@ from firewallfabrik.gui.object_tree_data import (
     LOCKABLE_TYPES,
     MODEL_MAP,
     NEW_TYPES_FOR_FOLDER,
-    NEW_TYPES_FOR_GROUP_NODE,
     NO_COPY_TYPES,
     NO_DELETE_TYPES,
     RULE_SET_TYPES,
@@ -50,10 +54,24 @@ class TreeActionHandler:
             'Firewall',
             'Host',
             'IntervalGroup',
+            'FailoverClusterGroup',
             'Interface',
             'Library',
             'ObjectGroup',
             'ServiceGroup',
+            'StateSyncClusterGroup',
+        }
+    )
+
+    # Groups a paste adds a member to rather than a copy, unless they are
+    # a standard folder.
+    _MEMBER_GROUP_TYPES = frozenset(
+        {
+            'FailoverClusterGroup',
+            'IntervalGroup',
+            'ObjectGroup',
+            'ServiceGroup',
+            'StateSyncClusterGroup',
         }
     )
 
@@ -314,33 +332,79 @@ class TreeActionHandler:
             current = current.parent()
         return item  # fallback — should not happen
 
-    @staticmethod
-    def _get_allowed_paste_types(item):
-        """Return the set of allowed object types for pasting into *item*.
+    def pasteable_entries(self, item):
+        """Return the clipboard entries that may be pasted onto *item*, or None."""
+        entries = self._clipboard_store.tree_entries
+        if not entries:
+            return None
+        resolved = self._resolve_paste_item(item)
+        fits = [cb for cb, r in self._paste_refusals(resolved, entries) if not r]
+        return fits or None
 
-        Walks up from *item* through category folders until a real group
-        or library is found.  Returns ``None`` when any type is accepted
-        (e.g. the library root or an unknown user-created group).
+    def _paste_kind(self, item):
+        """Say what pasting onto the resolved paste container *item* does.
+
+        ``'member'`` adds a reference to a group that is not a standard
+        folder, ``'child'`` puts a copy under a device or an interface,
+        ``'slot'`` files a copy in a standard folder or a library - the
+        three branches of ``ObjectManipulator::actuallyPasteTo``
+        (fwbuilder5 ObjectManipulator_ops.cpp:299).
         """
-        current = item
-        while current is not None:
-            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
-            if obj_type in ('Cluster', 'Firewall', 'Host'):
-                return frozenset({'Interface'})
-            if obj_type == 'Interface':
-                return frozenset({'IPv4', 'IPv6', 'Interface', 'physAddress'})
-            if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-                group_name = current.text(0)
-                entries = NEW_TYPES_FOR_GROUP_NODE.get(
-                    (obj_type, group_name),
-                )
-                if entries is not None:
-                    return frozenset(e[0] for e in entries)
-                return None  # user-created group — no restriction
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_type in self._MEMBER_GROUP_TYPES and not self._ot._is_system_group(item):
+            return 'member'
+        if obj_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
+            return 'child'
+        return 'slot'
+
+    def _paste_refusals(self, item, entries):
+        """Return ``[(entry, refusal)]`` for pasting *entries* onto *item*.
+
+        *refusal* is '' for an entry that may be pasted.  This is
+        ``ObjectManipulator::prepareForInsertion`` and
+        ``FWBTree::validateForInsertion`` (fwbuilder5 ObjectManipulator.cpp:1240,
+        FWBTree.cpp:403): a standard folder takes an object only when it is
+        that object's standard folder, and a library files it in that
+        folder; a device, an interface or a group asks its
+        ``validateChild`` (:func:`tree_child_refusal`).
+        """
+        if not entries or self._db_manager is None:
+            return []
+        source_db = self._clipboard_store.tree_source_db or self._db_manager
+        kind = self._paste_kind(item)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        target_id = item.data(0, Qt.ItemDataRole.UserRole)
+        result = []
+        with source_db.session() as source, self._db_manager.session() as own:
+            target = None
+            if kind != 'slot' and target_id:
+                target = load_object(own, uuid.UUID(target_id))
             if obj_type == 'Library':
-                return None
-            current = current.parent()
-        return None
+                folder_path = None
+            else:
+                folder_path = self._ot._standard_folder_path(item)
+            for entry in entries:
+                try:
+                    obj = load_object(source, uuid.UUID(entry['id']))
+                    if obj is None:
+                        obj = source.get(RuleSet, uuid.UUID(entry['id']))
+                except (KeyError, ValueError):
+                    obj = None
+                if obj is None:
+                    result.append((entry, 'The object no longer exists.'))
+                    continue
+                if kind != 'slot':
+                    if target is None:
+                        result.append((entry, incompatible(obj, item.text(0))))
+                    else:
+                        result.append((entry, tree_child_refusal(target, obj)))
+                    continue
+                slot = SYSTEM_GROUP_PATHS.get(entry.get('type', ''))
+                if slot is None or (folder_path is not None and slot != folder_path):
+                    result.append((entry, incompatible(obj, item.text(0))))
+                else:
+                    result.append((entry, ''))
+        return result
 
     def _ctx_copy(self):
         """Copy all selected object references to the tree clipboard."""
@@ -371,7 +435,15 @@ class TreeActionHandler:
             oid = it.data(0, Qt.ItemDataRole.UserRole)
             otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
             ro = it.data(0, Qt.ItemDataRole.UserRole + 5) or False
-            if oid and otype and otype not in NO_COPY_TYPES and not ro:
+            # A rule set is copied, not cut: Firewall Builder's cut deletes
+            # the original, and the last rule set of a kind cannot be.
+            if (
+                oid
+                and otype
+                and otype not in NO_COPY_TYPES
+                and otype not in RULE_SET_TYPES
+                and not ro
+            ):
                 entries.append({'id': oid, 'type': otype, 'cut': True})
         if not entries:
             return
@@ -393,7 +465,7 @@ class TreeActionHandler:
         source_db = self._clipboard_store.tree_source_db
         is_cross_file = source_db is not None and source_db is not self._db_manager
 
-        # When pasting onto a leaf object (e.g. a Firewall), resolve
+        # When pasting onto a leaf object (e.g. a Network), resolve
         # upward to the nearest container so the clone becomes a sibling.
         item = self._resolve_paste_item(item)
 
@@ -401,26 +473,122 @@ class TreeActionHandler:
         if target_lib_id is None:
             return
 
-        # Validate type compatibility — skip entries that don't belong.
-        allowed = self._get_allowed_paste_types(item)
-        entries = [
-            cb
-            for cb in self._clipboard_store.tree_entries
-            if allowed is None or cb['type'] in allowed
-        ]
+        plan = self._paste_refusals(item, self._clipboard_store.tree_entries)
+        refusals = list(dict.fromkeys(r for _cb, r in plan if r))
+        if refusals:
+            # prepareForInsertion says so for every object it refuses.
+            QMessageBox.critical(
+                self._ot._tree.window(), 'FirewallFabrik', '\n\n'.join(refusals[:5])
+            )
+        entries = [cb for cb, r in plan if not r]
         if not entries:
             return
 
+        kind = self._paste_kind(item)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        prefix = self._ot._get_device_prefix(item)
+        any_cut = any(cb['cut'] for cb in entries)
+        last_id = None
+
+        if kind == 'member':
+            member_ids = []
+            for cb in entries:
+                if is_cross_file:
+                    new_id = self._copy_into_standard_slot(source_db, cb, target_lib_id)
+                    if new_id is not None:
+                        member_ids.append(new_id)
+                else:
+                    member_ids.append(uuid.UUID(cb['id']))
+            if self._ops.add_group_members(uuid.UUID(obj_id), member_ids):
+                last_id = uuid.UUID(obj_id)
+        elif kind == 'child':
+            target_uuid = uuid.UUID(obj_id)
+            on_interface = obj_type == 'Interface'
+            for cb in entries:
+                cb_id = uuid.UUID(cb['id'])
+                if cb['type'] in RULE_SET_TYPES:
+                    new_id = self._ops.paste_rule_set(source_db, cb_id, target_uuid)
+                    last_id = new_id or last_id
+                    continue
+                model_cls = MODEL_MAP.get(cb['type'])
+                if model_cls is None:
+                    continue
+                placement = {
+                    'target_interface_id': target_uuid if on_interface else None,
+                    'target_device_id': None if on_interface else target_uuid,
+                }
+                if is_cross_file:
+                    new_id = self._ops.duplicate_object_cross_db(
+                        source_db,
+                        cb_id,
+                        model_cls,
+                        target_lib_id,
+                        prefix=prefix,
+                        **placement,
+                    )
+                elif cb['cut']:
+                    moved = self._ops.reparent_object(
+                        cb_id,
+                        model_cls,
+                        device_id=placement['target_device_id'],
+                        interface_id=placement['target_interface_id'],
+                        prefix=prefix,
+                    )
+                    new_id = cb_id if moved else None
+                else:
+                    new_id = self._ops.duplicate_object(
+                        cb_id, model_cls, target_lib_id, prefix=prefix, **placement
+                    )
+                last_id = new_id or last_id
+        else:
+            last_id = self._paste_into_slot(
+                item, entries, source_db, is_cross_file, target_lib_id, prefix
+            )
+
+        if any_cut:
+            self._clipboard_store.clear_tree()
+
+        if last_id is not None:
+            self._ot.tree_changed.emit('', '')
+            QTimer.singleShot(0, lambda lid=last_id: self._ot.select_object(lid))
+
+    def _copy_into_standard_slot(self, source_db, cb, target_lib_id):
+        """Copy an object from another file into its standard folder here."""
+        model_cls = MODEL_MAP.get(cb['type'])
+        slot = SYSTEM_GROUP_PATHS.get(cb['type'])
+        if model_cls is None or slot is None:
+            return None
+        with self._db_manager.session() as session:
+            group = find_group_by_path(session, target_lib_id, slot)
+            group_id = group.id if group is not None else None
+        return self._ops.duplicate_object_cross_db(
+            source_db,
+            uuid.UUID(cb['id']),
+            model_cls,
+            target_lib_id,
+            target_group_id=group_id,
+        )
+
+    def _paste_into_slot(
+        self, item, entries, source_db, is_cross_file, target_lib_id, prefix
+    ):
+        """Paste into a standard folder, a user subfolder or a library.
+
+        A library takes the object into its standard folder
+        (``prepareForInsertion`` maps a Library target with
+        ``getStandardSlotForObject``); the refusals above already made sure
+        there is one.
+        """
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         target_iface_id, target_group_id, target_device_id = (
             self._ot._get_paste_context(item)
         )
-        prefix = self._ot._get_device_prefix(item)
 
         # When pasting into a category folder, store the folder path
         # on the pasted object so it appears in the correct subfolder.
         # When pasting into a real group/object, clear any existing
         # folder (empty string) so the object moves to the group root.
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if obj_type is None:
             target_folder = self._ot._get_category_folder_path(item)
         elif target_group_id is not None:
@@ -428,15 +596,19 @@ class TreeActionHandler:
         else:
             target_folder = None
 
-        any_cut = False
         last_id = None
-
         for cb in entries:
             cb_id = uuid.UUID(cb['id'])
-            cb_type = cb['type']
-            model_cls = MODEL_MAP.get(cb_type)
+            model_cls = MODEL_MAP.get(cb['type'])
             if model_cls is None:
                 continue
+            group_id = target_group_id
+            if obj_type == 'Library':
+                with self._db_manager.session() as session:
+                    group = find_group_by_path(
+                        session, target_lib_id, SYSTEM_GROUP_PATHS[cb['type']]
+                    )
+                    group_id = group.id if group is not None else None
 
             if is_cross_file:
                 # Cross-file paste: always deep-copy, never move.
@@ -449,21 +621,21 @@ class TreeActionHandler:
                     prefix=prefix,
                     target_device_id=target_device_id,
                     target_interface_id=target_iface_id,
-                    target_group_id=target_group_id,
+                    target_group_id=group_id,
                 )
-                if new_id is not None:
-                    last_id = new_id
             elif cb['cut']:
-                any_cut = True
-                if self._ops.move_object(
-                    cb_id,
-                    model_cls,
-                    target_lib_id,
-                    folder=target_folder,
-                    prefix=prefix,
-                    target_group_id=target_group_id,
-                ):
-                    last_id = cb_id
+                new_id = (
+                    cb_id
+                    if self._ops.move_object(
+                        cb_id,
+                        model_cls,
+                        target_lib_id,
+                        folder=target_folder,
+                        prefix=prefix,
+                        target_group_id=group_id,
+                    )
+                    else None
+                )
             else:
                 new_id = self._ops.duplicate_object(
                     cb_id,
@@ -473,17 +645,10 @@ class TreeActionHandler:
                     prefix=prefix,
                     target_device_id=target_device_id,
                     target_interface_id=target_iface_id,
-                    target_group_id=target_group_id,
+                    target_group_id=group_id,
                 )
-                if new_id is not None:
-                    last_id = new_id
-
-        if any_cut:
-            self._clipboard_store.clear_tree()
-
-        if last_id is not None:
-            self._ot.tree_changed.emit('', '')
-            QTimer.singleShot(0, lambda lid=last_id: self._ot.select_object(lid))
+            last_id = new_id or last_id
+        return last_id
 
     def _shortcut_copy(self):
         """Handle Ctrl+C — copy all selected objects."""
@@ -675,7 +840,26 @@ class TreeActionHandler:
             return False
         if obj_type in NO_DELETE_TYPES:
             return False
+        if obj_type in RULE_SET_TYPES and not self._has_sibling_of_type(item):
+            # "can't delete last policy, nat and routing child objects"
+            # (ObjectManipulator::getDeleteMenuState, fwbuilder5
+            # ObjectManipulator.cpp:1013).  There is no "New Routing Rule
+            # Set", so a deleted one could not come back.
+            return False
         return not self._ot._is_system_group(item)
+
+    @staticmethod
+    def _has_sibling_of_type(item):
+        """Return True if *item*'s parent holds another child of its type."""
+        parent = item.parent()
+        if parent is None:
+            return True
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        return any(
+            parent.child(i) is not item
+            and parent.child(i).data(0, Qt.ItemDataRole.UserRole + 1) == obj_type
+            for i in range(parent.childCount())
+        )
 
     # -- New [Type] --
 

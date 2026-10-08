@@ -42,7 +42,6 @@ from firewallfabrik.gui.policy_context_menu import (
     ACTION_MENU_ENTRIES,
     ACTIONS_WITH_PARAMS,
     NAT_ACTION_MENU_ENTRIES,
-    VALID_TYPES_BY_SLOT,
 )
 
 
@@ -61,9 +60,13 @@ def test_a_rule_set_can_be_dragged_out_of_the_tree(rule_set_type):
 
 def test_a_rule_element_still_refuses_a_rule_set():
     """Draggable is not droppable: only the branch area takes one."""
-    for slot, valid in VALID_TYPES_BY_SLOT.items():
-        assert 'Policy' not in valid, slot
-        assert 'NAT' not in valid, slot
+    from firewallfabrik.core._util import SLOT_VALUES
+    from firewallfabrik.core._validation import rule_element_accepts
+    from firewallfabrik.core.objects import NAT, Policy
+
+    for slot in SLOT_VALUES:
+        assert not rule_element_accepts(slot, Policy(name='Policy')), slot
+        assert not rule_element_accepts(slot, NAT(name='NAT')), slot
 
 
 def test_the_action_is_offered_in_both_menus():

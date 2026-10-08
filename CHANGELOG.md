@@ -22,6 +22,20 @@ Data file:
 
 * groups keep the order of their members through a save
 
+Editor:
+
+* deleting a cluster or an interface also deletes its failover and state sync groups and its sub-interfaces
+* dragging in the tree only sorts objects into the subfolders of their own folder
+* Find & Replace also replaces in groups, accepts dynamic and cluster groups, finds hosts and interfaces by address, and leaves a reference alone where the field does not take the replacement
+* groups show their members in the tree, the tooltip and the group editor, interfaces included
+* interfaces, MAC addresses, Attached Networks and dynamic groups can be put into an object group, and a group of interfaces into the interface field of a rule ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
+* pasting an interface brings its addresses and sub-interfaces, pasting into another file brings the objects the pasted object names, and rule sets and cluster groups can be copied
+* pasting onto a group adds the object to the group instead of copying it into the group's folder, and pasting refuses what the target cannot hold
+* rule fields only take objects that fit - one gateway and one interface in a route, no Tag Service as translated service, only interfaces of the firewall itself - and the drag cursor shows a refused drop
+* the "Group" action leaves out objects the new group cannot hold
+* the context menu offers its "New" entries by folder, so a user group named like a standard folder is a group; it offers no "New Routing Rule Set" and no new address on a dynamic, unnumbered or bridge-port interface, and the last rule set of a kind cannot be deleted
+* "Where used" also lists branch targets, tagging services and cluster memberships, and changing one of them marks the firewalls using it for recompile
+
 
 ## [v3.3.0] - 2026-10-07
 

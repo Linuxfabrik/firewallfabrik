@@ -27,7 +27,22 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from firewallfabrik.core.objects import Rule, rule_elements
+from firewallfabrik.core._validation import (
+    group_accepts,
+    incompatible,
+    load_object,
+    replace_kind,
+    rule_element_refusal,
+)
+from firewallfabrik.core.objects import (
+    Group,
+    PhysAddress,
+    Rule,
+    RuleSet,
+    group_membership,
+    placeholder_kind,
+    rule_elements,
+)
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_DIR = Path(__file__).resolve().parent / 'ui'
@@ -48,38 +63,10 @@ _TCP_UDP_TYPES = frozenset({'TCPService', 'UDPService'})
 _IP_SERVICE_TYPES = frozenset({'IPService'})
 _ICMP_TYPES = frozenset({'ICMPService', 'ICMP6Service'})
 
-# Type compatibility sets for replace validation.
-_ADDRESS_COMPATIBLE = frozenset(
-    {
-        'IPv4',
-        'IPv6',
-        'Network',
-        'NetworkIPv6',
-        'AddressRange',
-        'PhysAddress',
-        'Host',
-        'Firewall',
-        'Cluster',
-        'Interface',
-        'AddressTable',
-        'DNSName',
-        'AttachedNetworks',
-        'ObjectGroup',
-    }
-)
-_SERVICE_COMPATIBLE = frozenset(
-    {
-        'TCPService',
-        'UDPService',
-        'ICMPService',
-        'ICMP6Service',
-        'IPService',
-        'CustomService',
-        'TagService',
-        'UserService',
-        'ServiceGroup',
-    }
-)
+# Devices and interfaces carry their address on an interface;
+# ``FindObjectWidget::matchAttr`` asks ``Address::getAddressPtr`` of them,
+# which is the first address there (Host.cpp:147).
+_ADDRESS_HOLDER_TYPES = frozenset({'Cluster', 'Firewall', 'Host', 'Interface'})
 
 
 @dataclasses.dataclass
@@ -91,6 +78,7 @@ class _FindResult:
     rule_id: uuid.UUID | None = None
     slot: str | None = None
     target_id: uuid.UUID | None = None
+    group_id: uuid.UUID | None = None
 
 
 class FindPanel(QWidget):
@@ -214,7 +202,7 @@ class FindPanel(QWidget):
         if not self._results or self._result_index == 0:
             return
         current = self._results[self._result_index - 1]
-        if current.rule_id is not None:
+        if current.rule_id is not None or current.group_id is not None:
             self._replace_current(current)
 
     @Slot()
@@ -239,70 +227,42 @@ class FindPanel(QWidget):
         if self._db_manager is None:
             return
 
-        scope = self.srScope.currentIndex()
-        if scope == 0:
-            QMessageBox.information(
-                self,
-                'FirewallFabrik',
-                self.tr(
-                    'Replace All only operates on rules.\n'
-                    'Change the scope to include rules.'
-                ),
-            )
-            return
-
         # Build scope-filtered results using the same logic as find().
         self._last_find_obj_id = find_obj_id
-        results = self._find_all()
-        rule_results = [r for r in results if r.rule_id is not None]
+        results = [
+            r
+            for r in self._find_all()
+            if r.rule_id is not None or r.group_id is not None
+        ]
 
-        if not rule_results:
+        if not results:
             QMessageBox.information(
                 self,
                 'FirewallFabrik',
-                self.tr('No matching rule references found.'),
+                self.tr('No matching references found.'),
             )
             return
 
         count = 0
+        refusals = []
         with self._db_manager.session('Replace all') as session:
-            for result in rule_results:
-                dup = session.execute(
-                    sqlalchemy.select(rule_elements.c.target_id).where(
-                        rule_elements.c.rule_id == result.rule_id,
-                        rule_elements.c.slot == result.slot,
-                        rule_elements.c.target_id == new_id,
-                    ),
-                ).first()
-                if dup is not None:
-                    session.execute(
-                        sqlalchemy.delete(rule_elements).where(
-                            rule_elements.c.rule_id == result.rule_id,
-                            rule_elements.c.slot == result.slot,
-                            rule_elements.c.target_id == find_obj_id,
-                        ),
-                    )
+            new_obj = load_object(session, new_id)
+            for result in results:
+                refusal = self._replace_one(session, result, find_obj_id, new_obj)
+                if refusal:
+                    refusals.append(refusal)
                 else:
-                    session.execute(
-                        sqlalchemy.update(rule_elements)
-                        .where(
-                            rule_elements.c.rule_id == result.rule_id,
-                            rule_elements.c.slot == result.slot,
-                            rule_elements.c.target_id == find_obj_id,
-                        )
-                        .values(target_id=new_id),
-                    )
-                count += 1
+                    count += 1
 
         if self._reload_callback is not None:
             self._reload_callback()
         self._reset_results()
 
-        QMessageBox.information(
-            self,
-            'FirewallFabrik',
-            self.tr(f'Replaced {count} reference(s).'),
-        )
+        message = self.tr(f'Replaced {count} reference(s).')
+        if refusals:
+            skipped = '\n'.join(dict.fromkeys(refusals))
+            message += self.tr(f'\n\nLeft {len(refusals)} unchanged:\n{skipped}')
+        QMessageBox.information(self, 'FirewallFabrik', message)
 
     @Slot()
     def replaceNext(self):
@@ -389,6 +349,7 @@ class FindPanel(QWidget):
             # Object-based search.
             if scope in (0, 1):
                 results.extend(self._find_in_tree(find_obj_id=find_obj_id))
+                results.extend(self._find_in_groups(find_obj_id))
             if scope in (1, 2):
                 results.extend(self._find_in_rules(find_obj_id))
             elif scope == 3:
@@ -453,6 +414,26 @@ class FindPanel(QWidget):
             it += 1
         return results
 
+    def _find_in_groups(self, find_obj_id) -> list[_FindResult]:
+        """Return the groups that hold *find_obj_id* as a member.
+
+        Firewall Builder's tree scope finds the references in groups as
+        well as the object itself (``_findAll`` walks every reference in
+        the tree), and Replace swaps them.
+        """
+        if self._db_manager is None:
+            return []
+        with self._db_manager.session() as session:
+            rows = session.execute(
+                sqlalchemy.select(group_membership.c.group_id).where(
+                    group_membership.c.member_id == find_obj_id
+                )
+            ).all()
+        return [
+            _FindResult(group_id=group_id, target_id=find_obj_id)
+            for (group_id,) in rows
+        ]
+
     def _find_in_rules(self, find_obj_id, *, rule_set_ids=None) -> list[_FindResult]:
         """Search rule_elements for references to *find_obj_id*.
 
@@ -502,9 +483,12 @@ class FindPanel(QWidget):
             return self._match_text(target, text, use_regexp, pattern)
 
         if attr_index == 1:
-            if obj_type not in _ADDRESS_TYPES:
+            if obj_type in _ADDRESS_HOLDER_TYPES:
+                target = self._holder_address(obj_id)
+            elif obj_type in _ADDRESS_TYPES:
+                target = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
+            else:
                 return False
-            target = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
             return self._match_text(target, text, use_regexp, pattern)
 
         if attr_index == 2:
@@ -526,6 +510,21 @@ class FindPanel(QWidget):
             return self._match_text(target, text, use_regexp, pattern)
 
         return False
+
+    def _holder_address(self, obj_id):
+        """Return the first address of a device or interface, or ''."""
+        if self._db_manager is None:
+            return ''
+        with self._db_manager.session() as session:
+            obj = load_object(session, uuid.UUID(obj_id))
+            ifaces = getattr(obj, 'interfaces', None)
+            if ifaces is None:
+                ifaces = [obj] if obj is not None else []
+            for iface in ifaces:
+                for addr in iface.addresses:
+                    if not isinstance(addr, PhysAddress) and addr.get_address():
+                        return addr.get_address()
+        return ''
 
     @staticmethod
     def _match_text(target, text, use_regexp, pattern):
@@ -565,12 +564,13 @@ class FindPanel(QWidget):
         find_type = self.findDropArea.get_object_type() or ''
         replace_type = self.replaceDropArea.get_object_type() or ''
 
-        find_is_addr = find_type in _ADDRESS_COMPATIBLE
-        find_is_srv = find_type in _SERVICE_COMPATIBLE
-        replace_is_addr = replace_type in _ADDRESS_COMPATIBLE
-        replace_is_srv = replace_type in _SERVICE_COMPATIBLE
+        find_kind = replace_obj_kind = ''
+        if self._db_manager is not None:
+            with self._db_manager.session() as session:
+                find_kind = replace_kind(load_object(session, find_id))
+                replace_obj_kind = replace_kind(load_object(session, replace_id))
 
-        if not ((find_is_addr and replace_is_addr) or (find_is_srv and replace_is_srv)):
+        if not find_kind or find_kind != replace_obj_kind:
             QMessageBox.warning(
                 self,
                 'FirewallFabrik',
@@ -584,52 +584,102 @@ class FindPanel(QWidget):
         return True
 
     def _replace_current(self, result: _FindResult):
-        """Replace a single rule element reference."""
+        """Replace a single reference, in a rule or in a group."""
         if self._db_manager is None:
             return
-
         new_id = self.replaceDropArea.get_object_id()
-        if new_id is None or result.rule_id is None or result.slot is None:
+        find_obj_id = self.findDropArea.get_object_id()
+        if new_id is None or find_obj_id is None:
             return
 
-        find_obj_id = self.findDropArea.get_object_id()
-
         with self._db_manager.session('Replace object') as session:
-            # Check for duplicate.
-            dup = session.execute(
-                sqlalchemy.select(rule_elements.c.target_id).where(
-                    rule_elements.c.rule_id == result.rule_id,
-                    rule_elements.c.slot == result.slot,
-                    rule_elements.c.target_id == new_id,
-                ),
-            ).first()
-            if dup is not None:
-                # Duplicate: just delete the old reference.
-                session.execute(
-                    sqlalchemy.delete(rule_elements).where(
-                        rule_elements.c.rule_id == result.rule_id,
-                        rule_elements.c.slot == result.slot,
-                        rule_elements.c.target_id == find_obj_id,
-                    ),
-                )
-            else:
-                session.execute(
-                    sqlalchemy.update(rule_elements)
-                    .where(
-                        rule_elements.c.rule_id == result.rule_id,
-                        rule_elements.c.slot == result.slot,
-                        rule_elements.c.target_id == find_obj_id,
-                    )
-                    .values(target_id=new_id),
-                )
+            refusal = self._replace_one(
+                session, result, find_obj_id, load_object(session, new_id)
+            )
+        if refusal:
+            QMessageBox.warning(self, 'FirewallFabrik', refusal)
 
         if self._reload_callback is not None:
             self._reload_callback()
+
+    @staticmethod
+    def _replace_one(session, result, find_obj_id, new_obj):
+        """Replace *find_obj_id* by *new_obj* where *result* found it.
+
+        ``FindObjectWidget::_replaceCurrent`` (FindObjectWidget.cpp:640):
+        a read-only container is left alone, and a container already
+        holding the replacement just loses the old reference.  Firewall
+        Builder then inserts with ``addRef``, whose ``validateChild``
+        silently drops what the container refuses, so a rule element
+        lost the object and was left matching more; here the reference
+        stays and the refusal is reported.  Returns '' on success.
+        """
+        if new_obj is None:
+            return 'The replacement object no longer exists.'
+        if result.group_id is not None:
+            group = session.get(Group, result.group_id)
+            if group is None:
+                return ''
+            if group.ro or (group.library is not None and group.library.ro):
+                return f'Can not modify read-only object {group.name}'
+            table, owner = group_membership, group_membership.c.group_id
+            column, owner_id, extra = 'member_id', group.id, []
+            refusal = (
+                ''
+                if group_accepts(group, new_obj)
+                else (incompatible(new_obj, group.name))
+            )
+        else:
+            rule = session.get(Rule, result.rule_id)
+            rule_set = session.get(RuleSet, rule.rule_set_id) if rule else None
+            if rule_set is None:
+                return ''
+            fw = rule_set.device
+            if fw is not None and (fw.ro or (fw.library is not None and fw.library.ro)):
+                return f'Can not modify read-only object {fw.name}'
+            table, owner = rule_elements, rule_elements.c.rule_id
+            column, owner_id = 'target_id', rule.id
+            extra = [rule_elements.c.slot == result.slot]
+            current = []
+            for (tid,) in session.execute(
+                sqlalchemy.select(rule_elements.c.target_id).where(
+                    owner == owner_id, *extra
+                )
+            ):
+                obj = load_object(session, tid)
+                if tid != find_obj_id and obj is not None and not placeholder_kind(obj):
+                    current.append(obj)
+            refusal = ''
+            if all(o.id != new_obj.id for o in current):
+                refusal = rule_element_refusal(result.slot, new_obj, fw, current)
+        col = table.c[column]
+        holds_new = session.execute(
+            sqlalchemy.select(col).where(owner == owner_id, col == new_obj.id, *extra)
+        ).first()
+        where = [owner == owner_id, col == find_obj_id, *extra]
+        if holds_new is not None:
+            session.execute(sqlalchemy.delete(table).where(*where))
+            return ''
+        if refusal:
+            return refusal
+        session.execute(
+            sqlalchemy.update(table).where(*where).values({column: new_obj.id})
+        )
+        return ''
 
     def _show_result(self, result: _FindResult):
         """Display a search result to the user."""
         if result.tree_item is not None:
             self._show_item(result.tree_item)
+        elif result.group_id is not None:
+            # ``showObject`` shows the group holding the reference.
+            target = str(result.group_id)
+            it = QTreeWidgetItemIterator(self._tree)
+            while it.value():
+                if it.value().data(0, Qt.ItemDataRole.UserRole) == target:
+                    self._show_item(it.value())
+                    break
+                it += 1
         elif result.rule_set_id is not None and result.rule_id is not None:
             self.navigate_to_rule.emit(
                 str(result.rule_set_id),

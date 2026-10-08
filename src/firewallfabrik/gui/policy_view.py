@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QMenu,
+    QMessageBox,
     QStyle,
     QStyledItemDelegate,
     QToolButton,
@@ -43,8 +44,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from firewallfabrik.core._validation import SINGLE_OBJECT_SLOTS
 from firewallfabrik.gui.policy_context_menu import (
-    VALID_TYPES_BY_SLOT,
     add_color_submenu,
     add_new_group_action,
     add_to_adjacent_group_actions,
@@ -774,11 +775,12 @@ class PolicyView(QTreeView):
                                 break
                 if target is None:
                     target = elements[0]
-                if target[1] == 'Any':
-                    self._show_any_message(col)
-                else:
-                    self._open_element_editor(str(target[0]), target[2])
-                    self._reveal_in_tree(str(target[0]))
+                # The model leaves the "Any" placeholder out, so whatever is
+                # listed here is a real object, even one called "Any".
+                self._open_element_editor(str(target[0]), target[2])
+                self._reveal_in_tree(str(target[0]))
+            else:
+                self._show_any_message(col)
         elif col == action_col:
             self._open_action_editor(model, index)
         elif col == comment_col:
@@ -1004,12 +1006,38 @@ class PolicyView(QTreeView):
         self._copy_element(target_id, name, obj_type)
         model.remove_element(index, slot, target_id)
 
-    def _paste_element(self, model, index, slot):
-        """Paste the object clipboard into the cell."""
+    def _clipboard_object_id(self):
+        """Return the UUID of the object on the clipboard, or None."""
         entry = self._clipboard_store.object_entry
         if entry is None:
+            return None
+        try:
+            return uuid.UUID(entry['id'])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _clipboard_fits(self, model, index, slot):
+        """Return True if the object on the clipboard may go into the cell."""
+        obj_id = self._clipboard_object_id()
+        return obj_id is not None and not model.element_refusal(index, slot, obj_id)
+
+    def _paste_element(self, model, index, slot):
+        """Paste the object clipboard into the cell."""
+        obj_id = self._clipboard_object_id()
+        if obj_id is None:
             return
-        model.add_element(index, slot, uuid.UUID(entry['id']))
+        self._report_refusal(slot, model.add_element(index, slot, obj_id))
+
+    def _report_refusal(self, slot, refusal):
+        """Say why an object was refused, where Firewall Builder says it.
+
+        ``RuleSetView::validateForInsertion`` explains itself for the two
+        elements that take one object of a particular kind, the gateway
+        and the interface of a route (RuleSetView.cpp:2400); everywhere
+        else the drag cursor has already shown that the drop is refused.
+        """
+        if refusal and slot in SINGLE_OBJECT_SLOTS:
+            QMessageBox.information(self, 'FirewallFabrik', refusal)
 
     def _change_action_and_edit(self, model, index, action):
         """Change the rule action and open the action editor with a fresh index."""
@@ -1184,12 +1212,9 @@ class PolicyView(QTreeView):
         col_to_slot = model.col_to_slot
         if col in element_cols:
             slot = col_to_slot.get(col)
-            if slot:
-                valid_types = VALID_TYPES_BY_SLOT.get(slot, frozenset())
-                entry = self._clipboard_store.object_entry
-                if entry is not None and entry.get('type', '') in valid_types:
-                    self._paste_element(model, index=idx, slot=slot)
-                    return
+            if slot and self._clipboard_fits(model, idx, slot):
+                self._paste_element(model, index=idx, slot=slot)
+                return
 
         # Fall back to rule paste.
         self._paste_and_scroll(model, idx)
@@ -1318,6 +1343,7 @@ class PolicyView(QTreeView):
             and index.column() in element_cols
             and model is not None
             and not model.is_group(index)
+            and self._drop_fits(event.mimeData(), model, index)
         ):
             if event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
                 event.setDropAction(Qt.DropAction.CopyAction)
@@ -1326,6 +1352,59 @@ class PolicyView(QTreeView):
             event.accept()
         else:
             event.ignore()
+
+    @staticmethod
+    def _drop_items(mime):
+        """Return the dragged entries as a list of dicts, or []."""
+        try:
+            payload = json.loads(bytes(mime.data(FWF_MIME_TYPE)).decode())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return []
+        if isinstance(payload, dict):
+            return [payload]
+        if isinstance(payload, list):
+            return [p for p in payload if isinstance(p, dict)]
+        return []
+
+    def _drop_fits(self, mime, model, index):
+        """Return True if every dragged object may go into the cell.
+
+        ``RuleSetView::dragMoveEvent`` asks ``validateForInsertion`` of each
+        dragged object, quietly, so the cursor already shows a refused drop
+        (RuleSetView.cpp:2530).  The answer is cached per cell and payload,
+        because the event fires on every mouse move.
+        """
+        slot = model.col_to_slot.get(index.column())
+        row_data = model.get_row_data(index)
+        if not slot or row_data is None:
+            return False
+        items = self._drop_items(mime)
+        key = (
+            row_data.rule_id,
+            slot,
+            tuple(
+                (e.get('id'), e.get('source_rule_id'), e.get('source_slot'))
+                for e in items
+            ),
+        )
+        cached = getattr(self, '_drop_fits_cache', None)
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        fits = bool(items)
+        for entry in items:
+            try:
+                obj_id = uuid.UUID(entry.get('id', ''))
+            except (TypeError, ValueError):
+                fits = False
+                break
+            source = None
+            if entry.get('source_rule_id') and entry.get('source_slot'):
+                source = (uuid.UUID(entry['source_rule_id']), entry['source_slot'])
+            if model.element_refusal(index, slot, obj_id, ignore_source=source):
+                fits = False
+                break
+        self._drop_fits_cache = (key, fits)
+        return fits
 
     def dropEvent(self, event):
         mime = event.mimeData()
@@ -1346,21 +1425,7 @@ class PolicyView(QTreeView):
             event.ignore()
             return
 
-        try:
-            payload = json.loads(bytes(mime.data(FWF_MIME_TYPE)).decode())
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            event.ignore()
-            return
-
-        # Normalise payload: old format (single dict) → list.
-        if isinstance(payload, dict):
-            items = [payload]
-        elif isinstance(payload, list):
-            items = payload
-        else:
-            event.ignore()
-            return
-
+        items = self._drop_items(mime)
         if not items:
             event.ignore()
             return
@@ -1369,7 +1434,6 @@ class PolicyView(QTreeView):
         if not slot:
             event.ignore()
             return
-        valid_types = VALID_TYPES_BY_SLOT.get(slot, frozenset())
 
         # Cell-to-cell drag (always single item).
         first = items[0]
@@ -1378,8 +1442,7 @@ class PolicyView(QTreeView):
 
         if source_rule_id and source_slot:
             obj_id = first.get('id')
-            obj_type = first.get('type', '')
-            if not obj_id or obj_type not in valid_types:
+            if not obj_id:
                 event.ignore()
                 return
             row_data = model.get_row_data(index)
@@ -1390,22 +1453,26 @@ class PolicyView(QTreeView):
                 event.ignore()
                 return
             if event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
-                model.add_element(index, slot, uuid.UUID(obj_id))
+                refusal = model.add_element(index, slot, uuid.UUID(obj_id))
             else:
-                model.move_element(
+                refusal = model.move_element(
                     uuid.UUID(source_rule_id),
                     source_slot,
                     index,
                     slot,
                     uuid.UUID(obj_id),
                 )
+            self._report_refusal(slot, refusal)
         else:
-            # Tree drop — add all valid items.
+            # Tree drop: every object is checked on its own and the ones
+            # the element refuses are left out, as RuleSetView::dropEvent
+            # does (RuleSetView.cpp:2215).
             for entry in items:
                 obj_id = entry.get('id')
-                obj_type = entry.get('type', '')
-                if obj_id and obj_type in valid_types:
-                    model.add_element(index, slot, uuid.UUID(obj_id))
+                if obj_id:
+                    self._report_refusal(
+                        slot, model.add_element(index, slot, uuid.UUID(obj_id))
+                    )
 
         event.acceptProposedAction()
 

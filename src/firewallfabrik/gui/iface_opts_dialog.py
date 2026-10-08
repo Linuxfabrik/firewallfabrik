@@ -41,7 +41,7 @@ _TYPE_LABELS = {
 # the order given there and deliberately not sorted.  A parent without a
 # list there offers its sub-interfaces no type.
 _INTERFACE_TYPES = ['ethernet', 'bridge', 'bonding']
-_SUBINTERFACE_TYPES = {
+SUBINTERFACE_TYPES = {
     'bonding': ['ethernet', '8021q', 'unknown'],
     'bridge': ['ethernet', '8021q', 'unknown'],
     'ethernet': ['8021q', 'unknown'],
@@ -99,7 +99,7 @@ class IfaceOptsDialog(QDialog):
         else:
             # An empty parent type is ethernet, as in Firewall Builder.
             parent_type = (parent.options or {}).get('type', '') or 'ethernet'
-            types = list(_SUBINTERFACE_TYPES.get(parent_type, []))
+            types = list(SUBINTERFACE_TYPES.get(parent_type, []))
         if not current_type:
             # No type means ethernet to the compilers (Interface::isBridgePort);
             # where the list has none, Firewall Builder picks "unknown".

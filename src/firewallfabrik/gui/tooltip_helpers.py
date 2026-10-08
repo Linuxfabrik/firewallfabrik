@@ -18,6 +18,8 @@ Used by both the object tree and the policy/NAT/routing rule editor.
 
 from datetime import UTC, datetime
 
+from firewallfabrik.core._dynamic_groups import object_type_name
+from firewallfabrik.gui.object_tree_data import group_contents
 from firewallfabrik.gui.platform_settings import HOST_OS
 from firewallfabrik.platforms import _versions
 
@@ -248,16 +250,11 @@ def obj_tooltip(obj):
 
     # -- Groups --
     elif type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-        members = []
-        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
-            val = getattr(obj, attr, None)
-            if val:
-                members.extend(val)
+        members = group_contents(obj)
         count = len(members)
         lines.append(f'{count} objects')
         for m in sorted(members, key=lambda o: o.name.lower())[:20]:
-            m_type = getattr(m, 'type', type(m).__name__)
-            lines.append(f'{m_type}  <b>{m.name}</b>')
+            lines.append(f'{object_type_name(m)}  <b>{m.name}</b>')
         if count > 20:
             lines.append('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;.&nbsp;.')
 

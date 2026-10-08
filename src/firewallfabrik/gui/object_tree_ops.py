@@ -19,6 +19,12 @@ from datetime import UTC, datetime
 import sqlalchemy
 
 from firewallfabrik.core._util import OPTION_REF_KEYS
+from firewallfabrik.core._validation import (
+    group_accepts,
+    load_object,
+    rule_set_refusal,
+    tree_child_refusal,
+)
 from firewallfabrik.core.objects import (
     NAT,
     Address,
@@ -37,6 +43,7 @@ from firewallfabrik.core.objects import (
     Service,
     StateSyncClusterGroup,
     group_membership,
+    placeholder_kind,
     rule_elements,
 )
 from firewallfabrik.gui.object_tree_data import (
@@ -165,6 +172,45 @@ def failover_group_defaults(protocol):
     return {}
 
 
+def _reference_holders(obj):
+    """Return what in *obj* holds references: groups and rule sets."""
+    if isinstance(obj, RuleSet):
+        return [obj]
+    if isinstance(obj, Group):
+        return [obj]
+    holders = []
+    if isinstance(obj, Host):
+        holders.extend(obj.rule_sets)
+        holders.extend(obj.child_groups)
+        for iface in obj.interfaces:
+            holders.extend(iface.child_groups)
+    if isinstance(obj, Interface):
+        holders.extend(obj.child_groups)
+    return holders
+
+
+def _primary_object(obj):
+    """Return the object *obj* is copied with: the host of an interface."""
+    while True:
+        if isinstance(obj, Address) and obj.interface is not None:
+            obj = obj.interface
+        elif isinstance(obj, Interface) and (obj.parent_interface or obj.device):
+            obj = obj.parent_interface or obj.device
+        elif isinstance(obj, Group) and (obj.interface or obj.device):
+            obj = obj.interface or obj.device
+        else:
+            return obj
+
+
+def _own_placeholder(session, ref, kind):
+    """Return the id of this database's placeholder matching *ref*, or None."""
+    cls = type(ref)
+    for obj in session.scalars(sqlalchemy.select(cls).where(cls.name == kind)):
+        if placeholder_kind(obj) == kind:
+            return obj.id
+    return None
+
+
 class TreeOperations:
     """Encapsulates all DB-mutating operations for the object tree."""
 
@@ -180,7 +226,10 @@ class TreeOperations:
         """Recursively collect ALL descendant IDs from *root_id*.
 
         Handles: Host -> Interfaces -> Addresses, Host -> RuleSets -> Rules,
-        Interface -> Addresses, Group -> members -> sub-groups.
+        Interface -> Addresses, Group -> members -> sub-groups, and what
+        Firewall Builder keeps as XML children and so deletes with the
+        subtree: the state sync groups of a cluster, the failover group and
+        Attached Networks object of an interface, and its sub-interfaces.
 
         Returns ``(obj_ids: set, rule_ids: set)``.
         """
@@ -205,12 +254,21 @@ class TreeOperations:
                     for rule in rs.rules:
                         rule_ids.add(rule.id)
                         obj_ids.add(rule.id)
+                for child_grp in host.child_groups:
+                    obj_ids.add(child_grp.id)
 
-            # Interface -> addresses
+            # Interface -> addresses, groups, sub-interfaces
             iface = session.get(Interface, current_id)
             if iface is not None:
                 for addr in iface.addresses:
                     obj_ids.add(addr.id)
+                for child_grp in iface.child_groups:
+                    obj_ids.add(child_grp.id)
+                for sub in iface.sub_interfaces:
+                    obj_ids.add(sub.id)
+                    if sub.id not in seen:
+                        seen.add(sub.id)
+                        queue.append(sub.id)
 
             # Group -> child objects + sub-groups
             group = session.get(Group, current_id)
@@ -247,8 +305,8 @@ class TreeOperations:
         Firewall Builder cannot end up there: it puts a `dummySource` /
         `dummyDestination` placeholder in the element and `Compiler::Begin`
         skips such a rule with a warning.  FirewallFabrik has no deleted
-        objects and no placeholders (see DesignDecisions.md), so it says the
-        same thing the other way round - the rule is disabled, stays where
+        objects (see DesignDecisions.md), so it says the same thing the
+        other way round - the rule is disabled, stays where
         it is, and the administrator decides whether to repair or remove it.
 
         Returns the rules that were disabled, as ``(label, slot)`` pairs.
@@ -550,6 +608,16 @@ class TreeOperations:
                 # top-level interface of that device.
                 new_obj.device_id = target_device_id
                 new_obj.library_id = None
+            elif isinstance(new_obj, Group) and (
+                target_interface_id is not None or target_device_id is not None
+            ):
+                # A failover group belongs to an interface and a state
+                # sync group to a cluster; the group keeps its library.
+                new_obj.interface_id = target_interface_id
+                new_obj.device_id = (
+                    target_device_id if target_interface_id is None else None
+                )
+                new_obj.library_id = target_lib_id
             elif target_interface_id is not None and hasattr(new_obj, 'interface_id'):
                 new_obj.interface_id = target_interface_id
                 # Addresses under interfaces don't carry library_id.
@@ -586,6 +654,9 @@ class TreeOperations:
                 self._duplicate_device_children(
                     session, session, source, new_obj, id_map
                 )
+            if isinstance(source, Interface):
+                session.flush()
+                self._copy_interface_children(session, session, source, new_obj, id_map)
 
             # Copy group_membership entries for groups.
             if isinstance(source, Group):
@@ -701,12 +772,60 @@ class TreeOperations:
                 self._duplicate_group_members(source_session, group, new_group, id_map)
             else:
                 self._duplicate_group_members_cross_db(
-                    source_session, target_session, group, new_group
+                    source_session, target_session, group, new_group, id_map
                 )
+
+    def _copy_interface_children(
+        self, source_session, target_session, source_iface, new_iface, id_map
+    ):
+        """Copy what an interface holds onto its copy *new_iface*.
+
+        ``ObjectManipulator::actuallyPasteTo`` copies an interface with
+        ``duplicate(obj, true)``, the whole subtree (fwbuilder5
+        ObjectManipulator_ops.cpp:386): its addresses and MAC address, its
+        failover group and Attached Networks object, and its
+        sub-interfaces with theirs.  Without it a pasted interface arrived
+        empty.
+        """
+        for addr in source_iface.addresses:
+            new_addr = self._clone_object(addr, id_map)
+            new_addr.interface_id = new_iface.id
+            new_addr.library_id = None
+            new_addr.group_id = None
+            target_session.add(new_addr)
+        for group in source_iface.child_groups:
+            new_group = self._clone_object(group, id_map)
+            new_group.interface_id = new_iface.id
+            new_group.library_id = new_iface.library_id
+            target_session.add(new_group)
+            target_session.flush()
+            if source_session is target_session:
+                self._duplicate_group_members(source_session, group, new_group)
+            else:
+                self._duplicate_group_members_cross_db(
+                    source_session, target_session, group, new_group, id_map
+                )
+        for sub in source_iface.sub_interfaces:
+            new_sub = self._clone_object(sub, id_map)
+            new_sub.parent_interface_id = new_iface.id
+            new_sub.device_id = new_iface.device_id
+            new_sub.library_id = new_iface.library_id
+            target_session.add(new_sub)
+            target_session.flush()
+            self._copy_interface_children(
+                source_session, target_session, sub, new_sub, id_map
+            )
 
     @staticmethod
     def _copy_rule_sets(
-        source_session, target_session, source_device, new_device, id_map
+        source_session,
+        target_session,
+        source_device,
+        new_device,
+        id_map,
+        *,
+        rule_sets=None,
+        overrides=None,
     ):
         """Copy the rule sets of *source_device* onto *new_device*.
 
@@ -724,9 +843,11 @@ class TreeOperations:
         # relationships).
         rule_element_tasks = []
         new_rules = []
-        for rs in source_device.rule_sets:
+        for rs in source_device.rule_sets if rule_sets is None else rule_sets:
             new_rs = TreeOperations._clone_object(rs, id_map)
             new_rs.device_id = new_device.id
+            for key, value in (overrides or {}).get(rs.id, {}).items():
+                setattr(new_rs, key, value)
             target_session.add(new_rs)
             for rule in rs.rules:
                 new_rule = TreeOperations._clone_object(rule, id_map)
@@ -795,6 +916,77 @@ class TreeOperations:
                 )
             )
 
+    def copy_missing_references(
+        self, source_db_manager, source_id, target_lib_id, id_map, seen=None
+    ):
+        """Copy into this database what *source_id* names and it has not got.
+
+        ``FWObjectDatabase::recursivelyCopySubtree`` (fwbuilder5
+        FWObjectDatabase_tree_ops.cpp:494) follows every reference of the
+        object it copies into another file: an object the target has is
+        used, one it has not got is copied with its primary object - a
+        whole host for an interface or one of its addresses - into the
+        same place in the target library.  Without it a pasted group
+        arrived without the members the other file kept, and a pasted
+        firewall with rules naming objects that do not exist.  The
+        "Any" and "Dummy" placeholders are this file's own.
+        """
+        seen = set() if seen is None else seen
+        if source_id in seen:
+            return
+        seen.add(source_id)
+        with source_db_manager.session() as source, self._db_manager.session() as own:
+            obj = load_object(source, source_id) or source.get(RuleSet, source_id)
+            if obj is None:
+                return
+            wanted = []
+            for holder in _reference_holders(obj):
+                if isinstance(holder, Group):
+                    wanted.extend(m.id for m in holder.get_member_objects())
+                else:
+                    for rule in holder.rules:
+                        wanted.extend(
+                            row.target_id
+                            for row in source.execute(
+                                sqlalchemy.select(rule_elements.c.target_id).where(
+                                    rule_elements.c.rule_id == rule.id
+                                )
+                            )
+                        )
+            to_copy = []
+            for ref_id in dict.fromkeys(wanted):
+                if ref_id in id_map or load_object(own, ref_id) is not None:
+                    continue
+                ref = load_object(source, ref_id)
+                if ref is None:
+                    continue
+                kind = placeholder_kind(ref)
+                if kind:
+                    mine = _own_placeholder(own, ref, kind)
+                    if mine is not None:
+                        id_map[ref_id] = mine
+                    continue
+                primary = _primary_object(ref)
+                slot = SYSTEM_GROUP_PATHS.get(getattr(primary, 'type', ''))
+                group = find_group_by_path(own, target_lib_id, slot) if slot else None
+                to_copy.append((primary.id, type(primary), group.id if group else None))
+        for primary_id, cls, group_id in to_copy:
+            if primary_id in id_map:
+                continue
+            self.copy_missing_references(
+                source_db_manager, primary_id, target_lib_id, id_map, seen
+            )
+            if primary_id in id_map:
+                continue
+            self.duplicate_object_cross_db(
+                source_db_manager,
+                primary_id,
+                cls,
+                target_lib_id,
+                target_group_id=group_id,
+                id_map=id_map,
+            )
+
     def duplicate_object_cross_db(
         self,
         source_db_manager,
@@ -807,17 +999,27 @@ class TreeOperations:
         target_device_id=None,
         target_group_id=None,
         target_interface_id=None,
+        id_map=None,
     ):
         """Deep-copy an object from *source_db_manager* into *this* database.
 
         Used for cross-file paste.  Reads the source object from the
         foreign database, serializes all scalar columns, and creates a
-        new ORM instance in the local database with a fresh UUID.
+        new ORM instance in the local database with a fresh UUID.  What
+        the object names and this database has not got is copied first
+        (:meth:`copy_missing_references`).  *id_map* collects every
+        source id that was copied, with the id of its copy.
 
         Returns the new object's UUID, or *None* on failure.
         """
         if self._db_manager is None or source_db_manager is None:
             return None
+        id_map = {} if id_map is None else id_map
+        self.copy_missing_references(
+            source_db_manager, source_id, target_lib_id, id_map
+        )
+        if source_id in id_map:
+            return id_map[source_id]
 
         # Read the source object from the foreign database.
         source_session = source_db_manager.create_session()
@@ -827,7 +1029,6 @@ class TreeOperations:
             if source is None:
                 return None
 
-            id_map = {}
             new_obj = self._clone_object(source, id_map)
 
             # Clear all parent references first, then set the target.
@@ -855,6 +1056,14 @@ class TreeOperations:
             elif target_device_id is not None and isinstance(new_obj, Interface):
                 new_obj.device_id = target_device_id
                 new_obj.library_id = None
+            elif isinstance(new_obj, Group) and (
+                target_interface_id is not None or target_device_id is not None
+            ):
+                new_obj.interface_id = target_interface_id
+                new_obj.device_id = (
+                    target_device_id if target_interface_id is None else None
+                )
+                new_obj.library_id = target_lib_id
             elif target_interface_id is not None and hasattr(new_obj, 'interface_id'):
                 new_obj.interface_id = target_interface_id
                 if hasattr(new_obj, 'library_id'):
@@ -892,6 +1101,11 @@ class TreeOperations:
                     new_obj,
                     id_map,
                 )
+            if isinstance(source, Interface):
+                target_session.flush()
+                self._copy_interface_children(
+                    source_session, target_session, source, new_obj, id_map
+                )
 
             # Copy group membership for groups.
             if isinstance(source, Group):
@@ -900,6 +1114,7 @@ class TreeOperations:
                     target_session,
                     source,
                     new_obj,
+                    id_map,
                 )
 
             target_session.commit()
@@ -922,33 +1137,157 @@ class TreeOperations:
         target_session,
         source_group,
         new_group,
+        id_map=None,
     ):
         """Copy group_membership entries across databases.
 
-        Only copies memberships whose member_id exists in the target DB.
+        A member copied into this database (*id_map*, see
+        :meth:`copy_missing_references`) is replaced by its copy; a member
+        that is neither copied nor already here is left out.
         """
+        id_map = id_map or {}
         rows = source_session.execute(
             sqlalchemy.select(group_membership).where(
                 group_membership.c.group_id == source_group.id,
             ),
         ).all()
         for row in rows:
-            # Check if the member exists in the target database before
-            # inserting the membership (cross-file groups may reference
-            # objects that don't exist in the target).
-            exists = False
-            for cls in (Address, Service, Interval, Host, Interface, Group):
-                if target_session.get(cls, row.member_id) is not None:
-                    exists = True
-                    break
-            if exists:
+            member_id = id_map.get(row.member_id, row.member_id)
+            if load_object(target_session, member_id) is not None:
                 target_session.execute(
                     group_membership.insert().values(
                         group_id=new_group.id,
-                        member_id=row.member_id,
+                        member_id=member_id,
                         position=row.position,
                     ),
                 )
+
+    def paste_rule_set(self, source_db_manager, rule_set_id, target_device_id):
+        """Copy a rule set with its rules onto a firewall; return the new id.
+
+        ``Firewall::validateChild`` takes a Policy and a NAT rule set at
+        any time and a Routing one only while the firewall has none
+        (fwbuilder5 Firewall.cpp:205); ``actuallyPasteTo`` then adds a
+        copy (ObjectManipulator_ops.cpp:376, "add ruleset object to a
+        firewall").  The copy is not the top rule set when the firewall
+        already has one of its kind, because two top rule sets would both
+        claim the built-in chains.
+        """
+        if self._db_manager is None:
+            return None
+        source_db_manager = source_db_manager or self._db_manager
+        same_db = source_db_manager is self._db_manager
+        id_map = {}
+        if not same_db:
+            with self._db_manager.session() as session:
+                device = session.get(Host, target_device_id)
+                lib_id = device.library_id if device is not None else None
+            self.copy_missing_references(source_db_manager, rule_set_id, lib_id, id_map)
+        source_session = source_db_manager.create_session()
+        target_session = (
+            source_session if same_db else self._db_manager.create_session()
+        )
+        try:
+            source = source_session.get(RuleSet, rule_set_id)
+            device = target_session.get(Host, target_device_id)
+            if source is None or device is None:
+                return None
+            if rule_set_refusal(device, source):
+                return None
+            siblings = [rs for rs in device.rule_sets if rs.type == source.type]
+            taken = {rs.name for rs in siblings}
+            name, suffix = source.name, 1
+            while name in taken:
+                name = f'{source.name}-{suffix}'
+                suffix += 1
+            overrides = {
+                source.id: {
+                    'name': name,
+                    'top': bool(source.top) and not any(rs.top for rs in siblings),
+                }
+            }
+            self._copy_rule_sets(
+                source_session,
+                target_session,
+                source,
+                device,
+                id_map,
+                rule_sets=[source],
+                overrides=overrides,
+            )
+            new_rs = target_session.get(RuleSet, id_map[source.id])
+            target_session.commit()
+            self._db_manager.save_state(f'Paste {source.type} {source.name}')
+            return new_rs.id
+        except Exception:
+            target_session.rollback()
+            raise
+        finally:
+            source_session.close()
+            if not same_db:
+                target_session.close()
+
+    def reparent_object(
+        self,
+        obj_id,
+        model_cls,
+        *,
+        device_id=None,
+        interface_id=None,
+        prefix='',
+    ):
+        """Move an interface, an address or a cluster group to a new parent.
+
+        Cut and paste onto a device or an interface: the object keeps its
+        id, so every rule and group that names it still does.  Firewall
+        Builder's cut deletes the object and the paste adds a copy, which
+        loses those references; fwf has no Deleted Objects library to take
+        them back from, so it moves instead.  Returns True on success.
+        """
+        if self._db_manager is None:
+            return False
+        session = self._db_manager.create_session()
+        try:
+            obj = session.get(model_cls, obj_id)
+            if obj is None:
+                return False
+            target = (
+                session.get(Interface, interface_id)
+                if interface_id is not None
+                else session.get(Host, device_id)
+            )
+            if target is None or tree_child_refusal(target, obj):
+                return False
+            if isinstance(obj, Interface):
+                if interface_id is not None:
+                    obj.parent_interface_id = interface_id
+                    obj.device_id = target.device_id
+                else:
+                    obj.parent_interface_id = None
+                    obj.device_id = device_id
+                obj.library_id = None
+                for sub in obj.sub_interfaces:
+                    sub.device_id = obj.device_id
+            elif isinstance(obj, Group):
+                obj.interface_id = interface_id
+                obj.device_id = device_id if interface_id is None else None
+                obj.parent_group_id = None
+            else:
+                obj.interface_id = interface_id
+                obj.group_id = None
+                if hasattr(obj, 'library_id'):
+                    obj.library_id = None
+            obj.name = self.make_name_unique(session, obj)
+            session.commit()
+            self._db_manager.save_state(
+                f'{prefix}Move {getattr(obj, "type", model_cls.__name__)} {obj.name}'
+            )
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+        return True
 
     # ------------------------------------------------------------------
     # Move
@@ -1595,26 +1934,64 @@ class TreeOperations:
         if new_id is None:
             return None
 
-        # Add group_membership entries.
+        # FWObject::addRef asks the group's validateChild and leaves out
+        # what it refuses (fwbuilder5 FWObject.cpp:889), so a selection of
+        # an address, a service and a rule set makes a group of the
+        # address alone.
+        self.add_group_members(
+            new_id, member_ids, description=f'Group {len(member_ids)} objects'
+        )
+        return new_id
+
+    def add_group_members(self, group_id, member_ids, *, description=None):
+        """Add *member_ids* to the group *group_id*; return how many were added.
+
+        The "regular group" branch of ``ObjectManipulator::actuallyPasteTo``
+        (fwbuilder5 ObjectManipulator_ops.cpp:344): a member already in the
+        group is not added again, and one the group's ``validateChild``
+        refuses is left out (:func:`group_accepts`).
+        """
+        if self._db_manager is None:
+            return 0
         session = self._db_manager.create_session()
+        added = 0
         try:
-            for pos, mid in enumerate(member_ids):
+            group = session.get(Group, group_id)
+            if group is None:
+                return 0
+            rows = session.execute(
+                sqlalchemy.select(
+                    group_membership.c.member_id, group_membership.c.position
+                ).where(group_membership.c.group_id == group_id)
+            ).all()
+            present = {row.member_id for row in rows}
+            position = max((row.position for row in rows), default=-1) + 1
+            for mid in member_ids:
+                mid = uuid.UUID(mid) if isinstance(mid, str) else mid
+                if mid in present:
+                    continue
+                obj = load_object(session, mid)
+                if obj is None or not group_accepts(group, obj):
+                    continue
                 session.execute(
                     group_membership.insert().values(
-                        group_id=new_id,
-                        member_id=uuid.UUID(mid) if isinstance(mid, str) else mid,
-                        position=pos,
+                        group_id=group_id, member_id=mid, position=position
                     )
                 )
+                present.add(mid)
+                position += 1
+                added += 1
             session.commit()
-            self._db_manager.save_state(f'Group {len(member_ids)} objects')
+            if added:
+                self._db_manager.save_state(
+                    description or f'Add {added} objects to {group.name}'
+                )
         except Exception:
             session.rollback()
             raise
         finally:
             session.close()
-
-        return new_id
+        return added
 
     # ------------------------------------------------------------------
     # Shared helpers
@@ -1631,11 +2008,27 @@ class TreeOperations:
         base_name = obj.name
         model_cls = type(obj)
 
-        # Collect existing names in the same scope.
+        # Collect existing names in the same scope: the parent the object
+        # sits in, the way ``makeNameUnique(target, ...)`` asks the
+        # children of the paste target.  An interface is unique among the
+        # interfaces of its device (or parent interface), an address among
+        # those of its interface; everything else within its library.
         stmt = sqlalchemy.select(model_cls.name).where(
-            model_cls.name.like(f'{base_name}%')
+            model_cls.name.like(f'{base_name}%'),
+            model_cls.id != obj.id,
         )
-        if hasattr(obj, 'library_id') and obj.library_id is not None:
+        if isinstance(obj, Interface) and (
+            obj.device_id is not None or obj.parent_interface_id is not None
+        ):
+            stmt = stmt.where(
+                model_cls.device_id == obj.device_id,
+                model_cls.parent_interface_id.is_(None)
+                if obj.parent_interface_id is None
+                else model_cls.parent_interface_id == obj.parent_interface_id,
+            )
+        elif getattr(obj, 'interface_id', None) is not None:
+            stmt = stmt.where(model_cls.interface_id == obj.interface_id)
+        elif hasattr(obj, 'library_id') and obj.library_id is not None:
             stmt = stmt.where(model_cls.library_id == obj.library_id)
         existing = set(session.scalars(stmt).all())
 

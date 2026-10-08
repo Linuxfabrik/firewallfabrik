@@ -31,63 +31,6 @@ from firewallfabrik.gui.label_settings import (
 from firewallfabrik.gui.policy_model import PolicyTreeModel
 
 # ------------------------------------------------------------------
-# Type-set constants (shared with policy_view drag-drop code)
-# ------------------------------------------------------------------
-
-ADDRESS_TYPES = frozenset(
-    {
-        'AddressRange',
-        'AddressTable',
-        'AttachedNetworks',
-        'Cluster',
-        'DNSName',
-        'DynamicGroup',
-        'Firewall',
-        'Host',
-        'IPv4',
-        'IPv6',
-        'Interface',
-        'Network',
-        'NetworkIPv6',
-        'ObjectGroup',
-        'PhysAddress',
-    }
-)
-
-SERVICE_TYPES = frozenset(
-    {
-        'CustomService',
-        'ICMP6Service',
-        'ICMPService',
-        'IPService',
-        'ServiceGroup',
-        'TCPService',
-        'TagService',
-        'UDPService',
-        'UserService',
-    }
-)
-
-VALID_TYPES_BY_SLOT = {
-    'dst': ADDRESS_TYPES,
-    'itf': frozenset({'Interface'}),
-    'itf_inb': frozenset({'Interface'}),
-    'itf_outb': frozenset({'Interface'}),
-    'odst': ADDRESS_TYPES,
-    'osrc': ADDRESS_TYPES,
-    'osrv': SERVICE_TYPES,
-    'rdst': ADDRESS_TYPES,
-    'rgtw': ADDRESS_TYPES,
-    'ritf': frozenset({'Interface'}),
-    'src': ADDRESS_TYPES,
-    'srv': SERVICE_TYPES,
-    'tdst': ADDRESS_TYPES,
-    'tsrc': ADDRESS_TYPES,
-    'tsrv': SERVICE_TYPES,
-    'when': frozenset({'Interval', 'IntervalGroup'}),
-}
-
-# ------------------------------------------------------------------
 # Action menu constants
 # ------------------------------------------------------------------
 
@@ -315,10 +258,7 @@ def build_element_menu(menu, view, model, index, col):
         'Paste',
         lambda: view._paste_element(model, index, slot),
     )
-    valid_types = VALID_TYPES_BY_SLOT.get(slot, frozenset())
-    clip = view._clipboard_store.object_entry
-    can_paste = clip is not None and clip.get('type', '') in valid_types
-    paste_act.setEnabled(can_paste)
+    paste_act.setEnabled(view._clipboard_fits(model, index, slot))
 
     # Delete.
     delete_act = menu.addAction(
