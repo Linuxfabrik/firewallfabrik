@@ -181,13 +181,22 @@ class EmptyRGtwAndRItf(RoutingRuleProcessor):
 
 
 class SingleAddressInRGtw(RoutingRuleProcessor):
-    """Report a gateway object that carries more than one address.
+    """Report a gateway element that is not one single address.
 
     ``via`` takes exactly one next hop.  Corresponds to
     ``RoutingCompiler::singleAdressInRGtw``, which asks
-    ``RuleElement::checkSingleIPAdress``.  Runs before the expansion, so
+    ``RuleElementRGtw::checkSingleIPAdress`` (fwbuilder5 RuleElement.cpp:666):
+    a host or an interface with exactly one address, or an address object.
+    The editor refuses everything else and a second object
+    (``RuleElementRGtw::validateChild``); a data file written elsewhere does
+    not, and the print rule takes the first object only, so a second
+    gateway would vanish and a network compile into ``via 192.0.2.0/24``,
+    which iproute2 refuses at activation.  Runs before the expansion, so
     the message can name the object the administrator picked rather than
     one of the addresses behind it.
+
+    The C++ accepts an IPv4 object only; an IPv6 one is accepted here on
+    purpose, because fwf installs IPv6 routes.
     """
 
     def process_next(self) -> bool:
@@ -195,7 +204,23 @@ class SingleAddressInRGtw(RoutingRuleProcessor):
         if rule is None:
             return False
 
+        if len(rule.rgtw) > 1:
+            names = ', '.join(f'"{obj.name}"' for obj in rule.rgtw)
+            self.compiler.error(
+                rule,
+                f'A route has one gateway, but the rule names {len(rule.rgtw)} '
+                f'({names}); the rule is left out',
+            )
+            return True
+
         for obj in rule.rgtw:
+            if not _is_single_address_object(obj):
+                self.compiler.error(
+                    rule,
+                    f'Object "{obj.name}" is used as the gateway but is not a '
+                    f'single address, host or interface; the rule is left out',
+                )
+                return True
             if _count_addresses(obj) > 1:
                 self.compiler.error(
                     rule,
@@ -222,6 +247,18 @@ class RItfChildOfFw(RoutingRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        if len(rule.ritf) > 1:
+            # ``RuleElementRItf::validateChild`` takes one interface
+            # (fwbuilder5 RuleElement.cpp:699); the print rule writes the
+            # first and the others would vanish from the route.
+            names = ', '.join(f'"{obj.name}"' for obj in rule.ritf)
+            self.compiler.error(
+                rule,
+                f'A route leaves through one interface, but the rule names '
+                f'{len(rule.ritf)} ({names}); the rule is left out',
+            )
+            return True
 
         for obj in rule.ritf:
             if not isinstance(obj, Interface):
@@ -987,6 +1024,27 @@ def _parent_host(iface: Interface):
 # address *and* a MAC - which is what a host with "MAC address matching"
 # turned on expands to - look like two next hops and costs the rule.
 _INET_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
+
+
+def _is_single_address_object(obj) -> bool:
+    """Return whether *obj* is a kind of object that can be a next hop.
+
+    ``RuleElementRGtw::checkSingleIPAdress``: a host or an interface, whose
+    address count is checked separately, or an address.  A network counts
+    as an address only with a host mask, which is how the importer writes
+    a gateway it found among the existing objects.
+    """
+    if isinstance(obj, (Host, Interface, IPv4, IPv6)):
+        return True
+    if isinstance(obj, (Network, NetworkIPv6)):
+        try:
+            net = ipaddress.ip_network(
+                f'{obj.get_address()}/{obj.get_netmask()}', strict=False
+            )
+        except ValueError:
+            return False
+        return net.prefixlen == net.max_prefixlen
+    return False
 
 
 def _count_addresses(obj) -> int:
