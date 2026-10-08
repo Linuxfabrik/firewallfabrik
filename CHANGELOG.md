@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Editor:
 
+* rules can be pasted into another open data file, together with the objects they use
 * the preference "Use object name for the DNS record" of DNS Name objects
 
 ### Fixed
@@ -41,7 +42,7 @@ Editor:
 * groups show their members in the tree and the group editor, interfaces included
 * interfaces can be group members, and a group of interfaces can be a rule's interface ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
 * locked firewalls, groups and libraries also protect the objects inside them
-* pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along
+* pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along once and takes Standard library objects from that file
 * pasting onto a group adds the object to the group instead of copying it there
 * rule fields accept only objects they can hold, and the cursor shows it while dragging
 * switching a firewall between iptables and nftables clears an alternative compiler path, so the new platform's compiler runs

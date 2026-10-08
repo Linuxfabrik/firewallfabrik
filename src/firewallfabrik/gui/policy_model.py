@@ -23,6 +23,7 @@ import sqlalchemy
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
+from firewallfabrik.core._util import OPTION_REF_KEYS
 from firewallfabrik.core._validation import (
     is_read_only,
     load_object,
@@ -52,6 +53,7 @@ from firewallfabrik.gui.label_settings import (
     get_label_color,
     get_label_text,
 )
+from firewallfabrik.gui.object_tree_ops import TreeOperations
 from firewallfabrik.gui.policy_rule_options import (
     build_options_display,
     nat_options_tooltip,
@@ -308,8 +310,14 @@ class PolicyTreeModel(QAbstractItemModel):
     firewall_modified = Signal(object)
     # Why a change was not made: the rule set belongs to a locked object.
     modification_refused = Signal(str)
+    # A paste from another file copied the objects its rules name into
+    # this one, so the object tree has more to show.
+    objects_added = Signal()
 
     _clipboard: ClassVar[list[uuid.UUID]] = []
+    # The file the clipboard rules were copied from; every open file has
+    # a database of its own.
+    _clipboard_source: ClassVar = None
 
     def __init__(
         self,
@@ -1272,6 +1280,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 for child in node.children:
                     rule_ids.append(child.row_data.rule_id)
         PolicyTreeModel._clipboard = rule_ids
+        PolicyTreeModel._clipboard_source = self._db_manager
 
     def cut_rules(self, indices):
         """Copy rule IDs to clipboard, then delete the rules."""
@@ -1286,17 +1295,89 @@ class PolicyTreeModel(QAbstractItemModel):
         a policy rule pasted into a NAT rule set became a NAT rule with
         no translation and its elements in slots NAT never reads - an
         "any to any, translate nothing" rule that switched off every NAT
-        rule below it.  A rule of another file is not in this database
-        and is skipped too.
+        rule below it.  A rule of another file is asked in that file.
         """
         if not PolicyTreeModel._clipboard:
             return []
-        with self._db_manager.session() as session:
+        with self._clipboard_db().session() as session:
             return [
                 rule_id
                 for rule_id in PolicyTreeModel._clipboard
                 if isinstance(session.get(Rule, rule_id), self._rule_cls)
             ]
+
+    def _clipboard_db(self):
+        """Return the database the clipboard rules are in."""
+        return PolicyTreeModel._clipboard_source or self._db_manager
+
+    def _copy_rule_references(self, source_db, rule_ids):
+        """Copy what rules of another file name into this one; return the id map.
+
+        ``RuleSetView::createInsertTemplate`` copies a rule of another
+        project file with ``recursivelyCopySubtree`` (fwbuilder5
+        RuleSetView.cpp:1555), which brings along every object the rule
+        names and this file has not got, into the library of the firewall
+        the rule set belongs to.  Verified against Firewall Builder 5.3.7
+        on Fedora 38: a rule naming an address of another firewall's
+        interface brings that whole firewall along, its rules pointing at
+        their own copies, and the Standard library's services are this
+        file's own.
+        """
+        id_map = {}
+        with self._db_manager.session() as session:
+            rule_set = session.get(RuleSet, self._rule_set_id)
+            device = rule_set.device if rule_set is not None else None
+            lib_id = device.library_id if device is not None else None
+        if lib_id is None:
+            return id_map
+        TreeOperations(self._db_manager).copy_rule_references(
+            source_db, rule_ids, lib_id, id_map
+        )
+        return id_map
+
+    @staticmethod
+    def _foreign_rule_options(session, options, id_map):
+        """Point the references in *options* at this file's objects.
+
+        Measured with Firewall Builder 5.3.7 on Fedora 38: a rule pasted
+        from another file keeps ``tagobject_id`` and ``branch_id`` as they
+        were, ids that exist only in the other file, because
+        ``recursivelyCopySubtree`` follows references and these are
+        options (its own "references in attributes, they suck", ticket
+        #1004).  The tag service is not copied and the rule marks nothing;
+        the branch shows no target and does not compile - even when the
+        rule set it jumps into came along with its firewall, while inside
+        that copied firewall the same branch is pointed at the copy.
+
+        fwf copies the tag service with the rule's other references and
+        points a branch at a rule set that was copied along, the way
+        Firewall Builder does inside the copied firewall.  A branch into a
+        rule set that was not copied loses its target, ``branch_name``
+        included: kept, the name would send the rule into whatever rule
+        set of that name this firewall has, where Firewall Builder's rule
+        has no target and the compiler reports it.
+        """
+        str_map = {str(old): str(new) for old, new in id_map.items()}
+        for key in OPTION_REF_KEYS:
+            ref = options.get(key)
+            if not ref:
+                continue
+            ref = str_map.get(str(ref), str(ref))
+            try:
+                target = load_object(session, uuid.UUID(ref)) or session.get(
+                    RuleSet, uuid.UUID(ref)
+                )
+            except ValueError:
+                target = None
+            if target is not None:
+                options[key] = ref
+                if key == 'branch_id':
+                    options['branch_name'] = target.name
+                continue
+            options.pop(key)
+            if key == 'branch_id':
+                options.pop('branch_name', None)
+        return options
 
     def paste_rules(self, index, *, before=False):
         """Paste rules from clipboard at *index*.
@@ -1310,8 +1391,11 @@ class PolicyTreeModel(QAbstractItemModel):
         clears ``session.new``, which would prevent the automatic dirty
         detection in the ``session()`` context manager.
         """
-        if not self.pasteable_rule_ids():
+        rule_ids = self.pasteable_rule_ids()
+        if not rule_ids:
             return []
+        source_db = self._clipboard_db()
+        cross_file = source_db is not self._db_manager
         with self._db_manager.session() as session:
             rule_set = session.get(RuleSet, self._rule_set_id)
             if rule_set is not None and is_read_only(rule_set):
@@ -1332,11 +1416,14 @@ class PolicyTreeModel(QAbstractItemModel):
             position = self.flat_rule_count()
             group_name = ''
 
+        id_map = self._copy_rule_references(source_db, rule_ids) if cross_file else {}
+
         new_ids = []
         session = self._db_manager.create_session()
+        source = source_db.create_session() if cross_file else session
         try:
-            for i, src_id in enumerate(self.pasteable_rule_ids()):
-                src_rule = session.get(Rule, src_id)
+            for i, src_id in enumerate(rule_ids):
+                src_rule = source.get(Rule, src_id)
                 if src_rule is None:
                     continue
 
@@ -1356,6 +1443,8 @@ class PolicyTreeModel(QAbstractItemModel):
                     opts['group'] = group_name
                 else:
                     opts.pop('group', None)
+                if cross_file:
+                    opts = self._foreign_rule_options(session, opts, id_map)
 
                 kwargs = {
                     'comment': src_rule.comment or '',
@@ -1381,7 +1470,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 session.flush()
 
                 # Copy rule_elements.
-                src_elements = session.execute(
+                src_elements = source.execute(
                     sqlalchemy.select(
                         rule_elements.c.slot,
                         rule_elements.c.target_id,
@@ -1389,6 +1478,9 @@ class PolicyTreeModel(QAbstractItemModel):
                     ).where(rule_elements.c.rule_id == src_id),
                 ).all()
                 for slot, target_id, elem_pos in src_elements:
+                    target_id = id_map.get(target_id, target_id)
+                    if cross_file and load_object(session, target_id) is None:
+                        continue
                     session.execute(
                         rule_elements.insert().values(
                             rule_id=new_id,
@@ -1407,6 +1499,8 @@ class PolicyTreeModel(QAbstractItemModel):
             session.rollback()
             raise
         finally:
+            if cross_file:
+                source.close()
             session.close()
 
         if new_ids:
@@ -1414,6 +1508,8 @@ class PolicyTreeModel(QAbstractItemModel):
 
         if fw_id is not None:
             self.firewall_modified.emit(fw_id)
+        if id_map:
+            self.objects_added.emit()
 
         self.reload()
         return new_ids

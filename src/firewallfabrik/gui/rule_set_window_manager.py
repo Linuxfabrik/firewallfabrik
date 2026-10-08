@@ -37,6 +37,7 @@ class RuleSetWindowManager(QObject):
     """Manages MDI sub-windows for rule set views."""
 
     firewall_modified = Signal(object)  # UUID forwarded from PolicyTreeModel
+    objects_added = Signal()  # forwarded from PolicyTreeModel
 
     _STATE_FILE_NAME = 'last_object_state.json'
 
@@ -101,6 +102,7 @@ class RuleSetWindowManager(QObject):
             object_name=fw_name,
         )
         model.firewall_modified.connect(self.firewall_modified)
+        model.objects_added.connect(self.objects_added)
         title = f'{fw_name} / {rs_name}'
         panel = RuleSetPanel(
             clipboard_store=self._clipboard_store,
@@ -166,6 +168,7 @@ class RuleSetWindowManager(QObject):
             rule_set_type=rs_type,
         )
         model.firewall_modified.connect(self.firewall_modified)
+        model.objects_added.connect(self.objects_added)
         title = f'{fw_name} / {rs_name}'
         panel = RuleSetPanel(
             clipboard_store=self._clipboard_store,

@@ -624,6 +624,10 @@ class FWWindow(QMainWindow):
         self._object_tree.tree_changed.connect(
             self._on_tree_changed, Qt.ConnectionType.QueuedConnection
         )
+        # Rules pasted from another file bring the objects they name along.
+        self._rs_mgr.objects_added.connect(
+            self._on_tree_changed, Qt.ConnectionType.QueuedConnection
+        )
         self._object_tree.find_requested.connect(self._on_find_from_tree)
         self._object_tree.where_used_requested.connect(self._on_where_used_from_tree)
         self._object_tree.compile_requested.connect(self.compile)

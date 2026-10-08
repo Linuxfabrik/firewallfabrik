@@ -12,8 +12,10 @@
 
 """Database-mutating operations (CRUD) for the object tree."""
 
+import contextlib
 import copy
 import uuid
+import weakref
 from datetime import UTC, datetime
 
 import sqlalchemy
@@ -27,6 +29,7 @@ from firewallfabrik.core._validation import (
 )
 from firewallfabrik.core.objects import (
     NAT,
+    STANDARD_LIBRARY_NAME,
     Address,
     Cluster,
     FailoverClusterGroup,
@@ -189,6 +192,55 @@ def _reference_holders(obj):
     return holders
 
 
+# The copies made into a file from another open file, per source file:
+# what ``recursivelyCopySubtree`` finds again through the ".copy_of_<root>"
+# attribute it puts on every copy (fwbuilder5
+# FWObjectDatabase_tree_ops.cpp:498), so pasting from the same file twice
+# copies an object it names once.  Like that attribute, which Firewall
+# Builder does not save, it lasts as long as both files are open.
+_SESSION_COPIES = weakref.WeakKeyDictionary()
+
+
+def _earlier_copies(own_db, source_db):
+    """Return the ``{source id: copy id}`` of copies from *source_db*."""
+    per_source = _SESSION_COPIES.setdefault(own_db, weakref.WeakKeyDictionary())
+    return per_source.setdefault(source_db, {})
+
+
+def _exists(session, obj_id):
+    """Whether this database still holds *obj_id* - undo may have removed it."""
+    return (
+        load_object(session, obj_id) is not None
+        or session.get(RuleSet, obj_id) is not None
+        or session.get(Rule, obj_id) is not None
+    )
+
+
+def _rule_references(session, rules):
+    """Return the ids of the objects *rules* name, in order.
+
+    The rule elements, and the tag object a tagging rule marks with: the
+    rule keeps that one in its options (``PolicyRule::setTagObject``), and
+    a copy without it marks nothing.  The rule set a branch rule jumps
+    into is not followed - it belongs to a firewall, and
+    ``recursivelyCopySubtree`` does not follow it either.
+    """
+    wanted = []
+    for rule in rules:
+        wanted.extend(
+            session.scalars(
+                sqlalchemy.select(rule_elements.c.target_id).where(
+                    rule_elements.c.rule_id == rule.id
+                )
+            )
+        )
+        tag_id = (rule.options or {}).get('tagobject_id')
+        if tag_id:
+            with contextlib.suppress(ValueError):
+                wanted.append(uuid.UUID(str(tag_id)))
+    return wanted
+
+
 def _primary_object(obj):
     """Return the object *obj* is copied with: the host of an interface."""
     while True:
@@ -200,6 +252,48 @@ def _primary_object(obj):
             obj = obj.interface or obj.device
         else:
             return obj
+
+
+def _parents(obj):
+    """Return the folders and groups *obj* sits in, innermost first."""
+    names = []
+    parent = getattr(obj, 'group', None) or getattr(obj, 'parent_group', None)
+    while parent is not None:
+        names.append(parent.name)
+        obj = parent
+        parent = getattr(obj, 'group', None) or getattr(obj, 'parent_group', None)
+    library = getattr(obj, 'library', None)
+    folder = (getattr(obj, 'data', None) or {}).get('folder', '')
+    return library, tuple(names), folder
+
+
+def _own_standard_object(session, ref):
+    """Return the id of this database's copy of a Standard library object.
+
+    ``recursivelyCopySubtree`` finds an object of the Standard library in
+    the target file by its id, which is the same in every file Firewall
+    Builder writes, and uses it instead of copying it (fwbuilder5
+    FWObjectDatabase_tree_ops.cpp:620).  FirewallFabrik gives every object
+    a new id on each load, so it asks for the object of the same type and
+    name in the same place of this file's Standard library.  Returns None
+    for an object of another library, or one this file's Standard library
+    has not got - an older file, or none at all - which is then copied.
+    """
+    library, names, folder = _parents(ref)
+    if library is None or library.name != STANDARD_LIBRARY_NAME:
+        return None
+    cls = type(ref)
+    for candidate in session.scalars(
+        sqlalchemy.select(cls).where(cls.name == ref.name)
+    ):
+        own_library, own_names, own_folder = _parents(candidate)
+        if (
+            own_library is not None
+            and own_library.name == STANDARD_LIBRARY_NAME
+            and (own_names, own_folder) == (names, folder)
+        ):
+            return candidate.id
+    return None
 
 
 def _own_placeholder(session, ref, kind):
@@ -944,32 +1038,65 @@ class TreeOperations:
                 if isinstance(holder, Group):
                     wanted.extend(m.id for m in holder.get_member_objects())
                 else:
-                    for rule in holder.rules:
-                        wanted.extend(
-                            row.target_id
-                            for row in source.execute(
-                                sqlalchemy.select(rule_elements.c.target_id).where(
-                                    rule_elements.c.rule_id == rule.id
-                                )
-                            )
-                        )
-            to_copy = []
-            for ref_id in dict.fromkeys(wanted):
-                if ref_id in id_map or load_object(own, ref_id) is not None:
-                    continue
-                ref = load_object(source, ref_id)
-                if ref is None:
-                    continue
-                kind = placeholder_kind(ref)
-                if kind:
-                    mine = _own_placeholder(own, ref, kind)
-                    if mine is not None:
-                        id_map[ref_id] = mine
-                    continue
-                primary = _primary_object(ref)
-                slot = SYSTEM_GROUP_PATHS.get(getattr(primary, 'type', ''))
-                group = find_group_by_path(own, target_lib_id, slot) if slot else None
-                to_copy.append((primary.id, type(primary), group.id if group else None))
+                    wanted.extend(_rule_references(source, holder.rules))
+            to_copy = self._missing_primaries(
+                source, own, wanted, target_lib_id, id_map
+            )
+        self._copy_primaries(source_db_manager, to_copy, target_lib_id, id_map, seen)
+
+    def copy_rule_references(self, source_db_manager, rule_ids, target_lib_id, id_map):
+        """Copy into this database what the rules *rule_ids* name and it has not got.
+
+        The rule counterpart of :meth:`copy_missing_references`, for rules
+        pasted from another file: ``RuleSetView::createInsertTemplate``
+        copies such a rule with ``recursivelyCopySubtree`` into the rule
+        set it is pasted into (fwbuilder5 RuleSetView.cpp:1555), so what
+        the rule names lands in the library of that firewall.
+        """
+        self._reuse_earlier_copies(source_db_manager, id_map)
+        with source_db_manager.session() as source, self._db_manager.session() as own:
+            rules = [r for r in (source.get(Rule, i) for i in rule_ids) if r]
+            wanted = _rule_references(source, rules)
+            to_copy = self._missing_primaries(
+                source, own, wanted, target_lib_id, id_map
+            )
+        self._copy_primaries(source_db_manager, to_copy, target_lib_id, id_map, set())
+        self._fix_references(id_map)
+        self._remember_copies(source_db_manager, id_map)
+
+    @staticmethod
+    def _missing_primaries(source, own, wanted, target_lib_id, id_map):
+        """Return the primary objects of *wanted* this database has not got.
+
+        A placeholder is mapped onto this database's own in *id_map*
+        instead.  Each entry is ``(id, class, group id)``: the group is the
+        standard folder of the object's type in the target library.
+        """
+        to_copy = []
+        for ref_id in dict.fromkeys(wanted):
+            if ref_id in id_map or load_object(own, ref_id) is not None:
+                continue
+            ref = load_object(source, ref_id)
+            if ref is None:
+                continue
+            kind = placeholder_kind(ref)
+            if kind:
+                mine = _own_placeholder(own, ref, kind)
+                if mine is not None:
+                    id_map[ref_id] = mine
+                continue
+            mine = _own_standard_object(own, ref)
+            if mine is not None:
+                id_map[ref_id] = mine
+                continue
+            primary = _primary_object(ref)
+            slot = SYSTEM_GROUP_PATHS.get(getattr(primary, 'type', ''))
+            group = find_group_by_path(own, target_lib_id, slot) if slot else None
+            to_copy.append((primary.id, type(primary), group.id if group else None))
+        return to_copy
+
+    def _copy_primaries(self, source_db_manager, to_copy, target_lib_id, id_map, seen):
+        """Copy the objects :meth:`_missing_primaries` found, references first."""
         for primary_id, cls, group_id in to_copy:
             if primary_id in id_map:
                 continue
@@ -985,7 +1112,58 @@ class TreeOperations:
                 target_lib_id,
                 target_group_id=group_id,
                 id_map=id_map,
+                seen=seen,
             )
+
+    def _reuse_earlier_copies(self, source_db_manager, id_map, *, skip=()):
+        """Seed *id_map* with what earlier pastes from that file copied.
+
+        *skip* is the object being pasted itself: Firewall Builder copies
+        the object it is asked to paste every time, and reuses only the
+        copies of what that object names.  Measured with Firewall Builder
+        5.3.7 on Fedora 38: the same rules pasted twice from another file
+        bring along the address and the firewall they name once.
+        """
+        copies = _earlier_copies(self._db_manager, source_db_manager)
+        with self._db_manager.session() as own:
+            for old_id, new_id in list(copies.items()):
+                if old_id in skip or old_id in id_map:
+                    continue
+                if _exists(own, new_id):
+                    id_map[old_id] = new_id
+                else:
+                    del copies[old_id]
+
+    def _remember_copies(self, source_db_manager, id_map):
+        """Keep *id_map* for the next paste from the same file."""
+        _earlier_copies(self._db_manager, source_db_manager).update(id_map)
+
+    def _fix_references(self, id_map):
+        """Point what still names an object of the other file at its copy.
+
+        Two objects that name each other - a firewall whose rules name its
+        own interfaces, or a group in a rule of a firewall that is one of
+        its members - are copied one before the other, so the first copy
+        still names the original of the second.  ``recursivelyCopySubtree``
+        makes "one more pass to fix references" for the same reason
+        (fwbuilder5 FWObjectDatabase_tree_ops.cpp:509).  The ids of the
+        other file exist nowhere in this one, so every row naming one is a
+        reference to fix.
+        """
+        if not id_map:
+            return
+        with self._db_manager.session('Paste (cross-file)') as session:
+            for old_id, new_id in id_map.items():
+                session.execute(
+                    rule_elements.update()
+                    .where(rule_elements.c.target_id == old_id)
+                    .values(target_id=new_id)
+                )
+                session.execute(
+                    group_membership.update()
+                    .where(group_membership.c.member_id == old_id)
+                    .values(member_id=new_id)
+                )
 
     def duplicate_object_cross_db(
         self,
@@ -1000,6 +1178,7 @@ class TreeOperations:
         target_group_id=None,
         target_interface_id=None,
         id_map=None,
+        seen=None,
     ):
         """Deep-copy an object from *source_db_manager* into *this* database.
 
@@ -1008,17 +1187,26 @@ class TreeOperations:
         new ORM instance in the local database with a fresh UUID.  What
         the object names and this database has not got is copied first
         (:meth:`copy_missing_references`).  *id_map* collects every
-        source id that was copied, with the id of its copy.
+        source id that was copied, with the id of its copy; *seen* holds
+        the objects whose references are being copied, so an object that
+        names itself, or one that names it, is copied once.
 
         Returns the new object's UUID, or *None* on failure.
         """
         if self._db_manager is None or source_db_manager is None:
             return None
         id_map = {} if id_map is None else id_map
+        outermost = seen is None
+        seen = set() if seen is None else seen
+        if outermost:
+            self._reuse_earlier_copies(source_db_manager, id_map, skip={source_id})
         self.copy_missing_references(
-            source_db_manager, source_id, target_lib_id, id_map
+            source_db_manager, source_id, target_lib_id, id_map, seen
         )
         if source_id in id_map:
+            if outermost:
+                self._fix_references(id_map)
+                self._remember_copies(source_db_manager, id_map)
             return id_map[source_id]
 
         # Read the source object from the foreign database.
@@ -1115,6 +1303,7 @@ class TreeOperations:
                     source,
                     new_obj,
                     id_map,
+                    pending=seen,
                 )
 
             target_session.commit()
@@ -1129,6 +1318,9 @@ class TreeOperations:
             source_session.close()
             target_session.close()
 
+        if outermost:
+            self._fix_references(id_map)
+            self._remember_copies(source_db_manager, id_map)
         return new_id
 
     @staticmethod
@@ -1138,12 +1330,16 @@ class TreeOperations:
         source_group,
         new_group,
         id_map=None,
+        pending=(),
     ):
         """Copy group_membership entries across databases.
 
         A member copied into this database (*id_map*, see
         :meth:`copy_missing_references`) is replaced by its copy; a member
-        that is neither copied nor already here is left out.
+        that is neither copied nor already here is left out.  A member
+        whose copy is still being made - a firewall whose rules name this
+        group - is in *pending* and keeps its id until
+        :meth:`_fix_references` points it at the copy.
         """
         id_map = id_map or {}
         rows = source_session.execute(
@@ -1153,7 +1349,10 @@ class TreeOperations:
         ).all()
         for row in rows:
             member_id = id_map.get(row.member_id, row.member_id)
-            if load_object(target_session, member_id) is not None:
+            member = load_object(source_session, row.member_id)
+            if load_object(target_session, member_id) is not None or (
+                member is not None and _primary_object(member).id in pending
+            ):
                 target_session.execute(
                     group_membership.insert().values(
                         group_id=new_group.id,
@@ -1182,6 +1381,7 @@ class TreeOperations:
             with self._db_manager.session() as session:
                 device = session.get(Host, target_device_id)
                 lib_id = device.library_id if device is not None else None
+            self._reuse_earlier_copies(source_db_manager, id_map)
             self.copy_missing_references(source_db_manager, rule_set_id, lib_id, id_map)
         source_session = source_db_manager.create_session()
         target_session = (
@@ -1216,9 +1416,9 @@ class TreeOperations:
                 overrides=overrides,
             )
             new_rs = target_session.get(RuleSet, id_map[source.id])
+            new_rs_id = new_rs.id
             target_session.commit()
             self._db_manager.save_state(f'Paste {source.type} {source.name}')
-            return new_rs.id
         except Exception:
             target_session.rollback()
             raise
@@ -1226,6 +1426,10 @@ class TreeOperations:
             source_session.close()
             if not same_db:
                 target_session.close()
+        if not same_db:
+            self._fix_references(id_map)
+            self._remember_copies(source_db_manager, id_map)
+        return new_rs_id
 
     def reparent_object(
         self,
