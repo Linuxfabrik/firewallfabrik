@@ -12,8 +12,12 @@
 
 """Editor panel dialog for RuleSet objects (Policy, NAT, Routing)."""
 
+import re
+
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+
+_RULE_SET_NAME = re.compile(r'[a-zA-Z0-9_\-+=@%^]+')
 
 
 class RuleSetDialog(BaseObjectDialog):
@@ -50,6 +54,24 @@ class RuleSetDialog(BaseObjectDialog):
             self.ipt_filter_table.setChecked(not mangle_only)
         else:
             self.iptables_only.hide()
+
+    def validate(self):
+        """``RuleSetDialog::validate`` (RuleSetDialog.cpp:167).
+
+        The name, and only the characters ``[a-zA-Z0-9_-+=@%^]``: a ":"
+        would split the "firewall:rule set:position" prefix of every
+        compiler message, and the name becomes a chain name.
+        """
+        refusal = super().validate()
+        if refusal:
+            return refusal
+        name = self.obj_name.text()
+        if not _RULE_SET_NAME.fullmatch(name):
+            return (
+                f"Rule set name '{name}' is invalid. Only "
+                "'[a-z][A-Z][0-9]_-+=@%^' characters are allowed."
+            )
+        return ''
 
     def _apply_changes(self):
         rs = self._obj

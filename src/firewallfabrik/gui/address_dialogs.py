@@ -90,34 +90,38 @@ class _BaseAddressDialog(BaseObjectDialog):
         """
         raise NotImplementedError
 
-    def _apply_changes(self):
-        address_text = self.address.text().strip()
-        address = ''
-        if address_text:
-            address = self._validate_address(address_text)
-            if address is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Address'),
-                    self.tr(self.illegal_address_message).replace('%1', address_text),
-                )
-                return
+    def validate(self):
+        """``IPv4Dialog::validate`` and its siblings: name, address, netmask.
 
+        An empty address is refused as well.  Firewall Builder reads it as
+        0.0.0.0 (``InetAddr("")``), which would make the object "any";
+        stored empty, the compiler leaves it out of every rule instead -
+        neither is what the administrator meant.
+        """
+        refusal = super().validate()
+        if refusal:
+            return refusal
+        address_text = self.address.text().strip()
+        if not address_text or self._validate_address(address_text) is None:
+            return self.tr(self.illegal_address_message).replace('%1', address_text)
+        if self._netmask_applies():
+            netmask_text = self.netmask.text()
+            if netmask_text.strip() or self._netmask_required():
+                try:
+                    self._validate_netmask(netmask_text)
+                except NetmaskRejected as rejected:
+                    return rejected.message
+        return ''
+
+    def _apply_changes(self):
+        address = self._validate_address(self.address.text().strip()) or ''
         netmask = None
         if self._netmask_applies():
             netmask_text = self.netmask.text()
             if not netmask_text.strip() and not self._netmask_required():
                 netmask = ''
             else:
-                try:
-                    netmask = self._validate_netmask(netmask_text)
-                except NetmaskRejected as rejected:
-                    QMessageBox.warning(
-                        self,
-                        self.tr('Invalid Netmask'),
-                        rejected.message,
-                    )
-                    return
+                netmask = self._validate_netmask(netmask_text)
 
         self._obj.name = self.obj_name.text()
         inet = dict(self._obj.inet_addr_mask or {})
@@ -132,8 +136,6 @@ class _BaseAddressDialog(BaseObjectDialog):
         self.address.setText(address)
         if netmask is not None:
             inet['netmask'] = netmask
-            # Show what was stored, the way fwbuilder's dialog comes back
-            # holding the InetAddr its applyChanges() put on the object.
             self.netmask.setText(netmask)
         self._obj.inet_addr_mask = inet
 
@@ -350,59 +352,50 @@ class AddressRangeDialog(BaseObjectDialog):
         self.rangeStart.setText(start.get('address', ''))
         self.rangeEnd.setText(end.get('address', ''))
 
+    def _range(self):
+        """Return the two ends as addresses, or a refusal string."""
+        ends = []
+        for text in (self.rangeStart.text().strip(), self.rangeEnd.text().strip()):
+            try:
+                ends.append(ipaddress.ip_address(text))
+            except ValueError:
+                return self.tr("Illegal IP address '%1'").replace('%1', text)
+        return ends
+
+    def validate(self):
+        """``AddressRangeDialog::validate`` (AddressRangeDialog.cpp:97).
+
+        Both ends are addresses of one family; an empty end is no address,
+        which Firewall Builder refuses as a family mismatch.
+        """
+        refusal = super().validate()
+        if refusal:
+            return refusal
+        ends = self._range()
+        if isinstance(ends, str):
+            return ends
+        start, end = ends
+        if start.version != end.version:
+            return (
+                self.tr("Range start '%1' and end '%2' must be the same IP version.")
+                .replace('%1', str(start))
+                .replace('%2', str(end))
+            )
+        return ''
+
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        start_text = self.rangeStart.text().strip()
-        end_text = self.rangeEnd.text().strip()
-        # Validate both addresses and ensure same family.
-        start_addr = end_addr = None
-        if start_text:
-            try:
-                start_addr = ipaddress.ip_address(start_text)
-            except ValueError:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Address'),
-                    self.tr("Illegal IP address '%1'").replace(
-                        '%1',
-                        start_text,
-                    ),
-                )
-                return
-        if end_text:
-            try:
-                end_addr = ipaddress.ip_address(end_text)
-            except ValueError:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Address'),
-                    self.tr("Illegal IP address '%1'").replace(
-                        '%1',
-                        end_text,
-                    ),
-                )
-                return
-        if start_addr and end_addr:
-            if start_addr.version != end_addr.version:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Address Mismatch'),
-                    self.tr(
-                        "Range start '%1' and end '%2' must be the same IP version.",
-                    )
-                    .replace('%1', start_text)
-                    .replace('%2', end_text),
-                )
-                return
-            # Auto-correct: end must be >= start.
-            if end_addr < start_addr:
-                end_addr = start_addr
-                self.rangeEnd.setText(str(end_addr))
+        start_addr, end_addr = self._range()
+        # Auto-correct: the end is moved up to the start
+        # (AddressRangeDialog.cpp:154).
+        end_addr = max(end_addr, start_addr)
+        self.rangeStart.setText(str(start_addr))
+        self.rangeEnd.setText(str(end_addr))
         start = dict(self._obj.start_address or {})
-        start['address'] = self.rangeStart.text().strip()
+        start['address'] = str(start_addr)
         self._obj.start_address = start
         end = dict(self._obj.end_address or {})
-        end['address'] = self.rangeEnd.text().strip()
+        end['address'] = str(end_addr)
         self._obj.end_address = end
 
     @Slot()

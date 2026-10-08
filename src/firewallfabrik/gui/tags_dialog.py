@@ -17,6 +17,7 @@ from pathlib import Path
 from PySide6.QtCore import QStringListModel, Slot
 from PySide6.QtWidgets import QDialog, QMessageBox
 
+from firewallfabrik.core._validation import keyword_refusal, simplify_keyword
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_DIR = Path(__file__).resolve().parent / 'ui'
@@ -81,7 +82,7 @@ class TagsDialog(QDialog):
 
     @Slot()
     def _on_create(self):
-        tag = self.newTagLineEdit.text().strip()
+        tag = simplify_keyword(self.newTagLineEdit.text())
         if not self._validate_tag(tag):
             return
         self._all_tags.add(tag)
@@ -98,18 +99,8 @@ class TagsDialog(QDialog):
         self._curr_model.setStringList(sorted(self._curr_tags))
 
     def _validate_tag(self, tag):
-        if not tag:
-            QMessageBox.warning(
-                self,
-                self.tr('Tags'),
-                self.tr('Tag must not be empty.'),
-            )
-            return False
-        if ',' in tag:
-            QMessageBox.warning(
-                self,
-                self.tr('Tags'),
-                self.tr('Tag must not contain a comma.'),
-            )
+        refusal = keyword_refusal(tag)
+        if refusal:
+            QMessageBox.warning(self, self.tr('Tags'), self.tr(refusal))
             return False
         return True

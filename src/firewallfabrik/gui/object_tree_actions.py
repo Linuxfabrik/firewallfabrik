@@ -20,7 +20,9 @@ from PySide6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMessageBox
 
 from firewallfabrik.core._validation import (
     incompatible,
+    keyword_refusal,
     load_object,
+    simplify_keyword,
     tree_child_refusal,
 )
 from firewallfabrik.core.objects import Address, Host, Interface, Library, RuleSet
@@ -186,8 +188,12 @@ class TreeActionHandler:
             'New Tag',
             'Enter tag:',
         )
-        keyword = keyword.strip() if ok else ''
+        keyword = simplify_keyword(keyword) if ok else ''
         if not keyword:
+            return
+        refusal = keyword_refusal(keyword)
+        if refusal:
+            QMessageBox.warning(self._ot._tree, 'New Tag', refusal)
             return
         self._ctx_add_keyword(keyword)
 

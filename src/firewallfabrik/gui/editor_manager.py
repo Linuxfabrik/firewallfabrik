@@ -452,6 +452,7 @@ class EditorManager(QObject):
         self._editor_obj_id = None
         self._editor_obj_name = None
         self._editor_obj_type = None
+        self._validating = False
 
     # --- Properties (read by FWWindow._on_create_group_member etc.) ---
 
@@ -564,12 +565,50 @@ class EditorManager(QObject):
         # Signal FWWindow to open the parent device's policy if needed.
         self.editor_opened.emit(obj, obj_type)
 
+    def _report_commit_failure(self, session, editor, error, obj_path):
+        """Roll back a refused change, say why and show what is stored.
+
+        The duplicate-name half of ``validateName`` (utils.cpp:214), which
+        the unique constraints of the database answer here.
+        ``ObjectEditor::changed`` reloads the editor after a refusal, so
+        the field does not keep a value that was not saved.
+        """
+        session.rollback()
+        if 'UNIQUE constraint failed' in str(error):
+            if obj_path:
+                detail = obj_path.replace(' / ', ' > ')
+                msg = f'Duplicate names are not allowed: {detail}'
+            else:
+                msg = 'Duplicate names are not allowed.'
+            self._validating = True
+            try:
+                QMessageBox.critical(self.parent(), 'FirewallFabrik', msg)
+            finally:
+                self._validating = False
+        else:
+            logger.exception('Commit failed')
+        editor.reload()
+
     @Slot()
     def on_editor_changed(self):
         """Handle a change in the active editor: apply and commit."""
         editor = self._current_editor
         session = self._editor_session
         if editor is None or session is None:
+            return
+        if self._validating:
+            return
+        refusal = '' if editor._is_read_only() else editor.validate()
+        if refusal:
+            # The message box takes the focus, which makes the name field
+            # finish editing again; without the guard the same message
+            # would come up twice (fwbuilder #1171).
+            self._validating = True
+            try:
+                QMessageBox.critical(self.parent(), 'FirewallFabrik', refusal)
+            finally:
+                self._validating = False
+            editor.reload()
             return
         editor.apply_all()
         # Capture path while the session is still usable (before a
@@ -606,6 +645,14 @@ class EditorManager(QObject):
         ref_firewalls = []
 
         if has_changes:
+            # Flush before anything queries: a query autoflushes, and a
+            # duplicate name would then raise outside the handler below
+            # and leave the session unusable for every later object.
+            try:
+                session.flush()
+            except sqlalchemy.exc.IntegrityError as e:
+                self._report_commit_failure(session, editor, e, obj_path)
+                return
             # Stamp the lastModified timestamp so the compile dialog and
             # the bold tree entry know a recompile is due.  Two answers,
             # and fwbuilder gives both (ProjectPanel_events.cpp:137-150
@@ -638,16 +685,7 @@ class EditorManager(QObject):
             try:
                 session.commit()
             except sqlalchemy.exc.IntegrityError as e:
-                session.rollback()
-                if 'UNIQUE constraint failed' in str(e):
-                    if obj_path:
-                        detail = obj_path.replace(' / ', ' > ')
-                        msg = f'Duplicate names are not allowed: {detail}'
-                    else:
-                        msg = 'Duplicate names are not allowed.'
-                    QMessageBox.critical(self.parent(), 'FirewallFabrik', msg)
-                else:
-                    logger.exception('Commit failed')
+                self._report_commit_failure(session, editor, e, obj_path)
                 return
 
             # Build a human-readable undo description.

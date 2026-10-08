@@ -17,6 +17,10 @@ from PySide6.QtCore import QSettings
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
+def _use_name_for_dns_record():
+    return QSettings().value('Objects/DNSName/useNameForDNSRecord', False, type=bool)
+
+
 class DNSNameDialog(BaseObjectDialog):
     """Editor for DNSName objects (name + DNS record + resolve mode)."""
 
@@ -44,11 +48,20 @@ class DNSNameDialog(BaseObjectDialog):
         else:
             self.r_compiletime.setChecked(True)
 
+    def _set_read_only(self, read_only):
+        super()._set_read_only(read_only)
+        # "Use object name for the DNS record": the record follows the
+        # name and is not edited on its own (DNSNameDialog.cpp:98).
+        if _use_name_for_dns_record():
+            self.dnsrec.setEnabled(False)
+
     def _apply_changes(self):
         new_name = self.obj_name.text()
         if self._obj.name != new_name:
             self._obj.name = new_name
         old_data = self._obj.data or {}
+        if _use_name_for_dns_record() and new_name != self.dnsrec.text():
+            self.dnsrec.setText(new_name.strip())
         data = self._obj.set_source_name(self.dnsrec.text().strip())
         data['run_time'] = self.r_runtime.isChecked()
         if data != old_data:

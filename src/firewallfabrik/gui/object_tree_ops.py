@@ -1470,6 +1470,16 @@ class TreeOperations:
                 kwargs['options'] = options
 
             new_obj = model_cls(**kwargs)
+            if name is None and type_name in ('NAT', 'Policy') and device_id:
+                # ObjectManipulator::newPolicyRuleSet / newNATRuleSet: the
+                # type, numbered from the second one on ("Policy_1"), a
+                # name the rule set editor accepts.
+                count = session.scalar(
+                    sqlalchemy.select(sqlalchemy.func.count())
+                    .select_from(RuleSet)
+                    .where(RuleSet.device_id == device_id, RuleSet.type == type_name)
+                )
+                name = f'{type_name}_{count}' if count else type_name
             new_obj.name = name or f'New {type_name}'
 
             # Make name unique.
@@ -2026,6 +2036,8 @@ class TreeOperations:
                 if obj.parent_interface_id is None
                 else model_cls.parent_interface_id == obj.parent_interface_id,
             )
+        elif isinstance(obj, RuleSet):
+            stmt = stmt.where(model_cls.device_id == obj.device_id)
         elif getattr(obj, 'interface_id', None) is not None:
             stmt = stmt.where(model_cls.interface_id == obj.interface_id)
         elif hasattr(obj, 'library_id') and obj.library_id is not None:

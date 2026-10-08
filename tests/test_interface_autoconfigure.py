@@ -46,11 +46,10 @@ class TestGuessInterfaceTypeTopLevel:
     def test_vlan_named(self):
         assert guess_interface_type('vlan100') == {'type': '8021q', 'vlan_id': '100'}
 
-    def test_vlan_dot_needs_parent(self):
-        # eth0.100 at top level should warn about missing parent
-        result = guess_interface_type('eth0.100')
-        assert '_vlan_needs_parent' in result
-        assert result['_vlan_needs_parent'] == 'eth0'
+    def test_vlan_dot_at_the_top_level(self):
+        # A cluster may have top-level VLAN interfaces; on a firewall the
+        # editor's validate refuses the name before this runs.
+        assert guess_interface_type('eth0.100') == {'type': '8021q', 'vlan_id': '100'}
 
     def test_ppp(self):
         assert guess_interface_type('ppp0') == {'type': 'ethernet'}
@@ -81,10 +80,14 @@ class TestGuessInterfaceTypeWithParent:
         assert result == {'type': '8021q', 'vlan_id': '100'}
 
     def test_vlan_mismatched_parent(self):
+        # guessSubInterfaceTypeAndAttributes sets nothing; validate refuses.
         parent = _FakeInterface('ens192')
-        result = guess_interface_type('eth0.100', parent)
-        assert '_vlan_name_mismatch' in result
-        assert result['_vlan_name_mismatch'] == 'ens192'
+        assert guess_interface_type('eth0.100', parent) == {}
+
+    def test_vlan_named_after_another_interface_under_a_bridge(self):
+        # The bridge port branch of guessSubInterfaceTypeAndAttributes.
+        parent = _FakeInterface('br0', options={'type': 'bridge'})
+        assert guess_interface_type('eth0.100', parent) == {'type': 'ethernet'}
 
     def test_vlan_named_under_any_parent(self):
         parent = _FakeInterface('ens192')
@@ -118,6 +121,4 @@ class TestGuessInterfaceTypeWithParent:
     def test_vlan_id_out_of_range(self):
         parent = _FakeInterface('eth0')
         # 4096 is out of 802.1Q range (0-4095)
-        result = guess_interface_type('eth0.5000', parent)
-        # Should not match VLAN pattern
-        assert '_vlan_name_mismatch' not in result or result == {}
+        assert guess_interface_type('eth0.5000', parent) == {}

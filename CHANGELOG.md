@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+Editor:
+
+* the preference "Use object name for the DNS record" of DNS Name objects
+
 ### Fixed
 
 Compiler:
@@ -24,13 +30,17 @@ Data file:
 
 Editor:
 
+* a duplicate name is refused without breaking the editor, and a refused edit saves nothing
+* blank names, characters a rule set or interface name cannot carry, and "/" in a firewall name are refused
 * deleting a cluster or an interface also deletes its cluster groups and sub-interfaces
 * Find & Replace also works in groups and refuses a replacement the field cannot hold
 * groups show their members in the tree and the group editor, interfaces included
 * interfaces can be group members, and a group of interfaces can be a rule's interface ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
+* locked firewalls, groups and libraries also protect the objects inside them
 * pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along
 * pasting onto a group adds the object to the group instead of copying it there
 * rule fields accept only objects they can hold, and the cursor shows it while dragging
+* the parameters of a cluster group refuse an empty VRRP secret and an address that is none
 * "Where used" also finds branch targets, tag services and cluster members
 
 

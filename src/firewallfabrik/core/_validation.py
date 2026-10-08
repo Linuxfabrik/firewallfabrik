@@ -330,18 +330,28 @@ def tree_child_refusal(target, obj) -> str:
     - a host, firewall or cluster takes interfaces; a firewall or cluster
       rule sets (:func:`rule_set_refusal`); a cluster state sync groups
       (``Cluster::validateChild``, Cluster.cpp:128)
-    - an interface takes addresses and a MAC address, a failover group, and
-      an interface as a sub-interface - but only one level of them
+    - an interface takes addresses and a MAC address and a failover group
       (``Interface::validateChild``, Interface.cpp:351)
+    - an interface placed under a device or another interface is
+      ``interfaceProperties::validateInterface``: one level of
+      sub-interfaces, VLAN names that name their parent, other
+      sub-interfaces only under a bridge or a bond, no bridge port or bond
+      slave in a cluster
     - a group that is not a standard folder takes what its
       ``validateChild`` takes (:func:`group_accepts`)
 
     A standard folder and a library take an object only into its standard
     slot, which the caller answers from the tree.
     """
+    if isinstance(obj, Interface) and isinstance(target, (Host, Interface)):
+        # FWBTree::validateForInsertion sends every interface to
+        # interfaceProperties::validateInterface (FWBTree.cpp:447).
+        from firewallfabrik.driver._interface_properties import (
+            LinuxInterfaceProperties,
+        )
+
+        return LinuxInterfaceProperties().interface_problem(target, obj)
     if isinstance(target, Host):
-        if isinstance(obj, Interface):
-            return ''
         if isinstance(obj, RuleSet):
             return rule_set_refusal(target, obj)
         if isinstance(obj, StateSyncClusterGroup) and isinstance(target, Cluster):
@@ -349,14 +359,6 @@ def tree_child_refusal(target, obj) -> str:
         return incompatible(obj, target.name)
     if isinstance(target, Interface):
         if isinstance(obj, (IPv4, IPv6, PhysAddress, FailoverClusterGroup)):
-            return ''
-        if isinstance(obj, Interface):
-            if target.parent_interface_id is not None or obj.sub_interfaces:
-                return (
-                    f'Interface {obj.name} can not become subinterface of '
-                    f'{target.name} because only one level of subinterfaces '
-                    f'is allowed.'
-                )
             return ''
         return incompatible(obj, target.name)
     if isinstance(target, Group):
@@ -377,4 +379,56 @@ def replace_kind(obj) -> str:
         return 'address'
     if isinstance(obj, (Service, ServiceGroup)):
         return 'service'
+    return ''
+
+
+def _container(obj):
+    """Return the object *obj* sits in, the way ``FWObject::getParent`` does."""
+    for attr in (
+        'rule_set',
+        'interface',
+        'parent_interface',
+        'parent_group',
+        'device',
+        'group',
+        'library',
+    ):
+        parent = getattr(obj, attr, None)
+        if parent is not None:
+            return parent
+    return None
+
+
+def is_read_only(obj) -> bool:
+    """``FWObject::isReadOnly`` (fwbuilder5 FWObject.cpp:1379).
+
+    An object is read-only when it or anything it sits in is locked: the
+    address of an interface of a locked firewall, a group in a locked
+    group, every object of a read-only library.
+    """
+    seen = set()
+    while obj is not None and id(obj) not in seen:
+        seen.add(id(obj))
+        if getattr(obj, 'ro', False):
+            return True
+        obj = _container(obj)
+    return False
+
+
+def simplify_keyword(text: str) -> str:
+    """``QString::simplified``: trimmed, inner white space folded to one space.
+
+    The tag dialog and "New Tag" both apply it before
+    ``KeywordsDialog::validateKeyword`` (KeywordsDialog.cpp:134), so
+    "a  b" and "a b" are one tag.
+    """
+    return ' '.join(text.split())
+
+
+def keyword_refusal(tag: str) -> str:
+    """``KeywordsDialog::validateKeyword``: not empty, no comma."""
+    if not tag:
+        return 'Tag must not be empty.'
+    if ',' in tag:
+        return 'Tag must not contain a comma.'
     return ''

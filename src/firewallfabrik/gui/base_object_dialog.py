@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from firewallfabrik.core._validation import is_read_only
 from firewallfabrik.gui.comment_tags import CommentTags
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
@@ -52,6 +53,7 @@ class BaseObjectDialog(QWidget):
     def load_object(self, obj, *, all_tags=None):
         """Load *obj* into the editor: populate widgets and connect signals."""
         self._obj = obj
+        self._all_tags = all_tags
         self._loading = True
         try:
             self._populate()
@@ -72,6 +74,27 @@ class BaseObjectDialog(QWidget):
     def _populate(self):
         """Fill widgets from ``self._obj``. Must be overridden."""
         raise NotImplementedError
+
+    def reload(self):
+        """Show the stored values again, dropping what was typed."""
+        if self._obj is not None:
+            self.load_object(self._obj, all_tags=getattr(self, '_all_tags', None))
+
+    def validate(self):
+        """Return why the values in the editor may not be saved, or ''.
+
+        ``ObjectEditor::changed`` asks the dialog's ``validate`` before it
+        applies anything and reloads the editor when the answer is no
+        (fwbuilder5 ObjectEditor.cpp:331).  The base asks the first half
+        of ``validateName`` (utils.cpp:197): the name must not be blank.
+        The second half, a sibling of the same type and name, is the
+        database's unique constraints, reported when the change is
+        committed.  Subclasses add their own checks.
+        """
+        name_widget = self.findChild(QLineEdit, 'obj_name')
+        if name_widget is not None and not name_widget.text().strip():
+            return 'Object name should not be blank'
+        return ''
 
     def _apply_changes(self):
         """Write widget values back to ``self._obj``. Must be overridden."""
@@ -94,14 +117,9 @@ class BaseObjectDialog(QWidget):
 
     def _is_read_only(self):
         """Return ``True`` if the current object must not be modified."""
-        obj = self._obj
-        if obj is None:
-            return False
-        return getattr(obj, 'ro', False) or getattr(
-            getattr(obj, 'library', None),
-            'ro',
-            False,
-        )
+        # A lock on anything the object sits in counts, the way
+        # FWObject::isReadOnly walks every parent.
+        return self._obj is not None and is_read_only(self._obj)
 
     def _set_read_only(self, read_only):
         """Enable or disable all editable child widgets."""

@@ -29,10 +29,11 @@ Every value lives on the *group's* options dict, the way
 ``FWOptions::cast(obj)`` reads it in the C++.
 """
 
+import ipaddress
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSettings
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QMessageBox
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
@@ -115,6 +116,33 @@ class _ClusterProtocolDialog(QDialog):
         QSettings().setValue(self._geometry_key(), self.saveGeometry())
         super().done(result)
 
+    def accept(self):
+        """Close only on values the protocol can use (``validate`` of the C++)."""
+        refusal = self.validate()
+        if refusal:
+            QMessageBox.critical(self, 'FirewallFabrik', refusal)
+            return
+        super().accept()
+
+    def validate(self):
+        """Return why the values cannot be stored, or ''."""
+        return ''
+
+    def _address_refusal(self, widget_name):
+        """An IPv4 or IPv6 address, as ``InetAddr`` reads it.
+
+        ``heartbeatOptionsDialog::validate`` and its siblings
+        (heartbeatOptionsDialog.cpp:114) refuse anything else, an empty
+        field included.  Kept, a bad address made the compiler fall back
+        to the default group or report the cluster at compile time.
+        """
+        text = getattr(self, widget_name).text().strip()
+        try:
+            ipaddress.ip_address(text)
+        except ValueError:
+            return f"Invalid IP address '{text}'"
+        return ''
+
 
 def _as_bool(value):
     """Read a stored flag the way ``FWObject::getBool`` does."""
@@ -148,6 +176,12 @@ class VRRPOptionsDialog(_ClusterProtocolDialog):
         'vrrp_vrid': 'vrrp_vrid',
     }
 
+    def validate(self):
+        """``vrrpOptionsDialog::validate`` (vrrpOptionsDialog.cpp:99)."""
+        if not self.vrrp_secret.text():
+            return 'Input not valid: VRRP Secret field can not be empty!'
+        return ''
+
 
 class HeartbeatOptionsDialog(_ClusterProtocolDialog):
     """heartbeat: the multicast group and port from ``ha.cf``."""
@@ -159,6 +193,9 @@ class HeartbeatOptionsDialog(_ClusterProtocolDialog):
         'heartbeat_port': 'heartbeat_port',
     }
 
+    def validate(self):
+        return self._address_refusal('heartbeat_address')
+
 
 class OpenAISOptionsDialog(_ClusterProtocolDialog):
     """OpenAIS / corosync: the totem ring's multicast group and port."""
@@ -168,6 +205,9 @@ class OpenAISOptionsDialog(_ClusterProtocolDialog):
         'openais_address': 'openais_address',
         'openais_port': 'openais_port',
     }
+
+    def validate(self):
+        return self._address_refusal('openais_address')
 
 
 class ConntrackOptionsDialog(_ClusterProtocolDialog):
@@ -179,6 +219,9 @@ class ConntrackOptionsDialog(_ClusterProtocolDialog):
         'conntrack_address': 'conntrack_address',
         'conntrack_port': 'conntrack_port',
     }
+
+    def validate(self):
+        return self._address_refusal('conntrack_address')
 
 
 #: Which dialog edits which protocol.  A group whose protocol is not in

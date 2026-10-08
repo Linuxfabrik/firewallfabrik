@@ -49,7 +49,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.objects import Cluster, Firewall
 from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
 from firewallfabrik.gui.netmask import (
     EMPTY_ADDRESS_OR_NETMASK,
@@ -73,6 +73,22 @@ _SETTINGS_GEOMETRY = 'NewClusterDialog/geometry'
 _SETTINGS_PROTOCOL = 'NewClusterDialog/failoverProtocol'
 
 _MEMBER_ROLE = Qt.ItemDataRole.UserRole
+
+
+def _selectable(props, iface):
+    """``ClusterInterfaceWidget::interfaceSelectable`` (ClusterInterfaceWidget.cpp:192).
+
+    With "autoconfigure interfaces" on, the interface has to be one a
+    cluster may hold (``validateInterface`` - a VLAN id above 4095 is not),
+    and it has to be eligible for a cluster.
+    """
+    from PySide6.QtCore import QSettings
+
+    if QSettings().value(
+        'Objects/Interface/autoconfigureInterfaces', True, type=bool
+    ) and props.interface_problem(Cluster(name=''), iface):
+        return False
+    return props.is_eligible_for_cluster(iface)
 
 
 @dataclass
@@ -179,7 +195,7 @@ class NewClusterDialog(QDialog):
                     if iface.parent_interface_id is not None:
                         continue
                     entry = _Iface(
-                        eligible=props.is_eligible_for_cluster(iface),
+                        eligible=_selectable(props, iface),
                         id=iface.id,
                         label=str((iface.data or {}).get('label', '')),
                         name=iface.name,
@@ -187,7 +203,7 @@ class NewClusterDialog(QDialog):
                     for sub in sorted(iface.sub_interfaces, key=lambda i: i.name):
                         entry.sub_interfaces.append(
                             _Iface(
-                                eligible=props.is_eligible_for_cluster(sub),
+                                eligible=_selectable(props, sub),
                                 id=sub.id,
                                 label=str((sub.data or {}).get('label', '')),
                                 name=sub.name,

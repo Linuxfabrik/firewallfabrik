@@ -56,6 +56,15 @@ _PLATFORM_SETTINGS_DIALOG = {
 }
 
 
+def _autoconfigure_interfaces():
+    """The "autoconfigure interfaces" preference, on unless switched off."""
+    from PySide6.QtCore import QSettings
+
+    return QSettings().value(
+        'Objects/Interface/autoconfigureInterfaces', True, type=bool
+    )
+
+
 class HostDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('hostdialog_q.ui', parent)
@@ -206,6 +215,19 @@ class FirewallDialog(BaseObjectDialog):
         self.hostOS.currentTextChanged.connect(self._update_settings_buttons)
         self._update_settings_buttons()
 
+    def validate(self):
+        """``FirewallDialog::validate`` / ``ClusterDialog::validate``.
+
+        The name, and no "/" in it (fwbuilder #2011): the name becomes the
+        file the compiled script is written to.
+        """
+        refusal = super().validate()
+        if refusal:
+            return refusal
+        if '/' in self.obj_name.text():
+            return 'Character "/" is not allowed in firewall object name'
+        return ''
+
     def _apply_changes(self):
         new_name = self.obj_name.text()
         if self._obj.name != new_name:
@@ -338,17 +360,13 @@ class InterfaceDialog(BaseObjectDialog):
         """Auto-detect interface type from name and parent context.
 
         Called both on load (``_populate``) and on save
-        (``_apply_changes``).  Silently applies guessed options on
-        load; shows warnings on save.
+        (``_apply_changes``); ``validate`` has refused a name that may
+        not sit where the interface sits.
         """
         from firewallfabrik.gui.interface_autoconfigure import guess_interface_type
 
         parent = getattr(self._obj, 'parent_interface', None)
         guessed = guess_interface_type(self._obj.name or '', parent)
-
-        # Skip warning flags on load — only relevant during save.
-        if '_vlan_name_mismatch' in guessed or '_vlan_needs_parent' in guessed:
-            return
 
         if guessed:
             options = dict(self._obj.options or {})
@@ -426,46 +444,35 @@ class InterfaceDialog(BaseObjectDialog):
             self._obj.data = data
 
         # Autoconfigure interface type from name if enabled in Preferences.
-        from PySide6.QtCore import QSettings
-
-        if QSettings().value(
-            'Objects/Interface/autoconfigureInterfaces', True, type=bool
-        ):
-            from firewallfabrik.gui.interface_autoconfigure import guess_interface_type
-
-            parent = getattr(self._obj, 'parent_interface', None)
-            guessed = guess_interface_type(self._obj.name or '', parent)
-
-            # Handle VLAN name mismatch warning.
-            if '_vlan_name_mismatch' in guessed:
-                from PySide6.QtWidgets import QMessageBox
-
-                parent_name = guessed['_vlan_name_mismatch']
-                QMessageBox.warning(
-                    self.window(),
-                    'FirewallFabrik',
-                    f"'{self._obj.name}' looks like a name of a VLAN "
-                    f'interface but it does not match the name of the '
-                    f"parent interface '{parent_name}'",
-                )
-                return
-
-            # Handle top-level VLAN that needs a parent interface.
-            if '_vlan_needs_parent' in guessed:
-                from PySide6.QtWidgets import QMessageBox
-
-                base_name = guessed['_vlan_needs_parent']
-                QMessageBox.warning(
-                    self.window(),
-                    'FirewallFabrik',
-                    f"'{self._obj.name}' looks like a name of a VLAN "
-                    f'interface but it is not a sub-interface of '
-                    f"'{base_name}'. Create it as a sub-interface of "
-                    f"'{base_name}' instead.",
-                )
-                return
-
+        if _autoconfigure_interfaces():
             self._run_autoconfigure()
+
+    def validate(self):
+        """``InterfaceDialog::validate`` (InterfaceDialog.cpp:317).
+
+        The name, then ``basicValidateInterfaceName`` - no white space on
+        Linux - and, with "autoconfigure interfaces" on, whether an
+        interface of this name may sit where this one sits
+        (``interfaceProperties::validateInterface``): a VLAN name has to
+        name its parent, and only a bridge or a bond takes a sub-interface
+        that is not a VLAN.
+        """
+        refusal = super().validate()
+        if refusal:
+            return refusal
+        from firewallfabrik.driver._interface_properties import (
+            LinuxInterfaceProperties,
+        )
+
+        props = LinuxInterfaceProperties()
+        name = self.obj_name.text()
+        refusal = props.basic_name_problem(name)
+        if refusal or not _autoconfigure_interfaces():
+            return refusal
+        parent = self._obj.parent_interface or self._obj.device
+        if parent is None:
+            return ''
+        return props.interface_problem(parent, self._obj, name=name)
 
     @Slot()
     def openIfaceDialog(self):

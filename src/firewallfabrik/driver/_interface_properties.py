@@ -55,46 +55,106 @@ def get_interface_var_name(iface: Interface, suffix: str = '') -> str:
 class InterfaceProperties:
     """Platform-agnostic interface validation and name checking."""
 
-    def validate_interface_name(self, name: str) -> tuple[bool, str]:
-        """Check if interface name is valid. Returns (ok, error_msg)."""
-        if ' ' in name:
-            return False, f"Interface name '{name}' contains spaces"
-        if '-' in name and not self._allow_hyphens():
-            return False, f"Interface name '{name}' contains hyphens"
-        if not name:
-            return False, 'Interface name is empty'
-        return True, ''
-
-    def _allow_hyphens(self) -> bool:
-        return False
-
-    def looks_like_vlan(self, name: str) -> bool:
-        """Check if name looks like a VLAN interface (e.g., eth0.100)."""
-        return bool(re.match(r'^.+\.\d+$', name))
+    # -- Names and the interface hierarchy (compiler_lib/interfaceProperties.cpp)
 
     def parse_vlan(self, name: str) -> tuple[str, int] | None:
-        """Parse VLAN interface name. Returns (base_name, vlan_id) or None."""
-        m = re.match(r'^(.+)\.(\d+)$', name)
-        if m:
-            return m.group(1), int(m.group(2))
+        """Return ``(base name, vlan id)`` if *name* looks like a VLAN.
+
+        ``interfaceProperties::parseVlan`` knows no VLAN; the platform
+        subclass does.
+        """
         return None
 
-    def is_valid_vlan_name(
-        self,
-        name: str,
-        parent_name: str,
-    ) -> tuple[bool, str]:
-        """Validate VLAN interface name against parent."""
+    def looks_like_vlan(self, name: str) -> bool:
+        """``interfaceProperties::looksLikeVlanInterface``."""
+        return self.parse_vlan(name) is not None
+
+    def basic_name_problem(self, name: str) -> str:
+        """``basicValidateInterfaceName``: no white space and no "-"."""
+        if ' ' in name or '-' in name:
+            return f'Interface name \'{name}\' can not contain white space and "-"'
+        return ''
+
+    def vlan_name_problem(self, name: str, parent_name: str) -> str:
+        """``interfaceProperties::isValidVlanInterfaceName`` (interfaceProperties.cpp:98).
+
+        A VLAN name has to name its parent interface ("eth0.100" under
+        "eth0"; "vlan100" anywhere), and the VLAN id has to fit in twelve
+        bits.  An empty *parent_name* skips the first check: a cluster may
+        have top-level VLAN interfaces, and a VLAN may be a bridge port.
+        """
         parsed = self.parse_vlan(name)
         if parsed is None:
-            return False, f"'{name}' is not a valid VLAN interface name"
-        base, _vlan_id = parsed
-        if base != parent_name:
-            return False, (
-                f"VLAN interface '{name}' base name '{base}' "
-                f"does not match parent '{parent_name}'"
+            return f"'{name}' is not a valid vlan interface name"
+        base, vlan_id = parsed
+        if parent_name and base != 'vlan' and parent_name != base:
+            return (
+                f"'{name}' looks like a name of a vlan interface but it does "
+                f"not match the name of the parent interface '{parent_name}'"
             )
-        return True, ''
+        if vlan_id > 4095:
+            return (
+                f"'{name}' looks like a name of a vlan interface but vlan ID "
+                f'it defines is outside of the valid range.'
+            )
+        return ''
+
+    def interface_problem(self, target, iface=None, *, name=None) -> str:
+        """Return why an interface may not become a child of *target*, or ''.
+
+        ``interfaceProperties::validateInterface`` (interfaceProperties.cpp:246
+        and :346), which ``FWBTree::validateForInsertion`` and
+        ``InterfaceDialog::validate`` ask for every interface placed under a
+        firewall, a cluster or another interface.  *iface* is the
+        interface object; *name* overrides its name, for a rename that is
+        not stored yet.
+        """
+        from firewallfabrik.core.objects import Cluster, Host
+
+        name = name if name is not None else iface.name
+        if (
+            iface is not None
+            and isinstance(target, Interface)
+            and (target.parent_interface_id is not None or iface.sub_interfaces)
+        ):
+            return (
+                f'Interface {name} can not become subinterface of '
+                f'{target.name} because only one level of subinterfaces '
+                f'is allowed.'
+            )
+        if iface is not None and isinstance(target, Cluster):
+            parent = iface.parent_interface
+            if parent is not None:
+                own_type = (iface.options or {}).get('type') or 'ethernet'
+                parent_type = (parent.options or {}).get('type') or 'ethernet'
+                if parent_type == 'bridge' and own_type == 'ethernet':
+                    return (
+                        f'Interface {name} is a bridge port, it can not belong '
+                        f'to a cluster'
+                    )
+                if parent_type == 'bonding' and own_type == 'ethernet':
+                    return (
+                        f'Interface {name} is a bonding interface slave, it can '
+                        f'not belong to a cluster'
+                    )
+
+        if isinstance(target, Host):
+            if self.looks_like_vlan(name):
+                parent_name = '' if isinstance(target, Cluster) else target.name
+                return self.vlan_name_problem(name, parent_name)
+            return ''
+        if isinstance(target, Interface):
+            target_type = (target.options or {}).get('type') or ''
+            if self.looks_like_vlan(name):
+                parent_name = '' if target_type == 'bridge' else target.name
+                return self.vlan_name_problem(name, parent_name)
+            if target_type not in ('bridge', 'bonding'):
+                return (
+                    f'Interface {name} which is not a vlan can only be a '
+                    f'subinterface of a bridge or bonding interface'
+                )
+            return ''
+        return f'Interface can not be a child object of {type(target).__name__}'
 
     def is_eligible_for_cluster(self, iface: Interface) -> bool:
         """Whether *iface* can stand behind a cluster interface.
@@ -246,13 +306,32 @@ class InterfaceProperties:
         return v6 + v4
 
 
+# ``linux24Interfaces::parseVlan`` (linux24Interfaces.cpp:41).  Qt's
+# ``indexOf`` searches, so these are searched for, not matched in full.
+_LINUX_VLAN_PATTERNS = (
+    re.compile(r'([a-zA-Z0-9-]+\d{1,})\.(\d{1,})'),
+    re.compile(r'(vlan)(\d{1,})'),
+)
+
+
 class LinuxInterfaceProperties(InterfaceProperties):
-    """Linux-specific interface validation."""
+    """Linux-specific interface validation (``linux24Interfaces``)."""
 
-    def _allow_hyphens(self) -> bool:
-        return True
+    def parse_vlan(self, name: str) -> tuple[str, int] | None:
+        for pattern in _LINUX_VLAN_PATTERNS:
+            match = pattern.search(name or '')
+            if match:
+                return match.group(1), int(match.group(2))
+        return None
 
-    def looks_like_vlan(self, name: str) -> bool:
-        if super().looks_like_vlan(name):
-            return True
-        return bool(re.match(r'^vlan\d+$', name))
+    def basic_name_problem(self, name: str) -> str:
+        """Linux allows "-" (OpenWRT ``ppp-dsl``, fwbuilder #1856), not spaces."""
+        if ' ' in name:
+            return f"Interface name '{name}' can not contain white space"
+        return ''
+
+    def interface_problem(self, target, iface=None, *, name=None) -> str:
+        name = name if name is not None else iface.name
+        return self.basic_name_problem(name) or super().interface_problem(
+            target, iface, name=name
+        )

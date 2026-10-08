@@ -22,8 +22,6 @@ import re
 # VLAN patterns (Linux):
 # eth0.100 -> base=eth0, vlan_id=100
 # vlan100 -> base=vlan, vlan_id=100
-_VLAN_DOT_RE = re.compile(r'^([a-zA-Z0-9-]+\d+)\.(\d+)$')
-_VLAN_NAME_RE = re.compile(r'^vlan(\d+)$')
 
 # Interface type patterns (by prefix, no dot):
 _TYPE_PATTERNS = [
@@ -41,34 +39,32 @@ _TYPE_PATTERNS = [
 
 
 def _parse_vlan(name: str) -> tuple[str, int] | None:
-    """Extract (base_name, vlan_id) from a VLAN interface name.
+    """Extract ``(base_name, vlan_id)`` from a VLAN interface name.
 
-    Returns ``None`` if *name* does not look like a VLAN interface.
+    ``linux24Interfaces::parseVlan``, with the VLAN id range of
+    ``isValidVlanInterfaceName``: an id above 4095 is no VLAN to configure.
     """
-    m = _VLAN_DOT_RE.match(name)
-    if m:
-        vlan_id = int(m.group(2))
-        if 0 <= vlan_id <= 4095:
-            return m.group(1), vlan_id
-    m = _VLAN_NAME_RE.match(name)
-    if m:
-        vlan_id = int(m.group(1))
-        if 0 <= vlan_id <= 4095:
-            return 'vlan', vlan_id
-    return None
+    from firewallfabrik.driver._interface_properties import (
+        LinuxInterfaceProperties,
+    )
+
+    parsed = LinuxInterfaceProperties().parse_vlan(name)
+    if parsed is None or not 0 <= parsed[1] <= 4095:
+        return None
+    return parsed
 
 
 def guess_interface_type(name: str, parent_iface=None) -> dict:
     """Guess interface type and parameters from its name and parent.
 
-    When *parent_iface* is given (an ``Interface`` ORM object), the
-    function mirrors fwbuilder's ``guessSubInterfaceTypeAndAttributes``:
-
-    * VLAN names (``eth0.100``) are only accepted when the base name
-      matches the parent interface name.
-    * Sub-interfaces of a bridge parent get ``type=ethernet``.
-    * Sub-interfaces of a bonding parent get ``type=ethernet`` and
-      the ``_set_unnumbered`` flag.
+    With *parent_iface* (an ``Interface`` ORM object) this is
+    ``interfaceProperties::guessSubInterfaceTypeAndAttributes``
+    (interfaceProperties.cpp:467): a VLAN name that names its parent
+    ("eth0.100" under "eth0", or "vlan100") makes a VLAN; anything else
+    under a bridge is an Ethernet port, and under a bond an unnumbered
+    Ethernet slave - a VLAN named after another interface under a bridge
+    included.  Whether the name may sit there at all is the editor's
+    ``validate``, which refuses it before this runs.
 
     Returns a dict with keys to merge into the interface's options dict.
     Returns empty dict if no pattern matches.
@@ -82,34 +78,21 @@ def guess_interface_type(name: str, parent_iface=None) -> dict:
         parent_type = (parent_iface.options or {}).get('type', '')
 
         vlan = _parse_vlan(name)
-        if vlan is not None:
-            base_name, vlan_id = vlan
-            # "vlanNNN" style is always valid under any parent.
-            # "parent.NNN" style must match the parent name.
-            if base_name == 'vlan' or base_name == parent_name:
-                return {'type': '8021q', 'vlan_id': str(vlan_id)}
-            # Name looks like VLAN but does not match parent — warn.
-            return {'_vlan_name_mismatch': parent_name}
-
-        # Non-VLAN sub-interface under a bridge → ethernet.
+        if vlan is not None and vlan[0] in ('vlan', parent_name):
+            return {'type': '8021q', 'vlan_id': str(vlan[1])}
         if parent_type == 'bridge':
             return {'type': 'ethernet'}
-
-        # Non-VLAN sub-interface under bonding → ethernet + unnumbered.
         if parent_type == 'bonding':
             return {'type': 'ethernet', '_set_unnumbered': True}
-
         return {}
 
     # -- Top-level interface (no parent) --
 
+    # A top-level VLAN: "vlan100" anywhere, "eth0.100" on a cluster, which
+    # may have top-level VLAN interfaces (interfaceProperties.cpp:355).
     vlan = _parse_vlan(name)
     if vlan is not None:
-        base_name, vlan_id = vlan
-        if base_name != 'vlan':
-            # "eth0.100" at top level → should be a sub-interface of "eth0".
-            return {'_vlan_needs_parent': base_name}
-        return {'type': '8021q', 'vlan_id': str(vlan_id)}
+        return {'type': '8021q', 'vlan_id': str(vlan[1])}
 
     if '.' not in name:
         for pattern, iface_type in _TYPE_PATTERNS:

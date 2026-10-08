@@ -205,10 +205,10 @@ def test_a_firewall_has_one_routing_rule_set():
 
 def test_an_interface_takes_one_level_of_sub_interfaces():
     """Interface::validateChild (Interface.cpp:351)."""
-    parent = _new(Interface)
-    sub = _new(Interface, parent_interface_id=parent.id)
-    assert tree_child_refusal(parent, _new(Interface)) == ''
-    assert tree_child_refusal(sub, _new(Interface)), 'no third level'
+    parent = _new(Interface, name='br0', options={'type': 'bridge'})
+    sub = _new(Interface, name='br0.1', parent_interface_id=parent.id)
+    assert tree_child_refusal(parent, _new(Interface, name='eth1')) == ''
+    assert tree_child_refusal(sub, _new(Interface, name='eth1')), 'no third level'
     assert tree_child_refusal(parent, _new(PhysAddress)) == ''
     assert tree_child_refusal(parent, _new(TCPService))
 

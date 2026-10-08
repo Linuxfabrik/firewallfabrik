@@ -233,6 +233,17 @@ tags are matched.</string>
             </widget>
            </item>
            <item row="1" column="1">
+            <widget class="QCheckBox" name="use_name_for_dns_record">
+             <property name="toolTip">
+              <string>The DNS record of every DNS Name object is its name; the
+record field of the editor follows the name and cannot be edited.</string>
+             </property>
+             <property name="text">
+              <string>Use object name for the DNS record in all objects of this type</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
             <spacer name="verticalSpacer">
              <property name="orientation">
               <enum>Qt::Orientation::Vertical</enum>
