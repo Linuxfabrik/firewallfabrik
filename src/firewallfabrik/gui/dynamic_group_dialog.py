@@ -31,17 +31,24 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
 )
 
-from firewallfabrik.core.objects import Address, Group, Host
+from firewallfabrik.core._dynamic_groups import (
+    KEYWORD_ANY,
+    KEYWORD_NONE,
+    TYPE_ANY,
+    TYPE_NONE,
+    dynamic_group_members,
+    object_type_name,
+)
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.group_dialog import _get_object_properties
 
 logger = logging.getLogger(__name__)
 
 # fwbuilder constants (DynamicGroup.cpp).
-_TYPE_NONE = 'none'
-_TYPE_ANY = 'any'
-_KEYWORD_NONE = ','
-_KEYWORD_ANY = ''
+_TYPE_NONE = TYPE_NONE
+_TYPE_ANY = TYPE_ANY
+_KEYWORD_NONE = KEYWORD_NONE
+_KEYWORD_ANY = KEYWORD_ANY
 
 # Object types eligible for dynamic group membership, matching
 # fwbuilder's FWBTree::getObjectTypes() — alphabetically sorted.
@@ -59,37 +66,6 @@ _OBJECT_TYPES = [
     ('NetworkIPv6', 'Network IPv6'),
     ('ObjectGroup', 'Object Group'),
 ]
-
-# Types that are considered "Address-like" (Address::cast succeeds)
-# or ObjectGroup (ObjectGroup::cast succeeds) in fwbuilder.
-_ADDRESS_TYPE_NAMES = frozenset(
-    {
-        'AddressRange',
-        'AddressTable',
-        'AttachedNetworks',
-        'DNSName',
-        'DynamicGroup',
-        'IPv4',
-        'IPv6',
-        'MultiAddress',
-        'MultiAddressRunTime',
-        'Network',
-        'NetworkIPv6',
-        'PhysAddress',
-    }
-)
-_GROUP_TYPE_NAMES = frozenset(
-    {
-        'ObjectGroup',
-    }
-)
-_DEVICE_TYPE_NAMES = frozenset(
-    {
-        'Cluster',
-        'Firewall',
-        'Host',
-    }
-)
 
 
 class _CriteriaDelegate(QStyledItemDelegate):
@@ -347,80 +323,17 @@ class DynamicGroupDialog(BaseObjectDialog):
         if session is None:
             return
 
-        self_id = self._obj.id
-
-        # Query all candidate objects (Address-like, ObjectGroup, and
-        # device types) and check each against the criteria.
-        for cls in (Address, Group, Host):
-            try:
-                objs = session.scalars(sqlalchemy.select(cls)).unique().all()
-            except Exception:
-                logger.debug('Failed to query %s for matched objects', cls.__name__)
-                continue
-            for obj in objs:
-                if obj.id == self_id:
-                    continue
-                if not self._is_member(obj, criteria, self.matchMode.currentText()):
-                    continue
-                self._add_matched_item(obj)
+        for obj in dynamic_group_members(
+            session, self._obj, criteria, self.matchMode.currentText()
+        ):
+            self._add_matched_item(obj)
 
         self.matchedView.resizeColumnToContents(0)
         self.matchedView.resizeColumnToContents(1)
 
-    def _is_member(self, obj, criteria, match_mode='AND'):
-        """Return True if *obj* matches *criteria* under *match_mode*.
-
-        *criteria* is a list of ``(type_str, keyword_str)`` tuples.
-        *match_mode* is ``'AND'`` (every row must match, default) or
-        ``'OR'`` (at least one row must match - the original fwbuilder
-        semantics from ``DynamicGroup::isMemberOfGroup()``).
-        """
-        obj_type = getattr(obj, 'type', '')
-
-        # Only Address-like objects, ObjectGroups, and device types are
-        # eligible (mirrors the C++ Address::cast / ObjectGroup::cast
-        # checks).
-        if obj_type not in _ADDRESS_TYPE_NAMES | _GROUP_TYPE_NAMES | _DEVICE_TYPE_NAMES:
-            return False
-
-        # Exclude objects in a deleted-objects library.
-        lib = getattr(obj, 'library', None)
-        if lib is None:
-            return False
-        lib_name = getattr(lib, 'name', '')
-        if lib_name == 'Deleted Objects':
-            return False
-
-        # For ObjectGroup types, exclude "standard" groups near the
-        # root (distance <= 3).  We approximate fwbuilder's
-        # getDistanceFromRoot() by counting parent_group levels + 2
-        # (Library → top-level group → child group).
-        if obj_type in _GROUP_TYPE_NAMES:
-            depth = 2  # Library (1) + the group container itself (2)
-            parent = getattr(obj, 'parent_group', None)
-            while parent is not None:
-                depth += 1
-                parent = getattr(parent, 'parent_group', None)
-            if depth <= 3:
-                return False
-
-        keywords = getattr(obj, 'keywords', None) or set()
-
-        active = []
-        for type_val, keyword_val in criteria:
-            type_match = type_val == _TYPE_ANY or obj_type == type_val
-            keyword_match = keyword_val == _KEYWORD_ANY or keyword_val in keywords
-            active.append(type_match and keyword_match)
-
-        if not active:
-            return False
-        if match_mode == 'OR':
-            return any(active)
-        return all(active)
-
     def _add_matched_item(self, obj):
         """Add a matched object to the tree widget."""
-        obj_type = getattr(obj, 'type', '')
+        obj_type = object_type_name(obj)
         name = getattr(obj, 'name', '')
         props = _get_object_properties(obj)
 

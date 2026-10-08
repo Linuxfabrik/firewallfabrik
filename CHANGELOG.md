@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Compiler:
 
+* a dynamic group also selects the interfaces, interface addresses and failover and state sync groups carrying its keyword
 * a firewall with two routing rule sets holding rules is refused instead of installing the routes of one of them
 * a NAT rule with a Tag Service as its translated service is reported and left out instead of translating without it
 * a routing rule with a second gateway or interface, or with a network as its gateway, is reported and left out instead of losing the rest or stopping the activation

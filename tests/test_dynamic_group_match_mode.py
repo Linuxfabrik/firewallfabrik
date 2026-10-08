@@ -19,21 +19,18 @@ preserve fwbuilder's original semantics
 """
 
 from firewallfabrik.compiler._compiler import _matches_dynamic_criteria
+from firewallfabrik.core.objects import Firewall, Host, IPService, Library
+
+_CLASSES = {'Firewall': Firewall, 'Host': Host, 'IPService': IPService}
 
 
-class _Library:
-    def __init__(self, name='User'):
-        self.name = name
-
-
-class _FakeObj:
-    """Minimal stub matching what _matches_dynamic_criteria reads."""
-
-    def __init__(self, type_, keywords=None, library_name='User'):
-        self.type = type_
-        self.keywords = set(keywords or [])
-        self.library = _Library(library_name)
-        self.parent_group = None  # not a group, depth check skipped
+def _FakeObj(type_, keywords=None, library_name='User'):
+    """A real, unsaved model object - membership asks its class."""
+    return _CLASSES[type_](
+        name=f'{type_}-object',
+        keywords=set(keywords or []),
+        library=Library(name=library_name),
+    )
 
 
 def _crit(type_, keyword):
@@ -161,7 +158,7 @@ class TestEdgeCases:
         assert _matches_dynamic_criteria(obj, criteria)
 
     def test_excluded_object_type(self):
-        # IPService is not in _DG_ELIGIBLE.
+        # A service is neither an address nor an object group.
         obj = _FakeObj('IPService', keywords={'prod03'})
         assert not _matches_dynamic_criteria(
             obj,
