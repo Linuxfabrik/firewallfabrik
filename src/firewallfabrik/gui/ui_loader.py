@@ -73,6 +73,7 @@ class FWFUiLoader(QUiLoader):
     def __init__(self, base_instance):
         super().__init__(base_instance)
         self._base_instance = base_instance
+        register_custom_widgets()
 
     def createWidget(self, class_name, parent=None, name=''):
         if parent is None and self._base_instance is not None:
@@ -84,8 +85,11 @@ class FWFUiLoader(QUiLoader):
         return super().createWidget(class_name, parent, name)
 
 
-# Late imports: dialog modules import FWFUiLoader from this module,
-# so we update the map after both modules are fully defined.
+# Late imports: dialog modules import FWFUiLoader from this module, so
+# the map is filled when the first loader is created, not when this module
+# is imported. Filling it at import time made every dialog module
+# unimportable on its own (base_object_dialog -> comment_tags ->
+# tags_dialog -> ui_loader -> base_object_dialog).
 def _register_actions_dialog():
     from firewallfabrik.gui.actions_dialog import ActionsPanel
 
@@ -232,21 +236,34 @@ def _register_ruleset_dialog():
     CUSTOM_WIDGET_MAP['RuleSetDialog'] = RuleSetDialog
 
 
-_register_actions_dialog()
-_register_cluster_group_dialog()
-_register_address_dialogs()
-_register_comment_editor_panel()
-_register_comment_tags()
-_register_device_dialogs()
-_register_drop_area()
-_register_group_dialog()
-_register_group_type_dialogs()
-_register_library_dialog()
-_register_metric_editor_panel()
-_register_nat_rule_options_panel()
-_register_routing_rule_options_panel()
-_register_rule_options_panel()
-_register_ruleset_dialog()
-_register_service_dialogs()
-_register_service_type_dialogs()
-_register_time_dialog()
+_custom_widgets_registered = False
+
+
+def register_custom_widgets():
+    """Replace the placeholders in ``CUSTOM_WIDGET_MAP`` with the real classes.
+
+    Runs once, on the first ``FWFUiLoader``; call it directly to look a
+    class up in the map without loading a .ui file.
+    """
+    global _custom_widgets_registered
+    if _custom_widgets_registered:
+        return
+    _custom_widgets_registered = True
+    _register_actions_dialog()
+    _register_address_dialogs()
+    _register_cluster_group_dialog()
+    _register_comment_editor_panel()
+    _register_comment_tags()
+    _register_device_dialogs()
+    _register_drop_area()
+    _register_group_dialog()
+    _register_group_type_dialogs()
+    _register_library_dialog()
+    _register_metric_editor_panel()
+    _register_nat_rule_options_panel()
+    _register_routing_rule_options_panel()
+    _register_rule_options_panel()
+    _register_ruleset_dialog()
+    _register_service_dialogs()
+    _register_service_type_dialogs()
+    _register_time_dialog()

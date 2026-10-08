@@ -44,6 +44,7 @@ def panel():
 
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     QApplication.instance() or QApplication([])
     return ui_loader.CUSTOM_WIDGET_MAP['FirewallDialog']()
 

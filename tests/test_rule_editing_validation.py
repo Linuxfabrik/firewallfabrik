@@ -31,7 +31,6 @@ pytest.importorskip('PySide6')
 
 from PySide6.QtWidgets import QApplication
 
-import firewallfabrik.gui.ui_loader  # the dialogs need it first
 from firewallfabrik.gui.cluster_protocol_dialogs import (
     ConntrackOptionsDialog,
     VRRPOptionsDialog,

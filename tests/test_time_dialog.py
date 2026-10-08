@@ -29,12 +29,8 @@ pytest.importorskip('PySide6', reason='the GUI extra is not installed')
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-# The loader registers the dialog modules at import time, so it has to be
-# imported first: reaching for the dialog module directly is a circular
-# import through `device_dialogs`.
 from PySide6.QtCore import QDate
 
-import firewallfabrik.gui.ui_loader  # noqa: F401
 from firewallfabrik.compiler._interval_helpers import (
     parse_interval_data,
     parse_interval_dates,

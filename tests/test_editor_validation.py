@@ -40,7 +40,6 @@ pytest.importorskip('PySide6')
 
 from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
 
-import firewallfabrik.gui.ui_loader  # the dialogs need it first
 from firewallfabrik.gui.address_dialogs import AddressRangeDialog, IPv4Dialog
 from firewallfabrik.gui.device_dialogs import FirewallDialog, InterfaceDialog
 from firewallfabrik.gui.editor_manager import EditorManager

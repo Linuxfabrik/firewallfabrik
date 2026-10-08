@@ -48,6 +48,7 @@ def editor():
 
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     QApplication.instance() or QApplication([])
     return ui_loader.CUSTOM_WIDGET_MAP['ClusterGroupDialog']
 
@@ -127,6 +128,7 @@ def test_a_cluster_has_a_panel_of_its_own():
     """It used to be edited with the firewall's, release combo and all."""
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     cluster_panel = ui_loader.CUSTOM_WIDGET_MAP['ClusterDialog']
     firewall_panel = ui_loader.CUSTOM_WIDGET_MAP['FirewallDialog']
 
@@ -142,6 +144,7 @@ def test_the_cluster_panel_offers_no_release(editor):
     """
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     panel = ui_loader.CUSTOM_WIDGET_MAP['ClusterDialog']()
 
     assert panel.version is None
@@ -153,6 +156,7 @@ def test_the_cluster_panel_offers_no_release(editor):
 def test_the_firewall_panel_still_offers_one(editor):
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     panel = ui_loader.CUSTOM_WIDGET_MAP['FirewallDialog']()
 
     assert panel.version is not None

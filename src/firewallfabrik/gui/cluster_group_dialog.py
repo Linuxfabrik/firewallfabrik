@@ -32,6 +32,7 @@ from firewallfabrik.core.objects import (
     group_membership,
 )
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+from firewallfabrik.gui.cluster_protocol_dialogs import PROTOCOL_DIALOGS
 
 logger = logging.getLogger(__name__)
 
@@ -106,11 +107,6 @@ class ClusterGroupDialog(BaseObjectDialog):
 
         # Edit Parameters -- one dialog per protocol.  "None" has no
         # parameters, which is what leaving the button disabled says.
-        # Imported here, not at the top: `ui_loader` registers this class
-        # while it is itself being imported, so a module-level import of
-        # anything that reaches the loader is a circular one.
-        from firewallfabrik.gui.cluster_protocol_dialogs import PROTOCOL_DIALOGS
-
         self.editParameters.setEnabled(group_type in PROTOCOL_DIALOGS)
         self.editParameters.setToolTip(
             'Address, port and mode of the protocol this group speaks. The '
@@ -294,8 +290,6 @@ class ClusterGroupDialog(BaseObjectDialog):
         is modal and the editor's own Apply only knows about the name and
         the protocol.
         """
-        from firewallfabrik.gui.cluster_protocol_dialogs import PROTOCOL_DIALOGS
-
         group_type = (self._obj.data or {}).get('type', '')
         dialog_cls = PROTOCOL_DIALOGS.get(group_type)
         if dialog_cls is None:

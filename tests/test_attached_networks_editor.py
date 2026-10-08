@@ -60,6 +60,7 @@ def panel():
     """The real editor panel, reached the way the loader registers it."""
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     return ui_loader.CUSTOM_WIDGET_MAP['AttachedNetworksDialog']()
 
 

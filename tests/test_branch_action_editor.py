@@ -110,10 +110,9 @@ def test_the_drop_area_reports_what_was_dropped(qt_app):
 
 def test_the_panel_wires_the_branch_area(qt_app):
     """The widget exists in the .ui file; the panel has to read and write it."""
-    # Through the loader, because importing the module directly while it is
-    # registering itself is a circular import.
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     panel = ui_loader.CUSTOM_WIDGET_MAP['ActionsDialog']()
     assert hasattr(panel, 'iptBranchDropArea')
     assert hasattr(panel, '_load_branch_target')
@@ -141,6 +140,7 @@ class _Model:
 def _panel_for(rule_set_type, row_data):
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     panel = ui_loader.CUSTOM_WIDGET_MAP['ActionsDialog']()
     panel._model = _Model(rule_set_type)
     panel._index = object()

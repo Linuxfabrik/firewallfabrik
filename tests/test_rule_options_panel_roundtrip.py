@@ -32,10 +32,6 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import sqlalchemy
 
-# The loader registers the dialog modules at import time, so it has to be
-# imported first: reaching for the dialog module directly is a circular
-# import through `device_dialogs`.
-import firewallfabrik.gui.ui_loader  # noqa: F401
 from firewallfabrik.core.objects import Policy, PolicyRule
 from firewallfabrik.gui.rule_options_dialog import RuleOptionsPanel
 from tests.conftest import FIXTURES_DIR, _get_db

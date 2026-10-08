@@ -70,6 +70,7 @@ class _Model:
 def _panel(qt_app, options):
     from firewallfabrik.gui import ui_loader
 
+    ui_loader.register_custom_widgets()
     panel = ui_loader.CUSTOM_WIDGET_MAP['ActionsDialog']()
     panel._model = _Model()
     panel._index = object()

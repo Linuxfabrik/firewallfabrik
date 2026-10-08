@@ -19,7 +19,6 @@ import pytest
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 pytest.importorskip('PySide6', reason='the GUI extra is not installed')
 
-import firewallfabrik.gui.ui_loader  # noqa: F401
 from firewallfabrik.gui.service_dialogs import (
     TCPServiceDialog,
     UDPServiceDialog,
