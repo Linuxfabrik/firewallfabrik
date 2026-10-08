@@ -498,14 +498,19 @@ class YamlWriter:
         if children:
             d['children'] = sorted(children, key=lambda c: c.get('name', ''))
 
-        # Members from group_membership (cross-references only)
+        # Members from group_membership (cross-references only), in the
+        # order the group holds them: Firewall Builder keeps the order of
+        # a group's children, and the group editor shows it.
         rows = session.execute(
-            sqlalchemy.select(objects.group_membership.c.member_id).where(
-                objects.group_membership.c.group_id == grp.id,
+            sqlalchemy.select(objects.group_membership.c.member_id)
+            .where(objects.group_membership.c.group_id == grp.id)
+            .order_by(
+                objects.group_membership.c.position,
+                objects.group_membership.c.member_id,
             ),
         ).fetchall()
         if rows:
-            d['members'] = sorted(self._ref_path(row[0]) for row in rows)
+            d['members'] = [self._ref_path(row[0]) for row in rows]
 
         return d
 

@@ -184,16 +184,21 @@ class YamlReader:
         return self._ref_index.get(ref_path)
 
     def _resolve_deferred(self):
+        # The members are listed in the order the group holds them.
+        next_position = {}
         for group_id, ref_path in self._deferred_memberships:
             target_id = self._resolve_ref_path(ref_path)
             if target_id is None:
                 logger.warning('Unresolved group member ref: %s', ref_path)
                 self.unresolved_refs.append(ref_path)
                 continue
+            position = next_position.get(group_id, 0)
+            next_position[group_id] = position + 1
             self._memberships.append(
                 {
                     'group_id': group_id,
                     'member_id': target_id,
+                    'position': position,
                 }
             )
 

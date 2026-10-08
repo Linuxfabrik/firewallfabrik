@@ -18,6 +18,10 @@ Compiler:
 * a routing rule with a second gateway or interface, or with a network as its gateway, is reported and left out instead of losing the rest or stopping the activation
 * a rule that still holds the "Dummy" placeholder is left out with a warning instead of matching any address, and an object called "Any" or "Dummy" is no longer dropped from rules
 
+Data file:
+
+* groups keep the order of their members through a save
+
 
 ## [v3.3.0] - 2026-10-07
 

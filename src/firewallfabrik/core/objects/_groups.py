@@ -152,6 +152,40 @@ class Group(Base):
         'polymorphic_identity': 'Group',
     }
 
+    def get_member_objects(self) -> list:
+        """Return the objects this group references, in member order.
+
+        Membership lives in ``group_membership``, and a member may sit in
+        any of the object tables.  The relationships ``addresses``,
+        ``services``, ``devices`` and the like say which objects are filed
+        *in* this group as a folder, which is something else.
+        """
+        session = sqlalchemy.orm.object_session(self)
+        if session is None:
+            return []
+        member_ids = (
+            session.execute(
+                sqlalchemy.select(group_membership.c.member_id)
+                .where(group_membership.c.group_id == self.id)
+                .order_by(group_membership.c.position),
+            )
+            .scalars()
+            .all()
+        )
+        if not member_ids:
+            return []
+        from ._addresses import Address
+        from ._devices import Host, Interface
+        from ._services import Interval, Service
+
+        found = {}
+        for cls in (Address, Group, Host, Interface, Interval, Service):
+            for obj in session.scalars(
+                sqlalchemy.select(cls).where(cls.id.in_(member_ids)),
+            ).unique():
+                found[obj.id] = obj
+        return [found[mid] for mid in member_ids if mid in found]
+
     __table_args__ = (
         sqlalchemy.Index('ix_groups_type', 'type'),
         sqlalchemy.Index('ix_groups_library_id', 'library_id'),
