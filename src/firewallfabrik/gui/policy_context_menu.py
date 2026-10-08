@@ -28,7 +28,6 @@ from firewallfabrik.gui.label_settings import (
     get_label_color,
     get_label_text,
 )
-from firewallfabrik.gui.policy_model import PolicyTreeModel
 
 # ------------------------------------------------------------------
 # Action menu constants
@@ -111,7 +110,7 @@ def build_row_menu(menu, view, model, index):
         f'Cut {rule_label}\tCtrl+X',
         lambda sel=selected: model.cut_rules(sel),
     )
-    clipboard_count = len(PolicyTreeModel._clipboard)
+    clipboard_count = len(model.pasteable_rule_ids())
     paste_label = 'Rules' if clipboard_count > 1 else 'Rule'
     paste_above = menu.addAction(
         f'Paste {paste_label} Above',

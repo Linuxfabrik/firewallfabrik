@@ -23,7 +23,11 @@ import sqlalchemy
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
-from firewallfabrik.core._validation import load_object, rule_element_refusal
+from firewallfabrik.core._validation import (
+    is_read_only,
+    load_object,
+    rule_element_refusal,
+)
 from firewallfabrik.core.objects import (
     Address,
     Direction,
@@ -302,6 +306,8 @@ class PolicyTreeModel(QAbstractItemModel):
     """Database-backed tree model for policy/NAT/routing rules with group support."""
 
     firewall_modified = Signal(object)
+    # Why a change was not made: the rule set belongs to a locked object.
+    modification_refused = Signal(str)
 
     _clipboard: ClassVar[list[uuid.UUID]] = []
 
@@ -584,11 +590,24 @@ class PolicyTreeModel(QAbstractItemModel):
         the Firewall's bold state.
         """
         fw_id = None
+        refusal = ''
         with self._db_manager.session(description) as session:
             yield session
-            fw = self._stamp_firewall(session)
-            if fw is not None:
-                fw_id = fw.id  # Capture before session closes.
+            # RuleSetView::canChange refuses every change to the rules of
+            # a locked firewall or library (fwbuilder5 RuleSetView.cpp:1604,
+            # FWObject::isReadOnly walking up the tree).
+            rule_set = session.get(RuleSet, self._rule_set_id)
+            if rule_set is not None and is_read_only(rule_set):
+                session.rollback()
+                owner = rule_set.device.name if rule_set.device else rule_set.name
+                refusal = f'Can not modify read-only object {owner}'
+            else:
+                fw = self._stamp_firewall(session)
+                if fw is not None:
+                    fw_id = fw.id  # Capture before session closes.
+        if refusal:
+            self.modification_refused.emit(refusal)
+            return
         # Emit after the session has committed so listeners read
         # up-to-date data from the database.
         if fw_id is not None:
@@ -1259,6 +1278,26 @@ class PolicyTreeModel(QAbstractItemModel):
         self.copy_rules(indices)
         self.delete_rules(indices)
 
+    def pasteable_rule_ids(self):
+        """Return the clipboard rules that may be pasted into this rule set.
+
+        ``RuleSetView::pasteRuleAbove`` skips a rule ``checkRuleType``
+        refuses (fwbuilder5 RuleSetView.cpp:1524, RuleSetModel.cpp:1584):
+        a policy rule pasted into a NAT rule set became a NAT rule with
+        no translation and its elements in slots NAT never reads - an
+        "any to any, translate nothing" rule that switched off every NAT
+        rule below it.  A rule of another file is not in this database
+        and is skipped too.
+        """
+        if not PolicyTreeModel._clipboard:
+            return []
+        with self._db_manager.session() as session:
+            return [
+                rule_id
+                for rule_id in PolicyTreeModel._clipboard
+                if isinstance(session.get(Rule, rule_id), self._rule_cls)
+            ]
+
     def paste_rules(self, index, *, before=False):
         """Paste rules from clipboard at *index*.
 
@@ -1271,8 +1310,16 @@ class PolicyTreeModel(QAbstractItemModel):
         clears ``session.new``, which would prevent the automatic dirty
         detection in the ``session()`` context manager.
         """
-        if not PolicyTreeModel._clipboard:
+        if not self.pasteable_rule_ids():
             return []
+        with self._db_manager.session() as session:
+            rule_set = session.get(RuleSet, self._rule_set_id)
+            if rule_set is not None and is_read_only(rule_set):
+                owner = rule_set.device.name if rule_set.device else rule_set.name
+                self.modification_refused.emit(
+                    f'Can not modify read-only object {owner}'
+                )
+                return []
 
         node = self._node_from_index(index)
         if node.node_type == _NodeType.Group:
@@ -1288,8 +1335,7 @@ class PolicyTreeModel(QAbstractItemModel):
         new_ids = []
         session = self._db_manager.create_session()
         try:
-            for i, src_id in enumerate(PolicyTreeModel._clipboard):
-                # Use base Rule for lookup — clipboard may hold any type.
+            for i, src_id in enumerate(self.pasteable_rule_ids()):
                 src_rule = session.get(Rule, src_id)
                 if src_rule is None:
                     continue
@@ -1500,6 +1546,20 @@ class PolicyTreeModel(QAbstractItemModel):
         """
         row_data = self.get_row_data(index)
         if row_data is None:
+            return
+        # RuleSetView::changeAction touches nothing when the action stays
+        # the same (RuleSetView.cpp:1918): picking "Accept" again must not
+        # take away a stateless flag the administrator set on purpose.
+        with self._db_manager.session() as session:
+            current = session.get(self._rule_cls, row_data.rule_id)
+            old = None
+            if current is not None:
+                old = (
+                    current.nat_action
+                    if self._rule_set_type == 'NAT'
+                    else current.policy_action
+                )
+        if old == action.value:
             return
         with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} action'),

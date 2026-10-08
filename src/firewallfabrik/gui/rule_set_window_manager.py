@@ -24,7 +24,7 @@ from pathlib import Path
 import sqlalchemy
 from PySide6.QtCore import QModelIndex, QObject, QSettings, Qt, Signal, Slot
 from PySide6.QtGui import QActionGroup, QIcon, QKeySequence
-from PySide6.QtWidgets import QMdiSubWindow
+from PySide6.QtWidgets import QMdiSubWindow, QMessageBox
 
 from firewallfabrik.core.objects import Address, Interface, RuleSet
 from firewallfabrik.gui.policy_model import PolicyTreeModel
@@ -108,6 +108,11 @@ class RuleSetWindowManager(QObject):
         )
         panel.set_title(title)
         panel.policy_view.setModel(model)
+        model.modification_refused.connect(
+            lambda msg, view=panel.policy_view: QMessageBox.critical(
+                view, 'FirewallFabrik', msg
+            )
+        )
 
         sub = QMdiSubWindow()
         sub.setWidget(panel)
@@ -168,6 +173,11 @@ class RuleSetWindowManager(QObject):
         )
         panel.set_title(title)
         panel.policy_view.setModel(model)
+        model.modification_refused.connect(
+            lambda msg, view=panel.policy_view: QMessageBox.critical(
+                view, 'FirewallFabrik', msg
+            )
+        )
 
         sub = QMdiSubWindow()
         sub.setWidget(panel)

@@ -12,10 +12,11 @@
 
 """Action parameters editor panel for iptables policy rules."""
 
+import re
 import uuid
 from pathlib import Path
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.core.objects import NATAction, PolicyAction
@@ -176,6 +177,9 @@ class ActionsPanel(QWidget):
                 self.ipt_branch_in_mangle.setChecked(
                     _to_bool(opts.get('ipt_branch_in_mangle')),
                 )
+                # A NAT branch has no mangle table to branch in;
+                # Firewall Builder's NATBranchPage has no such option.
+                self.ipt_branch_in_mangle.setVisible(not self._is_nat_rule())
             if hasattr(self, 'iptBranchDropArea'):
                 self._load_branch_target(opts)
         finally:
@@ -191,9 +195,23 @@ class ActionsPanel(QWidget):
         if hasattr(self, 'rejectvalue'):
             opts['action_on_reject'] = self.rejectvalue.currentText()
 
-        # Accounting.
+        # Accounting.  The name becomes a chain name, so only letters,
+        # digits and "_" (ActionsDialog::applyChanges, ActionsDialog.cpp:135).
         if hasattr(self, 'accountingvalue_str'):
-            opts['rule_name_accounting'] = self.accountingvalue_str.text()
+            name = self.accountingvalue_str.text()
+            if re.search(r'[^a-zA-Z0-9_]', name):
+                QMessageBox.information(
+                    self,
+                    'FirewallFabrik',
+                    'Rule name for accounting is converted to the iptables\n'
+                    'chain name and therefore may not contain white space\n'
+                    'and special characters.',
+                )
+                self.accountingvalue_str.setText(
+                    opts.get('rule_name_accounting', '') or ''
+                )
+                return
+            opts['rule_name_accounting'] = name
 
         # Custom.  Both statements are written, and the platform-less
         # field a Firewall Builder file carries is dropped: it has been
@@ -213,7 +231,7 @@ class ActionsPanel(QWidget):
         # object and almost every one of them owns a "Policy".  The name is
         # written beside it because that is the chain the rule jumps to and
         # what the rule summary shows.
-        if hasattr(self, 'ipt_branch_in_mangle'):
+        if hasattr(self, 'ipt_branch_in_mangle') and not self._is_nat_rule():
             opts['ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
         if hasattr(self, 'iptBranchDropArea'):
             target_id = self.iptBranchDropArea.get_object_id()

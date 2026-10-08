@@ -31,6 +31,8 @@ Data file:
 Editor:
 
 * a duplicate name is refused without breaking the editor, and a refused edit saves nothing
+* a policy rule can no longer be pasted into a NAT rule set, where it switched off the NAT rules below it
+* a traffic class or route set in the rule options takes effect, and the rules of a locked firewall cannot be changed
 * blank names, characters a rule set or interface name cannot carry, and "/" in a firewall name are refused
 * deleting a cluster or an interface also deletes its cluster groups and sub-interfaces
 * Find & Replace also works in groups and refuses a replacement the field cannot hold

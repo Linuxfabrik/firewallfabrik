@@ -15,7 +15,7 @@
 import uuid
 from pathlib import Path
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 
 from firewallfabrik.core._options import option_is_true
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -111,6 +111,13 @@ class RuleOptionsPanel(QWidget):
         # Route tab interaction: "Continue" disables iif and tee.
         if hasattr(self, 'ipt_continue'):
             self.ipt_continue.toggled.connect(self._on_continue_toggled)
+
+        # The tag a rule sets is a Tag Service and nothing else
+        # (RuleOptionsDialog.cpp:79); anything else compiled into "tagging
+        # rule has no Tag Service".
+        drop = getattr(self, 'iptTagDropArea', None)
+        if drop is not None:
+            drop.set_accepted_types({'TagService'})
 
     def load_rule(self, model, index):
         """Populate the panel from the rule at *index*."""
@@ -252,6 +259,30 @@ class RuleOptionsPanel(QWidget):
             else:
                 opts.pop('tagobject_id', None)
                 opts.pop('tagging', None)
+
+        # The flags the compilers act on follow from the values, the way
+        # RuleOptionsDialog::applyChanges derives them on every apply
+        # (RuleOptionsDialog.cpp:430): a traffic class typed in without
+        # the flag compiled into a rule with no target, and a route
+        # without it was dropped without a word.
+        opts['classification'] = bool(opts.get('classify_str'))
+        opts['routing'] = bool(
+            opts.get('ipt_iif') or opts.get('ipt_oif') or opts.get('ipt_gw')
+        )
+
+        # "Note that --iif, --continue, and --tee, are mutually exclusive"
+        # (ActionsDialog::validate, ActionsDialog.cpp:105).
+        if sum(bool(opts.get(k)) for k in ('ipt_iif', 'ipt_continue', 'ipt_tee')) > 1:
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                "'Change inbound interface', 'Continue packet inspection' and "
+                "'Make a copy' options are mutually exclusive",
+            )
+            self._disconnect_signals()
+            self._load_options()
+            self._connect_signals()
+            return
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}

@@ -78,7 +78,8 @@ class CommentEditorPanel(QWidget):
         editor = getattr(self, 'editor', None)
         if editor is None:
             return
-        new_comment = editor.toPlainText().strip()
+        # Kept as typed, white space included (CommentEditorPanel.cpp:76).
+        new_comment = editor.toPlainText()
         self._model.set_comment(self._index, new_comment)
         # set_comment() calls reload(), invalidating all QModelIndex objects.
         if self._rule_id is not None:
