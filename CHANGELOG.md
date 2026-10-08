@@ -12,29 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Compiler:
 
-* a dynamic group also selects the interfaces, interface addresses and failover and state sync groups carrying its keyword
-* a firewall with two routing rule sets holding rules is refused instead of installing the routes of one of them
-* a NAT rule with a Tag Service as its translated service is reported and left out instead of translating without it
-* a routing rule with a second gateway or interface, or with a network as its gateway, is reported and left out instead of losing the rest or stopping the activation
-* a rule that still holds the "Dummy" placeholder is left out with a warning instead of matching any address, and an object called "Any" or "Dummy" is no longer dropped from rules
+* a dynamic group also selects interfaces and cluster groups
+* a NAT rule translating to a Tag Service is reported instead of compiled without it
+* a routing rule with two gateways or two interfaces, or a network as gateway, is reported instead of losing part of the route
+* a rule holding the "Dummy" placeholder is left out with a warning, and an object named "Any" or "Dummy" stays in its rules
+* two routing rule sets with rules on one firewall are reported instead of one of them being ignored
 
 Data file:
 
-* groups keep the order of their members through a save
+* groups keep the order of their members
 
 Editor:
 
-* deleting a cluster or an interface also deletes its failover and state sync groups and its sub-interfaces
-* dragging in the tree only sorts objects into the subfolders of their own folder
-* Find & Replace also replaces in groups, accepts dynamic and cluster groups, finds hosts and interfaces by address, and leaves a reference alone where the field does not take the replacement
-* groups show their members in the tree, the tooltip and the group editor, interfaces included
-* interfaces, MAC addresses, Attached Networks and dynamic groups can be put into an object group, and a group of interfaces into the interface field of a rule ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
-* pasting an interface brings its addresses and sub-interfaces, pasting into another file brings the objects the pasted object names, and rule sets and cluster groups can be copied
-* pasting onto a group adds the object to the group instead of copying it into the group's folder, and pasting refuses what the target cannot hold
-* rule fields only take objects that fit - one gateway and one interface in a route, no Tag Service as translated service, only interfaces of the firewall itself - and the drag cursor shows a refused drop
-* the "Group" action leaves out objects the new group cannot hold
-* the context menu offers its "New" entries by folder, so a user group named like a standard folder is a group; it offers no "New Routing Rule Set" and no new address on a dynamic, unnumbered or bridge-port interface, and the last rule set of a kind cannot be deleted
-* "Where used" also lists branch targets, tagging services and cluster memberships, and changing one of them marks the firewalls using it for recompile
+* deleting a cluster or an interface also deletes its cluster groups and sub-interfaces
+* Find & Replace also works in groups and refuses a replacement the field cannot hold
+* groups show their members in the tree and the group editor, interfaces included
+* interfaces can be group members, and a group of interfaces can be a rule's interface ([#189](https://github.com/Linuxfabrik/firewallfabrik/issues/189))
+* pasting an interface keeps its addresses, and pasting into another file brings the objects it uses along
+* pasting onto a group adds the object to the group instead of copying it there
+* rule fields accept only objects they can hold, and the cursor shows it while dragging
+* "Where used" also finds branch targets, tag services and cluster members
 
 
 ## [v3.3.0] - 2026-10-07
