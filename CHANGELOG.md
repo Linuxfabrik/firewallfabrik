@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+Editor:
+
+* Tools > Lookup Versions of All Firewalls asks every firewall over SSH which iptables and nftables it runs and sets the matching version on all of them in one step
 
 
 ## [v3.4.0] - 2026-10-08

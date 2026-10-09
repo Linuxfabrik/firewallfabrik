@@ -104,15 +104,12 @@ class FirewallDialog(BaseObjectDialog):
         from firewallfabrik.platforms import _versions
 
         platform = _PLATFORM_INTERNAL.get(self.platform.currentText(), '')
-        options = self._obj.options or {}
         settings = QSettings()
-        ask = {
-            'address': version_lookup.resolve_mgmt_address(self._obj),
-            'user': options.get('admUser', '') or 'root',
-            'extra_args': options.get('sshArgs', ''),
-            'ssh_path': settings.value('SSH/SSHPath', '', type=str),
-            'timeout': settings.value('SSH/SSHTimeout', 10, type=int) or 10,
-        }
+        ask = version_lookup.login(
+            self._obj,
+            settings.value('SSH/SSHPath', '', type=str),
+            settings.value('SSH/SSHTimeout', 10, type=int),
+        )
         title = 'Lookup Version'
         result = None
         # Empty until ssh asks for one; not a password of any kind.

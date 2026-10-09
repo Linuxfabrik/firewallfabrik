@@ -1182,6 +1182,7 @@
      <string>Tools</string>
     </property>
     <addaction name="ImportAddressesFromFileAction" />
+    <addaction name="LookupVersionsAction" />
     <addaction name="UpdateStandardLibraryAction" />
    </widget>
    <widget class="QMenu" name="helpMenu">
@@ -1822,6 +1823,19 @@ another project</string>
    </property>
    <property name="toolTip">
     <string>Import Addresses From File</string>
+   </property>
+  </action>
+  <action name="LookupVersionsAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Lookup Versions of All Firewalls...</string>
+   </property>
+   <property name="toolTip">
+    <string>Log in to every firewall the way the installer does, read which iptables,
+nftables and distribution it runs, and offer the matching version for each.
+Does the same as the "Lookup Version ..." button of a single firewall.</string>
    </property>
   </action>
   <action name="UpdateStandardLibraryAction">
@@ -2672,6 +2686,22 @@ FirewallFabrik. User libraries and firewall rules are preserved.</string>
    </hints>
   </connection>
   <connection>
+   <sender>LookupVersionsAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toolsLookupVersions()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>571</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>UpdateStandardLibraryAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2977,6 +3007,7 @@ FirewallFabrik. User libraries and firewall rules are preserved.</string>
   <slot>showTutorial()</slot>
   <slot>inspect()</slot>
   <slot>toolsImportAddressesFromFile()</slot>
+  <slot>toolsLookupVersions()</slot>
   <slot>toolsUpdateStandardLibrary()</slot>
   <slot>back()</slot>
   <slot>fileReload()</slot>

@@ -997,6 +997,7 @@ class FWWindow(QMainWindow):
         self.inspectAction.setEnabled(False)
         self.installAction.setEnabled(False)
         self.libImportAction.setEnabled(False)
+        self.LookupVersionsAction.setEnabled(False)
         self.libExportAction.setEnabled(False)
         self.policyImportAction.setEnabled(False)
         self.ruleColorMenu.setEnabled(False)
@@ -1079,6 +1080,7 @@ class FWWindow(QMainWindow):
         self.inspectAction.setEnabled(True)
         self.installAction.setEnabled(True)
         self.libImportAction.setEnabled(True)
+        self.LookupVersionsAction.setEnabled(True)
         self.libExportAction.setEnabled(True)
         self.policyImportAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
@@ -1778,6 +1780,20 @@ class FWWindow(QMainWindow):
             parent=self,
         )
         dlg.exec()
+
+    @Slot()
+    def toolsLookupVersions(self):
+        """Look up and set the version of every firewall (``lookup_versions``)."""
+        from firewallfabrik.gui.lookup_versions import lookup_all_versions
+
+        # Pending edits in the panel go in first, and the panel is reopened
+        # afterwards so it shows the version that was set.
+        self._flush_editor_changes()
+        obj_id = self._editor_mgr.current_obj_id
+        obj_type = self._editor_mgr.current_obj_type
+        self._close_editor()
+        lookup_all_versions(self)
+        self._refresh_after_history_change(obj_id, obj_type)
 
     @Slot()
     def toolsUpdateStandardLibrary(self):

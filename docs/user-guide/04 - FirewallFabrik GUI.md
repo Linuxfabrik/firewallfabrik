@@ -147,6 +147,18 @@ The Rules menu lets you compile and install firewall policies.
 
 Rules Menu
 
+### Tools Menu
+
+The Tools menu holds operations that work on the whole data file.
+
+| Tools Menu Entry | Explanation |
+|----|----|
+| Import Addresses From File | Creates address and network objects from a text file. |
+| Lookup Versions of All Firewalls... | Asks every firewall over SSH which iptables, nftables and distribution it runs, and sets the matching version on each in one step. See [Looking Up the Version of All Firewalls](05%20-%20Working%20with%20Objects.md#looking-up-the-version-of-all-firewalls). |
+| Update Standard Library | Replaces the Standard library with the one shipped with FirewallFabrik. User libraries and firewall rules are kept. |
+
+Tools Menu
+
 ### Help Menu
 
 The Help menu provides access to help resources and information about the program.

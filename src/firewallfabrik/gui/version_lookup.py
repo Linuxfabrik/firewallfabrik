@@ -106,6 +106,22 @@ def resolve_mgmt_address(fw):
     return ''
 
 
+def login(fw, ssh_path: str = '', timeout: int = 10) -> dict:
+    """The keyword arguments of :func:`run` for firewall *fw*.
+
+    The installer settings of the firewall name the user and the ssh
+    arguments; *ssh_path* and *timeout* are the SSH preferences.
+    """
+    options = fw.options or {}
+    return {
+        'address': resolve_mgmt_address(fw),
+        'user': options.get('admUser', '') or 'root',
+        'extra_args': options.get('sshArgs', ''),
+        'ssh_path': ssh_path,
+        'timeout': timeout or 10,
+    }
+
+
 def parse(output: str) -> Lookup:
     """Read the answer of the remote command."""
     sections: dict[str, list[str]] = {}

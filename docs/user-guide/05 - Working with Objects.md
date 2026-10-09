@@ -124,11 +124,32 @@ These controls let you specify the basic settings of the firewall, such as the n
 
 - Name: Specify or change the name of the firewall object.
 - Platform: Specify or change the firewall software.
-- Version: Specify or change the version number of the firewall software. In most cases, you can leave this set to any. In general, setting the version to "any" means the compiler only supports options available in all supported versions of the software. If you need a feature that is supported only by a particular version, then specify that version.
+- Version: The release of iptables or nftables the firewall runs. The compiler only uses features that this release supports, so set it to what the firewall actually runs. Each entry names the distributions it fits. A firewall without a version is compiled for the newest entry.
+- Lookup Version ...: Logs in to the firewall the way the installer does (management address, user and SSH arguments from its installer settings), reads which iptables, nftables and distribution it runs, and offers the matching version. The commands it runs read and change nothing. A password is asked for only if the SSH key or agent is not enough.
 - Host OS: Specify or change the host operating system of the firewall device.
 - Firewall Settings: Opens the Advanced Settings dialog for the platform or firewall software. Click Help in the dialog for assistance with dialog options. See Section 5.2.2.4.3 for a screen shot.
 - Host OS Settings: Opens the Advanced Settings dialog for the indicated Host OS. Click Help in the dialog for assistance with dialog options. See Section 5.2.2.4.2 for a screen shot.
 - Inactive firewall: Check this box to make the firewall object inactive. The firewall name changes from bold to a regular font to indicate that it is inactive, and the firewall is not available for compiling or installation. Essentially, this is a way to "comment out" the firewall object without deleting it.
+
+##### Looking Up the Version of All Firewalls
+
+Tools > Lookup Versions of All Firewalls... does what the Lookup Version ... button does, for every firewall of the data file at once:
+
+1. All firewalls that log in with an SSH key or the SSH agent are asked in parallel. A progress dialog shows how many have answered; Cancel stops waiting for the rest.
+2. Each firewall that needs a password gets a password prompt of its own. Leaving the prompt empty or cancelling it skips that firewall. A password typed for one firewall is never sent to another.
+3. A dialog lists every firewall with what it runs, its current version and the version that fits. Firewalls with a different version are checked. Uncheck the ones that should keep their version, then click Apply.
+
+All versions are set in one step, which Edit > Undo takes back. Every changed firewall counts as modified, so the Compile dialog selects it again.
+
+The dialog names the reason for every firewall that is not changed:
+
+- `fits already`: the version already matches.
+- `locked, not asked`: the firewall is locked. Unlock it to look it up.
+- `not reachable: ...`: the SSH login failed, the message says why. A firewall without a management address is reported here as well.
+- `not asked, no password given`: the password prompt was left empty or cancelled.
+- `nftables is not installed, so no entry fits` (or `iptables`): the firewall does not run the packet filter it is configured for.
+
+Clusters have no version of their own and are not listed.
 
 ##### Host OS Settings Dialog
 
