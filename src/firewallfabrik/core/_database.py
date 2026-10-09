@@ -17,9 +17,11 @@ import logging
 import pathlib
 import re
 import time
+import warnings
 
 import sqlalchemy
 import sqlalchemy.event
+import sqlalchemy.exc
 import sqlalchemy.orm
 
 from . import objects
@@ -256,8 +258,8 @@ class DatabaseManager:
         if index == self._current_index:
             logger.info('Already at history index %d', index)
             return False
+        self._restore_db(self._history[index].state)
         self._current_index = index
-        self._restore_db(self._history[self._current_index].state)
         logger.debug('Jumped to history index %d', self._current_index)
         self._notify_history_changed()
         return True
@@ -374,15 +376,32 @@ class DatabaseManager:
         return backup.getvalue()
 
     def _restore_db(self, state):
-        self._reset_db(False)
+        # The foreign keys go off before the tables are dropped, not only
+        # for the restore: devices, groups and interfaces reference each
+        # other (a cluster group points to its interface or cluster), so
+        # no order drops them without SQLite refusing a DROP TABLE that
+        # still has rows pointing at it.  The in-memory database is one
+        # connection, the one drop_all uses as well.
         connection = self.engine.raw_connection()
         connection.execute('PRAGMA foreign_keys = OFF')
-        connection.executescript(state.decode('utf-8'))
-        connection.execute('PRAGMA foreign_keys = ON')
+        try:
+            self._reset_db(False)
+            connection.executescript(state.decode('utf-8'))
+        finally:
+            connection.execute('PRAGMA foreign_keys = ON')
 
     def _reset_db(self, recreate_schema):
         logger.debug('Resetting database')
-        objects.Base.metadata.drop_all(self.engine)
+        # The cycle between devices, groups and interfaces leaves the drop
+        # order unsorted; with the foreign keys off (see _restore_db) that
+        # is harmless, and an empty schema has nothing to refuse anyway.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore',
+                message="Can't sort tables for DROP",
+                category=sqlalchemy.exc.SAWarning,
+            )
+            objects.Base.metadata.drop_all(self.engine)
         if recreate_schema:
             logger.debug('Recreating database schema')
             objects.Base.metadata.create_all(self.engine)

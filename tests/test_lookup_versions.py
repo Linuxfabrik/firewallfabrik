@@ -159,11 +159,9 @@ def test_cancel_changes_nothing(qt_app, db):
     assert set(_versions(db).values()) == {''}
 
 
-def test_all_entries_are_one_step_on_the_undo_stack(qt_app, db):
-    before = len(db.get_history())
-
+def test_one_undo_takes_all_entries_back(qt_app, db):
     _lookup(db, 'linuxfabrik', accept=True)
 
-    history = db.get_history()
-    assert len(history) == before + 1
-    assert history[-1].description == 'Lookup versions of all firewalls'
+    assert db.get_history()[-1].description == 'Lookup versions of all firewalls'
+    assert db.undo()
+    assert set(_versions(db).values()) == {''}

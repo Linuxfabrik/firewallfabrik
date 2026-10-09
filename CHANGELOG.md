@@ -14,6 +14,12 @@ Editor:
 
 * Tools > Lookup Versions of All Firewalls asks every firewall over SSH which iptables and nftables it runs and sets the matching version on all of them in one step
 
+### Fixed
+
+Editor:
+
+* Undo and Redo work again; since v3.0.0 they failed, and the data file could no longer be saved afterwards
+
 
 ## [v3.4.0] - 2026-10-08
 
