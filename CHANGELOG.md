@@ -19,6 +19,7 @@ Editor:
 Editor:
 
 * a double click on the failover group of a cluster opens its editor again, with the member list and "Manage Members" ([#192](https://github.com/Linuxfabrik/firewallfabrik/issues/192))
+* the member list of a cluster group and the object list of a dynamic group show their icons again
 * Undo and Redo work again; since v3.0.0 they failed, and the data file could no longer be saved afterwards
 
 

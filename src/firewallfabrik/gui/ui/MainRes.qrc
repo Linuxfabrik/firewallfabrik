@@ -198,6 +198,8 @@
     <file alias="Icons/Interface/icon-big">Icons/interface_64.png</file>
     <file alias="Icons/Interval/icon-big">Icons/clock_64.png</file>
     <file alias="Icons/IntervalGroup/icon-big">Icons/clock-group_64.png</file>
+    <file alias="Icons/Library/icon-big">Icons/library_64.png</file>
+    <file alias="Icons/NAT/icon-big">Icons/nat_64.png</file>
     <file alias="Icons/Network/icon-big">Icons/network_64.png</file>
     <file alias="Icons/NetworkIPv6/icon-big">Icons/network6_64.png</file>
     <file alias="Icons/ObjectGroup/icon-big">Icons/object-group_64.png</file>
@@ -207,12 +209,45 @@
     <file alias="Icons/Pipe/icon-big">Icons/pipe_64.png</file>
     <file alias="Icons/Policy/icon-big">Icons/ruleset_64.png</file>
     <file alias="Icons/Reject/icon-big">Icons/reject_64.png</file>
+    <file alias="Icons/Routing/icon-big">Icons/routing_64.png</file>
     <file alias="Icons/ServiceGroup/icon-big">Icons/service-group_64.png</file>
     <file alias="Icons/StateSyncClusterGroup/icon-big">Icons/state-sync-cluster-group_64.png</file>
     <file alias="Icons/TCPService/icon-big">Icons/service-tcp_64.png</file>
     <file alias="Icons/TagService/icon-big">Icons/service-tag_64.png</file>
     <file alias="Icons/UDPService/icon-big">Icons/service-udp_64.png</file>
     <file alias="Icons/UserService/icon-big">Icons/user_64.png</file>
+
+    <!-- Reference icons (:/Icons/Type/icon-ref) -->
+    <file alias="Icons/AddressRange/icon-ref">Icons/rangeaddress-ref_25.png</file>
+    <file alias="Icons/AddressTable/icon-ref">Icons/addresstable-ref_25.png</file>
+    <file alias="Icons/AttachedNetworks/icon-ref">Icons/network-ref_25.png</file>
+    <file alias="Icons/Cluster/icon-ref">Icons/cluster-ref_25.png</file>
+    <file alias="Icons/ClusterGroup/icon-ref">Icons/user-ref_25.png</file>
+    <file alias="Icons/CustomService/icon-ref">Icons/service-custom-ref_25.png</file>
+    <file alias="Icons/DNSName/icon-ref">Icons/domainname-ref_25.png</file>
+    <file alias="Icons/DynamicGroup/icon-ref">Icons/dynamic-group-ref_25.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon-ref">Icons/failover-cluster-group-ref_25.png</file>
+    <file alias="Icons/Firewall/icon-ref">Icons/firewall-ref_25.png</file>
+    <file alias="Icons/Host/icon-ref">Icons/host-ref_25.png</file>
+    <file alias="Icons/ICMP6Service/icon-ref">Icons/service-icmp6-ref_25.png</file>
+    <file alias="Icons/ICMPService/icon-ref">Icons/service-icmp-ref_25.png</file>
+    <file alias="Icons/IPService/icon-ref">Icons/service-ip-ref_25.png</file>
+    <file alias="Icons/IPv4/icon-ref">Icons/address-ref_25.png</file>
+    <file alias="Icons/IPv6/icon-ref">Icons/address6-ref_25.png</file>
+    <file alias="Icons/Interface/icon-ref">Icons/interface-ref_25.png</file>
+    <file alias="Icons/Interval/icon-ref">Icons/clock-ref_25.png</file>
+    <file alias="Icons/IntervalGroup/icon-ref">Icons/clock-group-ref_25.png</file>
+    <file alias="Icons/Library/icon-ref">Icons/library-ref_25.png</file>
+    <file alias="Icons/Network/icon-ref">Icons/network-ref_25.png</file>
+    <file alias="Icons/NetworkIPv6/icon-ref">Icons/network6-ref_25.png</file>
+    <file alias="Icons/ObjectGroup/icon-ref">Icons/object-group-ref_25.png</file>
+    <file alias="Icons/ServiceGroup/icon-ref">Icons/service-group-ref_25.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon-ref">Icons/state-sync-cluster-group-ref_25.png</file>
+    <file alias="Icons/TCPService/icon-ref">Icons/service-tcp-ref_25.png</file>
+    <file alias="Icons/TagService/icon-ref">Icons/service-tag-ref_25.png</file>
+    <file alias="Icons/UDPService/icon-ref">Icons/service-udp-ref_25.png</file>
+    <file alias="Icons/UserService/icon-ref">Icons/user-ref_25.png</file>
+    <file alias="Icons/PhysAddress/icon-ref">Icons/physaddress-ref_25.png</file>
 
     <!-- Window icon (multiple sizes for taskbar / window manager) -->
     <file alias="Icons/FirewallFabrik/scalable">Icons/firewallfabrik.svg</file>
