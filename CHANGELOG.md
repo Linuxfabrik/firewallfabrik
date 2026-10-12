@@ -18,6 +18,7 @@ Editor:
 
 Editor:
 
+* a double click on the failover group of a cluster opens its editor again, with the member list and "Manage Members" ([#192](https://github.com/Linuxfabrik/firewallfabrik/issues/192))
 * Undo and Redo work again; since v3.0.0 they failed, and the data file could no longer be saved afterwards
 
 
