@@ -1760,6 +1760,16 @@ how a report stops being read.
   value; a check added late has to be checked against every *other* reader
   of the same field, because a Verify processor only guards what runs after
   it.
+- `WarnAnyTCPUDPService` (`compiler/processors/_service.py`) has no C++
+  counterpart.  A TCP or UDP service whose ports are all 0 matches every port
+  of its protocol, which is how All TCP and All UDP are written, and a new
+  service starts out that way, so a forgotten port makes an Accept rule accept
+  a whole protocol ([#194](https://github.com/Linuxfabrik/firewallfabrik/issues/194)).
+  The processor warns once per rule and service, in the filter pass of both
+  policy pipelines, right after the groups are expanded and before any rule is
+  split.  The two predefined services are told apart by the library they are
+  in (`is_standard_library_object`), not by their name; a Deny or Reject rule,
+  a negated element and a service with flags or a port range are not reported.
 - `SpecialCasesWithCustomServices` asks whether a Custom Service does its
   own connection-state matching case-insensitively, where the C++ uses a
   case-sensitive `find("ESTABLISHED")`.  Both tools read the state names
@@ -2077,6 +2087,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyScriptLiterals` |
 | — (FirewallFabrik only) | `compiler/processors/_generic.py:VerifyTimeIntervals` |
 | — (FirewallFabrik only) | `compiler/processors/_service.py:SplitHelperAssignment` |
+| — (FirewallFabrik only) | `compiler/processors/_service.py:WarnAnyTCPUDPService` |
 | `specialCasesWithCustomServices` | `platforms/iptables/_policy_compiler.py:SpecialCasesWithCustomServices` |
 | `separatePortRanges` | `platforms/iptables/_policy_compiler.py:SeparatePortRanges` |
 | `separateUserServices` | `compiler/processors/_service.py:SeparateUserServices` |
@@ -2407,7 +2418,7 @@ SingleObjectNegationItf → ItfNegation → DecideOnChainForClassify → Interfa
 ResolveMultiAddress →
 RecursiveGroupsInRE(src/dst/srv) → EmptyGroupsInRE(src/dst/srv/itf) →
 ExpandGroups → DropRuleWithEmptyRE →
-EliminateDuplicatesInSRC/DST/SRV →
+EliminateDuplicatesInSRC/DST/SRV → WarnAnyTCPUDPService →
 SplitHelperAssignment →
 CheckForTCPEstablished →
 SplitRuleIfSrvAnyActionReject → FillActionOnReject → SplitServicesIfRejectWithTCPReset →

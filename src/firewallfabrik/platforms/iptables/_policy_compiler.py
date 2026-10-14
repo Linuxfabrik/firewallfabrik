@@ -77,6 +77,7 @@ from firewallfabrik.compiler.processors._service import (
     VerifyIcmpTypes,
     VerifyIpProtocols,
     VerifyPortRanges,
+    WarnAnyTCPUDPService,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -370,6 +371,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
+        self.add(WarnAnyTCPUDPService('warn about TCP/UDP services without ports'))
 
         # -- Srv negation & reject processors (matching fwbuilder order) --
         self.add(SingleSrvNegation('single srv negation'))

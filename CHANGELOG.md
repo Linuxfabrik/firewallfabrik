@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+Compiler (iptables, nftables):
+
+* an Accept rule using a TCP or UDP service without any port now warns that it matches every port ([#194](https://github.com/Linuxfabrik/firewallfabrik/issues/194))
 
 
 ## [v3.5.0] - 2026-10-12

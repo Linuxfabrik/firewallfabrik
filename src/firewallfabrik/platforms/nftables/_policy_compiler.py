@@ -77,6 +77,7 @@ from firewallfabrik.compiler.processors._service import (
     VerifyIcmpTypes,
     VerifyIpProtocols,
     VerifyPortRanges,
+    WarnAnyTCPUDPService,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -425,6 +426,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
+        self.add(WarnAnyTCPUDPService('warn about TCP/UDP services without ports'))
         # Before negation, logging and the optimisations move a rule into
         # temporary chains that no longer carry its addresses or services.
         self.add(SplitHelperAssignment('split off connection tracking helpers'))

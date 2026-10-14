@@ -39,6 +39,7 @@ from ._database import (
     STANDARD_LIBRARY_NAME,
     FWObjectDatabase,
     Library,
+    is_standard_library_object,
     placeholder_kind,
     redirect_placeholder_copies,
 )
@@ -175,6 +176,7 @@ __all__ = [
     'get_address_table_source',
     'group_membership',
     'is_run_time_address_table',
+    'is_standard_library_object',
     'is_valid_dscp',
     'is_valid_packet_mark',
     'is_valid_tos',

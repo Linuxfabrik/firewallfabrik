@@ -1,0 +1,132 @@
+name: 'Test: an Accept rule with a TCP or UDP service that names no port'
+libraries:
+  - name: 'Standard'
+    comment: 'Standard objects'
+    ro: true
+    children:
+      - type: 'TCPService'
+        name: 'All TCP'
+      - type: 'UDPService'
+        name: 'All UDP'
+  - name: 'Test Objects'
+    children:
+      - type: 'TCPService'
+        name: 'All TCP'
+        comment: 'A user object that happens to carry the predefined name'
+      - type: 'UDPService'
+        name: 'forgotten-udp'
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'iptables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: true
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'A: user service without a port, accepted'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:web'
+              - type: 'PolicyRule'
+                position: 1
+                comment: 'B: the predefined All TCP, accepted'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Standard/TCPService:All TCP'
+              - type: 'PolicyRule'
+                position: 2
+                comment: 'C: user service without a port, denied'
+                action: 'Deny'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:web'
+              - type: 'PolicyRule'
+                position: 3
+                comment: 'D: user object named like the predefined one'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:All TCP'
+              - type: 'PolicyRule'
+                position: 4
+                comment: 'E: a port is set'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:http'
+              - type: 'PolicyRule'
+                position: 5
+                comment: 'F: UDP service without a port, accepted'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/UDPService:forgotten-udp'
+              - type: 'PolicyRule'
+                position: 6
+                comment: 'G: the predefined All UDP, accepted'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Standard/UDPService:All UDP'
+              - type: 'PolicyRule'
+                position: 7
+                comment: 'H: TCP flags inspected, accepted'
+                action: 'Accept'
+                direction: 'Both'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+                srv:
+                  - 'Library:Test Objects/TCPService:syn-only'
+      - type: 'TCPService'
+        name: 'http'
+        dst_range_start: 80
+        dst_range_end: 80
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.0.2.0'
+          netmask: '255.255.255.0'
+      - type: 'TCPService'
+        name: 'syn-only'
+        tcp_flags:
+          syn: true
+        tcp_flags_masks:
+          syn: true
+      - type: 'TCPService'
+        name: 'web'

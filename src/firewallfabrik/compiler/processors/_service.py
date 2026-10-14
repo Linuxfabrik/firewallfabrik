@@ -29,6 +29,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    is_standard_library_object,
 )
 from firewallfabrik.platforms.linux._conntrack_helpers import service_helper
 from firewallfabrik.platforms.linux._netfilter import custom_service_code
@@ -387,6 +388,51 @@ class VerifyPortRanges(BasicRuleProcessor):
                     'port range in the service object.',
                 )
                 return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class WarnAnyTCPUDPService(BasicRuleProcessor):
+    """Warn when an Accept rule names a TCP or UDP service with every port 0.
+
+    Such a service matches every port of its protocol.  That is how "any
+    TCP port" is written, and the Standard library ships All TCP and All
+    UDP for it, but a new TCP service starts out with port 0, so a user
+    who forgets to set one ends up accepting all TCP traffic.  The rule
+    still compiles; only the administrator can tell whether it was meant.
+
+    The two predefined services are recognised by the library they are in
+    and not by their name.  A service with flags or any port range is
+    not "any" (``Service.is_any``), and a negated element says the
+    opposite of what the warning is about.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        if (
+            rule.type == 'PolicyRule'
+            and rule.action == PolicyAction.Accept
+            and getattr(self.compiler, 'my_table', 'filter') == 'filter'
+            and not rule.get_neg('srv')
+            and not rule.srv_single_object_negation
+        ):
+            for srv in rule.srv:
+                if (
+                    isinstance(srv, (TCPService, UDPService))
+                    and srv.is_any()
+                    and not is_standard_library_object(srv)
+                ):
+                    protocol = 'TCP' if isinstance(srv, TCPService) else 'UDP'
+                    self.compiler.warning(
+                        rule,
+                        f'Service "{srv.name}" matches ALL {protocol} ports '
+                        '(source and destination ports are 0). Set a port if '
+                        'this is not intended.',
+                    )
 
         self.tmp_queue.append(rule)
         return True

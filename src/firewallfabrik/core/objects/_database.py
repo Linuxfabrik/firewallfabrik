@@ -69,6 +69,17 @@ def placeholder_kind(obj) -> str:
     return name
 
 
+def is_standard_library_object(obj) -> bool:
+    """True for an object that ships in the Standard library.
+
+    Asked by where the object is, never by its name: a user can call their
+    own service "All TCP".  A copy File > Import Library brought along
+    ("Standard-1") is the user's own and does not count.
+    """
+    library = getattr(obj, 'library', None)
+    return library is not None and library.name == STANDARD_LIBRARY_NAME
+
+
 def _is_standard_copy(library) -> bool:
     """A library File > Import Library brought along: "Standard-1", ..."""
     prefix = f'{STANDARD_LIBRARY_NAME}-'
