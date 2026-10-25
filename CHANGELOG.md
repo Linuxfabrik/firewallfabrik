@@ -16,6 +16,7 @@ Compiler (iptables, nftables):
 
 Installation:
 
+* AppStream metadata, so GNOME Software and KDE Discover describe FirewallFabrik
 * the user guide covers the native packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04
 
 ### Fixed
