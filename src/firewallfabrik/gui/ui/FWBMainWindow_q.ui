@@ -28,10 +28,6 @@
   <property name="windowTitle">
    <string>FirewallFabrik</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="MainRes.qrc">:/Icons/FirewallFabrik/32<normaloff>:/Icons/FirewallFabrik/32</normaloff>
-   </iconset>
-  </property>
   <widget class="QWidget" name="widget">
    <layout class="QGridLayout" name="gridLayout_4">
     <property name="leftMargin">

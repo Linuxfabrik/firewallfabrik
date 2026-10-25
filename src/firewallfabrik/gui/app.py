@@ -19,7 +19,8 @@ import signal
 import sys
 
 try:
-    from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator
+    from PySide6.QtCore import QLibraryInfo, QLocale, QSize, QTimer, QTranslator
+    from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleFactory
 except ImportError:
     print(
@@ -120,6 +121,23 @@ def main():
     WindowRegistry.instance()
 
     mw = FWWindow()
+
+    # One icon for every window, in several sizes, so the window manager
+    # picks a sharp one for the title bar, taskbar and Alt+Tab instead of
+    # scaling a single 32 px image.  An iconset in a .ui file holds one
+    # image per mode and state, hence Python.  The SVG is added at fixed
+    # sizes: at its natural size (831x826) the xcb plugin leaves it out of
+    # _NET_WM_ICON, and an SVG alone leaves availableSizes() empty on some
+    # Wayland compositors.  Verified with PySide6 6.12 under Xvfb on
+    # Fedora 44: _NET_WM_ICON holds 16, 24, 32, 48, 64 and 128.  Set after
+    # FWWindow(), which registers MainRes.qrc.
+    app_icon = QIcon()
+    for size in (16, 24, 32, 48):
+        app_icon.addFile(f':/Icons/FirewallFabrik/{size}', QSize(size, size))
+    for size in (64, 128):
+        app_icon.addFile(':/Icons/FirewallFabrik/scalable', QSize(size, size))
+    app.setWindowIcon(app_icon)
+
     mw.show()
 
     if filename:
