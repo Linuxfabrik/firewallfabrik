@@ -76,3 +76,27 @@ jobs:
 
       - name: 'Publish to PyPI'
         uses: 'pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086' # v1.14.3
+
+  # Linuxfabrik/packaging builds the RPM and DEB packages from the release tag.
+  # Its upstream check runs hourly; this starts it right away. Independent of
+  # PyPI, since the packages are built from the tag, not from the sdist.
+  notify-packaging:
+    name: 'Notify Linuxfabrik/packaging'
+    runs-on: 'ubuntu-latest'
+    steps:
+      # A token for the packaging repository only, with nothing but the
+      # contents permission that a repository dispatch requires.
+      - name: 'Generate app token'
+        id: 'app-token'
+        uses: 'actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510' # v3.3.0
+        with:
+          client-id: '${{ vars.LF_AUTOMATION_CLIENT_ID }}'
+          owner: 'Linuxfabrik'
+          permission-contents: 'write'
+          private-key: '${{ secrets.LF_AUTOMATION_APP_PRIVATE_KEY }}'
+          repositories: 'packaging'
+
+      - name: 'Send upstream-release'
+        env:
+          GH_TOKEN: '${{ steps.app-token.outputs.token }}'
+        run: 'gh api repos/Linuxfabrik/packaging/dispatches --field event_type=upstream-release'
