@@ -49,7 +49,7 @@ class _FWFStyle(QProxyStyle):
 def main():
     parser = argparse.ArgumentParser(
         prog='fwf',
-        description='FirewallFabrik — firewall configuration manager',
+        description='FirewallFabrik - firewall configuration manager',
     )
     parser.add_argument(
         '-v',
