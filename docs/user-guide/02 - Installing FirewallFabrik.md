@@ -10,6 +10,39 @@ If your system Python is older than 3.11 (typical on macOS or RHEL 8/9), use `uv
 uvx --python 3.11 --from 'firewallfabrik[gui]' fwf
 ```
 
+## Installing the Distribution Packages
+
+Linuxfabrik builds FirewallFabrik as native packages for RHEL 10 and compatibles, Fedora 44, Debian 13 and Ubuntu 26.04, published on [repo.linuxfabrik.ch](https://repo.linuxfabrik.ch). Older releases ship SQLAlchemy 1.x and no PySide6; on those, install from PyPI as described below.
+
+First set up the repository with `linuxfabrik-release`.
+
+RHEL 10 and compatibles (replace `el10` with `fedora44` on Fedora 44):
+
+``` bash
+sudo dnf install https://repo.linuxfabrik.ch/linuxfabrik-release-latest-el10.noarch.rpm
+```
+
+Debian 13 (replace `debian13` with `ubuntu26.04` on Ubuntu 26.04):
+
+``` bash
+curl --fail --location --remote-name https://repo.linuxfabrik.ch/linuxfabrik-release-latest-debian13.deb
+sudo apt install ./linuxfabrik-release-latest-debian13.deb
+sudo apt update
+```
+
+Then install the GUI, which pulls in the compilers:
+
+``` bash
+sudo dnf install linuxfabrik-firewallfabrik-gui
+sudo apt install linuxfabrik-firewallfabrik-gui
+```
+
+On RHEL 10 and compatibles, the GUI needs [EPEL](https://docs.fedoraproject.org/en-US/epel/), which provides PySide6.
+
+For the command-line tools alone (`fwf-ipt`, `fwf-nft`, `fwf-upgrade`, without Qt), install `linuxfabrik-firewallfabrik` instead. The short names `firewallfabrik` and `firewallfabrik-gui` work as well.
+
+The packages install the desktop file, the icon and the file types, so the steps under [Linux Desktop Integration](#linux-desktop-integration) are not needed.
+
 ## Installing from PyPI
 
 Make sure to include the `[gui]` extra to pull in PySide6 for the graphical interface.
@@ -141,7 +174,7 @@ Some Linux distributions ship a native PySide6 package that integrates better wi
 
 ## Linux Desktop Integration
 
-To add FirewallFabrik to your application menu and associate its icon:
+The distribution packages do this on their own. For an installation from PyPI or Git, add FirewallFabrik to your application menu and associate its icon:
 
 ``` bash
 cp assets/ch.linuxfabrik.firewallfabrik.desktop $HOME/.local/share/applications/

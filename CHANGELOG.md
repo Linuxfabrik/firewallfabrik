@@ -14,6 +14,10 @@ Compiler (iptables, nftables):
 
 * an Accept rule using a TCP or UDP service without any port now warns that it matches every port ([#194](https://github.com/Linuxfabrik/firewallfabrik/issues/194))
 
+Installation:
+
+* the user guide covers the native packages for RHEL 10, Fedora 44, Debian 13 and Ubuntu 26.04
+
 ### Fixed
 
 Editor:
