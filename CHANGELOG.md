@@ -23,6 +23,7 @@ Installation:
 
 Editor:
 
+* a new address, network or address range can be filled in field by field again, instead of every refused field wiping the others, and a new interface is named after its siblings (`eth1` after `eth0`) instead of "New Interface" ([#209](https://github.com/Linuxfabrik/firewallfabrik/issues/209))
 * the window icon stays sharp on HiDPI taskbars and in Alt+Tab
 
 

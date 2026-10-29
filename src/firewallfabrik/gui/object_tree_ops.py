@@ -14,6 +14,7 @@
 
 import contextlib
 import copy
+import re
 import uuid
 import weakref
 from datetime import UTC, datetime
@@ -50,6 +51,7 @@ from firewallfabrik.core.objects import (
     rule_elements,
 )
 from firewallfabrik.gui.object_tree_data import (
+    DEFAULT_ADDRESS_VALUES,
     MODEL_MAP,
     NEW_TYPES_FOR_FOLDER,
     SYSTEM_GROUP_PATHS,
@@ -1690,6 +1692,9 @@ class TreeOperations:
             if options and hasattr(model_cls, 'options'):
                 kwargs['options'] = options
 
+            for column, value in DEFAULT_ADDRESS_VALUES.get(type_name, {}).items():
+                kwargs[column] = copy.deepcopy(value)
+
             new_obj = model_cls(**kwargs)
             if name is None and type_name in ('NAT', 'Policy') and device_id:
                 # ObjectManipulator::newPolicyRuleSet / newNATRuleSet: the
@@ -1701,6 +1706,8 @@ class TreeOperations:
                     .where(RuleSet.device_id == device_id, RuleSet.type == type_name)
                 )
                 name = f'{type_name}_{count}' if count else type_name
+            if name is None and type_name == 'Interface':
+                name = self._new_interface_name(session, device_id, parent_interface_id)
             new_obj.name = name or f'New {type_name}'
 
             # Make name unique.
@@ -2227,6 +2234,49 @@ class TreeOperations:
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _new_interface_name(session, device_id, parent_interface_id):
+        """Name a new interface after its siblings: ``eth0`` makes ``eth1``.
+
+        Ports ``ObjectManipulator::newInterface``, which takes the name of
+        the newest interface on the same level as the prototype, or
+        "Interface" when there is none (``findNewestInterfaceName``), and
+        counts up its number until the name is free (the interface branch
+        of ``makeNameUnique``).  The default "New Interface" is a name the
+        interface editor refuses, so every field changed before the name
+        was lost in the reload that follows the refusal (#209).
+
+        "Newest" is the creation time Firewall Builder keeps in memory
+        only, to the second (``FWObject::storeCreationTime``).  After a
+        file is loaded every interface has the same one, and the loop
+        settles on the first.  FirewallFabrik keeps no creation time and
+        takes the first sibling by name.
+        """
+        stmt = sqlalchemy.select(Interface.name)
+        if parent_interface_id is not None:
+            stmt = stmt.where(Interface.parent_interface_id == parent_interface_id)
+        else:
+            stmt = stmt.where(
+                Interface.device_id == device_id,
+                Interface.parent_interface_id.is_(None),
+            )
+        existing = set(session.scalars(stmt).all())
+        if not existing:
+            return 'Interface'
+        prototype = min(existing)
+
+        basename = prototype
+        suffix = 1
+        match = re.search(r'([a-zA-Z-]+)(\d+)', prototype)
+        if match:
+            basename = match.group(1)
+            suffix = int(match.group(2))
+        name = prototype
+        while name in existing:
+            name = f'{basename}{suffix}'
+            suffix += 1
+        return name
 
     @staticmethod
     def make_name_unique(session, obj):

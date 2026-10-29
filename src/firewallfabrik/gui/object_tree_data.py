@@ -302,6 +302,29 @@ DEFAULT_CLUSTER_GROUP_PROTOCOL = {
     'StateSyncClusterGroup': 'conntrack',
 }
 
+# An address compared against and stored, nothing binds to it.
+_ANY_IPV4 = '0.0.0.0'  # nosec B104
+
+#: The address and netmask a new address object starts out with, in the
+#: spelling the data file carries.  These are the values of the
+#: libfwbuilder constructors: ``InetAddrMask()`` is 0.0.0.0/0.0.0.0,
+#: ``Network()`` sets the netmask to the length 32, ``NetworkIPv6()`` to
+#: 64, and ``AddressRange()`` starts and ends at 0.0.0.0.  Each of them
+#: passes the editor's validation, so the fields can be filled in one at
+#: a time.  An object created empty is refused on the first field that
+#: is left, and the reload that follows the refusal empties the field
+#: that was just typed (#209).
+DEFAULT_ADDRESS_VALUES = {
+    'AddressRange': {
+        'end_address': {'address': _ANY_IPV4},
+        'start_address': {'address': _ANY_IPV4},
+    },
+    'IPv4': {'inet_addr_mask': {'address': _ANY_IPV4, 'netmask': _ANY_IPV4}},
+    'IPv6': {'inet_addr_mask': {'address': '::', 'netmask': '0'}},
+    'Network': {'inet_addr_mask': {'address': _ANY_IPV4, 'netmask': '255.255.255.255'}},
+    'NetworkIPv6': {'inet_addr_mask': {'address': '::', 'netmask': '64'}},
+}
+
 
 def group_contents(group) -> list:
     """Return what a group holds: the objects filed in it and its members.
