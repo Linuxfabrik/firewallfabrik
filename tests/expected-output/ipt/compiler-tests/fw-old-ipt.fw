@@ -595,7 +595,7 @@ script_body() {
  $IPTABLES -N drop_invalid 2>/dev/null
  $IPTABLES -A OUTPUT ! -o lo -m state --state INVALID -j drop_invalid
  $IPTABLES -A INPUT ! -i lo -m state --state INVALID -j drop_invalid
- $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j LOG --log-level info --log-prefix "INVALID state -- DENY "
  $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy
@@ -632,7 +632,7 @@ script_body() {
  $IP6TABLES -A OUTPUT ! -o lo -m state --state INVALID -j drop_invalid
  $IP6TABLES -A INPUT ! -i lo -m state --state INVALID -j drop_invalid
  $IP6TABLES -A FORWARD -m state --state INVALID -j drop_invalid
- $IP6TABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IP6TABLES -A drop_invalid -j LOG --log-level info --log-prefix "INVALID state -- DENY "
  $IP6TABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy

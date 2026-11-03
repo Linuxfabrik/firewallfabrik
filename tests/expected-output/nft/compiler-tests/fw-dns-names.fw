@@ -420,7 +420,7 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        iif != "lo" ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
+        iif != "lo" ct state invalid counter log prefix "INVALID state -- DENY " level info drop
         #
         # Rule 0 (global)
         #
@@ -434,7 +434,7 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
+        ct state invalid counter log prefix "INVALID state -- DENY " level info drop
         #
         # Rule 0 (global)
         #
@@ -448,7 +448,7 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        oif != "lo" ct state invalid counter log prefix "INVALID state -- DENY " level debug drop
+        oif != "lo" ct state invalid counter log prefix "INVALID state -- DENY " level info drop
     }
 }
 

@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Changed
+
+Compiler (iptables, nftables):
+
+* packets in state INVALID are logged at the log level of the firewall, like the rules, instead of always at debug
+
+### Fixed
+
+Editor:
+
+* the "Add virtual addresses for NAT" setting no longer claims to need "Configure interfaces", it works without it
 
 
 ## [v3.7.0] - 2026-11-03

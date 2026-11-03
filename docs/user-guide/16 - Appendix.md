@@ -179,7 +179,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Logging | Log prefix: | `log_prefix` | string | `RULE %N -- %A ` | iptables, nftables |
 | Logging | log TCP options | `log_tcp_opt` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Logging | log TCP seq. numbers | `log_tcp_seq` | on/off (`true` / `false`) | `false` | iptables, nftables |
-| Script | Add virtual addresses for NAT: Automatically adds virtual IP addresses via “ip addr add” for NAT target addresses not already assigned to a firewall interface. Requires “Configure interfaces” to be enabled. | `manage_virtual_addr` | on/off (`true` / `false`) | `true` | iptables |
+| Script | Add virtual addresses for NAT: Automatically adds virtual IP addresses via “ip addr add” for NAT target addresses not already assigned to a firewall interface. Works on its own as well: without “Configure interfaces” only these addresses are added. | `manage_virtual_addr` | on/off (`true` / `false`) | `true` | iptables |
 | Compiler | mgmt_addr | `mgmt_addr` | string | `''` | iptables, nftables |
 | Compiler | Always permit ssh access from the management workstation with this address: | `mgmt_ssh` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Compiler | Output file name: | `output_file` | string | `fwf.sh` | iptables, nftables |

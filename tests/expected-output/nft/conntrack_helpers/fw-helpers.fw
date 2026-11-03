@@ -89,7 +89,7 @@ table inet fwf_filter {
         ct state related ct helper { "ftp", "irc", "tftp" } jump related_helper_in
         ct state related ct helper { "ftp", "irc", "tftp" } counter drop
         ct state related counter accept
-        iif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        iif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level info
         iif != "lo" ct state invalid counter drop
         #
         # Rule 1 (global)
@@ -140,7 +140,7 @@ table inet fwf_filter {
         ct state related ct helper { "ftp", "irc", "tftp" } jump related_helper_fwd
         ct state related ct helper { "ftp", "irc", "tftp" } counter drop
         ct state related counter accept
-        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level info
         ct state invalid counter drop
         ip daddr 192.168.1.10 tcp dport 21 counter ct helper set "fwf_ftp_tcp"
         #
@@ -196,7 +196,7 @@ table inet fwf_filter {
         ct state related ct helper { "ftp", "irc", "tftp" } jump related_helper_out
         ct state related ct helper { "ftp", "irc", "tftp" } counter drop
         ct state related counter accept
-        oif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        oif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level info
         oif != "lo" ct state invalid counter drop
         #
         # Rule 0 (global)

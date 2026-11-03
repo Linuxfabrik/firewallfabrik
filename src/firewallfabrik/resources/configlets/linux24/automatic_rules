@@ -26,6 +26,7 @@
 ## $nlgroup                   (NFLOG --nflog-group)
 ## $qthreshold                (NFLOG --nflog-threshold)
 ## $invalid_match_log_prefix  (LOG --log-prefix)
+## $invalid_log_level         (LOG --log-level) the log level of the firewall
 ## $drop_invalid_log_match    the drop_invalid chain, plus the limit match when
 ##                            the logging limit is on
 ##
@@ -198,7 +199,7 @@
 {{endif}}
 
 {{if not_use_ulog}}
-{{$begin_rule}} {{$drop_invalid_log_match}} -j LOG --log-level debug --log-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
+{{$begin_rule}} {{$drop_invalid_log_match}} -j LOG --log-level {{$invalid_log_level}} --log-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
 {{endif}}
 
 {{endif}}

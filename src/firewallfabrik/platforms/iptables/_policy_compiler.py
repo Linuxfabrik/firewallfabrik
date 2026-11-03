@@ -1144,6 +1144,23 @@ class PolicyCompiler_ipt(PolicyCompiler):
         conf.set_variable(
             'drop_invalid_and_log', 1 if (drop_invalid and log_invalid) else 0
         )
+        # The log level of the firewall, the one every logging rule uses
+        # unless it sets its own, so a log filtered by level shows the
+        # INVALID packets next to the rules.  Firewall Builder writes debug
+        # whatever the setting (configlets/linux24/automatic_rules); that
+        # stays the fallback for a level iptables does not take.
+        from firewallfabrik.platforms.iptables._print_rule import (
+            _is_known_log_level,
+            iptables_log_level,
+        )
+
+        invalid_log_level = self.fw.get_option('log_level')
+        conf.set_variable(
+            'invalid_log_level',
+            iptables_log_level(invalid_log_level)
+            if invalid_log_level and _is_known_log_level(invalid_log_level)
+            else 'debug',
+        )
         invalid_log_limit = ''
         limit = get_invalid_log_limit(self) if (drop_invalid and log_invalid) else None
         if limit:

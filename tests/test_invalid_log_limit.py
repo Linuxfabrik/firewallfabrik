@@ -167,3 +167,28 @@ def test_an_unknown_unit_is_reported_and_logged_without_a_limit(build):
     lines, warnings = build(limit_suffix='/fortnight')
     assert not any('limit' in line for line in lines)
     assert any('"/fortnight" is not a unit' in w for w in warnings)
+
+
+# The INVALID log follows the log level of the firewall, so a log filtered
+# by level shows it next to the rules; debug is the fallback for a level
+# the tool cannot write, and what Firewall Builder writes whatever the
+# setting.
+@pytest.mark.parametrize(
+    ('log_level', 'ipt_level', 'nft_level'),
+    [
+        ('info', 'info', 'info'),
+        ('warning', 'warning', 'warn'),
+        ('error', 'error', 'err'),
+        ('7', '7', 'debug'),
+        ('', 'debug', 'debug'),
+        ('loud', 'debug', 'debug'),
+        ('audit', 'debug', 'debug'),
+    ],
+)
+def test_invalid_packets_log_at_the_level_of_the_firewall(
+    log_level, ipt_level, nft_level
+):
+    ipt_lines, _ = _ipt(log_level=log_level)
+    assert any(f'-j LOG --log-level {ipt_level} ' in line for line in ipt_lines)
+    nft_lines, _ = _nft(log_level=log_level)
+    assert any(f'level {nft_level}' in line for line in nft_lines)

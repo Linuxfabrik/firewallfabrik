@@ -550,7 +550,7 @@ script_body() {
  $IP6TABLES -A fwf_OUTPUT ! -o lo -m conntrack --ctstate INVALID -j fwf_drop_invalid
  $IP6TABLES -A fwf_INPUT ! -i lo -m conntrack --ctstate INVALID -j fwf_drop_invalid
  $IP6TABLES -A fwf_FORWARD -m conntrack --ctstate INVALID -j fwf_drop_invalid
- $IP6TABLES -A fwf_drop_invalid -m limit --limit 10/second -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IP6TABLES -A fwf_drop_invalid -m limit --limit 10/second -j LOG --log-level info --log-prefix "INVALID state -- DENY "
  $IP6TABLES -A fwf_drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy

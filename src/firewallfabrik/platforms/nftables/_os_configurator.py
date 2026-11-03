@@ -86,11 +86,14 @@ class OSConfigurator_nft(OSConfigurator):
     def _invalid_log(self) -> str:
         """Return the log statement of the "drop invalid packets" rule.
 
-        The iptables counterpart logs at level debug, and via NFLOG when the
-        firewall is set to log that way (configlets/linux24/automatic_rules).
-        nftables defaults a log statement without a level to warn (netfilter
-        nftables src/statement.c), which would put a packet flood on the
-        console, so the level is spelled out.
+        It logs at the log level of the firewall, the one every logging
+        rule uses unless it sets its own, so a log filtered by level shows
+        the INVALID packets next to the rules.  Firewall Builder logs them
+        at debug whatever the setting (configlets/linux24/automatic_rules);
+        that stays the fallback for a level nftables cannot write.  Via
+        NFLOG when the firewall is set to log that way.  nftables defaults
+        a log statement without a level to warn (netfilter nftables
+        src/statement.c), so the level is always spelled out.
         """
         if self.fw.get_option('use_NFLOG'):
             nlgroup = get_log_netlink_group(self) or '1'
@@ -108,7 +111,17 @@ class OSConfigurator_nft(OSConfigurator):
                 parts.append(f'queue-threshold {qthreshold}')
             parts.append(f'prefix "{INVALID_STATE_LOG_PREFIX}"')
             return ' '.join(parts)
-        return f'log prefix "{INVALID_STATE_LOG_PREFIX}" level debug'
+        # Imported here: the print rule pulls in the whole compiler.
+        from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
+
+        level = str(self.fw.get_option('log_level') or '').strip().lower()
+        level = PrintRule_nft._NFT_LOG_LEVELS.get(level, level)
+        # `audit` is a facility, not a severity, and refuses a prefix next
+        # to it (nftables src/evaluate.c), the same reason the print rule
+        # leaves it out.
+        if level not in PrintRule_nft._NFT_LOG_LEVEL_KEYWORDS or level == 'audit':
+            level = 'debug'
+        return f'log prefix "{INVALID_STATE_LOG_PREFIX}" level {level}'
 
     def _backup_ssh_rules(self, chain: str, have_ipv6: bool) -> list[str]:
         """Return the backup ssh rules of one filter chain.

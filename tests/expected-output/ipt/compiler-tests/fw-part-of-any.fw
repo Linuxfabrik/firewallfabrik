@@ -573,7 +573,7 @@ script_body() {
  $IPTABLES -A OUTPUT ! -o lo -m conntrack --ctstate INVALID -j drop_invalid
  $IPTABLES -A INPUT ! -i lo -m conntrack --ctstate INVALID -j drop_invalid
  $IPTABLES -A FORWARD -m conntrack --ctstate INVALID -j drop_invalid
- $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j LOG --log-level info --log-prefix "INVALID state -- DENY "
  $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set Policy

@@ -1640,7 +1640,7 @@ for debugging only.</string>
        <item row="8" column="1">
         <widget class="QLabel" name="addVirtualsforNAT_label">
          <property name="text">
-          <string>Add virtual addresses for NAT: Automatically adds virtual IP addresses via “ip addr add” for NAT target addresses not already assigned to a firewall interface. Requires “Configure interfaces” to be enabled.</string>
+          <string>Add virtual addresses for NAT: Automatically adds virtual IP addresses via “ip addr add” for NAT target addresses not already assigned to a firewall interface. Works on its own as well: without “Configure interfaces” only these addresses are added.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
