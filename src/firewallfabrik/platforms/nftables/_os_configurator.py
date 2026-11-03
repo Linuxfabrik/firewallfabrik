@@ -271,23 +271,37 @@ class OSConfigurator_nft(OSConfigurator):
         # (NFT_BREAK in linux net/netfilter/nft_limit.c) and go on to the
         # policy. It gets a rule of its own, the way the
         # iptables configlet logs in the drop_invalid chain before its DROP.
+        # Loopback traffic is left to the policy: firewalld accepts it
+        # ahead of its INVALID drop (src/firewall/core/nftables.py,
+        # build_default_rules), so a packet conntrack calls INVALID on lo -
+        # a TCP segment out of window, one after its entry expired - does
+        # not break a local connection there.  Exempting lo instead of
+        # accepting it keeps the decision with the rules: a stateless
+        # loopback rule accepts the packet as firewalld would, a policy
+        # that restricts lo still does.  Only locally generated packets
+        # carry lo as their interface, the kernel drops 127.0.0.0/8 from
+        # any other one as martian (net/ipv4/route.c, ip_route_input_slow).
+        # A forwarded packet never has lo, so the forward chain needs no
+        # exemption.  `iif`/`oif` as for every loopback match (print rule).
         drop_invalid = self.fw.get_option('drop_invalid')
         log_invalid = self.fw.get_option('log_invalid')
         if drop_invalid and (forwards or not in_forward):
+            not_lo = {'input': 'iif != "lo" ', 'output': 'oif != "lo" '}.get(chain, '')
             limit = get_invalid_log_limit(self) if log_invalid else None
             if limit:
                 rate, unit = limit
                 rules.append(
-                    f'        ct state invalid limit rate {rate}/{unit} '
+                    f'        {not_lo}ct state invalid limit rate {rate}/{unit} '
                     f'counter {self._invalid_log()}'
                 )
-                rules.append('        ct state invalid counter drop')
+                rules.append(f'        {not_lo}ct state invalid counter drop')
             elif log_invalid:
                 rules.append(
-                    f'        ct state invalid counter {self._invalid_log()} drop'
+                    f'        {not_lo}ct state invalid counter '
+                    f'{self._invalid_log()} drop'
                 )
             else:
-                rules.append('        ct state invalid counter drop')
+                rules.append(f'        {not_lo}ct state invalid counter drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
 

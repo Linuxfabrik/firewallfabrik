@@ -146,7 +146,7 @@ The "Stateless" checkbox in the Rule Options dialog removes this connection trac
 
 - **Anti-spoofing rules** (e.g. "internal-network / Any / Deny / Inbound / outside-interface"): These rules drop packets with forged source addresses arriving on the wrong interface. Making them stateless ensures they drop all spoofed packets regardless of their conntrack state, including packets in the INVALID state that would not match `ct state new`.
 
-- **Loopback rules** (e.g. "Any / Any / Accept / lo"): Traffic on the loopback interface is always local. Stateless simplifies the generated code without any security impact.
+- **Loopback rules** (e.g. "Any / Any / Accept / lo"): Traffic on the loopback interface is always local. Stateless simplifies the generated code without any security impact. It also accepts loopback packets that connection tracking classifies as INVALID, for example a TCP segment outside the window. The automatic drop of INVALID packets leaves loopback traffic to the policy, as firewalld does, so such a packet does not interrupt a local connection.
 
 - **DHCP broadcast rules**: DHCP uses UDP broadcasts that are typically not tracked by conntrack. Stateless avoids creating unnecessary conntrack entries.
 

@@ -565,7 +565,7 @@ class Builder:
         ]
         if not chains:
             return
-        prefixes = [_automatic_prefix(chain.rules) for chain in chains]
+        prefixes = [_automatic_prefix(chain.rules, chain.hook) for chain in chains]
         kinds = {tuple(kind for kind, _rule in prefix) for prefix in prefixes}
         if len(kinds) != 1 or not next(iter(kinds)):
             return
@@ -1563,7 +1563,37 @@ def _is_plain(rule: Rule, allow_limit=False):
     )
 
 
-def _automatic_prefix(rules):
+def _is_invalid_plain(rule: Rule, hook: str, allow_limit=False):
+    """Whether *rule* is the automatic INVALID rule of a *hook* chain.
+
+    FirewallFabrik exempts loopback traffic from it in the input and
+    output chain (`iif != "lo"` / `! -i lo`, `oif != "lo"` / `! -o lo`),
+    Firewall Builder and earlier FirewallFabrik releases write it without
+    an interface.  Both are the option.
+    """
+    if _is_plain(rule, allow_limit=allow_limit):
+        return True
+    if hook == 'input':
+        exempt = rule.in_interface == 'lo' and rule.in_interface_negated
+        other = rule.out_interface
+    elif hook == 'output':
+        exempt = rule.out_interface == 'lo' and rule.out_interface_negated
+        other = rule.in_interface
+    else:
+        return False
+    if not exempt or other:
+        return False
+    rest = dataclasses.replace(
+        rule,
+        in_interface='',
+        in_interface_negated=False,
+        out_interface='',
+        out_interface_negated=False,
+    )
+    return _is_plain(rest, allow_limit=allow_limit)
+
+
+def _automatic_prefix(rules, hook=''):
     """The automatic rules a chain starts with, as (kind, rule) pairs."""
     prefix = []
     index = 0
@@ -1578,7 +1608,7 @@ def _automatic_prefix(rules):
         index += 1
     if (
         index < len(rules)
-        and _is_plain(rules[index], allow_limit=True)
+        and _is_invalid_plain(rules[index], hook, allow_limit=True)
         and rules[index].states == {'invalid'}
         and rules[index].action == 'log'
     ):
@@ -1586,7 +1616,7 @@ def _automatic_prefix(rules):
         index += 1
     if (
         index < len(rules)
-        and _is_plain(rules[index])
+        and _is_invalid_plain(rules[index], hook)
         and rules[index].states == {'invalid'}
         and rules[index].action == 'drop'
         and not rules[index].log

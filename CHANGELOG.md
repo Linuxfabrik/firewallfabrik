@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Changed
+
+Compiler (iptables, nftables):
+
+* the drop of packets in state INVALID leaves loopback traffic to the policy, as firewalld does, so a stateless loopback rule no longer loses local connections to it
+
+Import:
+
+* a ruleset whose INVALID drop exempts the loopback interface is recognised as the "drop invalid packets" option
 
 
 ## [v3.6.0] - 2026-10-29

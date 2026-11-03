@@ -214,6 +214,17 @@ What is not put back is what the failed-activation rollback does not put back ei
 `tests/test_rollback_timer.py` checks both scripts in a network namespace, on the setsid path. The systemd path, the installer and a policy that drops or resets the SSH connection were run on Rocky Linux 8.3 (iptables 1.8.4, nftables 0.9.3, systemd 239) and Debian 11 (iptables 1.8.7, nftables 0.9.8, systemd 247): the new connection failed, the ruleset from before came back after the timeout, and the boot script was unchanged.
 
 
+## The INVALID Drop Leaves Loopback Traffic to the Policy
+
+Firewall Builder drops every packet in conntrack state INVALID at the top of INPUT, OUTPUT and FORWARD, ahead of the policy (`automatic_rules` configlet). On the loopback interface that hits local connections: a TCP segment out of window or one arriving after its conntrack entry expired is INVALID, and the drop breaks the connection although nothing but the host itself is involved. A stateless loopback rule in the policy, which the user guide recommends, never gets to see the packet.
+
+firewalld accepts lo ahead of its INVALID drop (`src/firewall/core/nftables.py`, `build_default_rules`: established/related, DNAT, `iifname "lo" accept`, then the INVALID log and drop). FirewallFabrik reaches the same result without accepting anything on its own: the INVALID rules of the input and output chain carry `iif != "lo"` / `oif != "lo"` on nftables and `! -i lo` / `! -o lo` on iptables, and the policy decides. A stateless loopback rule then accepts the packet as firewalld does, and a policy that restricts traffic on lo keeps doing so. An implicit accept would have taken that decision away from every existing policy.
+
+The exemption is safe because only locally generated packets carry lo as their interface: the kernel drops 127.0.0.0/8 arriving on any other interface as martian (`net/ipv4/route.c`, `ip_route_input_slow`, with `route_localnet` off). The forward chain keeps its drop unchanged, a forwarded packet never has lo.
+
+`tests/test_invalid_loopback.py` sends a TCP RST over lo with no connection behind it, which conntrack classifies as INVALID (`tcp_new` refuses `sNO` with RST, `net/netfilter/nf_conntrack_proto_tcp.c`), in a network namespace on both packet filters: with the exemption the packet reaches the loopback rule of the policy, without it the INVALID drop takes it.
+
+
 ## Importing a Running Ruleset
 
 File > Import Firewall reads `iptables-save`, `ip6tables-save` and `nft -j list ruleset` (`firewallfabrik/importer/`). Two parsers write one neutral model, and one builder turns it into objects in the shape of the `.fwf` file, which the YAML reader merges into the open data file the way File > Import Library does. iptables and nftables are therefore mapped by the same code. The mapping follows Firewall Builder's importer (`IPTImporter.cpp`); what follows is where it had to go further, each found by comparing packet verdicts, not by reading output.

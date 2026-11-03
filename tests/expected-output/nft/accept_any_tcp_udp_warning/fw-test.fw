@@ -1,0 +1,530 @@
+#!/bin/sh
+# shellcheck disable=SC2034,SC2329
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * fw-test.fw /etc/fwf.sh
+#
+# Compiled for nftables (any version)
+#
+# Rule '0 (global)' shadows rule '2 (global)' below it, for service 'web'
+# Rule '0 (global)' shadows rule '4 (global)' below it, for service 'http'
+# Rule '0 (global)' shadows rule '7 (global)' below it, for service 'syn-only'
+# fw-test:Policy:0: warning: Service "web" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+# fw-test:Policy:3: warning: Service "All TCP" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+# fw-test:Policy:5: warning: Service "forgotten-udp" matches ALL UDP ports (source and destination ports are 0). Set a port if this is not intended.
+
+FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+# Every binary the script calls is looked for before it touches the
+# firewall, the way the iptables side has done it since fwbuilder wrote
+# `check_utilities`.  `command -v` and not `[ -x ]`: the tool paths may be
+# a bare name, which is what the PATH above is set for, and `[ -x nft ]`
+# answers a name with the file of that name in the working directory.
+find_program() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "\"$1\" not found"
+        exit 1
+    }
+}
+
+check_tools() {
+    find_program "$NFT"
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+nft_ruleset() {
+    cat <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+        iif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        iif != "lo" ct state invalid counter drop
+        #
+        # Rule 0 (global)
+        #
+        # A: user service without a port, accepted
+        # fw-test:Policy:0: warning: Service "web" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        # B: the predefined All TCP, accepted
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 2 (global)
+        #
+        # C: user service without a port, denied
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter drop
+        #
+        # Rule 3 (global)
+        #
+        # D: user object named like the predefined one
+        # fw-test:Policy:3: warning: Service "All TCP" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 4 (global)
+        #
+        # E: a port is set
+        ip saddr 192.0.2.0/24 tcp dport 80 ct state new counter accept
+        #
+        # Rule 5 (global)
+        #
+        # F: UDP service without a port, accepted
+        # fw-test:Policy:5: warning: Service "forgotten-udp" matches ALL UDP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto udp ct state new counter accept
+        #
+        # Rule 6 (global)
+        #
+        # G: the predefined All UDP, accepted
+        ip saddr 192.0.2.0/24 meta l4proto udp ct state new counter accept
+        #
+        # Rule 7 (global)
+        #
+        # H: TCP flags inspected, accepted
+        ip saddr 192.0.2.0/24 tcp flags & (syn) == syn ct state new counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
+        ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        ct state invalid counter drop
+        #
+        # Rule 0 (global)
+        #
+        # A: user service without a port, accepted
+        # fw-test:Policy:0: warning: Service "web" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        # B: the predefined All TCP, accepted
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 2 (global)
+        #
+        # C: user service without a port, denied
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter drop
+        #
+        # Rule 3 (global)
+        #
+        # D: user object named like the predefined one
+        # fw-test:Policy:3: warning: Service "All TCP" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto tcp ct state new counter accept
+        #
+        # Rule 4 (global)
+        #
+        # E: a port is set
+        ip saddr 192.0.2.0/24 tcp dport 80 ct state new counter accept
+        #
+        # Rule 5 (global)
+        #
+        # F: UDP service without a port, accepted
+        # fw-test:Policy:5: warning: Service "forgotten-udp" matches ALL UDP ports (source and destination ports are 0). Set a port if this is not intended.
+        ip saddr 192.0.2.0/24 meta l4proto udp ct state new counter accept
+        #
+        # Rule 6 (global)
+        #
+        # G: the predefined All UDP, accepted
+        ip saddr 192.0.2.0/24 meta l4proto udp ct state new counter accept
+        #
+        # Rule 7 (global)
+        #
+        # H: TCP flags inspected, accepted
+        ip saddr 192.0.2.0/24 tcp flags & (syn) == syn ct state new counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+        oif != "lo" ct state invalid limit rate 10/second counter log prefix "INVALID state -- DENY " level debug
+        oif != "lo" ct state invalid counter drop
+    }
+}
+
+NFT_RULES
+}
+
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+# The two halves the rollback timer needs from this packet filter (see
+# "try" below).  The saved ruleset goes back in one transaction with the
+# flush in front of it, so there is no moment without rules.  It is
+# checked that way before anything is changed: a listing nft cannot load
+# again - one with rules of iptables-nft, say - would leave the timer
+# nothing to put back.
+fwf_timer_save() {
+    check_tools
+    $NFT list ruleset >"$1/nft" || return 1
+    { echo 'flush ruleset'; cat "$1/nft"; } | $NFT --check -f /dev/stdin
+}
+
+fwf_timer_restore() {
+    { echo 'flush ruleset'; cat "$1/nft"; } | $NFT -f /dev/stdin
+}
+
+script_body() {
+    nft_ruleset | $NFT -f /dev/stdin
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
+}
+
+# The tables this ruleset installs, in the form "nft list tables" prints.
+FWF_OWN_TABLES='table ip fwf_filter'
+
+# Everything else, removed once the new ruleset is in place.
+#
+# nft loads a ruleset atomically and the one above deletes and recreates
+# each of its own tables in that same transaction, so their rules are
+# never missing for an instant.  Removing the old rules first undoes
+# exactly that: a table that is gone hooks nothing and every packet goes
+# through, and the machine has no firewall at all until the load
+# finishes.  The iptables side has no such gap - its reset sets the three
+# built-in policies to DROP before it flushes anything - and this is what
+# gives nftables the same guarantee.
+#
+# The deletes go into one batch of their own, so a name that has to be
+# quoted survives the round trip through "nft list tables" untouched.
+remove_other_tables() {
+    $NFT list tables 2>/dev/null |
+        while read -r line; do
+            printf '%s\n' "$FWF_OWN_TABLES" | grep -qxF "$line" && continue
+            # Coexistence: another tool's table is left alone, and
+            # only a table of ours this ruleset no longer installs goes.
+            case $line in
+            "table inet fwf_filter" | "table ip fwf_filter" \
+            | "table ip6 fwf_filter" \
+            | "table inet fwf_mangle" | "table ip fwf_mangle" \
+            | "table ip6 fwf_mangle" \
+            | "table inet fwf_nat" | "table ip fwf_nat" \
+            | "table ip6 fwf_nat") ;;
+            *) continue ;;
+            esac
+            printf 'delete %s\n' "$line"
+        done |
+        $NFT -f - 2>/dev/null
+    return 0
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# Two runs of this script at the same time - an installer and a timer, or
+# an address table reload during an activation - interleave their
+# commands, and the second one works on the first one's half-finished
+# ruleset.  Every command that changes the firewall therefore takes a
+# lock first and waits up to a minute for it.  /run belongs to root, so
+# the file cannot be a planted symlink.  flock comes with util-linux;
+# where it or the lock file is missing, the script runs without the lock
+# rather than not at all.  "reload" runs "$0 start", which finds the lock
+# already held (FWF_LOCKED) instead of waiting for itself.
+FWF_LOCK_FILE=${FWF_LOCK_FILE:-/run/fwf.lock}
+
+fwf_lock() {
+    test -n "$FWF_LOCKED" && return 0
+    command -v flock >/dev/null 2>&1 || return 0
+    (: >>"$FWF_LOCK_FILE") 2>/dev/null || return 0
+    exec 9>>"$FWF_LOCK_FILE"
+    if ! flock -w 60 9; then
+        log "Error: another run of this script still holds $FWF_LOCK_FILE after a minute. Nothing was changed."
+        exit 1
+    fi
+    FWF_LOCKED=1
+    export FWF_LOCKED
+}
+
+# "try" activates the policy and puts back the ruleset that was running
+# before it unless "confirm" follows within the given number of seconds.
+# The saved state is in /run, which is gone after a reboot, like the timer.
+FWF_ROLLBACK_DIR=${FWF_ROLLBACK_DIR:-/run/fwf-rollback}
+
+fwf_timer_stop() {
+    case "$1" in
+        systemd:*) systemctl stop "${1#systemd:}.timer" >/dev/null 2>&1 ;;
+        [0-9]*) kill "$1" >/dev/null 2>&1 ;;
+    esac
+    return 0
+}
+
+fwf_timer_arm() {
+    fwf_token="$(date +%s)-$$"
+    echo "$fwf_token" >"$FWF_ROLLBACK_DIR/token" || return 1
+    if test -d /run/systemd/system && command -v systemd-run >/dev/null 2>&1 &&
+        systemd-run --quiet --no-ask-password --collect \
+            --unit="fwf-rollback-$fwf_token" --on-active="$1" \
+            --timer-property=AccuracySec=1s \
+            --setenv=FWF_LOCK_FILE="$FWF_LOCK_FILE" \
+            --setenv=FWF_ROLLBACK_DIR="$FWF_ROLLBACK_DIR" \
+            /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$fwf_token" >/dev/null 2>&1; then
+        echo "systemd:fwf-rollback-$fwf_token" >"$FWF_ROLLBACK_DIR/timer"
+        return 0
+    fi
+    command -v setsid >/dev/null 2>&1 || return 1
+    FWF_LOCKED='' setsid /bin/sh -c 'trap "" HUP; sleep "$1"; exec /bin/sh "$2" rollback "$3"' \
+        fwf-rollback "$1" "$FWF_ROLLBACK_DIR/restore.sh" "$fwf_token" \
+        </dev/null >/dev/null 2>&1 9>&- &
+    echo "$!" >"$FWF_ROLLBACK_DIR/timer"
+}
+
+fwf_timer_rearm() {
+    fwf_old_timer=$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)
+    fwf_timer_arm "$1" || return 1
+    fwf_timer_stop "$fwf_old_timer"
+}
+
+fwf_try() {
+    case "$1" in
+        '' | *[!0-9]* | 0)
+            log "Error: \"try\" needs the number of seconds to wait for \"confirm\", such as \"$0 try 60\". Nothing was changed."
+            return 1
+            ;;
+    esac
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh"; then
+        log "An earlier activation is still waiting for confirmation; the ruleset from before it stays the one to go back to."
+    else
+        rm -rf "$FWF_ROLLBACK_DIR"
+        mkdir -m 700 "$FWF_ROLLBACK_DIR" || {
+            log "Error: cannot create $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+        fwf_timer_save "$FWF_ROLLBACK_DIR" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: the running ruleset cannot be saved in a form that can be loaded again, so it could not be put back. Nothing was changed."
+            return 1
+        }
+        cp "$0" "$FWF_ROLLBACK_DIR/restore.sh" || {
+            rm -rf "$FWF_ROLLBACK_DIR"
+            log "Error: cannot write to $FWF_ROLLBACK_DIR. Nothing was changed."
+            return 1
+        }
+    fi
+    fwf_timer_rearm "$1" || {
+        log "Error: neither systemd-run nor setsid can start a timer. Nothing was changed."
+        fwf_timer_expire
+        return 1
+    }
+    trap '' HUP
+    FWF_TRYING=1 /bin/sh "$0" start
+    fwf_status=$?
+    if test "$fwf_status" -ne 0; then
+        log "Error: the activation failed. The ruleset from before it is put back now."
+        fwf_timer_expire
+        return "$fwf_status"
+    fi
+    fwf_timer_rearm "$1"
+    log "Activated. Run \"$0 confirm\" within $1 seconds, or the ruleset from before it is put back."
+}
+
+fwf_confirm() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || {
+        log "Error: no activation is waiting for confirmation. It was put back when its time ran out, or it was not started with \"try\"."
+        return 1
+    }
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "Activation confirmed."
+}
+
+fwf_timer_expire() {
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    if test -n "$1" && test "$1" != "$(cat "$FWF_ROLLBACK_DIR/token" 2>/dev/null)"; then
+        return 0
+    fi
+    test -z "$1" && fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    if fwf_timer_restore "$FWF_ROLLBACK_DIR"; then
+        log "The activation was not confirmed. The ruleset from before it is back in place."
+        fwf_status=0
+    else
+        log "Error: the activation was not confirmed, and the ruleset from before it could not be put back."
+        fwf_status=1
+    fi
+    rm -rf "$FWF_ROLLBACK_DIR"
+    return "$fwf_status"
+}
+
+fwf_rollback() {
+    if test -f "$FWF_ROLLBACK_DIR/restore.sh" && test "$0" != "$FWF_ROLLBACK_DIR/restore.sh"; then
+        exec /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$1"
+    fi
+    fwf_timer_expire "$1"
+}
+
+fwf_timer_cancel() {
+    test -n "$FWF_TRYING" && return 0
+    test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+    fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+    rm -rf "$FWF_ROLLBACK_DIR"
+    log "An activation started with \"try\" was waiting for confirmation. This run replaces it, so its rollback timer is stopped."
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    status|test_interfaces|test_address_table) ;;
+    *) fwf_lock ;;
+esac
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        fwf_timer_cancel
+        check_tools
+        prolog_commands
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
+        script_body || run_epilog_and_exit 1
+        remove_other_tables
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        ;;
+
+    stop)
+        fwf_timer_cancel
+        check_tools
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        check_tools
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        check_tools
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 start
+        RETVAL=$?
+        ;;
+
+    try)
+        fwf_try "$2"
+        RETVAL=$?
+        ;;
+
+    confirm)
+        fwf_confirm
+        RETVAL=$?
+        ;;
+
+    rollback)
+        fwf_rollback "$2"
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload|try|confirm|rollback]"
+        RETVAL=1
+        ;;
+
+esac
+
+exit "$RETVAL"

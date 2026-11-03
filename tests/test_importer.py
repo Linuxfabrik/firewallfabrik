@@ -345,6 +345,38 @@ def test_the_leading_state_rules_of_every_chain_become_the_options():
     assert options['log_invalid'] is False
 
 
+def _invalid_drop_ruleset(input_iface, output_iface):
+    return (
+        '*filter\n:INPUT DROP [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT DROP [0:0]\n'
+        '-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT\n'
+        '-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT\n'
+        '-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT\n'
+        f'-A OUTPUT {output_iface} -m state --state INVALID -j DROP\n'
+        f'-A INPUT {input_iface} -m state --state INVALID -j DROP\n'
+        '-A FORWARD -m state --state INVALID -j DROP\n'
+        'COMMIT\n'
+    )
+
+
+def test_the_invalid_drop_with_the_loopback_exemption_is_the_option():
+    # What FirewallFabrik itself writes: lo is left to the policy.
+    _db, _fw, plan = _import(
+        [parse_iptables_save(_invalid_drop_ruleset('! -i lo', '! -o lo'))],
+        'iptables',
+    )
+    options = plan.firewall['options']
+    assert options['accept_established'] is True
+    assert options['drop_invalid'] is True
+
+
+def test_an_invalid_drop_exempting_another_interface_stays_a_rule():
+    _db, _fw, plan = _import(
+        [parse_iptables_save(_invalid_drop_ruleset('! -i eth0', '! -o eth0'))],
+        'iptables',
+    )
+    assert plan.firewall['options']['drop_invalid'] is False
+
+
 def test_a_state_next_to_a_service_branches(tmp_path):
     db_manager, fw_id, _plan = _import(
         [

@@ -160,10 +160,19 @@
 {{endif}}
 {{endif}}
 
+## Loopback traffic is left to the policy, as firewalld does: it accepts
+## lo ahead of its INVALID drop (src/firewall/core/nftables.py,
+## build_default_rules).  A packet conntrack calls INVALID on lo - a TCP
+## segment out of window, one after its entry expired - then does not
+## break a local connection when the policy accepts lo statelessly, and a
+## policy that restricts lo still does.  Only locally generated packets
+## carry lo as their interface: the kernel drops 127.0.0.0/8 from any
+## other one as martian (net/ipv4/route.c, ip_route_input_slow).  The
+## forward chain needs no exemption, a forwarded packet never has lo.
 {{if drop_invalid}}
 # drop packets that do not match any valid state
-{{$begin_rule}} {{$chain_output}}   -m {{$state_module_option}} INVALID  -j DROP {{$end_rule}}
-{{$begin_rule}} {{$chain_input}}    -m {{$state_module_option}} INVALID  -j DROP {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}   ! -o lo -m {{$state_module_option}} INVALID  -j DROP {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}    ! -i lo -m {{$state_module_option}} INVALID  -j DROP {{$end_rule}}
 {{if ipforw}}
 {{$begin_rule}} {{$chain_forward}}  -m {{$state_module_option}} INVALID  -j DROP {{$end_rule}}
 {{endif}}
@@ -172,8 +181,8 @@
 {{if drop_invalid_and_log}}
 # drop packets that do not match any valid state and log them
 {{$create_drop_invalid_chain}}
-{{$begin_rule}} {{$chain_output}}   -m {{$state_module_option}} INVALID  -j {{$prefix_drop_invalid}} {{$end_rule}}
-{{$begin_rule}} {{$chain_input}}    -m {{$state_module_option}} INVALID  -j {{$prefix_drop_invalid}} {{$end_rule}}
+{{$begin_rule}} {{$chain_output}}   ! -o lo -m {{$state_module_option}} INVALID  -j {{$prefix_drop_invalid}} {{$end_rule}}
+{{$begin_rule}} {{$chain_input}}    ! -i lo -m {{$state_module_option}} INVALID  -j {{$prefix_drop_invalid}} {{$end_rule}}
 {{if ipforw}}
 {{$begin_rule}} {{$chain_forward}}  -m {{$state_module_option}} INVALID  -j {{$prefix_drop_invalid}} {{$end_rule}}
 {{endif}}

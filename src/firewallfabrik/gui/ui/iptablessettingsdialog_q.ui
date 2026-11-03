@@ -377,7 +377,8 @@ no known connection</string>
              </property>
              <property name="toolTip">
               <string>Drop packets that are associated with no known connection (conntrack state
-INVALID).</string>
+INVALID). Loopback traffic is left to the policy, as firewalld does: a
+stateless rule on lo accepts it.</string>
              </property>
             </widget>
            </item>

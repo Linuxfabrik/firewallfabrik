@@ -593,8 +593,8 @@ script_body() {
  $IPTABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  # drop packets that do not match any valid state and log them
  $IPTABLES -N drop_invalid 2>/dev/null
- $IPTABLES -A OUTPUT -m state --state INVALID -j drop_invalid
- $IPTABLES -A INPUT -m state --state INVALID -j drop_invalid
+ $IPTABLES -A OUTPUT ! -o lo -m state --state INVALID -j drop_invalid
+ $IPTABLES -A INPUT ! -i lo -m state --state INVALID -j drop_invalid
  $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
  $IPTABLES -A drop_invalid -j DROP
 
@@ -629,8 +629,8 @@ script_body() {
  $IP6TABLES -A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  # drop packets that do not match any valid state and log them
  $IP6TABLES -N drop_invalid 2>/dev/null
- $IP6TABLES -A OUTPUT -m state --state INVALID -j drop_invalid
- $IP6TABLES -A INPUT -m state --state INVALID -j drop_invalid
+ $IP6TABLES -A OUTPUT ! -o lo -m state --state INVALID -j drop_invalid
+ $IP6TABLES -A INPUT ! -i lo -m state --state INVALID -j drop_invalid
  $IP6TABLES -A FORWARD -m state --state INVALID -j drop_invalid
  $IP6TABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
  $IP6TABLES -A drop_invalid -j DROP

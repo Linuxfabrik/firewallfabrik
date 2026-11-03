@@ -1,0 +1,909 @@
+#!/bin/sh
+# shellcheck disable=SC2034,SC2329
+#
+# MANAGED_HEADER
+#
+# TOOL VERSION
+#
+# Generated TIMESTAMP
+#
+# files: * fw-test.fw /etc/fwf.sh
+#
+# Compiled for iptables (any version)
+#
+
+# No iptables release is set for this firewall, so it is compiled for 1.6.2+; set the release the firewall runs in the firewall settings
+# Rule '0 (global)' shadows rule '2 (global)' below it, for service 'web'
+# Rule '0 (global)' shadows rule '4 (global)' below it, for service 'http'
+# Rule '0 (global)' shadows rule '7 (global)' below it, for service 'syn-only'
+# fw-test:Policy:0: warning: Service "web" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+# fw-test:Policy:3: warning: Service "All TCP" matches ALL TCP ports (source and destination ports are 0). Set a port if this is not intended.
+# fw-test:Policy:5: warning: Service "forgotten-udp" matches ALL UDP ports (source and destination ports are 0). Set a port if this is not intended.
+
+FWBDEBUG=""
+RETVAL=0
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+LSMOD="lsmod"
+MODPROBE="modprobe"
+IPTABLES="iptables"
+IP6TABLES="ip6tables"
+IPTABLES_RESTORE="iptables-restore"
+IP6TABLES_RESTORE="ip6tables-restore"
+IPTABLES_SAVE="iptables-save"
+IP6TABLES_SAVE="ip6tables-save"
+IP="ip"
+IFCONFIG="ifconfig"
+VCONFIG="vconfig"
+BRCTL="brctl"
+IFENSLAVE="ifenslave"
+IPSET="ipset"
+LOGGER="logger"
+
+log() {
+ echo "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+}
+
+getInterfaceVarName() {
+ echo "$1" | sed 's/\./_/'
+}
+
+getaddr_internal() {
+ dev=$1
+ name=$2
+ af=$3
+ L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
+}
+
+getnet_internal() {
+ dev=$1
+ name=$2
+ af=$3
+ L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
+}
+
+getaddr() {
+ getaddr_internal "$1" "$2" "-4"
+}
+
+getaddr6() {
+ getaddr_internal "$1" "$2" "-6"
+}
+
+getnet() {
+ getnet_internal "$1" "$2" "-4"
+}
+
+getnet6() {
+ getnet_internal "$1" "$2" "-6"
+}
+
+# function getinterfaces is used to process wildcard interfaces
+getinterfaces() {
+ NAME=$1
+ "$IP" link show | grep ": $NAME" | while read -r L; do
+ OIFS=$IFS
+ IFS=" :"
+ # shellcheck disable=SC2086
+ set -- $L
+ IFS=$OIFS
+ echo "$2"
+ done
+}
+
+diff_intf() {
+ func=$1
+ list1=$2
+ list2=$3
+ cmd=$4
+ for intf in $list1
+ do
+ echo "$list2" | grep -q "$intf" || {
+ # $intf is absent in list 2
+ "$func" "$intf" "$cmd"
+ }
+ done
+}
+
+find_program() {
+ PGM=$1
+ command -v "$PGM" >/dev/null 2>&1 || {
+ echo "\"$PGM\" not found"
+ exit 1
+ }
+}
+check_tools() {
+ find_program command
+ find_program "$IPTABLES"
+ find_program "$IP"
+}
+check_rollback_tools() {
+ find_program "$IPTABLES_SAVE"
+ find_program "$IPTABLES_RESTORE"
+}
+# The tables to clear. /proc/net/ip_tables_names, which used to be
+# read here, only exists while the legacy ip_tables module is loaded;
+# with the iptables-nft backend that every current distribution ships it
+# is absent, the loop over it ran zero times and nothing was cleared at
+# all, while the policies below were already set to DROP. Naming the
+# tables works with either backend: flushing one that does not exist is
+# a no-op and leaves no table behind.
+FWF_TABLES="filter mangle nat raw security"
+
+reset_iptables_v4() {
+ $IPTABLES -w 5 -P OUTPUT DROP
+ $IPTABLES -w 5 -P INPUT DROP
+ $IPTABLES -w 5 -P FORWARD DROP
+
+ for table in $FWF_TABLES; do
+ list=$($IPTABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
+ printf "%s" "$list" | while read -r c chain rest; do
+ if test "$c" = "Chain" ; then
+ $IPTABLES -w 5 -t "$table" -F "$chain"
+ fi
+ done
+ $IPTABLES -w 5 -t "$table" -X
+ done
+}
+
+reset_iptables_v6() {
+ $IP6TABLES -w 5 -P OUTPUT DROP
+ $IP6TABLES -w 5 -P INPUT DROP
+ $IP6TABLES -w 5 -P FORWARD DROP
+
+ for table in $FWF_TABLES; do
+ list=$($IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
+ printf "%s" "$list" | while read -r c chain rest; do
+ if test "$c" = "Chain" ; then
+ $IP6TABLES -w 5 -t "$table" -F "$chain"
+ fi
+ done
+ $IP6TABLES -w 5 -t "$table" -X
+ done
+}
+
+P2P_INTERFACE_WARNING=""
+
+missing_address() {
+ address=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ # shellcheck disable=SC2086
+ set -- $address
+ addr=$1
+ interface=$2
+ IFS=$oldIFS
+
+ "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
+ test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+ P2P_INTERFACE_WARNING="yes"
+ return
+ }
+
+ test "$cmd" = "add" && {
+ echo "# Adding ip address: $interface $addr"
+ if echo "$addr" | grep -q ':'; then
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+ else
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+ fi
+ }
+
+ test "$cmd" = "del" && {
+ echo "# Removing ip address: $interface $addr"
+ $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
+ }
+
+ $FWBDEBUG "$IP" link set "$interface" up
+}
+
+list_addresses_by_scope() {
+ interface=$1
+ scope=$2
+ ignore_list=$3
+ "$IP" addr ls dev "$interface" | \
+ awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+ while read -r addr; do
+ echo "${addr}@$interface"
+	done | sort
+}
+
+update_addresses_of_interface() {
+ ignore_list=$2
+ # shellcheck disable=SC2086
+ set -- $1
+ interface=$1
+ shift
+
+ FWB_ADDRS=$(
+ for addr in "$@"; do
+ echo "${addr}@$interface"
+ done | sort
+ )
+
+ CURRENT_ADDRS_ALL_SCOPES=""
+ CURRENT_ADDRS_GLOBAL_SCOPE=""
+
+ if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+ CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+ CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+ else
+ echo "# Interface $interface does not exist"
+ # Stop the script if we are not in test mode
+ test -z "$FWBDEBUG" && exit 1
+ fi
+
+ diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+ diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+}
+
+clear_addresses_except_known_interfaces() {
+ "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
+ 'function known(name, i, prefix) {
+ if (name in ignored_dict) return 1;
+ for (i in wildcard_arr) {
+ prefix = wildcard_arr[i];
+ if (substr(name, 1, length(prefix)) == prefix) return 1;
+ }
+ return 0;
+ }
+ BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {
+ ignored_dict[ignored_arr[a]]=1;
+ if (ignored_arr[a] ~ /[*+]$/)
+ wildcard_arr[a]=substr(ignored_arr[a],1,length(ignored_arr[a])-1);
+ }
+ }
+ (/state/ && $3 !~ /LOOPBACK/ && !known($2)) {print $2;}' | \
+ while read -r intf; do
+ echo "# Removing addresses not configured in fwbuilder from interface $intf"
+ $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+ $FWBDEBUG "$IP" link set "$intf" down
+ done
+}
+
+reset_fwf_chains_v4() {
+ prefix="$1"
+
+ # For each table, remove FWF jump rules from built-in chains (in
+ # reverse order to keep line numbers stable), then flush and delete
+ # FWF's own chains. We do not check /proc/net/ip_tables_names
+ # because it is absent on systems using the iptables-nft backend;
+ # instead we query iptables directly and suppress errors.
+ for table in filter nat mangle raw; do
+ # Remove jump rules targeting our prefixed chains from built-in chains.
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IPTABLES -w 5 -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read -r rulenum; do
+ $IPTABLES -w 5 -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ # Flush all our prefixed chains first, then delete them in a
+ # second pass. A single pass fails when sub-chains (e.g.
+ # fwf_C...) sort alphabetically before their parent chains
+ # (fwf_INPUT) -- the delete would fail because the parent still
+ # references the sub-chain.
+ $IPTABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IPTABLES -w 5 -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IPTABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IPTABLES -w 5 -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+reset_fwf_chains_v6() {
+ prefix="$1"
+
+ for table in filter nat mangle raw; do
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IP6TABLES -w 5 -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read -r rulenum; do
+ $IP6TABLES -w 5 -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ $IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IP6TABLES -w 5 -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read -r chain; do
+ $IP6TABLES -w 5 -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+setup_fwf_jumps_v4() {
+ prefix="$1"
+
+ # Set built-in chain policies to DROP for security.
+ $IPTABLES -w 5 -P INPUT DROP
+ $IPTABLES -w 5 -P FORWARD DROP
+ $IPTABLES -w 5 -P OUTPUT DROP
+
+ # Create our prefixed chains (ignore error if they already exist).
+ $IPTABLES -w 5 -N "${prefix}_INPUT" 2>/dev/null
+ $IPTABLES -w 5 -N "${prefix}_FORWARD" 2>/dev/null
+ $IPTABLES -w 5 -N "${prefix}_OUTPUT" 2>/dev/null
+
+ # Insert jump rules at position 1 (top of chain).
+ # Tools that start later (Docker, CrowdSec, fail2ban) will insert
+ # their own rules at position 1, pushing ours down. Control the
+ # evaluation order via systemd unit ordering.
+ $IPTABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
+ $IPTABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IPTABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat, mangle and raw tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle raw; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IPTABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IPTABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IPTABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IPTABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
+}
+
+setup_fwf_jumps_v6() {
+ prefix="$1"
+
+ $IP6TABLES -w 5 -P INPUT DROP
+ $IP6TABLES -w 5 -P FORWARD DROP
+ $IP6TABLES -w 5 -P OUTPUT DROP
+
+ $IP6TABLES -w 5 -N "${prefix}_INPUT" 2>/dev/null
+ $IP6TABLES -w 5 -N "${prefix}_FORWARD" 2>/dev/null
+ $IP6TABLES -w 5 -N "${prefix}_OUTPUT" 2>/dev/null
+
+ $IP6TABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
+ $IP6TABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IP6TABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat, mangle and raw tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle raw; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IP6TABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IP6TABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IP6TABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IP6TABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
+}
+
+check_file() {
+ test -r "$2" || {
+ echo "Can not find file $2 referenced by address table object $1"
+ exit 1
+ }
+}
+
+check_run_time_address_table_files() {
+ :
+
+}
+
+load_modules() {
+ :
+
+}
+
+verify_interfaces() {
+ :
+
+}
+
+prolog_commands() {
+ echo "Running prolog script"
+
+}
+
+epilog_commands() {
+ echo "Running epilog script"
+
+}
+
+run_epilog_and_exit() {
+ epilog_commands
+ exit "$1"
+}
+
+# The activation empties the ruleset before it installs the new one, so a
+# rule iptables refuses halfway through would leave the machine with DROP
+# policies and part of the rules - on a remote machine usually without
+# the rule that lets the administrator back in. The running ruleset is
+# therefore saved before anything is changed and put back when the
+# activation fails, the way Shorewall restores its saved state.
+fwf_save_ruleset() {
+ :
+ fwf_saved_v4=$($IPTABLES_SAVE) || { log "Error: \"$IPTABLES_SAVE\" cannot read the running ruleset. Nothing was changed."; exit 1; }
+
+}
+
+fwf_restore_family() {
+ fwf_save_tool=$1
+ fwf_saved=$2
+ shift 2
+ fwf_now=$("$fwf_save_tool") || return 1
+ {
+ printf '%s\n' "$fwf_saved"
+ for fwf_table in $(printf '%s\n' "$fwf_now" | sed -n 's/^\*//p'); do
+ printf '%s\n' "$fwf_saved" | grep -qx "\*$fwf_table" && continue
+ echo "*$fwf_table"
+ test "$fwf_table" = filter && printf ':INPUT ACCEPT [0:0]\n:FORWARD ACCEPT [0:0]\n:OUTPUT ACCEPT [0:0]\n'
+ echo COMMIT
+ done
+ } | "$@"
+}
+
+fwf_rollback_and_exit() {
+ fwf_rollback_status=0
+ fwf_restore_family "$IPTABLES_SAVE" "$fwf_saved_v4" "$IPTABLES_RESTORE" -w 5 || fwf_rollback_status=1
+
+ if test "$fwf_rollback_status" -eq 0; then
+ log "Error: the activation failed. The ruleset that was running before it is back in place."
+ else
+ log "Error: the activation failed, and the ruleset that was running before it could not be put back. The firewall is left with the part of the new rules it could install."
+ fi
+ run_epilog_and_exit "$1"
+}
+
+fwf_timer_save() {
+ check_rollback_tools
+ fwf_save_ruleset
+ printf '%s\n' "$fwf_saved_v4" >"$1/v4" || return 1
+ printf '%s\n' "$fwf_saved_v4" | "$IPTABLES_RESTORE" --test || return 1
+
+}
+
+fwf_timer_restore() {
+ fwf_restore_status=0
+ fwf_restore_family "$IPTABLES_SAVE" "$(cat "$1/v4")" "$IPTABLES_RESTORE" -w 5 || fwf_restore_status=1
+
+ return "$fwf_restore_status"
+}
+
+configure_interfaces() {
+ :
+ # Configure interfaces
+}
+
+# The shell form of the policy is hundreds of separate commands, and the
+# status of the function that runs them is the status of the last one - so
+# a rule iptables refused in the middle left the ruleset incomplete while
+# the script reported a clean activation. script_body therefore points
+# $IPTABLES and $IP6TABLES at these two for as long as it runs, which
+# leaves every generated command line exactly as it was, and counts what
+# was refused. "set -e" is not an alternative: the first thing script_body
+# does is write kernel variables, which fail in a container and on a
+# read-only /proc, and a rule guarded by 'test -n "$i_eth0" &&' is false
+# whenever the interface has no address.
+fwf_run_tool() {
+ fwf_tool=$1
+ shift
+ "$fwf_tool" "$@" && return 0
+ fwf_status=$?
+ case " $* " in
+ *" -N "*) return "$fwf_status" ;;
+ esac
+ fwf_failed_commands=$((fwf_failed_commands + 1))
+ echo "Error: \"$fwf_tool $*\" failed" >&2
+ return "$fwf_status"
+}
+
+fwf_run_iptables() {
+ fwf_run_tool "$fwf_tool_v4" "$@"
+}
+
+fwf_run_ip6tables() {
+ fwf_run_tool "$fwf_tool_v6" "$@"
+}
+
+script_body() {
+ :
+ fwf_failed_commands=0
+ fwf_tool_v4="$IPTABLES"
+ fwf_tool_v6="$IP6TABLES"
+ IPTABLES=fwf_run_iptables
+ IP6TABLES=fwf_run_ip6tables
+ # ================ IPv4
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IPTABLES -A fwf_INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ # drop packets that do not match any valid state and log them
+ $IPTABLES -N fwf_drop_invalid 2>/dev/null
+ $IPTABLES -A fwf_OUTPUT ! -o lo -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_INPUT ! -i lo -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_FORWARD -m conntrack --ctstate INVALID -j fwf_drop_invalid
+ $IPTABLES -A fwf_drop_invalid -m limit --limit 10/second -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IPTABLES -A fwf_drop_invalid -j DROP
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ # A: user service without a port, accepted
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ # B: the predefined All TCP, accepted
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 2 (global)
+ #
+ echo "Rule 2 (global)"
+ #
+ # C: user service without a port, denied
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j DROP
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j DROP
+ #
+ # Rule 3 (global)
+ #
+ echo "Rule 3 (global)"
+ #
+ # D: user object named like the predefined one
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 4 (global)
+ #
+ echo "Rule 4 (global)"
+ #
+ # E: a port is set
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 5 (global)
+ #
+ echo "Rule 5 (global)"
+ #
+ # F: UDP service without a port, accepted
+ $IPTABLES -w 5 -A fwf_INPUT -p udp -m udp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p udp -m udp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 6 (global)
+ #
+ echo "Rule 6 (global)"
+ #
+ # G: the predefined All UDP, accepted
+ $IPTABLES -w 5 -A fwf_INPUT -p udp -m udp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p udp -m udp -s 192.0.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ # H: TCP flags inspected, accepted
+ $IPTABLES -w 5 -A fwf_INPUT -p tcp -m tcp -s 192.0.2.0/24 --tcp-flags SYN SYN -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w 5 -A fwf_FORWARD -p tcp -m tcp -s 192.0.2.0/24 --tcp-flags SYN SYN -m conntrack --ctstate NEW -j ACCEPT
+ IPTABLES="$fwf_tool_v4"
+ IP6TABLES="$fwf_tool_v6"
+ test "$fwf_failed_commands" -eq 0
+}
+
+ip_forward() {
+ :
+
+}
+
+reset_all() {
+ :
+ reset_fwf_chains_v4 "fwf"
+}
+
+block_action() {
+ reset_all
+}
+
+stop_action() {
+ reset_all
+ $IPTABLES -w 5 -P OUTPUT ACCEPT
+ $IPTABLES -w 5 -P INPUT ACCEPT
+ $IPTABLES -w 5 -P FORWARD ACCEPT
+}
+
+status_action() {
+ # Coexistence mode: check for FirewallFabrik's own prefixed chains.
+ # Counting all chains would give false positives when Docker,
+ # CrowdSec or fail2ban create their own chains.
+ $IPTABLES -w 5 -S 2>/dev/null | grep -q -- "^-N fwf_" && {
+ echo "Firewall is active"
+ return 0
+ }
+ echo "Firewall is not configured"
+ exit 3
+}
+
+# Two runs of this script at the same time - an installer and a timer, or
+# an address table reload during an activation - interleave their
+# commands, and the second one works on the first one's half-finished
+# ruleset. Every command that changes the firewall therefore takes a
+# lock first and waits up to a minute for it. /run belongs to root, so
+# the file cannot be a planted symlink. flock comes with util-linux;
+# where it or the lock file is missing, the script runs without the lock
+# rather than not at all. "reload" runs "$0 start", which finds the lock
+# already held (FWF_LOCKED) instead of waiting for itself.
+FWF_LOCK_FILE=${FWF_LOCK_FILE:-/run/fwf.lock}
+
+fwf_lock() {
+ test -n "$FWF_LOCKED" && return 0
+ command -v flock >/dev/null 2>&1 || return 0
+ (: >>"$FWF_LOCK_FILE") 2>/dev/null || return 0
+ exec 9>>"$FWF_LOCK_FILE"
+ if ! flock -w 60 9; then
+ log "Error: another run of this script still holds $FWF_LOCK_FILE after a minute. Nothing was changed."
+ exit 1
+ fi
+ FWF_LOCKED=1
+ export FWF_LOCKED
+}
+
+# "try" activates the policy and puts back the ruleset that was running
+# before it unless "confirm" follows within the given number of seconds.
+# The saved state is in /run, which is gone after a reboot, like the timer.
+FWF_ROLLBACK_DIR=${FWF_ROLLBACK_DIR:-/run/fwf-rollback}
+
+fwf_timer_stop() {
+ case "$1" in
+ systemd:*) systemctl stop "${1#systemd:}.timer" >/dev/null 2>&1 ;;
+ [0-9]*) kill "$1" >/dev/null 2>&1 ;;
+ esac
+ return 0
+}
+
+fwf_timer_arm() {
+ fwf_token="$(date +%s)-$$"
+ echo "$fwf_token" >"$FWF_ROLLBACK_DIR/token" || return 1
+ if test -d /run/systemd/system && command -v systemd-run >/dev/null 2>&1 &&
+ systemd-run --quiet --no-ask-password --collect \
+ --unit="fwf-rollback-$fwf_token" --on-active="$1" \
+ --timer-property=AccuracySec=1s \
+ --setenv=FWF_LOCK_FILE="$FWF_LOCK_FILE" \
+ --setenv=FWF_ROLLBACK_DIR="$FWF_ROLLBACK_DIR" \
+ /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$fwf_token" >/dev/null 2>&1; then
+ echo "systemd:fwf-rollback-$fwf_token" >"$FWF_ROLLBACK_DIR/timer"
+ return 0
+ fi
+ command -v setsid >/dev/null 2>&1 || return 1
+ FWF_LOCKED='' setsid /bin/sh -c 'trap "" HUP; sleep "$1"; exec /bin/sh "$2" rollback "$3"' \
+ fwf-rollback "$1" "$FWF_ROLLBACK_DIR/restore.sh" "$fwf_token" \
+ </dev/null >/dev/null 2>&1 9>&- &
+ echo "$!" >"$FWF_ROLLBACK_DIR/timer"
+}
+
+fwf_timer_rearm() {
+ fwf_old_timer=$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)
+ fwf_timer_arm "$1" || return 1
+ fwf_timer_stop "$fwf_old_timer"
+}
+
+fwf_try() {
+ case "$1" in
+ '' | *[!0-9]* | 0)
+ log "Error: \"try\" needs the number of seconds to wait for \"confirm\", such as \"$0 try 60\". Nothing was changed."
+ return 1
+ ;;
+ esac
+ if test -f "$FWF_ROLLBACK_DIR/restore.sh"; then
+ log "An earlier activation is still waiting for confirmation; the ruleset from before it stays the one to go back to."
+ else
+ rm -rf "$FWF_ROLLBACK_DIR"
+ mkdir -m 700 "$FWF_ROLLBACK_DIR" || {
+ log "Error: cannot create $FWF_ROLLBACK_DIR. Nothing was changed."
+ return 1
+ }
+ fwf_timer_save "$FWF_ROLLBACK_DIR" || {
+ rm -rf "$FWF_ROLLBACK_DIR"
+ log "Error: the running ruleset cannot be saved in a form that can be loaded again, so it could not be put back. Nothing was changed."
+ return 1
+ }
+ cp "$0" "$FWF_ROLLBACK_DIR/restore.sh" || {
+ rm -rf "$FWF_ROLLBACK_DIR"
+ log "Error: cannot write to $FWF_ROLLBACK_DIR. Nothing was changed."
+ return 1
+ }
+ fi
+ fwf_timer_rearm "$1" || {
+ log "Error: neither systemd-run nor setsid can start a timer. Nothing was changed."
+ fwf_timer_expire
+ return 1
+ }
+ trap '' HUP
+ FWF_TRYING=1 /bin/sh "$0" start
+ fwf_status=$?
+ if test "$fwf_status" -ne 0; then
+ log "Error: the activation failed. The ruleset from before it is put back now."
+ fwf_timer_expire
+ return "$fwf_status"
+ fi
+ fwf_timer_rearm "$1"
+ log "Activated. Run \"$0 confirm\" within $1 seconds, or the ruleset from before it is put back."
+}
+
+fwf_confirm() {
+ test -f "$FWF_ROLLBACK_DIR/restore.sh" || {
+ log "Error: no activation is waiting for confirmation. It was put back when its time ran out, or it was not started with \"try\"."
+ return 1
+ }
+ fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+ rm -rf "$FWF_ROLLBACK_DIR"
+ log "Activation confirmed."
+}
+
+fwf_timer_expire() {
+ test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+ if test -n "$1" && test "$1" != "$(cat "$FWF_ROLLBACK_DIR/token" 2>/dev/null)"; then
+ return 0
+ fi
+ test -z "$1" && fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+ if fwf_timer_restore "$FWF_ROLLBACK_DIR"; then
+ log "The activation was not confirmed. The ruleset from before it is back in place."
+ fwf_status=0
+ else
+ log "Error: the activation was not confirmed, and the ruleset from before it could not be put back."
+ fwf_status=1
+ fi
+ rm -rf "$FWF_ROLLBACK_DIR"
+ return "$fwf_status"
+}
+
+fwf_rollback() {
+ if test -f "$FWF_ROLLBACK_DIR/restore.sh" && test "$0" != "$FWF_ROLLBACK_DIR/restore.sh"; then
+ exec /bin/sh "$FWF_ROLLBACK_DIR/restore.sh" rollback "$1"
+ fi
+ fwf_timer_expire "$1"
+}
+
+fwf_timer_cancel() {
+ test -n "$FWF_TRYING" && return 0
+ test -f "$FWF_ROLLBACK_DIR/restore.sh" || return 0
+ fwf_timer_stop "$(cat "$FWF_ROLLBACK_DIR/timer" 2>/dev/null)"
+ rm -rf "$FWF_ROLLBACK_DIR"
+ log "An activation started with \"try\" was waiting for confirmation. This run replaces it, so its rollback timer is stopped."
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+ cmd="start"
+}
+
+case "$cmd" in
+ status|test_interfaces|test_address_table) ;;
+ *) fwf_lock ;;
+esac
+
+case "$cmd" in
+ start)
+ log "Activating firewall script generated TIMESTAMP"
+ fwf_timer_cancel
+ check_tools
+ check_rollback_tools
+ prolog_commands
+ check_run_time_address_table_files
+
+ load_modules " "
+
+ configure_interfaces
+ verify_interfaces
+
+ fwf_save_ruleset
+ reset_all
+ setup_fwf_jumps_v4 "fwf"
+
+ script_body || fwf_rollback_and_exit 1
+ ip_forward
+ epilog_commands
+ ;;
+
+ stop)
+ fwf_timer_cancel
+ check_tools
+ stop_action
+ RETVAL=$?
+ ;;
+
+ status)
+ check_tools
+ status_action
+ RETVAL=$?
+ ;;
+
+ block)
+ check_tools
+ block_action
+ RETVAL=$?
+ ;;
+
+ reload)
+ $0 start
+ RETVAL=$?
+ ;;
+
+ try)
+ fwf_try "$2"
+ RETVAL=$?
+ ;;
+
+ confirm)
+ fwf_confirm
+ RETVAL=$?
+ ;;
+
+ rollback)
+ fwf_rollback "$2"
+ RETVAL=$?
+ ;;
+
+ interfaces)
+ check_tools
+ configure_interfaces
+ RETVAL=$?
+ ;;
+
+ test_interfaces)
+ check_tools
+ FWBDEBUG="echo"
+ configure_interfaces
+ RETVAL=$?
+ ;;
+
+ *)
+ echo "Usage $0 [start|stop|status|block|reload|try|confirm|rollback|interfaces|test_interfaces]"
+ RETVAL=1
+ ;;
+
+esac
+
+exit $RETVAL

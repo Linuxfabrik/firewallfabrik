@@ -125,11 +125,13 @@ def test_ipt_reports_a_rate_the_limit_match_cannot_express():
 def test_nft_logs_at_the_limit_and_drops_every_invalid_packet():
     # `limit` is a match: sharing one rule with the drop would let a packet
     # above the rate skip the drop and go on to the policy.
+    # The input chain leaves loopback traffic to the policy
+    # (tests/test_invalid_loopback.py).
     lines, warnings = _nft()
     assert lines == [
-        'ct state invalid limit rate 10/second counter log prefix '
+        'iif != "lo" ct state invalid limit rate 10/second counter log prefix '
         '"INVALID state -- DENY " level debug',
-        'ct state invalid counter drop',
+        'iif != "lo" ct state invalid counter drop',
     ]
     assert not warnings
 
@@ -137,13 +139,14 @@ def test_nft_logs_at_the_limit_and_drops_every_invalid_packet():
 def test_nft_one_rule_when_the_limit_is_off():
     lines, _ = _nft(limit_value=0)
     assert lines == [
-        'ct state invalid counter log prefix "INVALID state -- DENY " level debug drop'
+        'iif != "lo" ct state invalid counter log prefix "INVALID state -- DENY " '
+        'level debug drop'
     ]
 
 
 def test_nft_no_log_rule_without_log_invalid():
     lines, _ = _nft(log_invalid=False)
-    assert lines == ['ct state invalid counter drop']
+    assert lines == ['iif != "lo" ct state invalid counter drop']
 
 
 def test_ipt_no_log_without_log_invalid():
