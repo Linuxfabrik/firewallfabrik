@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.7.1] - 2026-11-03
+
 ### Changed
 
 Compiler (iptables, nftables):
@@ -786,7 +791,8 @@ Editor:
 Initial public beta pre-release: compile and install for iptables and nftables, with the Firewall Builder GUI.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.1...HEAD
+[v3.7.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.0...v3.7.1
 [v3.7.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.6.0...v3.7.0
 [v3.6.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.5.0...v3.6.0
 [v3.5.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.4.0...v3.5.0
