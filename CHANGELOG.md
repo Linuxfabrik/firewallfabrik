@@ -14,6 +14,12 @@ Examples:
 
 * `examples/vdc.fwf` is a starting point for a new virtual data center: six nftables firewalls with role tags and dynamic groups, dual-stack policies, anti-spoofing, and DNS and NTP limited to fixed servers; `examples/README.md` explains how to adapt it
 
+### Fixed
+
+Compiler (iptables, nftables):
+
+* a rule with the firewall as source and an address range around it as destination, such as an anti-spoofing rule, filters packets addressed to the firewall itself again, and a rule with such an address range as source and the firewall as destination also covers the firewall's own traffic
+
 
 ## [v3.7.1] - 2026-11-03
 

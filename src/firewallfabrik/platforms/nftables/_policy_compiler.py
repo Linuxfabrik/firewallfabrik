@@ -1852,9 +1852,10 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
     also covers traffic the firewall sends out itself.  The original
     rule stays in place and eventually lands in ``forward``.
 
-    Skipped when the destination already matches the firewall: the
-    resulting output->fw self-loop rule would never actually match
-    (kernel routes such packets via ``lo``) and fwbuilder omits it too.
+    The copy is made whatever the destination is, as in Firewall
+    Builder (PolicyCompiler_ipt.cpp, splitIfSrcMatchingAddressRange).
+    A destination that is the firewall as well does not make it dead:
+    the firewall's traffic to itself passes ``output`` on ``lo``.
     """
 
     def process_next(self) -> bool:
@@ -1880,17 +1881,12 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(nft_comp.fw.get_option('bridging_fw'))
         src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
-        dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
             rule.direction != Direction.Inbound
             and src is not None
             and isinstance(src, AddressRange)
             and nft_comp.complex_match(src, nft_comp.fw, not bridging, not bridging)
-            and not (
-                dst is not None
-                and nft_comp.complex_match(dst, nft_comp.fw, not bridging, not bridging)
-            )
         ):
             r = rule.clone()
             r.ipt_chain = 'output'
@@ -1907,6 +1903,13 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
     See :class:`SplitIfSrcMatchingAddressRange`; this is the
     destination-side counterpart.  Creates an ``input`` clone so
     firewall-directed traffic covered by the range is not missed.
+
+    The copy is made whatever the source is, as in Firewall Builder
+    (PolicyCompiler_ipt.cpp, splitIfDstMatchingAddressRange).  A source
+    that is the firewall does not make it dead: an anti-spoofing rule
+    names the firewall as source on the external interface, and the
+    forged packets it is there for arrive on that interface and go
+    through ``input``.
     """
 
     def process_next(self) -> bool:
@@ -1931,7 +1934,6 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         # frame, so there the question is the plain one.  fwbuilder
         # writes both as `b=m= !bridging_fw`.
         bridging = bool(nft_comp.fw.get_option('bridging_fw'))
-        src = self.compiler.correct_for_cluster(rule.src[0]) if rule.src else None
         dst = self.compiler.correct_for_cluster(rule.dst[0]) if rule.dst else None
 
         if (
@@ -1939,10 +1941,6 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
             and dst is not None
             and isinstance(dst, AddressRange)
             and nft_comp.complex_match(dst, nft_comp.fw, not bridging, not bridging)
-            and not (
-                src is not None
-                and nft_comp.complex_match(src, nft_comp.fw, not bridging, not bridging)
-            )
         ):
             r = rule.clone()
             r.ipt_chain = 'input'

@@ -1,0 +1,90 @@
+name: 'Test: address ranges that contain the firewall'
+libraries:
+  - name: 'Test Objects'
+    children:
+      - type: 'AddressRange'
+        name: 'all-ipv4'
+        start_address:
+          address: '0.0.0.0'
+        end_address:
+          address: '255.255.255.255'
+      - type: 'Firewall'
+        name: 'fw-test'
+        data:
+          platform: 'nftables'
+          host_OS: 'linux24'
+          version: ''
+        options:
+          accept_established: true
+          configure_interfaces: false
+          flush_ruleset: false
+          load_modules: false
+          manage_virtual_addr: false
+          verify_interfaces: false
+        interfaces:
+          - name: 'eth0'
+            data:
+              label: 'outside'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth0-addr'
+                inet_addr_mask:
+                  address: '203.0.113.1'
+                  netmask: '255.255.255.0'
+          - name: 'eth1'
+            data:
+              label: 'inside'
+            addresses:
+              - type: 'IPv4'
+                name: 'eth1-addr'
+                inet_addr_mask:
+                  address: '192.168.1.1'
+                  netmask: '255.255.255.0'
+          - name: 'lo'
+            addresses:
+              - type: 'IPv4'
+                name: 'lo-addr'
+                inet_addr_mask:
+                  address: '127.0.0.1'
+                  netmask: '255.0.0.0'
+        rule_sets:
+          - type: 'Policy'
+            name: 'Policy'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'PolicyRule'
+                comment: 'Anti-spoofing: the firewall as source, an address range
+                  around it as destination'
+                options:
+                  stateless: true
+                action: 'Deny'
+                direction: 'Inbound'
+                dst:
+                  - 'Library:Test Objects/AddressRange:all-ipv4'
+                itf:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth0'
+                src:
+                  - 'Library:Test Objects/Firewall:fw-test'
+              - type: 'PolicyRule'
+                position: 1
+                comment: 'An address range around a firewall address as source, the
+                  firewall as destination'
+                action: 'Accept'
+                direction: 'Both'
+                dst:
+                  - 'Library:Test Objects/Firewall:fw-test'
+                src:
+                  - 'Library:Test Objects/AddressRange:inside-range'
+                srv:
+                  - 'Library:Test Objects/TCPService:ssh'
+      - type: 'AddressRange'
+        name: 'inside-range'
+        start_address:
+          address: '192.168.1.1'
+        end_address:
+          address: '192.168.1.10'
+      - type: 'TCPService'
+        name: 'ssh'
+        dst_range_start: 22
+        dst_range_end: 22

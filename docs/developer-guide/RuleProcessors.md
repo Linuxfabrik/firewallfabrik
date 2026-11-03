@@ -846,6 +846,11 @@ Mirror for Dst with direction not Outbound.
 Splits when an AddressRange in Src/Dst includes the firewall's address.
 Checks if the range's start/end encompasses any firewall interface address.
 If so, splits into OUTPUT/INPUT + FORWARD rules similar to the network case.
+The copy is made whatever the other rule element holds, as in Firewall
+Builder. An anti-spoofing rule has the firewall as source and may have
+an address range as destination; its INPUT copy is the one that drops
+the forged packets addressed to the firewall itself
+(`tests/test_address_range_fw_split.py`).
 
 ### Address range handling
 
