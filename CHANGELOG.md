@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Changed
+
+Examples:
+
+* `examples/vdc.fwf` is a starting point for a new virtual data center: six nftables firewalls with role tags and dynamic groups, dual-stack policies, anti-spoofing, and DNS and NTP limited to fixed servers; `examples/README.md` explains how to adapt it
 
 
 ## [v3.7.1] - 2026-11-03

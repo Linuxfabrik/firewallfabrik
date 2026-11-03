@@ -124,7 +124,7 @@ List the current set with `grep -oE 'img/obj-[^)"]+' "05 - Working with Objects.
 
 ### 10 - Compiling and Installing a Policy (32)
 
-Standalone shots work with any of the five firewalls in `vdc.fwf`.
+Standalone shots work with any of the six firewalls in `vdc.fwf`. All of them compile for nftables; for an iptables shot, switch one firewall's platform to iptables first.
 
 - [ ] compile-main-toolbar-icons, compile-policy-toolbar-icons, compile-context-menu-options
 - [ ] compile-single-rule, compile-generated-iptables-gui, compile-policy-example, compile-select-firewalls
@@ -232,7 +232,7 @@ Anything showing Cisco, PF, ipfw, ipfilter, HP ProCurve or PuTTY has no counterp
 | (none yet)    | Branching rules and the SSH-scan branch recipes                              |
 | (none yet)    | Packet tagging recipes                                                       |
 
-`examples/vdc.fwf` contains five firewalls (`cloud`, `firewall`, `infra`, `monitor`, `proxy`) plus a populated object library. When you build a missing fixture, add it under `examples/` and list it here so later re-shoots use the same source.
+`examples/vdc.fwf` contains six nftables firewalls (`cloud`, `comm`, `firewall`, `infra`, `monitor`, `proxy`) plus a populated object library. When you build a missing fixture, add it under `examples/` and list it here so later re-shoots use the same source.
 
 ## Working tips
 
