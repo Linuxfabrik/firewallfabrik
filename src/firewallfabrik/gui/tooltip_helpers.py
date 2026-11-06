@@ -259,9 +259,8 @@ def obj_tooltip(obj):
             lines.append('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;.&nbsp;.')
 
     # -- Library --
-    elif type_str == 'Library':
-        if getattr(obj, 'ro', False):
-            lines.append('Read-only')
+    elif type_str == 'Library' and getattr(obj, 'ro', False):
+        lines.append('Read-only')
 
     # -- Comment --
     comment = getattr(obj, 'comment', None) or ''
