@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v3.7.3] - 2026-11-08
+
 ### Fixed
 
 Standard library:
@@ -810,7 +815,8 @@ Editor:
 Initial public beta pre-release: compile and install for iptables and nftables, with the Firewall Builder GUI.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.2...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.3...HEAD
+[v3.7.3]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.2...v3.7.3
 [v3.7.2]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.1...v3.7.2
 [v3.7.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.7.0...v3.7.1
 [v3.7.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v3.6.0...v3.7.0
