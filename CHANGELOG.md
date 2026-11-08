@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+Standard library:
+
+* the FreeIPA group includes HTTP (CA download, OCSP, CRL) and Kerberos and kpasswd over UDP, so clients can enroll and validate IPA certificates ("Update Standard Library")
 
 
 ## [v3.7.2] - 2026-11-03
