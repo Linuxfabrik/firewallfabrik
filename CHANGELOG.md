@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+Compiler (nftables):
+
+* with "flush ruleset", the script no longer loads the legacy iptables kernel modules, which made Lynis report FIRE-4512 "iptables module(s) loaded, but no rules active", and no longer leaves empty `ip filter` and `ip6 filter` tables behind
 
 
 ## [v3.7.3] - 2026-11-08

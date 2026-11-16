@@ -607,7 +607,22 @@ flush_legacy_iptables() {
     # old iptables rules would otherwise survive and shadow the nft
     # rules. All filtering is delegated to nftables, so the built-in
     # policies are reset to ACCEPT and every chain is flushed/deleted.
-    for ipt in iptables ip6tables; do
+    #
+    # Only the legacy binaries are called, and only while the kernel
+    # already holds legacy tables. "iptables" may be iptables-nft, which
+    # recreates the "ip filter" and "ip6 filter" tables right after
+    # "nft flush ruleset" removed them. And any legacy call loads the
+    # ip_tables / ip6_tables modules (plus one iptable_* module per
+    # table), which Lynis then reports as FIRE-4512 "iptables module(s)
+    # loaded, but no rules active". Without those modules there is no
+    # legacy rule to remove. Verified with iptables 1.8.10 (legacy and
+    # nf_tables) and Lynis 3.1.7 on Rocky Linux 9.
+    for ipt in iptables-legacy ip6tables-legacy; do
+        case "$ipt" in
+            iptables-legacy) names=/proc/net/ip_tables_names ;;
+            ip6tables-legacy) names=/proc/net/ip6_tables_names ;;
+        esac
+        [ -e "$names" ] || continue
         command -v "$ipt" >/dev/null 2>&1 || continue
         "$ipt" -P INPUT ACCEPT 2>/dev/null
         "$ipt" -P FORWARD ACCEPT 2>/dev/null
