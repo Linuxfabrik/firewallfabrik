@@ -39,7 +39,9 @@ jobs:
           cd docs
           ln -sf ../CHANGELOG.md CHANGELOG.md
           ln -sf ../CODE_OF_CONDUCT.md CODE_OF_CONDUCT.md
-          ln -sf ../CONTRIBUTING.md contributing.md
+          # A copy instead of a symlink: CONTRIBUTING.md links into docs/developer-guide/,
+          # which the site serves next to contributing.md.
+          sed --regexp-extended 's#\]\((<?)docs/developer-guide/#](\1developer-guide/#g' ../CONTRIBUTING.md > contributing.md
           ln -sf ../SECURITY.md security.md
 
       - name: 'Build documentation'
