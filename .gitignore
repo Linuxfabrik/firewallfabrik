@@ -170,7 +170,8 @@ cython_debug/
 # Compiled Qt resources (auto-generated from .qrc)
 *.rcc
 
-# Claude Code local settings and session files
-.claude/
+# Claude Code local settings and personal instructions
+.claude/settings.local.json
+CLAUDE.local.md
 
 examples/*.fw
