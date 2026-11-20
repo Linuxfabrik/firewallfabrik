@@ -23,7 +23,7 @@ Ports fwbuilder's ``newClusterDialog`` with its five pages:
 5. a summary.
 
 The Master column of the first page is left out: see "No Master Member
-in a Cluster" in DesignDecisions.md.  The cluster itself is created by
+in a Cluster" in design-decisions.md.  The cluster itself is created by
 ``TreeOperations.create_cluster`` from what ``get_result()`` returns.
 """
 

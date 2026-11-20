@@ -51,7 +51,6 @@ validation:
 
 exclude_docs: |
   README.md
-  developer-guide/README.md
   user-guide/README.md
 
 not_in_nav: |
@@ -79,12 +78,19 @@ nav:
       - 'Appendix': 'user-guide/16 - Appendix.md'
       - 'Migrating from Firewall Builder': 'user-guide/17 - Migrating from Firewall Builder.md'
   - 'Developer Guide':
-      - 'Database Manager': 'developer-guide/DatabaseManager.md'
-      - 'Debugging': 'developer-guide/Debugging.md'
-      - 'Design Decisions': 'developer-guide/DesignDecisions.md'
-      - 'Platform Defaults': 'developer-guide/PlatformDefaults.md'
-      - 'Rule Processors': 'developer-guide/RuleProcessors.md'
-      - 'Testing': 'developer-guide/Testing.md'
+      - 'Compilation Pipeline': 'developer-guide/compilation-pipeline.md'
+      - 'Database Manager': 'developer-guide/database-manager.md'
+      - 'Debugging': 'developer-guide/debugging.md'
+      - 'Design Decisions': 'developer-guide/design-decisions.md'
+      - 'Implementation Status': 'developer-guide/implementation-status.md'
+      - 'iptables NAT': 'developer-guide/iptables-nat.md'
+      - 'iptables Pipeline Order': 'developer-guide/iptables-pipeline-order.md'
+      - 'Platform Defaults': 'developer-guide/platform-defaults.md'
+      - 'Processor Naming Map': 'developer-guide/processor-naming-map.md'
+      - 'Rule Processors': 'developer-guide/rule-processors.md'
+      - 'Rule Processors (iptables)': 'developer-guide/rule-processors-iptables.md'
+      - 'Rule Processors (nftables)': 'developer-guide/rule-processors-nftables.md'
+      - 'Testing': 'developer-guide/testing.md'
   - 'Changelog': 'CHANGELOG.md'
   - 'Contributing': 'contributing.md'
   - 'Security': 'security.md'

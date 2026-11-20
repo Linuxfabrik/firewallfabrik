@@ -142,7 +142,7 @@ class PrintTotalNumberOfRules(BasicRuleProcessor):
     every pass of the C++ compiler carries right behind ``Begin``.  The
     line only appears in verbose mode, where it is what makes a fwf trace
     line up with a fwb_ipt one when the two are diffed
-    (docs/developer-guide/Debugging.md).
+    (docs/developer-guide/debugging.md).
     """
 
     def __init__(self, name: str = 'Print total number of rules') -> None:

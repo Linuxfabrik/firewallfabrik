@@ -191,12 +191,20 @@ When adding a new `nosec` annotation, always run bandit once and grep the output
 
 ### Developer Guide
 
-Detailed developer documentation lives in [`docs/developer-guide/`](docs/developer-guide/):
+Before you change code, read the file in [`docs/developer-guide/`](docs/developer-guide/) that matches the task, completely:
 
-- [CompilationPipeline](docs/developer-guide/CompilationPipeline.md) -- read this first
-- [DatabaseManager](docs/developer-guide/DatabaseManager.md)
-- [Debugging](docs/developer-guide/Debugging.md)
-- [DesignDecisions](docs/developer-guide/DesignDecisions.md)
-- [PlatformDefaults](docs/developer-guide/PlatformDefaults.md)
-- [RuleProcessors](docs/developer-guide/RuleProcessors.md)
-- [Testing](docs/developer-guide/Testing.md)
+| File | Read before |
+|---|---|
+| [compilation-pipeline.md](docs/developer-guide/compilation-pipeline.md) | the first change to the compilers: layers, data flow and where each step lives |
+| [database-manager.md](docs/developer-guide/database-manager.md) | working with database sessions or the undo stack in `core/_database.py` |
+| [debugging.md](docs/developer-guide/debugging.md) | tracing a rule through the processor pipeline with `--xp`, `--xn` or `--xr`, or comparing against `fwb_ipt` |
+| [design-decisions.md](docs/developer-guide/design-decisions.md) | changing a deliberate difference to Firewall Builder, the versioning or the GUI architecture |
+| [implementation-status.md](docs/developer-guide/implementation-status.md) | porting a Firewall Builder feature, or deciding whether a difference to Firewall Builder is intended |
+| [iptables-nat.md](docs/developer-guide/iptables-nat.md) | changing an iptables NAT processor or the NAT pipeline order |
+| [iptables-pipeline-order.md](docs/developer-guide/iptables-pipeline-order.md) | changing the order of the iptables policy or routing pipeline |
+| [platform-defaults.md](docs/developer-guide/platform-defaults.md) | adding a platform or host option, or changing its default |
+| [processor-naming-map.md](docs/developer-guide/processor-naming-map.md) | looking up the Python counterpart of a Firewall Builder processor |
+| [rule-processors.md](docs/developer-guide/rule-processors.md) | writing or changing any rule processor: base classes, data structures, generic processors |
+| [rule-processors-iptables.md](docs/developer-guide/rule-processors-iptables.md) | changing an iptables policy processor |
+| [rule-processors-nftables.md](docs/developer-guide/rule-processors-nftables.md) | changing an nftables processor or its pipeline |
+| [testing.md](docs/developer-guide/testing.md) | writing a test, or updating expected output files |

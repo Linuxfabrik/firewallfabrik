@@ -12,7 +12,7 @@
 
 """The default of a firewall option lives in `defaults.yaml` and nowhere else.
 
-`docs/developer-guide/PlatformDefaults.md` says so, and it matters where
+`docs/developer-guide/platform-defaults.md` says so, and it matters where
 a data file does not carry the key: a driver reading the raw dict with a
 fallback of its own answers the question its own way, and a `true` in the
 schema then never applies.  The two platforms have to agree as well - the

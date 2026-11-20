@@ -3,7 +3,7 @@
 This document gives the big picture of how FirewallFabrik turns a firewall
 definition (stored as `.fwf` / YAML, or imported from `.fwb` / XML) into an
 executable shell script for iptables or nftables. Read this first; the
-[Rule Processors](RuleProcessors.md) document drills into the individual
+[Rule Processors](rule-processors.md) document drills into the individual
 processor steps afterwards.
 
 ---
@@ -116,11 +116,11 @@ This walks through what happens when `fwf-ipt firewall1` (or the GUI
        `ResolveMultiAddress` processor calls and caches.
     2. **NAT compilation** — instantiate `NATCompiler_ipt`, run its
        pipeline of some 95 processors (see *iptables NAT pipeline order* in
-       [RuleProcessors.md](RuleProcessors.md)). Output goes into the `*nat`
+       [iptables-nat.md](iptables-nat.md)). Output goes into the `*nat`
        table section.
     3. **Policy compilation** — instantiate `PolicyCompiler_ipt`, run its
        pipeline of some 125 processors (see *Main compilation pass* in
-       [RuleProcessors.md](RuleProcessors.md)). Output is split across the
+       [iptables-pipeline-order.md](iptables-pipeline-order.md)). Output is split across the
        `*filter` and `*mangle` tables via `ipt_chain` on each rule.
     4. **Mangle pass** — a dedicated `PolicyCompiler_ipt` run for the
        mangle table (tagging / classify / routing).
@@ -159,8 +159,7 @@ table hooked at all until the load finishes.
 
 - If you're debugging **output correctness** (wrong iptables command, wrong
   chain, missing rule), start in the processor chain → see
-  [RuleProcessors.md](RuleProcessors.md), particularly the *Full pipeline
-  order* section.
+  [iptables-pipeline-order.md](iptables-pipeline-order.md).
 - If you're debugging **script scaffolding** (wrong shebang, missing
   `reset_all`, broken installer), start in the platform
   `_compiler_driver.py` and the configlet templates under
@@ -168,19 +167,19 @@ table hooked at all until the load finishes.
 - If you're debugging **input** (wrong rule in DB), start in the YAML /
   XML readers or in `core/objects/_rules.py`.
 - For **per-rule tracing** through the processor chain, enable the `Debug`
-  interceptor via `--xp` / `--xn` / `--xr` — see [Debugging](Debugging.md).
+  interceptor via `--xp` / `--xn` / `--xr` — see [Debugging](debugging.md).
 
 ---
 
 ## Further reading
 
-- [Rule Processors](RuleProcessors.md) — every processor, every pipeline,
+- [Rule Processors](rule-processors.md) — every processor, every pipeline,
   in execution order.
-- [Database Manager](DatabaseManager.md) — how `core/_database.py` manages
+- [Database Manager](database-manager.md) — how `core/_database.py` manages
   sessions and undo state.
-- [Platform Defaults](PlatformDefaults.md) — where default option values
+- [Platform Defaults](platform-defaults.md) — where default option values
   live and how they flow into the compiler.
-- [Debugging](Debugging.md) — how to trace a single rule through the
+- [Debugging](debugging.md) — how to trace a single rule through the
   pipeline.
-- [Testing](Testing.md) — how the expected-output regression tests guard
+- [Testing](testing.md) — how the expected-output regression tests guard
   compiler output.

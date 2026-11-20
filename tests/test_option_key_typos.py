@@ -16,7 +16,7 @@
 misspelled key is not an error, it is silence: the compiler uses the
 default and the value the administrator typed is never read.  That is the
 failure the option schema was written to prevent
-(docs/developer-guide/PlatformDefaults.md), and the check that would have
+(docs/developer-guide/platform-defaults.md), and the check that would have
 caught it had no caller.
 
 Reporting every unknown key is no use.  A data file imported from Firewall
