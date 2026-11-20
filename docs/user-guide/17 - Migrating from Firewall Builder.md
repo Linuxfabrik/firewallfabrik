@@ -78,7 +78,7 @@ FirewallFabrik imports all objects, rule sets, and settings from a `.fwb` file:
 ## What Does Not Get Imported
 
 - **Revision history (RCS)** -- Firewall Builder had optional RCS integration. FirewallFabrik does not support RCS; use Git for version control instead.
-- **Deleted Objects library** -- Firewall Builder soft-deleted objects into a special library. FirewallFabrik uses permanent deletion. See the [developer guide](../developer-guide/DesignDecisions.md) for the rationale.
+- **Deleted Objects library** -- Firewall Builder soft-deleted objects into a special library. FirewallFabrik uses permanent deletion. See the [developer guide](../developer-guide/design-decisions.md) for the rationale.
 - **Unsupported platform settings** -- If your `.fwb` file contains firewalls configured for platforms that FirewallFabrik does not support (e.g. Cisco PIX, PF), the objects are imported but cannot be compiled. See [Platform Compatibility](#platform-compatibility) below.
 
 ## Platform Compatibility

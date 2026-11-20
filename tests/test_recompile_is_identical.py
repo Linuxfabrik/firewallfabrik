@@ -12,7 +12,7 @@
 
 """Compiling the same firewall twice has to give the same script.
 
-`DesignDecisions.md` states it as the reason the compiler versions are
+`design-decisions.md` states it as the reason the compiler versions are
 separate from the package version: the same policy compiled again must
 produce a byte-identical file, or nobody can tell a real change from
 noise.  The GUI compiles in the process it runs in, so "again" usually

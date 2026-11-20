@@ -44,7 +44,7 @@ import re
 # Only what was measured is named: the releases each
 # distribution installs from its own repositories, and the corpus compiled
 # for the entry loaded on it without a rejection - see "The Release a
-# Firewall Is Compiled For" in docs/developer-guide/PlatformDefaults.md.
+# Firewall Is Compiled For" in docs/developer-guide/platform-defaults.md.
 # RHEL covers its rebuilds (Rocky Linux was measured).
 _ENTRIES: dict[str, list[tuple[str, str, str]]] = {
     # The gates are the version checks of the iptables compiler, and the

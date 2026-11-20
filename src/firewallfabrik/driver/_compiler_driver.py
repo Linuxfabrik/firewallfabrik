@@ -204,7 +204,7 @@ class CompilerDriver(BaseCompiler):
         drift: `configure_interfaces` defaults to on in the schema and
         every driver read it as off, so a firewall whose data file does
         not carry the key got a script that configured no addresses
-        (docs/developer-guide/PlatformDefaults.md).
+        (docs/developer-guide/platform-defaults.md).
         """
         return fw.get_option(key, platform=self.my_platform_name())
 
@@ -1231,7 +1231,7 @@ class CompilerDriver(BaseCompiler):
         get_option() falls back to the schema when a key is absent, so a
         key nobody reads is silently ignored - which is what the option
         schema was written to prevent (docs/developer-guide/
-        PlatformDefaults.md).  Reporting every unknown key is no use: a
+        platform-defaults.md).  Reporting every unknown key is no use: a
         data file imported from Firewall Builder carries the options of
         every platform it ever knew, and none of those is a mistake here.
         A key that is one edit away from a real one is a different matter,

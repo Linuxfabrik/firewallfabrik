@@ -67,7 +67,7 @@ def is_cpp_reference(fixture_path: Path, platform: str, private: bool) -> bool:
 
     To re-import the reference, copy the ``.fw.orig`` files from the
     fwbuilder tree into place and run ``--normalize-only`` instead; see
-    docs/developer-guide/Testing.md.
+    docs/developer-guide/testing.md.
     """
     return not private and platform == 'ipt' and fixture_path.suffix == '.fwb'
 

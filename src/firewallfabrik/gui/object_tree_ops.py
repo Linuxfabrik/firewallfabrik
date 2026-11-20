@@ -405,7 +405,7 @@ class TreeOperations:
         Firewall Builder cannot end up there: it puts a `dummySource` /
         `dummyDestination` placeholder in the element and `Compiler::Begin`
         skips such a rule with a warning.  FirewallFabrik has no deleted
-        objects (see DesignDecisions.md), so it says the same thing the
+        objects (see design-decisions.md), so it says the same thing the
         other way round - the rule is disabled, stays where
         it is, and the administrator decides whether to repair or remove it.
 
