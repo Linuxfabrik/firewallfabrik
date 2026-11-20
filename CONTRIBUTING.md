@@ -217,7 +217,7 @@ When adding a new `nosec` annotation, always run bandit once and grep the output
 
 ### Developer Guide
 
-Before you change code, read the file in [`docs/developer-guide/`](docs/developer-guide/) that matches the task, completely:
+Before you change code, read the file in `docs/developer-guide/` that matches the task, completely:
 
 | File | Read before |
 |---|---|
