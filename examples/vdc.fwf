@@ -12928,6 +12928,32 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
+                    comment: 'more than 100 concurrent HTTP/HTTPS connections from
+                      one address: a scanner holding every web server worker'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: true
+                      stateless: false
+                      action_on_reject: 'TCP RST'
+                      connlimit_value: 100
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:proxy'
+                    itf:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:proxy/Interface:eth0'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:HTTP
+                        80'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:HTTPS
+                        443'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 3
                     comment: 'application ports'
                     options:
                       disabled: false
@@ -12951,7 +12977,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 3
+                    position: 4
                     options:
                       disabled: false
                       group: ''
@@ -12973,7 +12999,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 4
+                    position: 5
                     options:
                       disabled: false
                       group: ''
@@ -12994,7 +13020,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 5
+                    position: 6
                     comment: 'admin access via OpenVPN, emergency access via firewall'
                     options:
                       disabled: false
@@ -13018,7 +13044,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 6
+                    position: 7
                     options:
                       disabled: false
                       group: ''
@@ -13041,7 +13067,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 7
+                    position: 8
                     options:
                       disabled: false
                       group: ''
@@ -13063,7 +13089,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 8
+                    position: 9
                     options:
                       disabled: false
                       group: ''
@@ -13085,7 +13111,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 9
+                    position: 10
                     options:
                       disabled: false
                       group: ''
@@ -13106,7 +13132,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 10
+                    position: 11
                     options:
                       disabled: false
                       group: ''
@@ -13128,7 +13154,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 11
+                    position: 12
                     comment: 'FreeIPA'
                     options:
                       disabled: false
@@ -13150,7 +13176,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 12
+                    position: 13
                     comment: 'For dnf updates and FreeIPA'
                     options:
                       disabled: false
@@ -13174,7 +13200,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 13
+                    position: 14
                     options:
                       disabled: false
                       group: ''
@@ -13195,7 +13221,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 14
+                    position: 15
                     options:
                       disabled: false
                       group: ''
@@ -13216,7 +13242,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 15
+                    position: 16
                     comment: 'services to be blocked, which should not be logged'
                     options:
                       disabled: false
@@ -13238,7 +13264,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 16
+                    position: 17
                     options:
                       disabled: false
                       group: ''
@@ -13259,7 +13285,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 17
+                    position: 18
                     options:
                       disabled: false
                       group: ''
@@ -13280,7 +13306,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 18
+                    position: 19
                     options:
                       disabled: false
                       group: ''
@@ -13301,7 +13327,7 @@ libraries:
                     when:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
-                    position: 19
+                    position: 20
                     comment: 'block all IPv6'
                     options:
                       disabled: false

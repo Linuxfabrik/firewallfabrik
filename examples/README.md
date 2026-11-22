@@ -42,6 +42,8 @@ The gateway is tagged `gateway`. All firewalls use nftables, and every one of th
 - DNS, NTP and FreeIPA only to the `infra` roles, Icinga only to and from the `monitoring vms`
 - a final rule that logs and drops all IPv6 the rules above do not accept
 
+**The reverse proxy (`proxy`)** rejects a new HTTP or HTTPS connection with a TCP reset while its source already holds 100, in the rule ahead of the one that accepts the web ports (Rule Options > connlimit). A scanner that opens hundreds of connections at once would otherwise occupy every worker of the web server, and fail2ban only bans it after the lines are written to the log. A browser opens a handful of connections per site; raise the limit if a whole office reaches the proxy through one NAT address.
+
 **Settings on every firewall**: packets in state INVALID are dropped and logged, logging is limited to 10 per second, interface addresses are never configured by the script, and the scripts are installed as user `linuxfabrik` with the activation command in the Installer tab. The prolog and epilog of `firewall` and `proxy` stop fail2ban before the ruleset is replaced and start it again afterwards; on `firewall` the prolog also waits for the OpenVPN interface.
 
 
