@@ -1071,9 +1071,11 @@ class DetectShadowing(BasicRuleProcessor):
             # setting there is.
             return sys.maxsize if value == -1 else value
 
+        if not DetectShadowing._connlimits_allow_shadowing(above, below):
+            return False
+
         for value_key, companions in (
             ('limit_value', ('limit_value_not', 'limit_suffix')),
-            ('connlimit_value', ('connlimit_value_not', 'connlimit_suffix')),
             (
                 'hashlimit_value',
                 ('hashlimit_suffix', 'hashlimit_mode', 'hashlimit_name'),
@@ -1091,6 +1093,57 @@ class DetectShadowing(BasicRuleProcessor):
                 ):
                     return False
         return True
+
+    @staticmethod
+    def _connlimits_allow_shadowing(above: CompRule, below: CompRule) -> bool:
+        """Return whether the connection limits let *above* shadow *below*.
+
+        A connection limit is not a rate. ``--connlimit-above N`` (nftables
+        ``ct count over N``) matches only while one source holds more than N
+        connections, and its "not" only while it holds N or fewer, so either
+        way the limit narrows what the rule matches. *above* therefore covers
+        *below* only when it carries no limit, or when *below* counts the same
+        way (same "not", same mask) and its own match lies inside: a higher
+        count for "above", a lower one for "not above". A rule that rejects
+        the connections over a limit, ahead of the rule that accepts the
+        rest, is the ordinary use and shadows nothing. Verified with nftables
+        1.1.5 on Rocky Linux 10.2 in network namespaces: with `ct count over
+        100` ahead of the accept, one source opened 100 connections and got a
+        TCP reset for every further one.
+
+        `PolicyCompiler_ipt::checkForShadowingPlatformSpecific` (fwbuilder
+        iptlib/PolicyCompiler_ipt.cpp:4965) compares the connlimit like a
+        rate and against the keys `connlimit_value_not` and
+        `connlimit_suffix`, which no editor writes; the rule options carry
+        `connlimit_above_not` and `connlimit_masklen`
+        (PolicyCompiler_PrintRule.cpp:298). Not ported.
+        """
+
+        def number(rule: CompRule, key: str) -> int:
+            try:
+                value = int(rule.get_option(key, 0) or 0)
+            except (TypeError, ValueError):
+                return 0
+            # -1 is what the compilers set on the temporary rules they split
+            # off, meaning "no limit here".
+            return max(value, 0)
+
+        def inverted(rule: CompRule) -> bool:
+            return bool(rule.get_option('connlimit_above_not', False))
+
+        above_count = number(above, 'connlimit_value')
+        if above_count == 0:
+            return True
+        below_count = number(below, 'connlimit_value')
+        if below_count == 0:
+            return False
+        if inverted(above) != inverted(below) or number(
+            above, 'connlimit_masklen'
+        ) != number(below, 'connlimit_masklen'):
+            return False
+        if inverted(above):
+            return below_count <= above_count
+        return below_count >= above_count
 
     @staticmethod
     def _element_shadows(e1: list, e2: list) -> bool:

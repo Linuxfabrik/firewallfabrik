@@ -15,7 +15,6 @@
 #  compiler runs with -xt flag
 #  testing shadowing when rules have non-default options
 #
-# Rule 'Policy_1 0 (eth0)' shadows rule 'Policy_1 1 (eth0)' below it
 # test-shadowing-3:Policy_4:0: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
 # test-shadowing-3:Policy_5:1: warning: the rate limit table "test" is already in use by another rule with a different rate; the kernel keeps the rate of the first one for every source both rules see
 # Rule 'Policy_6 0 (global)' shadows rule 'Policy_6 1 (global)' below it

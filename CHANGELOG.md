@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 tbd
 
+### Fixed
+
+Compiler (iptables, nftables):
+
+* a rule with a connection limit (connlimit) no longer counts as shadowing the rule below it
+
 
 ## [v3.7.4] - 2026-11-16
 

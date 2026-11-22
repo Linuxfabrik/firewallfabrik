@@ -223,6 +223,17 @@ how a report stops being read.
   rule in the chain carries the limit.  This and the entry above change
   the iptables output of every rule with a rate limit against the
   Firewall Builder reference.
+- **A connection limit narrows a rule, so it never shadows one without.**
+  `PolicyCompiler_ipt::checkForShadowingPlatformSpecific` compares
+  `connlimit_value` like a rate and checks the keys `connlimit_value_not`
+  and `connlimit_suffix`, which no editor writes, so a rule rejecting the
+  connections of a source above a limit "shadows" the accept rule below
+  it.  `DetectShadowing._connlimits_allow_shadowing` lets a rule with a
+  limit shadow only a rule that counts the same way (`connlimit_above_not`,
+  `connlimit_masklen`) and matches a subset: a count above a higher limit,
+  or a count up to a lower one.  The Firewall Builder iptables reference of
+  `test-shadowing-3` reports no shadowing for its connlimit rule set
+  either.
 - `VerifyScriptLiterals` (`compiler/processors/_generic.py`) asks a
   question none of those do: three objects cannot be resolved by the
   compiler, so their names travel into the generated shell script and are
